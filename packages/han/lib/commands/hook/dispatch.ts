@@ -390,8 +390,6 @@ function executeCommandHook(
         CLAUDE_PROJECT_DIR: process.cwd(),
         // Pass session ID for event logging
         ...(sessionId ? { HAN_SESSION_ID: sessionId } : {}),
-        // Disable fail-fast in subprocesses - dispatch handles aggregation
-        HAN_NO_FAIL_FAST: '1',
         // Disable cache if --no-cache was passed to dispatch
         ...(noCache ? { HAN_NO_CACHE: '1' } : {}),
         // Disable checkpoints if --no-checkpoints was passed to dispatch

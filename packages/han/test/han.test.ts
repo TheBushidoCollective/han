@@ -269,33 +269,6 @@ describe('Hook run', () => {
   );
 
   test(
-    'stops on first failure with --fail-fast',
-    () => {
-      mkdirSync(join(testDir, 'pkg1'));
-      mkdirSync(join(testDir, 'pkg2'));
-      writeFileSync(join(testDir, 'pkg1', 'package.json'), '{}');
-      writeFileSync(join(testDir, 'pkg2', 'package.json'), '{}');
-
-      execSync('git init', { cwd: testDir, stdio: 'pipe' });
-      execSync('git add .', { cwd: testDir, stdio: 'pipe' });
-
-      let exitCode: number | undefined;
-      try {
-        execSync(
-          `${binCommand} hook run --fail-fast --dirs-with package.json -- exit 1`,
-          { cwd: testDir, encoding: 'utf8', stdio: 'pipe' }
-        );
-      } catch (error) {
-        const execError = error as ExecError;
-        exitCode = execError.status || execError.code;
-      }
-
-      expect(exitCode).toBe(2);
-    },
-    { timeout: BINARY_TIMEOUT }
-  );
-
-  test(
     'respects --test-dir flag to filter directories',
     () => {
       mkdirSync(join(testDir, 'with-marker'));
@@ -995,105 +968,6 @@ describe('Hook config (han-plugin.yml)', () => {
     { timeout: BINARY_TIMEOUT }
   );
 
-  test(
-    'with --fail-fast stops on first failure',
-    () => {
-      const YAML = require('yaml');
-      const pluginDir = join(testDir, 'test-plugin');
-      mkdirSync(pluginDir, { recursive: true });
-      writeFileSync(
-        join(pluginDir, 'han-plugin.yml'),
-        YAML.stringify({
-          hooks: {
-            test: {
-              dirs_with: ['marker.txt'],
-              command: 'exit 1',
-            },
-          },
-        })
-      );
-
-      const projectDir = join(testDir, 'project');
-      mkdirSync(join(projectDir, 'pkg1'), { recursive: true });
-      mkdirSync(join(projectDir, 'pkg2'), { recursive: true });
-      writeFileSync(join(projectDir, 'pkg1', 'marker.txt'), '');
-      writeFileSync(join(projectDir, 'pkg2', 'marker.txt'), '');
-
-      execSync('git init', { cwd: projectDir, stdio: 'pipe' });
-      execSync('git add .', { cwd: projectDir, stdio: 'pipe' });
-
-      expect(() => {
-        execSync(`${binCommand} hook run test-plugin test --fail-fast`, {
-          cwd: projectDir,
-          encoding: 'utf8',
-          stdio: 'pipe',
-          env: {
-            ...process.env,
-            CLAUDE_PLUGIN_ROOT: pluginDir,
-            CLAUDE_PROJECT_DIR: projectDir,
-          },
-        });
-      }).toThrow();
-    },
-    { timeout: BINARY_TIMEOUT }
-  );
-
-  test(
-    '--fail-fast clears stale failure signals from previous runs',
-    () => {
-      const YAML = require('yaml');
-      const pluginDir = join(testDir, 'test-plugin');
-      mkdirSync(pluginDir, { recursive: true });
-      writeFileSync(
-        join(pluginDir, 'han-plugin.yml'),
-        YAML.stringify({
-          hooks: {
-            test: {
-              dirs_with: ['marker.txt'],
-              command: 'echo success',
-            },
-          },
-        })
-      );
-
-      const projectDir = join(testDir, 'project');
-      mkdirSync(join(projectDir, 'pkg1'), { recursive: true });
-      writeFileSync(join(projectDir, 'pkg1', 'marker.txt'), '');
-
-      execSync('git init', { cwd: projectDir, stdio: 'pipe' });
-      execSync('git add .', { cwd: projectDir, stdio: 'pipe' });
-
-      const sessionId = 'test-stale-sentinel-cleanup';
-      const sentinelDir = join(tmpdir(), 'han-hooks', sessionId);
-      mkdirSync(sentinelDir, { recursive: true });
-      const sentinelPath = join(sentinelDir, 'failure.sentinel');
-      writeFileSync(
-        sentinelPath,
-        JSON.stringify({
-          pluginName: 'stale-plugin',
-          hookName: 'stale-hook',
-          timestamp: Date.now() - 10000,
-        })
-      );
-
-      expect(existsSync(sentinelPath)).toBe(true);
-
-      execSync(`${binCommand} hook run test-plugin test --fail-fast`, {
-        cwd: projectDir,
-        encoding: 'utf8',
-        stdio: 'pipe',
-        env: {
-          ...process.env,
-          CLAUDE_PLUGIN_ROOT: pluginDir,
-          CLAUDE_PROJECT_DIR: projectDir,
-          HAN_SESSION_ID: sessionId,
-        },
-      });
-
-      expect(existsSync(sentinelPath)).toBe(false);
-    },
-    { timeout: BINARY_TIMEOUT }
-  );
 });
 
 // ============================================

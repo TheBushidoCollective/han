@@ -18,8 +18,8 @@ han hook run <plugin-name> <hook-name>
 # With options
 han hook run <plugin-name> <hook-name> --verbose
 
-# Disable caching or fail-fast
-han hook run <plugin-name> <hook-name> --no-cache --no-fail-fast
+# Disable caching
+han hook run <plugin-name> <hook-name> --no-cache
 
 # Legacy format: Run custom command across directories
 han hook run --dirs-with <file> -- <command>
@@ -30,7 +30,6 @@ han hook run --dirs-with <file> -- <command>
 | Option | Description |
 |--------|-------------|
 | `--no-cache` | Disable caching (caching is ON by default in v2.0.0+) |
-| `--no-fail-fast` | Continue on failures (fail-fast is ON by default in v2.0.0+) |
 | `--no-checkpoints` | Disable checkpoint filtering (checkpoints are ON by default) |
 | `--verbose` | Show full command output in real-time |
 | `--directory <path>` | Limit execution to specific directory |
@@ -44,7 +43,7 @@ han hook run --dirs-with <file> -- <command>
 | `--dirs-with <file>` | Only run in directories containing the specified file |
 | `--test-dir <command>` | Only include directories where this command exits 0 |
 
-**Breaking Change (v2.0.0):** Caching and fail-fast are now enabled by default. Use `--no-cache` or `--no-fail-fast` to disable them.
+**Breaking Change (v2.0.0):** Caching is enabled by default. Use `--no-cache` to disable it.
 
 ### Caching Behavior
 
@@ -72,9 +71,6 @@ han hook run typescript typecheck --verbose
 # Run Biome lint in specific directory
 han hook run biome lint --directory packages/core
 
-# Continue on failures instead of stopping
-han hook run playwright-mcp test --no-fail-fast
-
 # Legacy: Run npm test in directories with package.json
 han hook run --dirs-with package.json -- npm test
 ```
@@ -98,7 +94,6 @@ When you run `han hook run bun test`, Han:
 2. Checks if files matching `**/*.ts` or `**/*.test.ts` have changed (caching is enabled by default)
 3. Runs `bun test --only-failures` in each directory
 4. Records the result and updates checkpoints
-5. Stops on first failure (fail-fast is enabled by default)
 
 ## `han hook list`
 

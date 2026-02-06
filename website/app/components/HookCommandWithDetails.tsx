@@ -98,7 +98,7 @@ function HighlightedCode({
 }
 
 // Extract han hook name from a command like:
-// han hook run typescript build --fail-fast --cached
+// han hook run typescript build --cached
 function extractHanHookName(
 	command: string,
 	pluginName: string,

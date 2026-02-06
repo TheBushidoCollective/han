@@ -32,7 +32,6 @@ hooks:
   enabled: true            # Master switch for all hooks (default: true)
   checkpoints: true        # Session/agent checkpoint filtering (default: true)
   cache: true              # Smart caching - skip if no changes (default: true)
-  fail_fast: true          # Stop on first hook failure (default: true)
   transcript_filter: true  # Multi-session conflict prevention (default: true, v2.3.0)
 
 # Orchestrator settings (controls MCP tool exposure)
@@ -74,7 +73,6 @@ hooks:
   enabled: true            # Master switch - disable all hooks
   checkpoints: true        # Filter hooks by session/agent context
   cache: true              # Skip hooks when files haven't changed
-  fail_fast: true          # Stop execution on first hook failure
   transcript_filter: true  # Filter by session's modified files (v2.3.0)
 ```
 
@@ -85,7 +83,6 @@ hooks:
 | `enabled` | boolean | `true` | Master switch to enable/disable all hooks |
 | `checkpoints` | boolean | `true` | Enable session-scoped filtering (only run relevant hooks) |
 | `cache` | boolean | `true` | Enable smart caching to skip unchanged files |
-| `fail_fast` | boolean | `true` | Stop on first hook failure instead of running all |
 | `transcript_filter` | boolean | `true` | Filter hooks to files THIS session modified (prevents multi-session conflicts) |
 
 ### Configuration Priority
@@ -94,7 +91,7 @@ Settings are applied in this order (later overrides earlier):
 
 1. **Built-in defaults** - All settings default to `true` in v2.0.0
 2. **`han.yml` configuration** - Values from config hierarchy
-3. **CLI options** - Flags like `--cache=false` or `--no-fail-fast`
+3. **CLI options** - Flags like `--no-cache`
 4. **Environment variables** - `HAN_HOOKS_CACHE=false`, etc.
 
 Example:
@@ -167,7 +164,6 @@ hooks:
   enabled: true            # Master switch
   checkpoints: true        # Session filtering
   cache: true              # Smart caching
-  fail_fast: true          # Stop on first failure
   transcript_filter: true  # Multi-session conflict prevention (v2.3.0)
 
 biome:
@@ -234,7 +230,6 @@ You can also disable specific features:
 ```yaml
 hooks:
   cache: false              # Always run hooks, never use cache
-  fail_fast: false          # Continue running all hooks even if one fails
   checkpoints: false        # Run all hooks regardless of context
   transcript_filter: false  # Ignore session transcript, use checkpoint-only filtering
 ```
@@ -244,9 +239,6 @@ Or via CLI for one-off runs:
 ```bash
 # Disable caching for this run
 han hook run biome lint --cache=false
-
-# Run all hooks even if some fail
-han hook run --no-fail-fast
 ```
 
 ## Orchestrator Configuration

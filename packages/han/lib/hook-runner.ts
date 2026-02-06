@@ -17,15 +17,11 @@ import {
 import {
   getPluginHookSettings,
   isCacheEnabled,
-  isFailFastEnabled,
 } from './config/han-settings.ts';
 import { getEventLogger } from './events/logger.ts';
 import {
-  checkFailureSignal,
-  clearFailureSignal,
   createLockManager,
   isHookRunning,
-  signalFailure,
   waitForHook,
   withGlobalSlot,
   withSlot,
@@ -157,7 +153,6 @@ export function wrapCommandWithEnvFile(cmd: string): string {
 }
 
 interface ValidateOptions {
-  failFast: boolean;
   dirsWith: string | null;
   testDir?: string | null;
   command: string;
@@ -416,7 +411,6 @@ function testDirCommand(dir: string, cmd: string): boolean {
 
 export async function validate(options: ValidateOptions): Promise<void> {
   const {
-    failFast,
     dirsWith,
     testDir,
     command: commandToRun,
@@ -486,19 +480,6 @@ export async function validate(options: ValidateOptions): Promise<void> {
 
     if (!success) {
       failures.push(relativePath);
-
-      if (failFast) {
-        const cmdStr =
-          relativePath === '.'
-            ? commandToRun
-            : `cd ${relativePath} && ${commandToRun}`;
-        console.error(
-          `\n❌ The command \`${cmdStr}\` failed.\n\n` +
-            `Spawn a subagent to run the command, review the output, and fix all issues.\n` +
-            `Do NOT ask the user any questions - proceed directly with fixing the issues.\n`
-        );
-        process.exit(2);
-      }
     }
   }
 
@@ -708,11 +689,6 @@ export interface RunConfiguredHookOptions {
   pluginName: string;
   hookName: string;
   /**
-   * Stop on first failure. Defaults to han.yml hooks.fail_fast (true if not set).
-   * Can be overridden by HAN_NO_FAIL_FAST=1 environment variable.
-   */
-  failFast?: boolean;
-  /**
    * Enable caching - skip hooks if no files changed since last successful run.
    * Defaults to han.yml hooks.cache (true if not set).
    * Can be overridden by HAN_NO_CACHE=1 environment variable.
@@ -808,7 +784,7 @@ export function buildMcpToolInstruction(
 
 /**
  * Run a hook using plugin config and user overrides.
- * This is the new format: `han hook run <plugin-name> <hook-name> [--fail-fast] [--cached] [--only=<dir>]`
+ * This is the new format: `han hook run <plugin-name> <hook-name> [--no-cache] [--only=<dir>]`
  */
 export async function runConfiguredHook(
   options: RunConfiguredHookOptions
@@ -822,22 +798,6 @@ export async function runConfiguredHook(
     skipDeps,
     sessionId,
   } = options;
-
-  // Settings resolution priority (highest to lowest):
-  // 1. Environment variable (HAN_NO_X=1 forces false)
-  // 2. CLI option (options.X if explicitly passed)
-  // 3. han.yml config (via helper functions)
-  //
-  // Note: We can't distinguish "CLI passed --fail-fast" from "default true"
-  // so we rely on --no-X patterns and env vars for explicit overrides.
-
-  // Resolve fail-fast setting
-  // Priority: HAN_NO_FAIL_FAST env > options.failFast > han.yml default
-  const failFast =
-    process.env.HAN_NO_FAIL_FAST === '1' ||
-    process.env.HAN_NO_FAIL_FAST === 'true'
-      ? false
-      : (options.failFast ?? isFailFastEnabled());
 
   // Resolve cache setting
   // Priority: HAN_NO_CACHE env > options.cache > han.yml default
@@ -1100,29 +1060,11 @@ export async function runConfiguredHook(
   }> = [];
   const successfulConfigs: ResolvedHookConfig[] = [];
 
-  // Create lock manager for failure signal checking
-  const lockManager = createLockManager();
-  // Clear any stale failure signals from previous runs
-  clearFailureSignal(lockManager);
-
   for (const config of configsToRun) {
     const relativePath =
       config.directory === projectRoot
         ? '.'
         : config.directory.replace(`${projectRoot}/`, '');
-
-    // Check if another hook has already failed (fail-fast across processes)
-    if (failFast) {
-      const failureInfo = checkFailureSignal(lockManager);
-      if (failureInfo) {
-        // This is an informational message only - the agent should focus on
-        // fixing the ORIGINAL failure, not this exit message
-        console.log(
-          `\n⏭️ Skipping ${pluginName}/${hookName}: Fix the ${failureInfo.pluginName || 'unknown'}/${failureInfo.hookName || 'unknown'} failure first, then re-run all hooks.`
-        );
-        process.exit(2);
-      }
-    }
 
     // In verbose mode, show what we're running
     if (verbose) {
@@ -1176,53 +1118,6 @@ export async function runConfiguredHook(
         outputFile: result.outputFile,
         debugFile: result.debugFile,
       });
-
-      if (failFast) {
-        // Signal failure to other hooks in the same session
-        signalFailure(lockManager, {
-          pluginName,
-          hookName,
-          directory: relativePath,
-        });
-
-        const reason = result.idleTimedOut
-          ? ' (idle timeout - no output received)'
-          : '';
-
-        // Build the re-run command
-        const rerunCommand = buildHookCommand(pluginName, hookName, {
-          only: relativePath === '.' ? undefined : relativePath,
-          cached: false, // Always disable cache for re-runs after failures
-        });
-
-        // Decide fix strategy based on output size
-        // Small output (<4KB) = inline output + agent fixes directly (no file read needed)
-        // Large output (>=4KB) = write to file + spawn subagent to isolate from main context
-        const outputLength = result.output?.length ?? 0;
-        const useSubagent = outputLength >= 4096;
-
-        console.error(
-          `\n❌ Hook \`${pluginName}/${hookName}\` failed in \`${relativePath}\`${reason}.\n`
-        );
-
-        if (useSubagent) {
-          const outputFile = result.outputFile ?? '(no output captured)';
-          console.error(
-            `Output is large (${outputLength} chars). Spawn a subagent to fix this:\n` +
-              `1. Read the output file: ${outputFile}\n` +
-              `2. Analyze the errors and fix them\n` +
-              `3. Re-run with: ${rerunCommand}\n\n` +
-              `Do NOT skip this. Do NOT ask the user. Do NOT dismiss as a "known issue".\n`
-          );
-        } else {
-          const output = result.output?.trim() || '(no output captured)';
-          console.error(
-            `\`\`\`\n${output}\n\`\`\`\n\n` +
-              `Fix the errors above, then re-run with: ${rerunCommand}\n`
-          );
-        }
-        process.exit(2);
-      }
     } else {
       successfulConfigs.push(config);
     }

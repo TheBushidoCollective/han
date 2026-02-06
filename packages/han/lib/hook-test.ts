@@ -92,7 +92,6 @@ function generateExampleStdinPayload(_hookType: string): string {
 interface ExecuteHookSettings {
   cache: boolean;
   checkpoints: boolean;
-  failFast: boolean;
 }
 
 /**
@@ -149,7 +148,6 @@ async function executeHookCommand(
         // These override han.yml defaults in the spawned hook commands
         ...(settings.cache ? {} : { HAN_NO_CACHE: '1' }),
         ...(settings.checkpoints ? {} : { HAN_NO_CHECKPOINTS: '1' }),
-        ...(settings.failFast ? {} : { HAN_NO_FAIL_FAST: '1' }),
       },
     });
 
@@ -443,8 +441,6 @@ export interface TestHooksOptions {
   cache?: boolean;
   /** Enable checkpoint filtering (disabled by default for testing) */
   checkpoints?: boolean;
-  /** Enable fail-fast mode (disabled by default for testing) */
-  failFast?: boolean;
 }
 
 /**
@@ -456,7 +452,6 @@ export async function testHooks(options?: TestHooksOptions): Promise<void> {
   // Testing defaults: disabled for fresh test runs
   const cache = options?.cache ?? false;
   const checkpoints = options?.checkpoints ?? false;
-  const failFast = options?.failFast ?? false;
 
   if (!executeHooks) {
     // Validation-only mode (keep existing console output)
@@ -502,7 +497,7 @@ export async function testHooks(options?: TestHooksOptions): Promise<void> {
   const isTTY = process.stdin.isTTY && process.stdout.isTTY;
 
   // Build settings object to pass to execution functions
-  const settings: ExecuteHookSettings = { cache, checkpoints, failFast };
+  const settings: ExecuteHookSettings = { cache, checkpoints };
 
   if (isTTY) {
     // Execute hooks with interactive UI

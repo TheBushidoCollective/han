@@ -53,11 +53,6 @@ export function registerAliasCommands(program: Command): void {
         'Requires -- before command (e.g., han validate-legacy --dirs-with package.json -- npm test)'
     )
     .option(
-      '--no-fail-fast',
-      'Disable fail-fast - continue running even after failures'
-    )
-    .option('--fail-fast', '(Deprecated) Fail-fast is now the default behavior')
-    .option(
       '--dirs-with <file>',
       'Only run in directories containing the specified file'
     )
@@ -65,7 +60,7 @@ export function registerAliasCommands(program: Command): void {
     .action(
       async (
         _ignored: string[],
-        options: { failFast?: boolean; dirsWith?: string }
+        options: { dirsWith?: string }
       ) => {
         // Parse command from process.argv after --
         const separatorIndex = process.argv.indexOf('--');
@@ -86,12 +81,7 @@ export function registerAliasCommands(program: Command): void {
           process.exit(1);
         }
 
-        // Commander sets failFast=false when --no-fail-fast is used
-        // Default to true for legacy format
-        const failFast = options.failFast !== false;
-
         await validate({
-          failFast,
           dirsWith: options.dirsWith || null,
           command: commandArgs.join(' '),
         });
@@ -125,7 +115,6 @@ export function registerAliasCommands(program: Command): void {
         try {
           await orchestrate('Stop', {
             onlyChanged: !opts.allFiles, // default true (only changed files)
-            failFast: true, // Stop on first failure
             verbose: opts.verbose ?? false,
             wait: true, // Always wait for completion
             check: opts.check ?? false,

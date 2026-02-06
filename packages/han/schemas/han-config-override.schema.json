@@ -31,11 +31,6 @@
           "type": "boolean",
           "description": "Enable hook caching",
           "default": true
-        },
-        "fail_fast": {
-          "type": "boolean",
-          "description": "Stop on first hook failure",
-          "default": true
         }
       }
     },

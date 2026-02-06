@@ -1924,7 +1924,6 @@ export async function orchestrate(
   options: {
     onlyChanged: boolean;
     verbose: boolean;
-    failFast: boolean;
     wait: boolean;
     check: boolean;
     orchestrationId?: string;
@@ -2213,7 +2212,7 @@ export async function orchestrate(
   const allResults: HookResult[] = [];
   const outputs: string[] = [];
   let hasFailures = false;
-  let aborted = false; // Abort flag for fail-fast
+  let aborted = false; // Abort flag for batch failure
 
   // Initialize hash cycle detector for recursion detection
   const cycleDetector = new HashCycleDetector();
@@ -2275,13 +2274,13 @@ export async function orchestrate(
       }
     }
 
-    // Execute tasks sequentially with fail-fast
+    // Execute tasks sequentially
     const batchResults: HookResult[] = [];
     let taskIndex = 0;
 
     // Helper to schedule the next task if not aborted
     const scheduleNext = (): Promise<HookResult> | null => {
-      if (aborted && options.failFast) return null;
+      if (aborted) return null;
       if (taskIndex >= pendingTasks.length) return null;
 
       const { task, directory } = pendingTasks[taskIndex++];
@@ -2292,7 +2291,7 @@ export async function orchestrate(
 
       const promise = (async (): Promise<HookResult> => {
         // Double-check abort flag (may have changed while waiting for slot)
-        if (aborted && options.failFast) {
+        if (aborted) {
           return {
             plugin: task.plugin,
             hook: task.hookName,
@@ -2320,12 +2319,12 @@ export async function orchestrate(
           }
         );
 
-        // Set abort flag on failure
-        if (!result.success && !result.skipped && options.failFast) {
+        // Set abort flag on failure - stop processing remaining tasks in this batch
+        if (!result.success && !result.skipped) {
           aborted = true;
           if (isDebugMode()) {
             console.error(
-              `${colors.red}[fail-fast]${colors.reset} Aborting due to failure in ${task.plugin}/${task.hookName}`
+              `${colors.red}[abort]${colors.reset} Aborting batch due to failure in ${task.plugin}/${task.hookName}`
             );
           }
         }
@@ -2337,8 +2336,7 @@ export async function orchestrate(
     };
 
     // Execute tasks sequentially (execSync blocks, so no real parallelism anyway)
-    // This ensures fail-fast works correctly - no new tasks start after failure
-    while (taskIndex < pendingTasks.length && (!aborted || !options.failFast)) {
+    while (taskIndex < pendingTasks.length && !aborted) {
       const p = scheduleNext();
       if (!p) break;
 
@@ -2405,11 +2403,9 @@ export async function orchestrate(
     const failures = batchResults.filter((r) => !r.success && !r.skipped);
     if (failures.length > 0) {
       hasFailures = true;
-      // Fail fast: abort and stop executing remaining batches
-      if (options.failFast) {
-        aborted = true;
-        break;
-      }
+      // Stop executing remaining batches on failure
+      aborted = true;
+      break;
     }
 
     // Collect successful outputs
@@ -2699,7 +2695,6 @@ export function registerHookOrchestrate(hookCommand: Command): void {
       '--all-files',
       'Check all files, not just changed files (ignores cache)'
     )
-    .option('--no-fail-fast', 'Continue executing even after failures')
     .option('-v, --verbose', 'Show detailed execution output')
     .option(
       '-w, --wait',
@@ -2726,7 +2721,6 @@ export function registerHookOrchestrate(hookCommand: Command): void {
         eventType: string,
         opts: {
           allFiles?: boolean;
-          failFast?: boolean;
           verbose?: boolean;
           wait?: boolean;
           check?: boolean;
@@ -2737,7 +2731,6 @@ export function registerHookOrchestrate(hookCommand: Command): void {
       ) => {
         await orchestrate(eventType, {
           onlyChanged: !opts.allFiles, // default true (only changed files)
-          failFast: opts.failFast !== false,
           verbose: opts.verbose ?? false,
           check: opts.check ?? false,
           wait: opts.wait ?? false,

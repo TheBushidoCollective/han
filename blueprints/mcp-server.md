@@ -84,7 +84,6 @@ Returns available tools discovered from installed plugins.
         "type": "object",
         "properties": {
           "verbose": { "type": "boolean" },
-          "failFast": { "type": "boolean" },
           "directory": { "type": "string" }
         }
       }
@@ -104,7 +103,6 @@ Execute a tool.
   "name": "jutsu_typescript_lint",
   "arguments": {
     "verbose": false,
-    "failFast": true,
     "directory": "packages/core"
   }
 }
@@ -124,7 +122,6 @@ Execute a tool.
 **Input Properties:**
 
 - `verbose` (boolean) - Show full output in real-time
-- `failFast` (boolean) - Stop on first failure (default: true)
 - `directory` (string) - Limit to specific directory path
 
 ### Tool Annotations
@@ -170,7 +167,7 @@ Command: npm test
 ### Execution
 
 1. Find tool by name in discovered tools
-2. Extract parameters (verbose, failFast, directory)
+2. Extract parameters (verbose, directory)
 3. Set `CLAUDE_PLUGIN_ROOT` environment variable
 4. Execute via `runConfiguredHook()`
 5. Capture output via console interception

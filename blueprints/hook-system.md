@@ -257,7 +257,6 @@ Execute a single plugin hook (for manual/debugging use):
 
 **Options:**
 
-- `--fail-fast` - Stop on first failure
 - `--cached` - Only run if files changed
 - `--only <dir>` - Limit to specific directory
 - `--verbose` - Show detailed output
