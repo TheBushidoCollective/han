@@ -1,14 +1,13 @@
 #!/usr/bin/env bun
 /**
- * Production build script using Bun's bundler with HTML entrypoint
+ * Production build script using Bun's bundler with JS entrypoint
  *
- * This replaces Vite for production builds, using:
- * - Bun's HTML loader for automatic asset discovery
- * - Custom relay plugin for GraphQL transforms
- * - Custom pages plugin for file-based routing
+ * Uses a JS entrypoint instead of HTML to avoid a Bun HTML bundler bug
+ * where the wrong chunk gets assigned as the entry script on Linux.
+ * Generates index.html manually with the correct script reference.
  */
-import { rmSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { pagesPlugin } from "./pages-plugin";
 import { relayPlugin } from "./relay-plugin";
 import { rnwCompatPlugin } from "./rnw-compat-plugin";
@@ -27,14 +26,17 @@ try {
 console.log("Building browse-client with Bun...");
 console.log(`  Output: ${outDir}`);
 
+// Use JS entrypoint instead of HTML to avoid Bun's HTML bundler bug
+// on Linux where it assigns the wrong chunk as the entry script.
 const result = await Bun.build({
-	entrypoints: [join(projectRoot, "index.html")],
+	entrypoints: [join(projectRoot, "src", "main.tsx")],
 	outdir: outDir,
 	minify: true,
 	splitting: true,
 	sourcemap: "external",
 	target: "browser",
-	publicPath: "/", // Use absolute paths for SPA routing compatibility
+	publicPath: "/",
+	naming: "[dir]/[name]-[hash].[ext]",
 	plugins: [
 		rnwCompatPlugin(),
 		relayPlugin({ devMode: false }),
@@ -64,6 +66,24 @@ if (!result.success) {
 	process.exit(1);
 }
 
+// Find the entry point output (the main.tsx bundle)
+const entryOutput = result.outputs.find(
+	(o) => o.kind === "entry-point" && o.path.endsWith(".js"),
+);
+if (!entryOutput) {
+	console.error("Build failed: could not find entry-point JS output");
+	process.exit(1);
+}
+const entryFilename = `/${basename(entryOutput.path)}`;
+
+// Generate index.html from template with the correct entry script
+const template = readFileSync(join(projectRoot, "index.html"), "utf-8");
+const html = template.replace(
+	/<script type="module" src="\.\/src\/main\.tsx"><\/script>/,
+	`<script type="module" crossorigin src="${entryFilename}"></script>`,
+);
+writeFileSync(join(outDir, "index.html"), html);
+
 // Report build artifacts
 console.log("\nBuild complete:");
 for (const output of result.outputs) {
@@ -74,3 +94,4 @@ for (const output of result.outputs) {
 			: `${(size / 1024).toFixed(1)} KB`;
 	console.log(`  ${output.path.replace(outDir, "out")} (${sizeStr})`);
 }
+console.log(`  out/index.html (entry: ${entryFilename})`);
