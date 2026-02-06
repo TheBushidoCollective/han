@@ -7,10 +7,7 @@ on:
     paths:
       - 'packages/han/**'
       - 'packages/han-native/**'
-      - 'jutsu/**'
-      - 'do/**'
-      - 'hashi/**'
-      - 'core/**'
+      - 'plugins/**'
       - 'website/**'
       - '.github/workflows/auto-tag-release.yml'
 
@@ -50,7 +47,7 @@ jobs:
             echo "packages=false" >> $GITHUB_OUTPUT
           fi
 
-          if echo "$CHANGED" | grep -qE "^(jutsu|do|hashi|core)/"; then
+          if echo "$CHANGED" | grep -qE "^plugins/"; then
             echo "plugins=true" >> $GITHUB_OUTPUT
           else
             echo "plugins=false" >> $GITHUB_OUTPUT
@@ -68,7 +65,7 @@ jobs:
           chmod +x .github/scripts/generate-changelog.sh
 
           # Find changed plugins and generate changelogs
-          CHANGED_PLUGINS=$(git diff --name-only HEAD~1 HEAD | grep -E "^(jutsu|do|hashi|core)/" | cut -d'/' -f1-2 | sort -u || true)
+          CHANGED_PLUGINS=$(git diff --name-only HEAD~1 HEAD | grep -E "^plugins/" | cut -d'/' -f1-3 | sort -u || true)
 
           for plugin in $CHANGED_PLUGINS; do
             if [ -d "$plugin" ]; then
@@ -283,10 +280,9 @@ jobs:
       - name: Trigger release binaries workflow
         if: steps.check-tag.outputs.exists == 'false'
         env:
-          # Use PAT instead of github.token - the default token lacks
-          # permission to trigger workflow_dispatch events
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          # Use GITHUB_TOKEN with actions:write permission (declared at workflow level)
+          GH_TOKEN: ${{ github.token }}
         run: |
           TAG="v${{ steps.bump-version.outputs.new_version }}"
           echo "Triggering release-binaries workflow for $TAG"
-          gh workflow run release-binaries.yml -f tag="$TAG"
+          gh workflow run release-binaries.yml --ref "$TAG"
