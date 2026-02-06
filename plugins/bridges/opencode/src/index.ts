@@ -46,6 +46,8 @@ import {
   type OpenCodePluginContext,
   type ToolEventInput,
   type ToolEventOutput,
+  type ToolBeforeInput,
+  type ToolBeforeOutput,
   type OpenCodeEvent,
   type StopResult,
 } from "./types"
@@ -62,6 +64,7 @@ import {
   buildDisciplineContext,
   type DisciplineInfo,
 } from "./disciplines"
+import { buildSessionContext, buildPromptContext } from "./context"
 
 const PREFIX = "[han]"
 
@@ -150,6 +153,7 @@ async function hanBridgePlugin(ctx: OpenCodePluginContext) {
   // ─── Hook Discovery ──────────────────────────────────────────────────────
   const allHooks = discoverHooks(directory)
   const postToolUseHooks = getHooksByEvent(allHooks, "PostToolUse")
+  const preToolUseHooks = getHooksByEvent(allHooks, "PreToolUse")
   const stopHooks = getHooksByEvent(allHooks, "Stop")
 
   // ─── Skill Discovery ──────────────────────────────────────────────────────
@@ -185,7 +189,8 @@ async function hanBridgePlugin(ctx: OpenCodePluginContext) {
 
   console.error(
     `${PREFIX} Discovered ${pluginCount} plugins: ` +
-      `${postToolUseHooks.length} PostToolUse hooks, ` +
+      `${preToolUseHooks.length} PreToolUse, ` +
+      `${postToolUseHooks.length} PostToolUse, ` +
       `${stopHooks.length} Stop hooks, ` +
       `${skillCount} skills, ` +
       `${disciplineCount} disciplines`,
@@ -346,18 +351,90 @@ async function hanBridgePlugin(ctx: OpenCodePluginContext) {
     },
 
     // ─── System Prompt Injection ─────────────────────────────────────────
-    // Inject active discipline context into every LLM call.
+    // Inject core guidelines and active discipline context into every LLM call.
+    // This replaces Claude Code's SessionStart context injection +
+    // session-references must-read-first tags.
 
     "experimental.chat.system.transform": async (
       _input: Record<string, never>,
       output: { system: string[] },
     ) => {
+      // Core guidelines (professional honesty, no time estimates, etc.)
+      output.system.push(buildSessionContext(skillCount, disciplineCount))
+
+      // Active discipline context
       if (activeDiscipline) {
         output.system.push(buildDisciplineContext(activeDiscipline))
       }
     },
 
+    // ─── Chat Message Hook ──────────────────────────────────────────────
+    // Mirrors Claude Code's UserPromptSubmit hook: inject datetime
+    // on each user message so the LLM knows the current time.
+
+    "chat.message": async (
+      _input: Record<string, unknown>,
+      output: { message: string; parts: unknown[] },
+    ) => {
+      const timeContext = buildPromptContext()
+      output.parts.push({ type: "text", text: `\n\n${timeContext}` })
+    },
+
     // ─── Hook Handlers ───────────────────────────────────────────────────
+
+    /**
+     * tool.execute.before → PreToolUse hooks
+     *
+     * Runs before a tool executes. Enables:
+     * - Pre-commit/pre-push validation gates (intercept git commands)
+     * - Input modification (add context to prompts)
+     * - Subagent context injection (discipline context for task tools)
+     */
+    "tool.execute.before": async (
+      input: ToolBeforeInput,
+      output: ToolBeforeOutput,
+    ) => {
+      const claudeToolName = mapToolName(input.tool)
+
+      // Inject discipline context into task/agent tool prompts
+      if (activeDiscipline && output.args) {
+        const prompt = output.args.prompt as string | undefined
+        const message = output.args.message as string | undefined
+        const target = prompt ?? message
+
+        if (target && (claudeToolName === "Task" || input.tool === "agent")) {
+          const context = buildDisciplineContext(activeDiscipline)
+          const key = prompt ? "prompt" : "message"
+          output.args[key] = `<subagent-context>\n${context}\n</subagent-context>\n\n${target}`
+        }
+      }
+
+      // Run PreToolUse hooks (e.g., pre-commit validation)
+      if (preToolUseHooks.length > 0) {
+        const matching = preToolUseHooks.filter((h) => {
+          if (!h.toolFilter) return true
+          return h.toolFilter.includes(claudeToolName)
+        })
+
+        if (matching.length > 0) {
+          const results = await executeHooksParallel(matching, [], {
+            cwd: directory,
+            sessionId,
+            eventLogger,
+            hookType: "PreToolUse",
+          })
+
+          // If any PreToolUse hook fails, log it as a warning in output
+          const failures = results.filter((r) => !r.skipped && r.exitCode !== 0)
+          if (failures.length > 0) {
+            const warnings = failures
+              .map((r) => `[${r.hook.pluginName}/${r.hook.name}]: ${r.stdout || r.stderr}`)
+              .join("\n")
+            console.error(`${PREFIX} PreToolUse warnings:\n${warnings}`)
+          }
+        }
+      }
+    },
 
     /**
      * tool.execute.after → PostToolUse hooks

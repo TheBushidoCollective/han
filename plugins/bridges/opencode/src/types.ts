@@ -34,6 +34,20 @@ export type BunShell = (
 ) => Promise<{ exitCode: number; stdout: Buffer; stderr: Buffer }>
 
 /**
+ * OpenCode tool event shape from tool.execute.before.
+ * Allows modifying args before execution.
+ */
+export interface ToolBeforeInput {
+  tool: string
+  sessionID: string
+  callID: string
+}
+
+export interface ToolBeforeOutput {
+  args: Record<string, unknown>
+}
+
+/**
  * OpenCode tool event shape from tool.execute.after.
  */
 export interface ToolEventInput {
