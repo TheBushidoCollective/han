@@ -41,29 +41,9 @@ pub struct CoordinatorStatus {
 }
 
 /// Lock file path (~/.han/coordinator.lock)
-/// Uses same resolution as get_han_data_dir in db.rs
+/// Delegates to db::get_han_data_dir() which handles auto-migration.
 fn get_lock_path() -> PathBuf {
-    // Explicit override
-    if let Ok(dir) = std::env::var("HAN_DATA_DIR") {
-        return PathBuf::from(dir).join("coordinator.lock");
-    }
-
-    // Legacy override for testing
-    if let Ok(dir) = std::env::var("CLAUDE_CONFIG_DIR") {
-        return PathBuf::from(dir).join("han").join("coordinator.lock");
-    }
-
-    let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-    let new_dir = home.join(".han");
-    let old_dir = home.join(".claude").join("han");
-
-    if new_dir.exists() {
-        return new_dir.join("coordinator.lock");
-    }
-    if old_dir.exists() {
-        return old_dir.join("coordinator.lock");
-    }
-    new_dir.join("coordinator.lock")
+    crate::db::get_han_data_dir().join("coordinator.lock")
 }
 
 /// Lock file stale timeout (seconds)

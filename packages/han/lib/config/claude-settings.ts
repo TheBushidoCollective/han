@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 /**
@@ -52,6 +52,9 @@ export function getClaudeConfigDir(): string {
   return join(homeDir, '.claude');
 }
 
+/** Cached result so migration only runs once per process */
+let _hanDataDir: string | null = null;
+
 /**
  * Get Han's own data directory (~/.han)
  *
@@ -59,34 +62,59 @@ export function getClaudeConfigDir(): string {
  * This is provider-agnostic — shared across Claude Code, OpenCode,
  * and any future provider integrations.
  *
+ * On first call, auto-migrates ~/.claude/han → ~/.han if the old
+ * directory exists and the new one doesn't.
+ *
  * Priority:
  * 1. HAN_DATA_DIR environment variable (for testing/custom paths)
- * 2. ~/.han (default)
- * 3. Falls back to ~/.claude/han if it exists and ~/.han doesn't (migration)
+ * 2. ~/.han (default, auto-migrated from ~/.claude/han)
  */
 export function getHanDataDir(): string {
+  if (_hanDataDir) return _hanDataDir;
+
   if (process.env.HAN_DATA_DIR) {
-    return process.env.HAN_DATA_DIR;
+    _hanDataDir = process.env.HAN_DATA_DIR;
+    return _hanDataDir;
   }
+
   const homeDir = process.env.HOME || process.env.USERPROFILE;
   if (!homeDir) {
     return '';
   }
+
   const newDir = join(homeDir, '.han');
   const oldDir = join(getClaudeConfigDir(), 'han');
 
-  // If the new dir already exists, use it
+  // Already migrated or fresh install with data
   if (existsSync(newDir)) {
-    return newDir;
+    _hanDataDir = newDir;
+    return _hanDataDir;
   }
 
-  // If old dir exists but new doesn't, fall back to old (pre-migration)
+  // Old directory exists — auto-migrate
   if (existsSync(oldDir)) {
-    return oldDir;
+    try {
+      // Ensure parent exists (it's ~/, so it always does, but be safe)
+      mkdirSync(dirname(newDir), { recursive: true });
+      renameSync(oldDir, newDir);
+      console.error(`[han] Migrated data directory: ${oldDir} → ${newDir}`);
+      _hanDataDir = newDir;
+      return _hanDataDir;
+    } catch {
+      // Migration failed (permissions, cross-device, coordinator holding lock, etc.)
+      // Fall back to old path — next restart will retry
+      console.error(
+        `[han] Could not migrate ${oldDir} → ${newDir}, using old path. ` +
+          `Stop the coordinator and retry, or move manually.`,
+      );
+      _hanDataDir = oldDir;
+      return _hanDataDir;
+    }
   }
 
-  // Neither exists — use the new path (fresh install)
-  return newDir;
+  // Neither exists — fresh install
+  _hanDataDir = newDir;
+  return _hanDataDir;
 }
 
 /**

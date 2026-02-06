@@ -19,34 +19,56 @@ static DB: OnceLock<Mutex<Connection>> = OnceLock::new();
 static TEST_DB_PATH: OnceLock<String> = OnceLock::new();
 
 /// Get the Han data directory (~/.han)
-/// Priority: HAN_DATA_DIR > ~/.han (if exists) > ~/.claude/han (migration fallback) > ~/.han
-fn get_han_data_dir() -> std::path::PathBuf {
-    // Explicit override (testing/custom)
-    if let Ok(dir) = std::env::var("HAN_DATA_DIR") {
-        return std::path::PathBuf::from(dir);
-    }
+/// Auto-migrates from ~/.claude/han on first access if needed.
+/// Priority: HAN_DATA_DIR > CLAUDE_CONFIG_DIR/han (testing) > ~/.han (with auto-migrate)
+pub(crate) fn get_han_data_dir() -> std::path::PathBuf {
+    use std::sync::OnceLock;
+    static CACHED: OnceLock<std::path::PathBuf> = OnceLock::new();
 
-    // Legacy override for testing
-    if let Ok(dir) = std::env::var("CLAUDE_CONFIG_DIR") {
-        return std::path::PathBuf::from(dir).join("han");
-    }
+    CACHED
+        .get_or_init(|| {
+            // Explicit override (testing/custom)
+            if let Ok(dir) = std::env::var("HAN_DATA_DIR") {
+                return std::path::PathBuf::from(dir);
+            }
 
-    let home = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
-    let new_dir = home.join(".han");
-    let old_dir = home.join(".claude").join("han");
+            // Legacy override for testing
+            if let Ok(dir) = std::env::var("CLAUDE_CONFIG_DIR") {
+                return std::path::PathBuf::from(dir).join("han");
+            }
 
-    // If new dir exists, use it
-    if new_dir.exists() {
-        return new_dir;
-    }
+            let home = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+            let new_dir = home.join(".han");
+            let old_dir = home.join(".claude").join("han");
 
-    // If old dir exists but new doesn't, fall back to old (pre-migration)
-    if old_dir.exists() {
-        return old_dir;
-    }
+            // Already migrated or fresh install with data
+            if new_dir.exists() {
+                return new_dir;
+            }
 
-    // Neither exists — use the new path (fresh install)
-    new_dir
+            // Old directory exists — auto-migrate
+            if old_dir.exists() {
+                match std::fs::rename(&old_dir, &new_dir) {
+                    Ok(()) => {
+                        eprintln!("[han] Migrated data directory: {} → {}", old_dir.display(), new_dir.display());
+                        return new_dir;
+                    }
+                    Err(_) => {
+                        // Migration failed — fall back to old path, retry next restart
+                        eprintln!(
+                            "[han] Could not migrate {} → {}, using old path.",
+                            old_dir.display(),
+                            new_dir.display()
+                        );
+                        return old_dir;
+                    }
+                }
+            }
+
+            // Neither exists — fresh install
+            new_dir
+        })
+        .clone()
 }
 
 /// Get the default database path (~/.han/han.db)
