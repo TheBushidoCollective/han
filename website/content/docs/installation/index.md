@@ -1,9 +1,9 @@
 ---
 title: "Installation Methods"
-description: "Four ways to install Han: curl script, Homebrew, Claude Code plugin, or Claude CLI."
+description: "Install Han for Claude Code, OpenCode, or standalone use via curl, Homebrew, or plugin install."
 ---
 
-Han can be installed in four different ways depending on your workflow and environment. Choose the method that best fits your needs.
+Han works with Claude Code, OpenCode, and as a standalone CLI. Choose the method that fits your workflow.
 
 ## Quick Install (Recommended)
 
@@ -58,6 +58,23 @@ claude plugin install bushido@han
 ```
 
 This integrates Han with the Claude CLI ecosystem and provides the same benefits as the Claude Code installation method.
+
+## OpenCode
+
+Han works with [OpenCode](https://opencode.ai) through a bridge plugin that translates OpenCode's event system into Han hook executions.
+
+1. Install Han using any method above
+2. Install Han plugins: `han plugin install --auto`
+3. Add the bridge to your `opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["opencode-plugin-han"]
+}
+```
+
+Your Han validation hooks (biome, eslint, typescript, etc.) now run in OpenCode. See the [full OpenCode guide](/docs/installation/opencode) for details.
 
 ## Next Steps
 
