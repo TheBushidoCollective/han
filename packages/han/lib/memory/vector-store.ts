@@ -4,7 +4,7 @@
  * Provides semantic search capabilities using the native SurrealDB + ONNX Runtime backend.
  * The native module handles all embedding generation and vector storage internally.
  *
- * Storage location: ~/.claude/han/memory/index/
+ * Storage location: ~/.han/memory/index/
  */
 
 import { tryGetNativeModule } from '../native.ts';

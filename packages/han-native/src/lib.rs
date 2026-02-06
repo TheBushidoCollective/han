@@ -513,7 +513,7 @@ pub fn check_and_build_manifest(
 // ============================================================================
 
 /// Initialize or open a database at the given path
-/// Note: db_path is kept for API compatibility but the singleton uses ~/.claude/han/han.db
+/// Note: db_path is kept for API compatibility but the singleton uses ~/.han/han.db
 #[napi]
 pub fn db_init(db_path: String) -> napi::Result<bool> {
     db::init(&db_path)

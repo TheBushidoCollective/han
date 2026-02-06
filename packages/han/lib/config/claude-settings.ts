@@ -53,6 +53,43 @@ export function getClaudeConfigDir(): string {
 }
 
 /**
+ * Get Han's own data directory (~/.han)
+ *
+ * Han stores its coordinator, database, memory, and logs here.
+ * This is provider-agnostic — shared across Claude Code, OpenCode,
+ * and any future provider integrations.
+ *
+ * Priority:
+ * 1. HAN_DATA_DIR environment variable (for testing/custom paths)
+ * 2. ~/.han (default)
+ * 3. Falls back to ~/.claude/han if it exists and ~/.han doesn't (migration)
+ */
+export function getHanDataDir(): string {
+  if (process.env.HAN_DATA_DIR) {
+    return process.env.HAN_DATA_DIR;
+  }
+  const homeDir = process.env.HOME || process.env.USERPROFILE;
+  if (!homeDir) {
+    return '';
+  }
+  const newDir = join(homeDir, '.han');
+  const oldDir = join(getClaudeConfigDir(), 'han');
+
+  // If the new dir already exists, use it
+  if (existsSync(newDir)) {
+    return newDir;
+  }
+
+  // If old dir exists but new doesn't, fall back to old (pre-migration)
+  if (existsSync(oldDir)) {
+    return oldDir;
+  }
+
+  // Neither exists — use the new path (fresh install)
+  return newDir;
+}
+
+/**
  * Get project directory by walking up from CWD to find project markers.
  * Falls back to CWD if not found.
  *

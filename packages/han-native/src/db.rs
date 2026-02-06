@@ -18,20 +18,40 @@ static DB: OnceLock<Mutex<Connection>> = OnceLock::new();
 #[cfg(test)]
 static TEST_DB_PATH: OnceLock<String> = OnceLock::new();
 
-/// Get the default database path
-/// Respects CLAUDE_CONFIG_DIR environment variable for testing
-pub fn get_db_path() -> String {
-    // Check for CLAUDE_CONFIG_DIR first (for testing)
-    let base_dir = std::env::var("CLAUDE_CONFIG_DIR")
-        .ok()
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| {
-            dirs::home_dir()
-                .unwrap_or_else(|| std::path::PathBuf::from("."))
-                .join(".claude")
-        });
+/// Get the Han data directory (~/.han)
+/// Priority: HAN_DATA_DIR > ~/.han (if exists) > ~/.claude/han (migration fallback) > ~/.han
+fn get_han_data_dir() -> std::path::PathBuf {
+    // Explicit override (testing/custom)
+    if let Ok(dir) = std::env::var("HAN_DATA_DIR") {
+        return std::path::PathBuf::from(dir);
+    }
 
-    let han_dir = base_dir.join("han");
+    // Legacy override for testing
+    if let Ok(dir) = std::env::var("CLAUDE_CONFIG_DIR") {
+        return std::path::PathBuf::from(dir).join("han");
+    }
+
+    let home = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+    let new_dir = home.join(".han");
+    let old_dir = home.join(".claude").join("han");
+
+    // If new dir exists, use it
+    if new_dir.exists() {
+        return new_dir;
+    }
+
+    // If old dir exists but new doesn't, fall back to old (pre-migration)
+    if old_dir.exists() {
+        return old_dir;
+    }
+
+    // Neither exists — use the new path (fresh install)
+    new_dir
+}
+
+/// Get the default database path (~/.han/han.db)
+pub fn get_db_path() -> String {
+    let han_dir = get_han_data_dir();
     std::fs::create_dir_all(&han_dir).ok();
     han_dir.join("han.db").to_string_lossy().to_string()
 }

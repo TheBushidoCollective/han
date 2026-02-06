@@ -642,7 +642,7 @@ fn parse_han_event_line(line: &JsonlLine, ref_base_dir: Option<&Path>) -> Option
 }
 
 /// Get the corresponding Han events file path for a session file
-/// Han events are stored at ~/.claude/han/memory/personal/sessions/{date}-{sessionId}-han.jsonl
+/// Han events are stored at ~/.han/memory/personal/sessions/{date}-{sessionId}-han.jsonl
 /// We need to search for files matching *-{sessionId}-han.jsonl since we don't know the date
 fn get_han_events_path(session_file: &Path) -> Option<std::path::PathBuf> {
     let session_id = extract_session_id(session_file)?;

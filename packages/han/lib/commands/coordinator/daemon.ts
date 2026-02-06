@@ -15,8 +15,8 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { getHanDataDir } from '../../config/claude-settings.ts';
 import { getHanBinary } from '../../config/han-settings.ts';
 import { checkHealth, waitForHealth } from './health.ts';
 import { startServer, stopServer } from './server.ts';
@@ -24,22 +24,20 @@ import {
   type CoordinatorOptions,
   type CoordinatorStatus,
   getCoordinatorPort,
-  LOG_FILE,
-  PID_FILE,
 } from './types.ts';
 
 /**
- * Get the log file path
+ * Get the log file path (~/.han/coordinator.log)
  */
 export function getLogFilePath(): string {
-  return join(homedir(), '.claude', LOG_FILE);
+  return join(getHanDataDir(), 'coordinator.log');
 }
 
 /**
- * Get the PID file path
+ * Get the PID file path (~/.han/coordinator.pid)
  */
 function getPidFilePath(): string {
-  return join(homedir(), '.claude', PID_FILE);
+  return join(getHanDataDir(), 'coordinator.pid');
 }
 
 /**
