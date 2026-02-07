@@ -1219,18 +1219,33 @@ export async function runConfiguredHook(
           ? result.outputFile
           : '(no output captured)';
 
-        // Show fail fast message
-        console.error(`\n⚠ Stopped due to fail fast\n`);
+        // Decide fix strategy based on output size
+        // Small output (<4KB) = agent fixes directly (low context cost)
+        // Large output (>=4KB) = spawn subagent to isolate from main context
+        const outputLength = result.output?.length ?? 0;
+        const useSubagent = outputLength >= 4096;
 
-        // Concise, directive error message that emphasizes subagent delegation
         console.error(
-          `Hook \`${pluginName}/${hookName}\` failed in \`${relativePath}\`${reason}.\n\n` +
-            `**CRITICAL**: You MUST spawn a subagent to fix this. The subagent MUST:\n` +
-            `1. Read the output file: ${outputFile}\n` +
-            `2. Analyze the errors and fix them\n` +
-            `3. Re-run with: ${rerunCommand}\n\n` +
-            `Do NOT skip this. Do NOT ask the user. Do NOT dismiss as a "known issue".\n`
+          `\n❌ Hook \`${pluginName}/${hookName}\` failed in \`${relativePath}\`${reason}.\n`
         );
+
+        if (useSubagent) {
+          console.error(
+            `Output is large (${outputLength} chars). Spawn a subagent to fix this:\n` +
+              `1. Read the output file: ${outputFile}\n` +
+              `2. Analyze the errors and fix them\n` +
+              `3. Re-run with: ${rerunCommand}\n\n` +
+              `Do NOT skip this. Do NOT ask the user. Do NOT dismiss as a "known issue".\n`
+          );
+        } else {
+          console.error(
+            `Read the output file and fix the issues directly:\n` +
+              `1. Read: ${outputFile}\n` +
+              `2. Fix the errors\n` +
+              `3. Re-run with: ${rerunCommand}\n\n` +
+              `Do NOT skip this. Do NOT ask the user. Do NOT dismiss as a "known issue".\n`
+          );
+        }
         process.exit(2);
       }
     } else {
@@ -1332,10 +1347,19 @@ export async function runConfiguredHook(
       );
     }
 
-    console.error(
-      `\nReview the output files above and fix all issues.\n` +
-        `Do NOT ask the user any questions - proceed directly with fixing the issues.\n`
-    );
+    // For multi-failure, always recommend subagents since there are multiple directories to fix
+    if (failures.length === 1) {
+      console.error(
+        `\nRead the output file above, fix the issues, and re-run.\n` +
+          `Do NOT ask the user any questions - proceed directly with fixing the issues.\n`
+      );
+    } else {
+      console.error(
+        `\nSpawn subagents in parallel to fix each failure above.\n` +
+          `Each subagent should read its output file, fix the issues, and re-run.\n` +
+          `Do NOT ask the user any questions - proceed directly with fixing the issues.\n`
+      );
+    }
     process.exit(2);
   }
 
