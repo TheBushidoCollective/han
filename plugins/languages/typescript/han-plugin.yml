@@ -1,6 +1,7 @@
 hooks:
   # Full project type check at Stop (checkpoint)
   typecheck:
+    event: Stop
     command: "npx -y --package typescript tsc --noEmit"
     dirs_with:
       - "tsconfig.json"
@@ -12,13 +13,9 @@ hooks:
   # Uses isolatedModules to check individual files without full project context
   # Catches basic TypeScript errors (syntax, simple type mismatches) immediately
   typecheck-async:
-    event: PostToolUse
+    event: PostToolUse:Edit|Write|NotebookEdit
     command: "npx -y --package typescript tsc --noEmit --isolatedModules ${HAN_FILES}"
     dirs_with:
       - "tsconfig.json"
-    tool_filter:
-      - Edit
-      - Write
-      - NotebookEdit
     file_filter:
       - "**/*.{ts,tsx,mts,cts}"

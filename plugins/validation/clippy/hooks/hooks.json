@@ -1,15 +1,23 @@
 {
   "hooks": {
-    "PostToolUse": [
+    "Stop": [
       {
-        "matcher": "Edit|Write|NotebookEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run clippy lint-async --async"
+            "command": "han hook run clippy lint"
           }
-        ],
-        "async": true
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run clippy lint"
+          }
+        ]
       }
     ]
   }

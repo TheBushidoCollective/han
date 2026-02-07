@@ -1,0 +1,40 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run claude-plugin-development lint"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run claude-plugin-development config-sync"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run claude-plugin-development lint"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run claude-plugin-development config-sync"
+          }
+        ]
+      }
+    ]
+  }
+}

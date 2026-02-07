@@ -1,35 +1,55 @@
 {
   "hooks": {
-    "PostToolUse": [
+    "Stop": [
       {
-        "matcher": "Edit|Write|NotebookEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust format-async --async"
+            "command": "han hook run rust format"
           }
-        ],
-        "async": true
+        ]
       },
       {
-        "matcher": "Edit|Write|NotebookEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust build-async --async"
+            "command": "han hook run rust lint"
           }
-        ],
-        "async": true
+        ]
       },
       {
-        "matcher": "Edit|Write|NotebookEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust test-async --async"
+            "command": "han hook run rust test"
           }
-        ],
-        "async": true
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run rust format"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run rust lint"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run rust test"
+          }
+        ]
       }
     ]
   }

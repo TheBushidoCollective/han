@@ -2,34 +2,66 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|NotebookEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run go format-async --async"
+            "command": "han hook run go format --async"
           }
         ],
+        "matcher": "Edit|Write",
         "async": true
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run go format"
+          }
+        ]
       },
       {
-        "matcher": "Edit|Write|NotebookEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run go build-async --async"
+            "command": "han hook run go lint"
           }
-        ],
-        "async": true
+        ]
       },
       {
-        "matcher": "Edit|Write|NotebookEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run go test-async --async"
+            "command": "han hook run go test"
           }
-        ],
-        "async": true
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run go format"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run go lint"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run go test"
+          }
+        ]
       }
     ]
   }

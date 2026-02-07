@@ -24,6 +24,105 @@ export type HookEventType =
   | 'SubagentStart';
 
 /**
+ * Valid base event types for shorthand parsing validation
+ */
+const VALID_EVENT_TYPES = new Set<string>([
+  'Stop',
+  'SubagentStop',
+  'PreToolUse',
+  'PostToolUse',
+  'SessionStart',
+  'UserPromptSubmit',
+  'SubagentStart',
+]);
+
+/**
+ * Parsed event from shorthand syntax.
+ *
+ * Supports formats like:
+ * - "Stop" → { event: "Stop" }
+ * - "PostToolUse:Edit" → { event: "PostToolUse", toolMatcher: "Edit" }
+ * - "PostToolUse:Edit|Write" → { event: "PostToolUse", toolMatcher: "Edit|Write" }
+ */
+export interface ParsedEvent {
+  event: HookEventType;
+  toolMatcher?: string;
+}
+
+/**
+ * Parse a shorthand event string into a structured ParsedEvent.
+ *
+ * @param input - Event string like "Stop", "PostToolUse:Edit", "PreToolUse:Task"
+ * @returns Parsed event with optional tool matcher
+ */
+export function parseEventString(input: string): ParsedEvent {
+  const colonIdx = input.indexOf(':');
+  if (colonIdx === -1) {
+    if (!VALID_EVENT_TYPES.has(input)) {
+      throw new Error(`Unknown event type: '${input}'`);
+    }
+    return { event: input as HookEventType };
+  }
+  const eventPart = input.slice(0, colonIdx);
+  const matcherPart = input.slice(colonIdx + 1);
+  if (!VALID_EVENT_TYPES.has(eventPart)) {
+    throw new Error(`Unknown event type: '${eventPart}'`);
+  }
+  if (!matcherPart) {
+    throw new Error(`Empty tool matcher in event: '${input}'`);
+  }
+  return {
+    event: eventPart as HookEventType,
+    toolMatcher: matcherPart,
+  };
+}
+
+/**
+ * Parse an array of shorthand event strings, merging tool matchers
+ * for the same event type.
+ *
+ * @param events - Array of event strings (shorthand or plain)
+ * @returns Map of event type → merged tool matcher (undefined = no matcher)
+ */
+export function parseEventShorthands(
+  events: string[]
+): Map<HookEventType, string | undefined> {
+  const result = new Map<HookEventType, string | undefined>();
+  // Collect tool matchers per event for merging
+  const matcherParts = new Map<HookEventType, Set<string>>();
+
+  for (const eventStr of events) {
+    const parsed = parseEventString(eventStr);
+    if (parsed.toolMatcher) {
+      if (!matcherParts.has(parsed.event)) {
+        matcherParts.set(parsed.event, new Set());
+      }
+      // Split pipe-separated matchers and add individually
+      for (const part of parsed.toolMatcher.split('|')) {
+        matcherParts.get(parsed.event)?.add(part);
+      }
+    } else {
+      // No matcher - just register the event
+      if (!result.has(parsed.event)) {
+        result.set(parsed.event, undefined);
+      }
+    }
+  }
+
+  // Merge matcher sets into pipe-separated strings
+  for (const [event, parts] of matcherParts) {
+    result.set(event, [...parts].join('|'));
+  }
+
+  // Implicit SubagentStop: when Stop is present but SubagentStop is not
+  if (result.has('Stop') && !result.has('SubagentStop')) {
+    result.set('SubagentStop', result.get('Stop'));
+  }
+
+  return result;
+}
+
+/**
  * Hook category for phase-based execution ordering.
  * Hooks are executed in phase order: format → lint → typecheck → test → advisory.
  * All hooks in phase N must complete before phase N+1 starts.

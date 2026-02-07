@@ -1,17 +1,9 @@
 hooks:
-  # Full project lint at Stop (checkpoint)
   lint:
+    event: [Stop, PostToolUse:Edit|Write]
     command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/lint.sh\" ${HAN_FILES}"
     if_changed:
       - "**/*.sh"
-
-  # Single-file async lint on PostToolUse
-  lint-async:
-    event: PostToolUse
-    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/lint.sh\" ${HAN_FILES}"
-    tool_filter:
-      - Edit
-      - Write
     file_filter:
       - "**/*.sh"
       - "**/*.bash"

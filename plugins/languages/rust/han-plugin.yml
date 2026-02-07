@@ -1,6 +1,6 @@
 hooks:
-  # Full project hooks at Stop (checkpoint)
   format:
+    event: Stop
     command: "cargo fmt"
     dirs_with:
       - "Cargo.toml"
@@ -8,7 +8,9 @@ hooks:
       - "**/*.rs"
       - "Cargo.toml"
       - "Cargo.lock"
+
   lint:
+    event: Stop
     command: "cargo clippy -- -D warnings"
     dirs_with:
       - "Cargo.toml"
@@ -16,7 +18,9 @@ hooks:
       - "**/*.rs"
       - "Cargo.toml"
       - "Cargo.lock"
+
   test:
+    event: Stop
     command: "cargo test --all-features"
     dirs_with:
       - "Cargo.toml"
@@ -24,26 +28,3 @@ hooks:
       - "**/*.rs"
       - "Cargo.toml"
       - "Cargo.lock"
-
-  # Async hooks on PostToolUse - immediate feedback on file changes
-  format-async:
-    event: PostToolUse
-    command: "cargo fmt --check"
-    dirs_with:
-      - "Cargo.toml"
-    tool_filter:
-      - Edit
-      - Write
-    file_filter:
-      - "**/*.rs"
-
-  lint-async:
-    event: PostToolUse
-    command: "cargo clippy -- -D warnings"
-    dirs_with:
-      - "Cargo.toml"
-    tool_filter:
-      - Edit
-      - Write
-    file_filter:
-      - "**/*.rs"

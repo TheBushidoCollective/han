@@ -1,7 +1,7 @@
 hooks:
-  # Full project lint at Stop (checkpoint)
   lint:
-    command: "mix credo"
+    event: [Stop, PostToolUse:Edit|Write]
+    command: "mix credo ${HAN_FILES}"
     dirs_with:
       - "mix.exs"
     dir_test: "grep -qE ':credo' mix.exs"
@@ -12,17 +12,6 @@ hooks:
       - "**/*.leex"
       - "**/*.heex"
       - ".credo.exs"
-
-  # Single-file async lint on PostToolUse
-  lint-async:
-    event: PostToolUse
-    command: "mix credo ${HAN_FILES}"
-    dirs_with:
-      - "mix.exs"
-    dir_test: "grep -qE ':credo' mix.exs"
-    tool_filter:
-      - Edit
-      - Write
     file_filter:
       - "**/*.ex"
       - "**/*.exs"

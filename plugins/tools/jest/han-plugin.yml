@@ -1,6 +1,7 @@
 hooks:
   # Full test suite at Stop (checkpoint)
   test:
+    event: Stop
     command: |
       if [ -f bun.lock ] || [ -f bun.lockb ]; then bun run test
       elif [ -f pnpm-lock.yaml ]; then pnpm run test
@@ -17,7 +18,7 @@ hooks:
 
   # Single test file async validation on PostToolUse
   test-async:
-    event: PostToolUse
+    event: PostToolUse:Edit|Write|NotebookEdit
     command: |
       if [ -f bun.lock ] || [ -f bun.lockb ]; then bun test ${HAN_FILES}
       elif [ -f pnpm-lock.yaml ]; then pnpm exec jest ${HAN_FILES}
@@ -26,12 +27,7 @@ hooks:
     dirs_with:
       - "package.json"
     dir_test: "grep -qE '\"jest\":' package.json"
-    tool_filter:
-      - Edit
-      - Write
-      - NotebookEdit
     file_filter:
       - "**/*.test.{js,jsx,ts,tsx}"
       - "**/*.spec.{js,jsx,ts,tsx}"
-    # Only run if file contains test code (describe/it/test blocks)
     file_test: grep -qE "(describe|it|test)\s*\(" "${HAN_FILE}"
