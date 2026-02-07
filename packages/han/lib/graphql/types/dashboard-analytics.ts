@@ -84,6 +84,31 @@ export interface DailyCost {
 }
 
 /**
+ * Weekly cost aggregation
+ */
+export interface WeeklyCost {
+  weekStart: string;
+  weekLabel: string;
+  costUsd: number;
+  sessionCount: number;
+  avgDailyCost: number;
+}
+
+/**
+ * Per-session cost breakdown (top spenders)
+ */
+export interface SessionCost {
+  sessionId: string;
+  slug: string | null;
+  costUsd: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  messageCount: number;
+  startedAt: string | null;
+}
+
+/**
  * Comparison of a subscription tier vs API credits
  */
 export interface SubscriptionComparison {
@@ -103,6 +128,8 @@ export interface CostAnalysis {
   maxSubscriptionCostUsd: number;
   costUtilizationPercent: number;
   dailyCostTrend: DailyCost[];
+  weeklyCostTrend: WeeklyCost[];
+  topSessionsByCost: SessionCost[];
   costPerSession: number;
   costPerCompletedTask: number;
   cacheHitRate: number;
@@ -274,6 +301,63 @@ export const DailyCostType = DailyCostRef.implement({
   }),
 });
 
+const WeeklyCostRef = builder.objectRef<WeeklyCost>('WeeklyCost');
+
+export const WeeklyCostType = WeeklyCostRef.implement({
+  description: 'Weekly cost aggregation',
+  fields: (t) => ({
+    weekStart: t.exposeString('weekStart', {
+      description: 'Monday of the week (YYYY-MM-DD)',
+    }),
+    weekLabel: t.exposeString('weekLabel', {
+      description: 'Human-readable week label (e.g., "Jan 27 - Feb 2")',
+    }),
+    costUsd: t.exposeFloat('costUsd', {
+      description: 'Total estimated cost for this week',
+    }),
+    sessionCount: t.exposeInt('sessionCount', {
+      description: 'Number of sessions this week',
+    }),
+    avgDailyCost: t.exposeFloat('avgDailyCost', {
+      description: 'Average daily cost this week',
+    }),
+  }),
+});
+
+const SessionCostRef = builder.objectRef<SessionCost>('SessionCost');
+
+export const SessionCostType = SessionCostRef.implement({
+  description: 'Per-session cost breakdown',
+  fields: (t) => ({
+    sessionId: t.exposeString('sessionId', {
+      description: 'Session identifier',
+    }),
+    slug: t.exposeString('slug', {
+      nullable: true,
+      description: 'Human-readable session slug',
+    }),
+    costUsd: t.exposeFloat('costUsd', {
+      description: 'Estimated cost for this session',
+    }),
+    inputTokens: t.exposeInt('inputTokens', {
+      description: 'Total input tokens consumed',
+    }),
+    outputTokens: t.exposeInt('outputTokens', {
+      description: 'Total output tokens generated',
+    }),
+    cacheReadTokens: t.exposeInt('cacheReadTokens', {
+      description: 'Tokens served from cache',
+    }),
+    messageCount: t.exposeInt('messageCount', {
+      description: 'Total messages in session',
+    }),
+    startedAt: t.exposeString('startedAt', {
+      nullable: true,
+      description: 'Session start timestamp',
+    }),
+  }),
+});
+
 const SubscriptionComparisonRef =
   builder.objectRef<SubscriptionComparison>('SubscriptionComparison');
 
@@ -323,6 +407,16 @@ export const CostAnalysisType = CostAnalysisRef.implement({
       type: [DailyCostType],
       description: 'Daily cost breakdown',
       resolve: (data) => data.dailyCostTrend,
+    }),
+    weeklyCostTrend: t.field({
+      type: [WeeklyCostType],
+      description: 'Weekly cost aggregation',
+      resolve: (data) => data.weeklyCostTrend,
+    }),
+    topSessionsByCost: t.field({
+      type: [SessionCostType],
+      description: 'Top 10 most expensive sessions',
+      resolve: (data) => data.topSessionsByCost,
     }),
     costPerSession: t.exposeFloat('costPerSession', {
       description: 'Average cost per session',
@@ -561,6 +655,37 @@ function computeSentimentTrend(scores: number[]): string {
 }
 
 /**
+ * Get the Monday of the ISO week containing the given date string.
+ * Returns YYYY-MM-DD of the Monday.
+ */
+function getWeekStart(dateStr: string): string {
+  const date = new Date(`${dateStr}T00:00:00Z`);
+  const day = date.getUTCDay();
+  // Shift Sunday (0) to 7 so Monday=1 is always the start
+  const diff = (day === 0 ? 6 : day - 1);
+  date.setUTCDate(date.getUTCDate() - diff);
+  return date.toISOString().split('T')[0];
+}
+
+/**
+ * Format a week label like "Jan 27 - Feb 2"
+ */
+function formatWeekLabel(weekStartStr: string): string {
+  const start = new Date(`${weekStartStr}T00:00:00Z`);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 6);
+
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const startMonth = monthNames[start.getUTCMonth()];
+  const endMonth = monthNames[end.getUTCMonth()];
+
+  if (startMonth === endMonth) {
+    return `${startMonth} ${start.getUTCDate()} - ${end.getUTCDate()}`;
+  }
+  return `${startMonth} ${start.getUTCDate()} - ${endMonth} ${end.getUTCDate()}`;
+}
+
+/**
  * Detect compaction type by parsing JSON fields (not string matching).
  * Falls back to 'auto_compact' for unrecognized summary messages.
  */
@@ -635,6 +760,9 @@ export async function queryDashboardAnalytics(
     startedAt: string | null;
   }> = [];
 
+  // Per-session cost tracking (for top spenders list)
+  const sessionCosts: SessionCost[] = [];
+
   // Hook health accumulators
   const hookStats = new Map<
     string,
@@ -670,6 +798,7 @@ export async function queryDashboardAnalytics(
       let sessionInputTokens = 0;
       let sessionOutputTokens = 0;
       let sessionCachedTokens = 0;
+      let sessionCacheReadTokens = 0;
       let turnCount = 0;
       let taskTotal = 0;
       let taskCompleted = 0;
@@ -684,6 +813,7 @@ export async function queryDashboardAnalytics(
           sessionInputTokens += tokens.inputTokens;
           sessionOutputTokens += tokens.outputTokens;
           sessionCachedTokens += tokens.cachedTokens;
+          sessionCacheReadTokens += tokens.cacheReadTokens;
           totalCacheReadTokens += tokens.cacheReadTokens;
 
           if (msg.sentimentScore != null) {
@@ -756,14 +886,15 @@ export async function queryDashboardAnalytics(
       totalOutputTokens += sessionOutputTokens;
       totalCachedTokens += sessionCachedTokens;
 
-      // Track daily cost
+      // Track daily cost and per-session cost
+      const sessionCost = calculateCost(
+        sessionInputTokens,
+        sessionOutputTokens,
+        sessionCachedTokens
+      );
+
       if (sessionStartedAt) {
         const date = sessionStartedAt.split('T')[0];
-        const sessionCost = calculateCost(
-          sessionInputTokens,
-          sessionOutputTokens,
-          sessionCachedTokens
-        );
         const existing = dailyCostMap.get(date) || {
           costUsd: 0,
           sessionCount: 0,
@@ -772,6 +903,17 @@ export async function queryDashboardAnalytics(
         existing.sessionCount++;
         dailyCostMap.set(date, existing);
       }
+
+      sessionCosts.push({
+        sessionId: session.id,
+        slug: session.slug ?? null,
+        costUsd: round(sessionCost, 4),
+        inputTokens: sessionInputTokens,
+        outputTokens: sessionOutputTokens,
+        cacheReadTokens: sessionCacheReadTokens,
+        messageCount: allMessages.length,
+        startedAt: sessionStartedAt,
+      });
 
       // Collect hook executions for this session
       try {
@@ -978,6 +1120,34 @@ export async function queryDashboardAnalytics(
   }
   dailyCostTrend.reverse();
 
+  // Aggregate daily costs into weekly buckets
+  const weeklyMap = new Map<string, { costUsd: number; sessionCount: number; dayCount: number }>();
+  for (const day of dailyCostTrend) {
+    if (day.costUsd === 0 && day.sessionCount === 0) continue;
+    const weekStart = getWeekStart(day.date);
+    const existing = weeklyMap.get(weekStart) || { costUsd: 0, sessionCount: 0, dayCount: 0 };
+    existing.costUsd += day.costUsd;
+    existing.sessionCount += day.sessionCount;
+    existing.dayCount++;
+    weeklyMap.set(weekStart, existing);
+  }
+
+  const weeklyCostTrend: WeeklyCost[] = Array.from(weeklyMap.entries())
+    .map(([weekStart, data]) => ({
+      weekStart,
+      weekLabel: formatWeekLabel(weekStart),
+      costUsd: round(data.costUsd, 2),
+      sessionCount: data.sessionCount,
+      avgDailyCost: data.dayCount > 0 ? round(data.costUsd / data.dayCount, 2) : 0,
+    }))
+    .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+
+  // Top 10 most expensive sessions
+  const topSessionsByCost = sessionCosts
+    .filter((s) => s.costUsd > 0)
+    .sort((a, b) => b.costUsd - a.costUsd)
+    .slice(0, 10);
+
   // Cache hit rate: ratio of cache read tokens to total input-class tokens
   const totalInputClassTokens = totalInputTokens + totalCacheReadTokens;
   const cacheHitRate =
@@ -1038,6 +1208,8 @@ export async function queryDashboardAnalytics(
     costUtilizationPercent:
       round((finalCostUsd / subscriptionTier) * 100, 2),
     dailyCostTrend,
+    weeklyCostTrend,
+    topSessionsByCost,
     costPerSession:
       totalSessions > 0
         ? round(finalCostUsd / totalSessions, 2)

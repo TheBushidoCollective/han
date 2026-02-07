@@ -78,6 +78,23 @@ export const DashboardAnalyticsFragment = graphql`
           costUsd
           sessionCount
         }
+        weeklyCostTrend {
+          weekStart
+          weekLabel
+          costUsd
+          sessionCount
+          avgDailyCost
+        }
+        topSessionsByCost {
+          sessionId
+          slug
+          costUsd
+          inputTokens
+          outputTokens
+          cacheReadTokens
+          messageCount
+          startedAt
+        }
         costPerSession
         costPerCompletedTask
         cacheHitRate

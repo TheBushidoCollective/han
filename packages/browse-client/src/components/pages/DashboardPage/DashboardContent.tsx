@@ -292,6 +292,27 @@ export function DashboardContent({
 				costUsd: d?.costUsd ?? 0,
 				sessionCount: d?.sessionCount ?? 0,
 			})),
+			weeklyCostTrend: (
+				rawAnalytics?.costAnalysis?.weeklyCostTrend ?? []
+			).map((w) => ({
+				weekStart: w?.weekStart ?? "",
+				weekLabel: w?.weekLabel ?? "",
+				costUsd: w?.costUsd ?? 0,
+				sessionCount: w?.sessionCount ?? 0,
+				avgDailyCost: w?.avgDailyCost ?? 0,
+			})),
+			topSessionsByCost: (
+				rawAnalytics?.costAnalysis?.topSessionsByCost ?? []
+			).map((s) => ({
+				sessionId: s?.sessionId ?? "",
+				slug: s?.slug ?? null,
+				costUsd: s?.costUsd ?? 0,
+				inputTokens: s?.inputTokens ?? 0,
+				outputTokens: s?.outputTokens ?? 0,
+				cacheReadTokens: s?.cacheReadTokens ?? 0,
+				messageCount: s?.messageCount ?? 0,
+				startedAt: s?.startedAt ?? null,
+			})),
 			costPerSession:
 				rawAnalytics?.costAnalysis?.costPerSession ?? 0,
 			costPerCompletedTask:
@@ -513,6 +534,9 @@ export function DashboardContent({
 						{analyticsLoaded ? (
 							<CostAnalysisCard
 								costAnalysis={analytics.costAnalysis}
+								onSessionClick={(sessionId) =>
+									navigate(`/sessions/${sessionId}`)
+								}
 							/>
 						) : (
 							<Box

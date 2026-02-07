@@ -28,11 +28,32 @@ interface SubscriptionComparison {
 	readonly recommendation: string;
 }
 
+interface WeeklyCost {
+	readonly weekStart: string;
+	readonly weekLabel: string;
+	readonly costUsd: number;
+	readonly sessionCount: number;
+	readonly avgDailyCost: number;
+}
+
+interface SessionCost {
+	readonly sessionId: string;
+	readonly slug: string | null;
+	readonly costUsd: number;
+	readonly inputTokens: number;
+	readonly outputTokens: number;
+	readonly cacheReadTokens: number;
+	readonly messageCount: number;
+	readonly startedAt: string | null;
+}
+
 interface CostAnalysis {
 	readonly estimatedCostUsd: number;
 	readonly maxSubscriptionCostUsd: number;
 	readonly costUtilizationPercent: number;
 	readonly dailyCostTrend: readonly DailyCost[];
+	readonly weeklyCostTrend: readonly WeeklyCost[];
+	readonly topSessionsByCost: readonly SessionCost[];
 	readonly costPerSession: number;
 	readonly costPerCompletedTask: number;
 	readonly cacheHitRate: number;
@@ -43,6 +64,16 @@ interface CostAnalysis {
 
 interface CostAnalysisCardProps {
 	costAnalysis: CostAnalysis;
+	onSessionClick?: (sessionId: string) => void;
+}
+
+/**
+ * Format token count compactly (e.g., 1.2M, 450K)
+ */
+function formatTokens(count: number): string {
+	if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
+	if (count >= 1_000) return `${(count / 1_000).toFixed(0)}K`;
+	return `${count}`;
 }
 
 /**
@@ -215,6 +246,7 @@ function CostMetric({
 
 export function CostAnalysisCard({
 	costAnalysis,
+	onSessionClick,
 }: CostAnalysisCardProps): React.ReactElement {
 	const utilizationColor = getUtilizationColor(
 		costAnalysis.costUtilizationPercent,
@@ -444,6 +476,133 @@ export function CostAnalysisCard({
 							</Text>
 						</HStack>
 					</HStack>
+				</VStack>
+			)}
+
+			{/* Weekly cost trend */}
+			{costAnalysis.weeklyCostTrend.length > 0 && (
+				<VStack gap="sm" style={{ width: "100%" }}>
+					<Text color="secondary" size="xs">
+						Weekly Cost
+					</Text>
+
+					<VStack gap="xs" style={{ width: "100%" }}>
+						{costAnalysis.weeklyCostTrend.map((week) => {
+							const weeklyBudget = costAnalysis.maxSubscriptionCostUsd / 4.33;
+							const overBudget = week.costUsd > weeklyBudget;
+							const barWidth = weeklyBudget > 0
+								? Math.min((week.costUsd / weeklyBudget) * 100, 100)
+								: 0;
+
+							return (
+								<VStack
+									key={week.weekStart}
+									gap="xs"
+									style={{
+										padding: theme.spacing.sm,
+										backgroundColor: theme.colors.bg.tertiary,
+										borderRadius: theme.radii.md,
+									}}
+								>
+									<HStack justify="space-between" align="center">
+										<Text size="xs" weight="medium">
+											{week.weekLabel}
+										</Text>
+										<HStack gap="sm" align="center">
+											<Text
+												size="xs"
+												weight="semibold"
+												style={{
+													color: overBudget ? "#ef4444" : theme.colors.text.primary,
+												}}
+											>
+												{formatCost(week.costUsd)}
+											</Text>
+											<Text color="muted" size="xs">
+												{week.sessionCount} sessions
+											</Text>
+										</HStack>
+									</HStack>
+									<Box
+										style={{
+											width: "100%",
+											height: 4,
+											backgroundColor: theme.colors.bg.secondary,
+											borderRadius: theme.radii.full,
+											overflow: "hidden",
+										}}
+									>
+										<Box
+											style={{
+												width: `${barWidth}%`,
+												height: "100%",
+												backgroundColor: overBudget
+													? "#ef4444"
+													: theme.colors.accent.primary,
+												borderRadius: theme.radii.full,
+											}}
+										/>
+									</Box>
+								</VStack>
+							);
+						})}
+					</VStack>
+				</VStack>
+			)}
+
+			{/* Top sessions by cost */}
+			{costAnalysis.topSessionsByCost.length > 0 && (
+				<VStack gap="sm" style={{ width: "100%" }}>
+					<Text color="secondary" size="xs">
+						Most Expensive Sessions
+					</Text>
+
+					<VStack gap="xs" style={{ width: "100%" }}>
+						{costAnalysis.topSessionsByCost.map((session, idx) => (
+							<Box
+								key={session.sessionId}
+								onClick={() => onSessionClick?.(session.sessionId)}
+								style={{
+									padding: theme.spacing.sm,
+									backgroundColor: theme.colors.bg.tertiary,
+									borderRadius: theme.radii.md,
+									cursor: onSessionClick ? "pointer" : "default",
+								}}
+							>
+								<HStack justify="space-between" align="center">
+									<HStack gap="sm" align="center" style={{ flex: 1, minWidth: 0 }}>
+										<Text
+											color="muted"
+											size="xs"
+											style={{ width: 18, textAlign: "right" }}
+										>
+											{idx + 1}.
+										</Text>
+										<VStack gap="xs" style={{ flex: 1, minWidth: 0 }}>
+											<Text
+												size="sm"
+												weight="medium"
+												numberOfLines={1}
+											>
+												{session.slug || session.sessionId.slice(0, 8)}
+											</Text>
+											<HStack gap="sm">
+												<Text color="muted" size="xs">
+													{session.messageCount} msgs
+												</Text>
+												<Text color="muted" size="xs">
+													{formatTokens(session.inputTokens + session.outputTokens)} tokens
+												</Text>
+											</HStack>
+										</VStack>
+									</HStack>
+									<Text weight="semibold" size="sm">
+										{formatCost(session.costUsd)}
+									</Text>
+								</HStack>
+							</Box>
+						))}
+					</VStack>
 				</VStack>
 			)}
 		</VStack>

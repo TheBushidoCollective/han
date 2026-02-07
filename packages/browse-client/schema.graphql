@@ -398,6 +398,12 @@ type CostAnalysis {
 
   """Per-tier comparison of subscription cost vs API credit equivalent"""
   subscriptionComparisons: [SubscriptionComparison!]
+
+  """Top 10 most expensive sessions"""
+  topSessionsByCost: [SessionCost!]
+
+  """Weekly cost aggregation"""
+  weeklyCostTrend: [WeeklyCost!]
 }
 
 """Activity metrics for a single day"""
@@ -2846,6 +2852,33 @@ type SessionConnection {
   totalCount: Int
 }
 
+"""Per-session cost breakdown"""
+type SessionCost {
+  """Tokens served from cache"""
+  cacheReadTokens: Int
+
+  """Estimated cost for this session"""
+  costUsd: Float
+
+  """Total input tokens consumed"""
+  inputTokens: Int
+
+  """Total messages in session"""
+  messageCount: Int
+
+  """Total output tokens generated"""
+  outputTokens: Int
+
+  """Session identifier"""
+  sessionId: String
+
+  """Human-readable session slug"""
+  slug: String
+
+  """Session start timestamp"""
+  startedAt: String
+}
+
 """An edge in a session connection"""
 type SessionEdge {
   """Cursor for this edge"""
@@ -3644,6 +3677,24 @@ interface UserMessage implements Message {
   Raw message UUID. Use this for URLs and links instead of the global ID.
   """
   uuid: String
+}
+
+"""Weekly cost aggregation"""
+type WeeklyCost {
+  """Average daily cost this week"""
+  avgDailyCost: Float
+
+  """Total estimated cost for this week"""
+  costUsd: Float
+
+  """Number of sessions this week"""
+  sessionCount: Int
+
+  """Human-readable week label (e.g., "Jan 27 - Feb 2")"""
+  weekLabel: String
+
+  """Monday of the week (YYYY-MM-DD)"""
+  weekStart: String
 }
 
 """A git worktree within a project"""

@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<ea1f555f4d236b2c40938410186ff93a>>
+ * @generated SignedSource<<08380935712d72274382ea669264c99b>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -55,6 +55,23 @@ export type DashboardPageAnalytics_query$data = {
         readonly savingsUsd: number | null | undefined;
         readonly tierName: string | null | undefined;
       }> | null | undefined;
+      readonly topSessionsByCost: ReadonlyArray<{
+        readonly cacheReadTokens: number | null | undefined;
+        readonly costUsd: number | null | undefined;
+        readonly inputTokens: number | null | undefined;
+        readonly messageCount: number | null | undefined;
+        readonly outputTokens: number | null | undefined;
+        readonly sessionId: string | null | undefined;
+        readonly slug: string | null | undefined;
+        readonly startedAt: string | null | undefined;
+      }> | null | undefined;
+      readonly weeklyCostTrend: ReadonlyArray<{
+        readonly avgDailyCost: number | null | undefined;
+        readonly costUsd: number | null | undefined;
+        readonly sessionCount: number | null | undefined;
+        readonly weekLabel: string | null | undefined;
+        readonly weekStart: string | null | undefined;
+      }> | null | undefined;
     } | null | undefined;
     readonly hookHealth: ReadonlyArray<{
       readonly avgDurationMs: number | null | undefined;
@@ -100,21 +117,30 @@ var v0 = {
   "name": "count",
   "storageKey": null
 },
-v1 = [
-  {
-    "alias": null,
-    "args": null,
-    "kind": "ScalarField",
-    "name": "sessionId",
-    "storageKey": null
-  },
-  {
-    "alias": null,
-    "args": null,
-    "kind": "ScalarField",
-    "name": "slug",
-    "storageKey": null
-  },
+v1 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "sessionId",
+  "storageKey": null
+},
+v2 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "slug",
+  "storageKey": null
+},
+v3 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "startedAt",
+  "storageKey": null
+},
+v4 = [
+  (v1/*: any*/),
+  (v2/*: any*/),
   {
     "alias": null,
     "args": null,
@@ -164,14 +190,22 @@ v1 = [
     "name": "focusScore",
     "storageKey": null
   },
-  {
-    "alias": null,
-    "args": null,
-    "kind": "ScalarField",
-    "name": "startedAt",
-    "storageKey": null
-  }
-];
+  (v3/*: any*/)
+],
+v5 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "costUsd",
+  "storageKey": null
+},
+v6 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "sessionCount",
+  "storageKey": null
+};
 return {
   "argumentDefinitions": [],
   "kind": "Fragment",
@@ -278,7 +312,7 @@ return {
           "kind": "LinkedField",
           "name": "topSessions",
           "plural": true,
-          "selections": (v1/*: any*/),
+          "selections": (v4/*: any*/),
           "storageKey": null
         },
         {
@@ -288,7 +322,7 @@ return {
           "kind": "LinkedField",
           "name": "bottomSessions",
           "plural": true,
-          "selections": (v1/*: any*/),
+          "selections": (v4/*: any*/),
           "storageKey": null
         },
         {
@@ -407,20 +441,85 @@ return {
                   "name": "date",
                   "storageKey": null
                 },
+                (v5/*: any*/),
+                (v6/*: any*/)
+              ],
+              "storageKey": null
+            },
+            {
+              "alias": null,
+              "args": null,
+              "concreteType": "WeeklyCost",
+              "kind": "LinkedField",
+              "name": "weeklyCostTrend",
+              "plural": true,
+              "selections": [
                 {
                   "alias": null,
                   "args": null,
                   "kind": "ScalarField",
-                  "name": "costUsd",
+                  "name": "weekStart",
                   "storageKey": null
                 },
                 {
                   "alias": null,
                   "args": null,
                   "kind": "ScalarField",
-                  "name": "sessionCount",
+                  "name": "weekLabel",
+                  "storageKey": null
+                },
+                (v5/*: any*/),
+                (v6/*: any*/),
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "avgDailyCost",
                   "storageKey": null
                 }
+              ],
+              "storageKey": null
+            },
+            {
+              "alias": null,
+              "args": null,
+              "concreteType": "SessionCost",
+              "kind": "LinkedField",
+              "name": "topSessionsByCost",
+              "plural": true,
+              "selections": [
+                (v1/*: any*/),
+                (v2/*: any*/),
+                (v5/*: any*/),
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "inputTokens",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "outputTokens",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "cacheReadTokens",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "messageCount",
+                  "storageKey": null
+                },
+                (v3/*: any*/)
               ],
               "storageKey": null
             },
@@ -524,6 +623,6 @@ return {
 };
 })();
 
-(node as any).hash = "e74aa6078f98a1649e93ada45ec0e961";
+(node as any).hash = "0454d928bbd8df598ee0ce1f97adfb53";
 
 export default node;
