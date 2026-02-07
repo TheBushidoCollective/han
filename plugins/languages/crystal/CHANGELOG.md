@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- add PostToolUse hooks to 19 plugins for incremental validation ([1577c302](../../commit/1577c302))
+- auto-generate hooks.json from han-plugin.yml with shorthand events ([f3a39941](../../commit/f3a39941))
+
+### Fixed
+
+- async Stop hooks, merge test/test-async, fix plugin name resolution ([ba6474e8](../../commit/ba6474e8))
+
+## [1.10.0] - 2026-02-07
+
+### Added
+
 - auto-generate hooks.json from han-plugin.yml with shorthand events ([f3a39941](../../commit/f3a39941))
 
 ## [1.10.0] - 2026-01-30
