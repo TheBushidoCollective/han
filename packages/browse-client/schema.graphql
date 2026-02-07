@@ -367,6 +367,9 @@ type CoordinatorStatus {
 
 """Cost analysis with subscription context"""
 type CostAnalysis {
+  """Daily API spend at which the current subscription breaks even"""
+  breakEvenDailySpend: Float
+
   """Cache hit rate (0 to 1)"""
   cacheHitRate: Float
 
@@ -382,14 +385,19 @@ type CostAnalysis {
   """Daily cost breakdown"""
   dailyCostTrend: [DailyCost!]
 
-  """Total estimated cost in USD"""
+  """Total estimated cost in USD (API credit equivalent)"""
   estimatedCostUsd: Float
 
-  """Maximum subscription cost (e.g., $200 for Max plan, $100 for Pro)"""
+  """
+  Current subscription tier cost (e.g., $200 for Max 20x, $100 for Max 5x)
+  """
   maxSubscriptionCostUsd: Float
 
   """Potential savings if cache hit rate were optimal"""
   potentialSavingsUsd: Float
+
+  """Per-tier comparison of subscription cost vs API credit equivalent"""
+  subscriptionComparisons: [SubscriptionComparison!]
 }
 
 """Activity metrics for a single day"""
@@ -3110,6 +3118,31 @@ type Subscription {
     """Call ID to watch for result"""
     callId: String!
   ): ToolResultAddedPayload
+}
+
+"""Comparison of a subscription tier vs API credits"""
+type SubscriptionComparison {
+  """Equivalent API credit cost for the same usage"""
+  apiCreditCostUsd: Float
+
+  """Monthly subscription cost in USD"""
+  monthlyCostUsd: Float
+
+  """
+  Plan recommendation: "recommended", "overkill", or "good_value"
+  """
+  recommendation: String
+
+  """Percentage saved vs API credits (positive = subscription cheaper)"""
+  savingsPercent: Float
+
+  """
+  Amount saved with subscription vs API (positive = subscription cheaper)
+  """
+  savingsUsd: Float
+
+  """Subscription tier name (e.g., "Max 5x", "Max 20x")"""
+  tierName: String
 }
 
 """A context summary message in a session"""

@@ -82,6 +82,15 @@ export const DashboardAnalyticsFragment = graphql`
         costPerCompletedTask
         cacheHitRate
         potentialSavingsUsd
+        subscriptionComparisons {
+          tierName
+          monthlyCostUsd
+          apiCreditCostUsd
+          savingsUsd
+          savingsPercent
+          recommendation
+        }
+        breakEvenDailySpend
       }
     }
   }

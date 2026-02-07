@@ -19,6 +19,15 @@ interface DailyCost {
 	readonly sessionCount: number;
 }
 
+interface SubscriptionComparison {
+	readonly tierName: string;
+	readonly monthlyCostUsd: number;
+	readonly apiCreditCostUsd: number;
+	readonly savingsUsd: number;
+	readonly savingsPercent: number;
+	readonly recommendation: string;
+}
+
 interface CostAnalysis {
 	readonly estimatedCostUsd: number;
 	readonly maxSubscriptionCostUsd: number;
@@ -28,6 +37,8 @@ interface CostAnalysis {
 	readonly costPerCompletedTask: number;
 	readonly cacheHitRate: number;
 	readonly potentialSavingsUsd: number;
+	readonly subscriptionComparisons: readonly SubscriptionComparison[];
+	readonly breakEvenDailySpend: number;
 }
 
 interface CostAnalysisCardProps {
@@ -67,6 +78,101 @@ function getUtilizationBgColor(percent: number): string {
 	if (percent < 60) return "rgba(16, 185, 129, 0.15)";
 	if (percent <= 85) return "rgba(245, 158, 11, 0.15)";
 	return "rgba(239, 68, 68, 0.15)";
+}
+
+/**
+ * Get recommendation badge styling
+ */
+function getRecommendationStyle(recommendation: string): {
+	color: string;
+	bg: string;
+	label: string;
+} {
+	switch (recommendation) {
+		case "recommended":
+			return {
+				color: "#10b981",
+				bg: "rgba(16, 185, 129, 0.15)",
+				label: "Saves money",
+			};
+		case "good_value":
+			return {
+				color: "#f59e0b",
+				bg: "rgba(245, 158, 11, 0.15)",
+				label: "Close to break-even",
+			};
+		default:
+			return {
+				color: "#6b7280",
+				bg: "rgba(107, 114, 128, 0.15)",
+				label: "API cheaper",
+			};
+	}
+}
+
+/**
+ * Single row for subscription tier comparison
+ */
+function TierComparisonRow({
+	comparison,
+}: {
+	comparison: SubscriptionComparison;
+}): React.ReactElement {
+	const style = getRecommendationStyle(comparison.recommendation);
+	const isSaving = comparison.savingsUsd > 0;
+
+	return (
+		<HStack
+			gap="sm"
+			align="center"
+			style={{
+				padding: theme.spacing.sm,
+				backgroundColor: theme.colors.bg.tertiary,
+				borderRadius: theme.radii.md,
+			}}
+		>
+			{/* Tier name */}
+			<VStack gap="xs" style={{ flex: 1, minWidth: 70 }}>
+				<Text weight="semibold" size="sm">
+					{comparison.tierName}
+				</Text>
+				<Text color="muted" size="xs">
+					{formatCost(comparison.monthlyCostUsd)}/mo
+				</Text>
+			</VStack>
+
+			{/* Savings amount */}
+			<VStack gap="xs" align="center" style={{ flex: 1 }}>
+				<Text
+					weight="semibold"
+					size="sm"
+					style={{
+						color: isSaving ? "#10b981" : "#ef4444",
+					}}
+				>
+					{isSaving ? "+" : ""}
+					{formatCost(Math.abs(comparison.savingsUsd))}
+				</Text>
+				<Text color="muted" size="xs">
+					{isSaving ? "saved" : "extra"}
+				</Text>
+			</VStack>
+
+			{/* Recommendation badge */}
+			<Box
+				style={{
+					paddingHorizontal: theme.spacing.sm,
+					paddingVertical: 2,
+					backgroundColor: style.bg,
+					borderRadius: theme.radii.full,
+				}}
+			>
+				<Text size="xs" weight="semibold" style={{ color: style.color }}>
+					{style.label}
+				</Text>
+			</Box>
+		</HStack>
+	);
 }
 
 /**
@@ -215,6 +321,44 @@ export function CostAnalysisCard({
 					/>
 				</HStack>
 			</VStack>
+
+			{/* Max vs API Credits comparison */}
+			{costAnalysis.subscriptionComparisons.length > 0 && (
+				<VStack gap="sm" style={{ width: "100%" }}>
+					<HStack justify="space-between" align="center">
+						<Text color="secondary" size="xs">
+							Subscription vs API Credits
+						</Text>
+						<Text color="muted" size="xs">
+							est. {formatCost(costAnalysis.subscriptionComparisons[0]?.apiCreditCostUsd ?? 0)}/mo on API
+						</Text>
+					</HStack>
+
+					<VStack gap="xs" style={{ width: "100%" }}>
+						{costAnalysis.subscriptionComparisons.map((comparison) => (
+							<TierComparisonRow
+								key={comparison.tierName}
+								comparison={comparison}
+							/>
+						))}
+					</VStack>
+
+					{/* Break-even insight */}
+					<Box
+						style={{
+							padding: theme.spacing.sm,
+							backgroundColor: "rgba(99, 102, 241, 0.08)",
+							borderRadius: theme.radii.md,
+							borderLeftWidth: 3,
+							borderLeftColor: "#6366f1",
+						}}
+					>
+						<Text color="muted" size="xs">
+							Your plan breaks even at {formatCost(costAnalysis.breakEvenDailySpend)}/day in API credits
+						</Text>
+					</Box>
+				</VStack>
+			)}
 
 			{/* Daily cost sparkline */}
 			{costAnalysis.dailyCostTrend.length > 0 && (

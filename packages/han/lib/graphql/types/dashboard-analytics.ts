@@ -84,6 +84,18 @@ export interface DailyCost {
 }
 
 /**
+ * Comparison of a subscription tier vs API credits
+ */
+export interface SubscriptionComparison {
+  tierName: string;
+  monthlyCostUsd: number;
+  apiCreditCostUsd: number;
+  savingsUsd: number;
+  savingsPercent: number;
+  recommendation: string;
+}
+
+/**
  * Cost tracking with subscription context
  */
 export interface CostAnalysis {
@@ -95,6 +107,8 @@ export interface CostAnalysis {
   costPerCompletedTask: number;
   cacheHitRate: number;
   potentialSavingsUsd: number;
+  subscriptionComparisons: SubscriptionComparison[];
+  breakEvenDailySpend: number;
 }
 
 /**
@@ -260,17 +274,47 @@ export const DailyCostType = DailyCostRef.implement({
   }),
 });
 
+const SubscriptionComparisonRef =
+  builder.objectRef<SubscriptionComparison>('SubscriptionComparison');
+
+export const SubscriptionComparisonType = SubscriptionComparisonRef.implement({
+  description: 'Comparison of a subscription tier vs API credits',
+  fields: (t) => ({
+    tierName: t.exposeString('tierName', {
+      description: 'Subscription tier name (e.g., "Max 5x", "Max 20x")',
+    }),
+    monthlyCostUsd: t.exposeFloat('monthlyCostUsd', {
+      description: 'Monthly subscription cost in USD',
+    }),
+    apiCreditCostUsd: t.exposeFloat('apiCreditCostUsd', {
+      description: 'Equivalent API credit cost for the same usage',
+    }),
+    savingsUsd: t.exposeFloat('savingsUsd', {
+      description:
+        'Amount saved with subscription vs API (positive = subscription cheaper)',
+    }),
+    savingsPercent: t.exposeFloat('savingsPercent', {
+      description:
+        'Percentage saved vs API credits (positive = subscription cheaper)',
+    }),
+    recommendation: t.exposeString('recommendation', {
+      description:
+        'Plan recommendation: "recommended", "overkill", or "good_value"',
+    }),
+  }),
+});
+
 const CostAnalysisRef = builder.objectRef<CostAnalysis>('CostAnalysis');
 
 export const CostAnalysisType = CostAnalysisRef.implement({
   description: 'Cost analysis with subscription context',
   fields: (t) => ({
     estimatedCostUsd: t.exposeFloat('estimatedCostUsd', {
-      description: 'Total estimated cost in USD',
+      description: 'Total estimated cost in USD (API credit equivalent)',
     }),
     maxSubscriptionCostUsd: t.exposeFloat('maxSubscriptionCostUsd', {
       description:
-        'Maximum subscription cost (e.g., $200 for Max plan, $100 for Pro)',
+        'Current subscription tier cost (e.g., $200 for Max 20x, $100 for Max 5x)',
     }),
     costUtilizationPercent: t.exposeFloat('costUtilizationPercent', {
       description: 'Percentage of subscription cost utilized',
@@ -291,6 +335,16 @@ export const CostAnalysisType = CostAnalysisRef.implement({
     }),
     potentialSavingsUsd: t.exposeFloat('potentialSavingsUsd', {
       description: 'Potential savings if cache hit rate were optimal',
+    }),
+    subscriptionComparisons: t.field({
+      type: [SubscriptionComparisonType],
+      description:
+        'Per-tier comparison of subscription cost vs API credit equivalent',
+      resolve: (data) => data.subscriptionComparisons,
+    }),
+    breakEvenDailySpend: t.exposeFloat('breakEvenDailySpend', {
+      description:
+        'Daily API spend at which the current subscription breaks even',
     }),
   }),
 });
@@ -386,6 +440,16 @@ const PRICING = {
 
 /** Theoretical optimal cache rate target for savings estimate */
 const OPTIMAL_CACHE_RATE = 0.8;
+
+/**
+ * Claude subscription tiers for comparison.
+ * Pricing as of 2026: Pro $20, Max 5x $100, Max 20x $200.
+ */
+const SUBSCRIPTION_TIERS = [
+  { name: 'Pro', monthlyCostUsd: 20 },
+  { name: 'Max 5x', monthlyCostUsd: 100 },
+  { name: 'Max 20x', monthlyCostUsd: 200 },
+] as const;
 
 // =============================================================================
 // Helper Functions
@@ -929,6 +993,45 @@ export async function queryDashboardAnalytics(
       ? currentNonCachedInputCost * (OPTIMAL_CACHE_RATE - cacheHitRate)
       : 0;
 
+  // Prorate API cost to a monthly equivalent for fair comparison
+  // If analyzing 30 days, it maps 1:1 to a monthly subscription
+  const monthlyApiCost = days > 0 ? (finalCostUsd / days) * 30 : finalCostUsd;
+
+  // Build per-tier comparisons
+  const subscriptionComparisons: SubscriptionComparison[] = SUBSCRIPTION_TIERS.map(
+    (tier) => {
+      const savingsUsd = round(monthlyApiCost - tier.monthlyCostUsd, 2);
+      const savingsPercent =
+        monthlyApiCost > 0
+          ? round((savingsUsd / monthlyApiCost) * 100, 2)
+          : 0;
+
+      let recommendation: string;
+      if (monthlyApiCost < tier.monthlyCostUsd * 0.5) {
+        // API cost is less than half the subscription — not worth it
+        recommendation = 'overkill';
+      } else if (monthlyApiCost >= tier.monthlyCostUsd) {
+        // API cost meets or exceeds subscription — great value
+        recommendation = 'recommended';
+      } else {
+        // API cost is between 50-100% of subscription — decent value
+        recommendation = 'good_value';
+      }
+
+      return {
+        tierName: tier.name,
+        monthlyCostUsd: tier.monthlyCostUsd,
+        apiCreditCostUsd: round(monthlyApiCost, 2),
+        savingsUsd,
+        savingsPercent,
+        recommendation,
+      };
+    }
+  );
+
+  // Break-even: daily API spend at which the user's subscription tier pays for itself
+  const breakEvenDailySpend = round(subscriptionTier / 30, 2);
+
   const costAnalysis: CostAnalysis = {
     estimatedCostUsd: round(finalCostUsd, 2),
     maxSubscriptionCostUsd: subscriptionTier,
@@ -945,6 +1048,8 @@ export async function queryDashboardAnalytics(
         : 0,
     cacheHitRate,
     potentialSavingsUsd: round(savingsIfOptimal, 2),
+    subscriptionComparisons,
+    breakEvenDailySpend,
   };
 
   return {

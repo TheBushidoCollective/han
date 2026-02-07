@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<4284c2b90335aa66582b8b207c05287b>>
+ * @generated SignedSource<<ea1f555f4d236b2c40938410186ff93a>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -34,6 +34,7 @@ export type DashboardPageAnalytics_query$data = {
       readonly totalCompactions: number | null | undefined;
     } | null | undefined;
     readonly costAnalysis: {
+      readonly breakEvenDailySpend: number | null | undefined;
       readonly cacheHitRate: number | null | undefined;
       readonly costPerCompletedTask: number | null | undefined;
       readonly costPerSession: number | null | undefined;
@@ -46,6 +47,14 @@ export type DashboardPageAnalytics_query$data = {
       readonly estimatedCostUsd: number | null | undefined;
       readonly maxSubscriptionCostUsd: number | null | undefined;
       readonly potentialSavingsUsd: number | null | undefined;
+      readonly subscriptionComparisons: ReadonlyArray<{
+        readonly apiCreditCostUsd: number | null | undefined;
+        readonly monthlyCostUsd: number | null | undefined;
+        readonly recommendation: string | null | undefined;
+        readonly savingsPercent: number | null | undefined;
+        readonly savingsUsd: number | null | undefined;
+        readonly tierName: string | null | undefined;
+      }> | null | undefined;
     } | null | undefined;
     readonly hookHealth: ReadonlyArray<{
       readonly avgDurationMs: number | null | undefined;
@@ -442,6 +451,66 @@ return {
               "kind": "ScalarField",
               "name": "potentialSavingsUsd",
               "storageKey": null
+            },
+            {
+              "alias": null,
+              "args": null,
+              "concreteType": "SubscriptionComparison",
+              "kind": "LinkedField",
+              "name": "subscriptionComparisons",
+              "plural": true,
+              "selections": [
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "tierName",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "monthlyCostUsd",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "apiCreditCostUsd",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "savingsUsd",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "savingsPercent",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "recommendation",
+                  "storageKey": null
+                }
+              ],
+              "storageKey": null
+            },
+            {
+              "alias": null,
+              "args": null,
+              "kind": "ScalarField",
+              "name": "breakEvenDailySpend",
+              "storageKey": null
             }
           ],
           "storageKey": null
@@ -455,6 +524,6 @@ return {
 };
 })();
 
-(node as any).hash = "7041c0061f600f43eaa606fc400aead3";
+(node as any).hash = "e74aa6078f98a1649e93ada45ec0e961";
 
 export default node;

@@ -299,6 +299,18 @@ export function DashboardContent({
 			cacheHitRate: rawAnalytics?.costAnalysis?.cacheHitRate ?? 0,
 			potentialSavingsUsd:
 				rawAnalytics?.costAnalysis?.potentialSavingsUsd ?? 0,
+			subscriptionComparisons: (
+				rawAnalytics?.costAnalysis?.subscriptionComparisons ?? []
+			).map((c) => ({
+				tierName: c?.tierName ?? "",
+				monthlyCostUsd: c?.monthlyCostUsd ?? 0,
+				apiCreditCostUsd: c?.apiCreditCostUsd ?? 0,
+				savingsUsd: c?.savingsUsd ?? 0,
+				savingsPercent: c?.savingsPercent ?? 0,
+				recommendation: c?.recommendation ?? "overkill",
+			})),
+			breakEvenDailySpend:
+				rawAnalytics?.costAnalysis?.breakEvenDailySpend ?? 0,
 		},
 	};
 
