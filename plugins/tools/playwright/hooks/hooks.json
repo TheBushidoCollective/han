@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run playwright test --async"
+            "command": "han hook run playwright test-changed --async"
           }
         ],
         "matcher": "Edit|Write",

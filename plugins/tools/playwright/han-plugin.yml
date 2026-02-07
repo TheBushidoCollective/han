@@ -1,7 +1,7 @@
 hooks:
   test:
-    event: [Stop, PostToolUse:Edit|Write]
-    command: "PLAYWRIGHT_HTML_OPEN=never npx -y playwright test ${HAN_FILES}"
+    event: Stop
+    command: "PLAYWRIGHT_HTML_OPEN=never npx -y playwright test"
     dirs_with:
       - "playwright.config.ts"
       - "playwright.config.js"
@@ -11,7 +11,14 @@ hooks:
       - plugin: jutsu-playwright-bdd
         hook: generate
         optional: true
-    file_filter:
+
+  test-changed:
+    event: PostToolUse:Edit|Write
+    command: "PLAYWRIGHT_HTML_OPEN=never npx -y playwright test ${HAN_FILES}"
+    dirs_with:
+      - "playwright.config.ts"
+      - "playwright.config.js"
+    if_changed:
       - "**/*.spec.{js,ts}"
       - "**/*.test.{js,ts}"
       - "**/e2e/**/*.{js,ts}"

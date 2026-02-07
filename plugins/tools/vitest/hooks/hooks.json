@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run vitest test --async"
+            "command": "han hook run vitest test-changed --async"
           }
         ],
         "matcher": "Edit|Write|NotebookEdit",

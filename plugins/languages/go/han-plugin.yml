@@ -9,8 +9,6 @@ hooks:
       - "**/*.tmpl"
       - "go.mod"
       - "go.sum"
-    file_filter:
-      - "**/*.go"
 
   lint:
     event: Stop

@@ -17,5 +17,5 @@ hooks:
     command: "npx -y --package typescript tsc --noEmit --isolatedModules ${HAN_FILES}"
     dirs_with:
       - "tsconfig.json"
-    file_filter:
+    if_changed:
       - "**/*.{ts,tsx,mts,cts}"

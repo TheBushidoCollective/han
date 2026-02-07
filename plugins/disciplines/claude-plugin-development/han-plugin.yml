@@ -28,5 +28,3 @@ hooks:
       - "han-plugin.yml"
     if_changed:
       - "**/han-plugin.yml"
-    file_filter:
-      - "**/han-plugin.yml"

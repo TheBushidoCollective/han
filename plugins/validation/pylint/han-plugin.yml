@@ -11,6 +11,3 @@ hooks:
       - "pyproject.toml"
       - ".pylintrc"
       - "pylintrc"
-    file_filter:
-      - "**/*.py"
-      - "**/*.pyi"

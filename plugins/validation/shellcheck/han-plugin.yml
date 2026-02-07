@@ -4,6 +4,4 @@ hooks:
     command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/lint.sh\" ${HAN_FILES}"
     if_changed:
       - "**/*.sh"
-    file_filter:
-      - "**/*.sh"
       - "**/*.bash"

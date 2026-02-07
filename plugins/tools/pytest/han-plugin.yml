@@ -1,7 +1,7 @@
 hooks:
   test:
-    event: [Stop, PostToolUse:Edit|Write]
-    command: "pytest ${HAN_FILES}"
+    event: Stop
+    command: "pytest"
     dirs_with:
       - "pyproject.toml"
     dir_test: "grep -qE '^pytest[^a-zA-Z]|\"pytest\"' pyproject.toml"
@@ -11,7 +11,14 @@ hooks:
       - "pyproject.toml"
       - "pytest.ini"
       - "conftest.py"
-    file_filter:
+
+  test-changed:
+    event: PostToolUse:Edit|Write
+    command: "pytest ${HAN_FILES}"
+    dirs_with:
+      - "pyproject.toml"
+    dir_test: "grep -qE '^pytest[^a-zA-Z]|\"pytest\"' pyproject.toml"
+    if_changed:
       - "**/test_*.py"
       - "**/*_test.py"
       - "**/tests/*.py"

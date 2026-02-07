@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run pytest test --async"
+            "command": "han hook run pytest test-changed --async"
           }
         ],
         "matcher": "Edit|Write",

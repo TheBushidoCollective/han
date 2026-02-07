@@ -7,5 +7,3 @@ hooks:
     dir_test: "grep -qE '\"eslint\":' package.json"
     if_changed:
       - "**/*.{js,jsx,ts,tsx,mjs,cjs}"
-    file_filter:
-      - "**/*.{js,jsx,ts,tsx,mjs,cjs}"

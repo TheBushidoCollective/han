@@ -11,9 +11,6 @@ hooks:
       - "**/*.leex"
       - "**/*.heex"
       - ".formatter.exs"
-    file_filter:
-      - "**/*.ex"
-      - "**/*.exs"
 
   build:
     event: [Stop, PostToolUse:Edit|Write]
@@ -28,13 +25,10 @@ hooks:
       - "**/*.heex"
       - "mix.exs"
       - "mix.lock"
-    file_filter:
-      - "**/*.ex"
-      - "**/*.exs"
 
   test:
-    event: [Stop, PostToolUse:Edit|Write]
-    command: "mix test ${HAN_FILES}"
+    event: Stop
+    command: "mix test"
     dirs_with:
       - "mix.exs"
     if_changed:
@@ -45,7 +39,13 @@ hooks:
       - "**/*.heex"
       - "mix.exs"
       - "mix.lock"
-    file_filter:
+
+  test-changed:
+    event: PostToolUse:Edit|Write
+    command: "mix test ${HAN_FILES}"
+    dirs_with:
+      - "mix.exs"
+    if_changed:
       - "**/*_test.exs"
       - "**/test/**/*.exs"
     file_test: grep -qE "(describe|test|doctest)" "${HAN_FILE}"

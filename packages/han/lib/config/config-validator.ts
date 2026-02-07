@@ -203,7 +203,6 @@ export function validatePluginConfig(config: unknown): ValidationResult {
       'mcp',
       'silent',
       'test_dir',
-      'file_filter',
       'file_test',
       'sync',
     ];

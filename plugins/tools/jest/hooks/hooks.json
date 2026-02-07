@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jest test --async"
+            "command": "han hook run jest test-changed --async"
           }
         ],
         "matcher": "Edit|Write|NotebookEdit",

@@ -1,7 +1,7 @@
 hooks:
   test:
-    event: [Stop, PostToolUse:Edit|Write]
-    command: "npx mocha ${HAN_FILES}"
+    event: Stop
+    command: "npx mocha"
     dirs_with:
       - "package.json"
     dir_test: "grep -qE '\"mocha\":' package.json"
@@ -9,7 +9,14 @@ hooks:
       - "**/*.{js,jsx,ts,tsx,mjs,cjs}"
       - "test/**/*"
       - ".mocharc.*"
-    file_filter:
+
+  test-changed:
+    event: PostToolUse:Edit|Write
+    command: "npx mocha ${HAN_FILES}"
+    dirs_with:
+      - "package.json"
+    dir_test: "grep -qE '\"mocha\":' package.json"
+    if_changed:
       - "**/*.test.{js,ts}"
       - "**/*.spec.{js,ts}"
       - "**/test/**/*.{js,ts}"

@@ -7,5 +7,3 @@ hooks:
     if_changed:
       - "**/*.md"
       - ".markdownlint.*"
-    file_filter:
-      - "**/*.md"

@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rspec test --async"
+            "command": "han hook run rspec test-changed --async"
           }
         ],
         "matcher": "Edit|Write",

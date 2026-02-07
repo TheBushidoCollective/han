@@ -11,6 +11,3 @@ hooks:
       - "Gemfile"
       - ".rubocop.yml"
       - ".rubocop_todo.yml"
-    file_filter:
-      - "**/*.rb"
-      - "**/*.erb"

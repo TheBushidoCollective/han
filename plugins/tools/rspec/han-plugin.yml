@@ -1,7 +1,7 @@
 hooks:
   test:
-    event: [Stop, PostToolUse:Edit|Write]
-    command: "bundle exec rspec ${HAN_FILES}"
+    event: Stop
+    command: "bundle exec rspec"
     dirs_with:
       - "Gemfile"
     dir_test: "grep -qE '^\\s*gem.*rspec' Gemfile"
@@ -12,7 +12,14 @@ hooks:
       - "Gemfile.lock"
       - "spec/**/*"
       - ".rspec"
-    file_filter:
+
+  test-changed:
+    event: PostToolUse:Edit|Write
+    command: "bundle exec rspec ${HAN_FILES}"
+    dirs_with:
+      - "Gemfile"
+    dir_test: "grep -qE '^\\s*gem.*rspec' Gemfile"
+    if_changed:
       - "**/*_spec.rb"
       - "**/spec/**/*.rb"
     file_test: grep -qE "(describe|it|context)\s" "${HAN_FILE}"

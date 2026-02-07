@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run mocha test --async"
+            "command": "han hook run mocha test-changed --async"
           }
         ],
         "matcher": "Edit|Write",

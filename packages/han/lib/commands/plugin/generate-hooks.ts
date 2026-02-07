@@ -55,7 +55,6 @@ interface YamlHookDef {
   dirs_with?: string[];
   dir_test?: string;
   if_changed?: string[];
-  file_filter?: string[];
   file_test?: string;
   timeout?: number;
   idle_timeout?: number;

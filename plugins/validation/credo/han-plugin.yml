@@ -12,6 +12,3 @@ hooks:
       - "**/*.leex"
       - "**/*.heex"
       - ".credo.exs"
-    file_filter:
-      - "**/*.ex"
-      - "**/*.exs"
