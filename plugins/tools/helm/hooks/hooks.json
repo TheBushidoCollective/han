@@ -1,5 +1,17 @@
 {
   "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run helm lint --async"
+          }
+        ],
+        "matcher": "Edit|Write|NotebookEdit",
+        "async": true
+      }
+    ],
     "Stop": [
       {
         "hooks": [
