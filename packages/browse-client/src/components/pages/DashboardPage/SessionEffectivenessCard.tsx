@@ -61,7 +61,6 @@ function getTrendDisplay(trend: string): { arrow: string; color: string } {
 			return { arrow: "\u2193", color: "#ef4444" }; // Down arrow, red
 		case "stable":
 			return { arrow: "\u2192", color: "#6b7280" }; // Right arrow, gray
-		case "neutral":
 		default:
 			return { arrow: "\u2014", color: "#6b7280" }; // Em dash, gray
 	}

@@ -494,7 +494,6 @@ export async function queryDashboardAnalytics(
   let totalOutputTokens = 0;
   let totalCachedTokens = 0;
   let totalCacheReadTokens = 0;
-  let totalCacheCreationTokens = 0;
   let totalSessions = 0;
   let totalCompletedTasks = 0;
 
@@ -559,7 +558,6 @@ export async function queryDashboardAnalytics(
         sessionOutputTokens += tokens.outputTokens;
         sessionCachedTokens += tokens.cachedTokens;
         totalCacheReadTokens += tokens.cacheReadTokens;
-        totalCacheCreationTokens += tokens.cacheCreationTokens;
 
         if (
           msg.sentimentScore !== undefined &&
