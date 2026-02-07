@@ -1215,13 +1215,9 @@ export async function runConfiguredHook(
           cached: false, // Always disable cache for re-runs after failures
         });
 
-        const outputFile = result.outputFile
-          ? result.outputFile
-          : '(no output captured)';
-
         // Decide fix strategy based on output size
-        // Small output (<4KB) = agent fixes directly (low context cost)
-        // Large output (>=4KB) = spawn subagent to isolate from main context
+        // Small output (<4KB) = inline output + agent fixes directly (no file read needed)
+        // Large output (>=4KB) = write to file + spawn subagent to isolate from main context
         const outputLength = result.output?.length ?? 0;
         const useSubagent = outputLength >= 4096;
 
@@ -1230,6 +1226,7 @@ export async function runConfiguredHook(
         );
 
         if (useSubagent) {
+          const outputFile = result.outputFile ?? '(no output captured)';
           console.error(
             `Output is large (${outputLength} chars). Spawn a subagent to fix this:\n` +
               `1. Read the output file: ${outputFile}\n` +
@@ -1238,12 +1235,10 @@ export async function runConfiguredHook(
               `Do NOT skip this. Do NOT ask the user. Do NOT dismiss as a "known issue".\n`
           );
         } else {
+          const output = result.output?.trim() || '(no output captured)';
           console.error(
-            `Read the output file and fix the issues directly:\n` +
-              `1. Read: ${outputFile}\n` +
-              `2. Fix the errors\n` +
-              `3. Re-run with: ${rerunCommand}\n\n` +
-              `Do NOT skip this. Do NOT ask the user. Do NOT dismiss as a "known issue".\n`
+            `\`\`\`\n${output}\n\`\`\`\n\n` +
+              `Fix the errors above, then re-run with: ${rerunCommand}\n`
           );
         }
         process.exit(2);
