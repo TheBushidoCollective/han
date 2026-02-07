@@ -37,6 +37,10 @@ import {
   type ToolResultAddedPayload,
 } from './pubsub.ts';
 import { ActivityDataType, queryActivityData } from './types/activity-data.ts';
+import {
+  DashboardAnalyticsType,
+  queryDashboardAnalytics,
+} from './types/dashboard-analytics.ts';
 import { CacheEntryType, getAllCacheEntries } from './types/cache-entry.ts';
 import { CacheStatsType, queryCacheStats } from './types/cache-stats.ts';
 import {
@@ -344,6 +348,23 @@ builder.queryField('activity', (t) =>
     },
     description: 'Activity data for dashboard visualizations',
     resolve: async (_parent, args) => queryActivityData(args.days ?? 365),
+  })
+);
+
+/**
+ * Query for dashboard analytics (subagent usage, compaction health,
+ * session effectiveness, tool usage, hook health, cost analysis)
+ */
+builder.queryField('dashboardAnalytics', (t) =>
+  t.field({
+    type: DashboardAnalyticsType,
+    args: {
+      days: t.arg.int({ defaultValue: 30 }),
+      subscriptionTier: t.arg.int({ defaultValue: 200 }),
+    },
+    description: 'Aggregated analytics for the enhanced dashboard',
+    resolve: async (_parent, args) =>
+      queryDashboardAnalytics(args.days ?? 30),
   })
 );
 
