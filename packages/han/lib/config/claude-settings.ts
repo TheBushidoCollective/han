@@ -56,6 +56,14 @@ export function getClaudeConfigDir(): string {
 let _hanDataDir: string | null = null;
 
 /**
+ * Reset the cached Han data directory.
+ * Only needed in tests where env vars change between test cases.
+ */
+export function resetHanDataDir(): void {
+  _hanDataDir = null;
+}
+
+/**
  * Get Han's own data directory (~/.han)
  *
  * Han stores its coordinator, database, memory, and logs here.
@@ -67,7 +75,8 @@ let _hanDataDir: string | null = null;
  *
  * Priority:
  * 1. HAN_DATA_DIR environment variable (for testing/custom paths)
- * 2. ~/.han (default, auto-migrated from ~/.claude/han)
+ * 2. CLAUDE_CONFIG_DIR/han (when CLAUDE_CONFIG_DIR is explicitly set — testing/CI)
+ * 3. ~/.han (default, auto-migrated from ~/.claude/han)
  */
 export function getHanDataDir(): string {
   if (_hanDataDir) return _hanDataDir;
@@ -77,13 +86,20 @@ export function getHanDataDir(): string {
     return _hanDataDir;
   }
 
+  // When CLAUDE_CONFIG_DIR is explicitly set (testing/CI), use it
+  // to preserve test isolation — tests set CLAUDE_CONFIG_DIR to a temp dir
+  if (process.env.CLAUDE_CONFIG_DIR) {
+    _hanDataDir = join(process.env.CLAUDE_CONFIG_DIR, 'han');
+    return _hanDataDir;
+  }
+
   const homeDir = process.env.HOME || process.env.USERPROFILE;
   if (!homeDir) {
     return '';
   }
 
   const newDir = join(homeDir, '.han');
-  const oldDir = join(getClaudeConfigDir(), 'han');
+  const oldDir = join(homeDir, '.claude', 'han');
 
   // Already migrated or fresh install with data
   if (existsSync(newDir)) {
@@ -94,7 +110,6 @@ export function getHanDataDir(): string {
   // Old directory exists — auto-migrate
   if (existsSync(oldDir)) {
     try {
-      // Ensure parent exists (it's ~/, so it always does, but be safe)
       mkdirSync(dirname(newDir), { recursive: true });
       renameSync(oldDir, newDir);
       console.error(`[han] Migrated data directory: ${oldDir} → ${newDir}`);

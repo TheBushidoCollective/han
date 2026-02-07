@@ -208,6 +208,7 @@ Cache invalidation happens automatically: when `tool.execute.after` fires, the e
 The bridge registers a `han_skills` tool with OpenCode that gives the LLM access to Han's full skill library (400+ skills across 95+ plugins). Skills are discovered at plugin init time by scanning each installed plugin's `skills/*/SKILL.md` files.
 
 Two actions:
+
 - **list** — Browse available skills with optional search filter
 - **load** — Load the full SKILL.md content for a specific skill (supports partial name matching)
 
@@ -243,6 +244,7 @@ LLM: han_discipline({ action: "activate", discipline: "frontend" })
 The bridge writes Han-format JSONL events to `~/.han/opencode/projects/{slug}/{sessionId}-han.jsonl`. Each event includes `provider: "opencode"` so the coordinator can distinguish OpenCode sessions from Claude Code sessions.
 
 Events logged:
+
 - `hook_run` / `hook_result` — Hook execution lifecycle (start, success/failure, duration)
 - `hook_file_change` — File edits detected via `tool.execute.after`
 

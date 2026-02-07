@@ -189,6 +189,7 @@ hooks:
 ```
 
 The difference is in who executes the hook:
+
 - **Claude Code**: Reads `hooks.json`, calls `han hook run` via shell
 - **OpenCode**: Bridge reads `han-plugin.yml`, runs the command directly as a promise
 
@@ -240,10 +241,12 @@ The bridge writes Han-format JSONL events to `~/.han/opencode/projects/`. Each e
 On startup, the bridge launches the Han coordinator in the background. The coordinator watches the OpenCode events directory and indexes events into SQLite, making them visible in the Browse UI alongside Claude Code sessions.
 
 Events logged:
+
 - **hook_run / hook_result** - Hook execution lifecycle
 - **hook_file_change** - File edits detected via tool events
 
 Environment variables set by the bridge:
+
 - `HAN_PROVIDER=opencode` - Identifies the provider for child processes
 - `HAN_SESSION_ID=<uuid>` - Session ID for event correlation
 
