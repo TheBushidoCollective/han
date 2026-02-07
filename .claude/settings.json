@@ -23,6 +23,9 @@
       }
     ]
   },
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
   "enabledPlugins": {
     "accessibility@han": true,
     "act@han": true,

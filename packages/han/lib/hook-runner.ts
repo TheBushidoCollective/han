@@ -1,4 +1,4 @@
-import { execSync, spawn } from 'node:child_process';
+import { execSync, spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   existsSync,
@@ -13,39 +13,36 @@ import { join, resolve } from 'node:path';
 import {
   getClaudeConfigDir,
   getMergedPluginsAndMarketplaces,
+} from './config/claude-settings.ts';
+import {
+  getPluginHookSettings,
   isCacheEnabled,
   isFailFastEnabled,
-  isSessionFilteringEnabled,
-} from '../config/index.ts';
+} from './config/han-settings.ts';
+import { getEventLogger } from './events/logger.ts';
 import {
-  ensureSessionIndexed,
-  getSessionModifiedFiles,
-  type SessionModifiedFiles,
-  sessionFileValidations,
-} from '../db/index.ts';
-import {
-  buildCommandWithFiles,
   checkFailureSignal,
   clearFailureSignal,
-  commandUsesSessionFiles,
-  computeFileHash,
   createLockManager,
+  isHookRunning,
+  signalFailure,
+  waitForHook,
+  withGlobalSlot,
+  withSlot,
+} from './hook-lock.ts';
+import {
+  checkForChangesAsync,
+  computeFileHash,
   findDirectoriesWithMarkers,
   findFilesWithGlob,
+  trackFilesAsync,
+} from './hooks/hook-cache.ts';
+import {
   getHookConfigs,
+  getHookDefinition,
   type ResolvedHookConfig,
-  signalFailure,
-  withGlobalSlot,
-} from '../hooks/index.ts';
-import { getPluginNameFromRoot } from '../shared/index.ts';
-
-/**
- * Check if debug mode is enabled via HAN_DEBUG environment variable
- */
-export function isDebugMode(): boolean {
-  const debug = process.env.HAN_DEBUG;
-  return debug === '1' || debug === 'true';
-}
+} from './hooks/hook-config.ts';
+import { getPluginNameFromRoot, isDebugMode } from './shared.ts';
 
 /**
  * Compute SHA256 hash of a command string.
@@ -53,97 +50,6 @@ export function isDebugMode(): boolean {
  */
 function computeCommandHash(command: string): string {
   return createHash('sha256').update(command).digest('hex');
-}
-
-/**
- * Get session ID from environment.
- * Used for recording file validations scoped to the current Claude session.
- */
-function getSessionIdFromEnv(): string | undefined {
-  return process.env.HAN_SESSION_ID || process.env.CLAUDE_SESSION_ID;
-}
-
-/**
- * Get the intersection of session-modified files with pattern-matched files.
- *
- * @param modifiedFiles - Files from session_file_changes table
- * @param directory - Hook target directory
- * @param patterns - ifChanged glob patterns from hook config
- * @returns Array of relative file paths to pass to the hook command
- */
-function getSessionFilteredFiles(
-  modifiedFiles: SessionModifiedFiles,
-  directory: string,
-  patterns: string[]
-): string[] {
-  if (modifiedFiles.allModified.length === 0) {
-    return [];
-  }
-
-  const { relative } = require('node:path');
-
-  if (!patterns || patterns.length === 0) {
-    // No patterns = return all session-modified files (relative to directory)
-    return modifiedFiles.allModified
-      .map((f) => {
-        if (f.startsWith('/')) {
-          const rel = relative(directory, f);
-          // Only include files within the directory
-          return rel.startsWith('..') ? null : rel;
-        }
-        // Already relative - check if it goes outside directory
-        if (f.startsWith('..')) {
-          return null;
-        }
-        return f;
-      })
-      .filter((f): f is string => f !== null);
-  }
-
-  // Get files matching patterns in target directory
-  const patternFiles = findFilesWithGlob(directory, patterns);
-
-  // Convert pattern files to relative paths for comparison
-  const patternFilesMap = new Map<string, string>();
-  for (const f of patternFiles) {
-    patternFilesMap.set(relative(directory, f), relative(directory, f));
-  }
-
-  const result: string[] = [];
-
-  // Find intersection of session-modified files with pattern files
-  for (const modifiedPath of modifiedFiles.allModified) {
-    // Normalize the modified path (may be relative or absolute)
-    let normalizedPath = modifiedPath;
-
-    if (modifiedPath.startsWith('/')) {
-      // Absolute path - make relative to directory
-      normalizedPath = relative(directory, modifiedPath);
-    }
-
-    // Skip files outside the directory
-    if (normalizedPath.startsWith('..')) {
-      continue;
-    }
-
-    // Direct match
-    if (patternFilesMap.has(normalizedPath)) {
-      result.push(normalizedPath);
-      continue;
-    }
-
-    // Also check if any pattern file ends with the modified path
-    for (const patternFile of patternFilesMap.keys()) {
-      if (
-        patternFile.endsWith(normalizedPath) &&
-        !result.includes(patternFile)
-      ) {
-        result.push(patternFile);
-      }
-    }
-  }
-
-  return result;
 }
 
 /**
@@ -317,14 +223,15 @@ interface RunCommandOptions {
   hookName?: string;
   /** Plugin root directory for CLAUDE_PLUGIN_ROOT env var */
   pluginRoot?: string;
-  /** Absolute timeout in seconds (safeguard against hangs) */
+  /** Absolute timeout in seconds (safeguard against hangs). Default: 300s (5 min) */
   absoluteTimeout?: number;
 }
 
 /**
  * Get the default absolute timeout for commands in seconds.
- * This is a safeguard against hanging processes.
- * Default: 5 minutes (300 seconds)
+ * This is a safeguard against hanging processes that output slowly but continuously,
+ * bypassing the idle timeout.
+ * Default: 5 minutes (300 seconds). Configurable via HAN_HOOK_ABSOLUTE_TIMEOUT.
  */
 function getDefaultAbsoluteTimeout(): number {
   const envValue = process.env.HAN_HOOK_ABSOLUTE_TIMEOUT;
@@ -401,6 +308,7 @@ async function runCommand(
     }
 
     // Start absolute timeout as safeguard (always active)
+    // Prevents processes that output slowly but continuously from hanging forever
     absoluteTimeoutHandle = setTimeout(() => {
       if (!resolved) {
         absoluteTimedOut = true;
@@ -408,7 +316,7 @@ async function runCommand(
           `\n⏱️ Absolute timeout: Command exceeded ${absoluteTimeout}s limit and was terminated.\n`
         );
         try {
-          child.kill('SIGKILL'); // Force kill
+          child.kill('SIGKILL');
         } catch {
           // Ignore kill errors
         }
@@ -430,7 +338,7 @@ async function runCommand(
     }
 
     const finalizeResult = (success: boolean) => {
-      if (resolved) return; // Prevent double resolution
+      if (resolved) return; // Prevent double resolution from close/error race
       resolved = true;
 
       if (idleTimeoutHandle) {
@@ -531,14 +439,9 @@ export async function validate(options: ValidateOptions): Promise<void> {
     }
 
     // Acquire slot, run command, release slot
-    // Use global slots for cross-session coordination
-    const success = await withGlobalSlot(
-      'legacy-validate',
-      undefined,
-      async () => {
-        return runCommandSync(rootDir, commandToRun, verbose);
-      }
-    );
+    const success = await withSlot('legacy-validate', undefined, async () => {
+      return runCommandSync(rootDir, commandToRun, verbose);
+    });
     if (!success) {
       console.error(
         `\n❌ The command \`${commandToRun}\` failed.\n\n` +
@@ -577,36 +480,25 @@ export async function validate(options: ValidateOptions): Promise<void> {
     }
 
     // Acquire slot, run command, release slot (per directory)
-    // Use global slots for cross-session coordination
-    const success = await withGlobalSlot(
-      'legacy-validate',
-      undefined,
-      async () => {
-        return runCommandSync(dir, commandToRun, verbose);
-      }
-    );
+    const success = await withSlot('legacy-validate', undefined, async () => {
+      return runCommandSync(dir, commandToRun, verbose);
+    });
 
     if (!success) {
-      // Show individual failure
-      console.error(`  ✗ ${relativePath} failed`);
       failures.push(relativePath);
 
       if (failFast) {
-        console.error(`\n⚠ Stopped due to fail fast\n`);
         const cmdStr =
           relativePath === '.'
             ? commandToRun
             : `cd ${relativePath} && ${commandToRun}`;
         console.error(
-          `The command \`${cmdStr}\` failed.\n\n` +
+          `\n❌ The command \`${cmdStr}\` failed.\n\n` +
             `Spawn a subagent to run the command, review the output, and fix all issues.\n` +
             `Do NOT ask the user any questions - proceed directly with fixing the issues.\n`
         );
         process.exit(2);
       }
-    } else {
-      // Show individual success
-      console.log(`  ✓ ${relativePath} passed`);
     }
   }
 
@@ -633,7 +525,7 @@ export async function validate(options: ValidateOptions): Promise<void> {
   }
 
   console.log(
-    `\n✅ ${processedCount} director${processedCount === 1 ? 'y' : 'ies'} passed`
+    `\n✅ All ${processedCount} director${processedCount === 1 ? 'y' : 'ies'} passed validation`
   );
   process.exit(0);
 }
@@ -643,7 +535,7 @@ export async function validate(options: ValidateOptions): Promise<void> {
 // ============================================
 
 /**
- * Find plugin in a marketplace root directory.
+ * Find plugin in a marketplace root directory using multiple discovery methods.
  *
  * Discovery order:
  * 1. Check marketplace.json for the plugin's source path
@@ -837,11 +729,25 @@ export interface RunConfiguredHookOptions {
    */
   verbose?: boolean;
   /**
-   * Skip slot management (for MCP tools that run independently with timeouts)
+   * Checkpoint type to filter against (session or agent)
+   * When set, only runs hook if files changed since both:
+   * 1. Last hook run (cache check)
+   * 2. Checkpoint creation (checkpoint check)
    */
-  skipSlot?: boolean;
+  checkpointType?: 'session' | 'agent';
   /**
-   * Session ID for tracking hook executions in session messages
+   * Checkpoint ID to filter against
+   * Required when checkpointType is set
+   */
+  checkpointId?: string;
+  /**
+   * Skip dependency checks. Useful for recheck/retry scenarios
+   * when dependencies have already been satisfied.
+   */
+  skipDeps?: boolean;
+  /**
+   * Claude session ID for cache tracking.
+   * Required for hooks to be cached properly.
    */
   sessionId?: string;
 }
@@ -907,7 +813,15 @@ export function buildMcpToolInstruction(
 export async function runConfiguredHook(
   options: RunConfiguredHookOptions
 ): Promise<void> {
-  const { pluginName, hookName, only, verbose, skipSlot } = options;
+  const {
+    pluginName,
+    hookName,
+    only,
+    verbose,
+    // checkpointType and checkpointId are no longer used - checkpoints feature removed
+    skipDeps,
+    sessionId,
+  } = options;
 
   // Settings resolution priority (highest to lowest):
   // 1. Environment variable (HAN_NO_X=1 forces false)
@@ -931,6 +845,8 @@ export async function runConfiguredHook(
     process.env.HAN_NO_CACHE === '1' || process.env.HAN_NO_CACHE === 'true'
       ? false
       : (options.cache ?? isCacheEnabled());
+
+  // Checkpoints feature has been removed - now using ifChanged + transcript filtering
 
   let pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
   // Canonicalize projectRoot to match paths from native module (which uses fs::canonicalize)
@@ -970,6 +886,88 @@ export async function runConfiguredHook(
     }
   }
 
+  // Handle dependencies (unless --skip-deps is set)
+  if (!skipDeps) {
+    const hookDef = getHookDefinition(pluginRoot, hookName);
+    if (hookDef?.dependsOn && hookDef.dependsOn.length > 0) {
+      const lockManager = createLockManager();
+      const { plugins } = getMergedPluginsAndMarketplaces();
+
+      for (const dep of hookDef.dependsOn) {
+        // Check if dependency plugin is installed
+        const isDepInstalled = plugins.has(dep.plugin);
+
+        if (!isDepInstalled) {
+          if (dep.optional) {
+            if (verbose) {
+              console.log(
+                `[${pluginName}/${hookName}] Skipping optional dependency: ${dep.plugin}/${dep.hook} (not installed)`
+              );
+            }
+            continue;
+          }
+          // Required dependency is missing
+          console.error(
+            `Error: Required dependency plugin "${dep.plugin}" is not installed.\n\n` +
+              `The hook "${pluginName}/${hookName}" requires "${dep.plugin}/${dep.hook}" to run first.\n` +
+              `Install the dependency plugin with: han plugin install ${dep.plugin}`
+          );
+          process.exit(1);
+        }
+
+        // Check if dependency hook is already running
+        if (isHookRunning(lockManager, dep.plugin, dep.hook)) {
+          if (verbose) {
+            console.log(
+              `[${pluginName}/${hookName}] Waiting for dependency: ${dep.plugin}/${dep.hook} (already running)`
+            );
+          }
+          const completed = await waitForHook(
+            lockManager,
+            dep.plugin,
+            dep.hook
+          );
+          if (!completed) {
+            console.error(
+              `Error: Timeout waiting for dependency hook "${dep.plugin}/${dep.hook}" to complete.\n`
+            );
+            process.exit(1);
+          }
+        } else {
+          // Dependency is not running - spawn it and wait
+          if (verbose) {
+            console.log(
+              `[${pluginName}/${hookName}] Running dependency: ${dep.plugin}/${dep.hook}`
+            );
+          }
+
+          // Run the dependency hook synchronously
+          const result = spawnSync(
+            'han',
+            ['hook', 'run', dep.plugin, dep.hook, '--skip-deps'],
+            {
+              stdio: verbose ? 'inherit' : 'pipe',
+              shell: true,
+              env: {
+                ...process.env,
+                // Don't inherit CLAUDE_PLUGIN_ROOT since we're running a different plugin
+                CLAUDE_PLUGIN_ROOT: '',
+              },
+            }
+          );
+
+          if (result.status !== 0) {
+            console.error(
+              `Error: Dependency hook "${dep.plugin}/${dep.hook}" failed.\n` +
+                `Fix the dependency first, then retry.`
+            );
+            process.exit(2);
+          }
+        }
+      }
+    }
+  }
+
   // Get all configs
   let configs = getHookConfigs(pluginRoot, hookName, projectRoot);
 
@@ -992,26 +990,41 @@ export async function runConfiguredHook(
     }
   }
 
+  // Execute before_all script if configured (runs once before all directory iterations)
+  const hookSettings = getPluginHookSettings(pluginName, hookName);
+  if (hookSettings?.before_all) {
+    if (verbose) {
+      console.log(`\n[${pluginName}/${hookName}] Running before_all script:`);
+      console.log(`  $ ${hookSettings.before_all}\n`);
+    }
+    try {
+      execSync(hookSettings.before_all, {
+        encoding: 'utf-8',
+        timeout: 60000, // 60 second timeout
+        stdio: verbose ? 'inherit' : ['pipe', 'pipe', 'pipe'],
+        shell: '/bin/bash',
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          CLAUDE_PROJECT_DIR: projectRoot,
+          CLAUDE_PLUGIN_ROOT: pluginRoot,
+        },
+      });
+    } catch (error: unknown) {
+      const stderr = (error as { stderr?: Buffer })?.stderr?.toString() || '';
+      console.error(
+        `\n❌ before_all script failed for ${pluginName}/${hookName}:\n${stderr}`
+      );
+      process.exit(2);
+    }
+  }
+
   // Phase 1: Check cache and categorize configs BEFORE acquiring lock
   // This avoids holding a slot while just checking hashes
   const configsToRun: ResolvedHookConfig[] = [];
   let totalFound = 0;
   let disabledCount = 0;
   let skippedCount = 0;
-  let staleSkippedCount = 0;
-
-  // Get session ID for session-scoped validation
-  const sessionId = options.sessionId ?? getSessionIdFromEnv();
-
-  // Force-index the current session to ensure session_file_changes is up to date
-  if (sessionId) {
-    await ensureSessionIndexed(sessionId, projectRoot);
-  }
-
-  // Get session-modified files for ${HAN_FILES} substitution
-  const sessionModifiedFiles = sessionId
-    ? await getSessionModifiedFiles(sessionId)
-    : null;
 
   for (const config of configs) {
     totalFound++;
@@ -1022,43 +1035,32 @@ export async function runConfiguredHook(
       continue;
     }
 
-    // If --cache is enabled and we have a session ID, use session-based validation with stale detection
-    if (cache && config.ifChanged && config.ifChanged.length > 0 && sessionId) {
-      const commandHash = computeCommandHash(config.command);
+    // Compute relative path for consistent cache keys
+    // CRITICAL: Must use relative path to match trackFilesAsync and orchestrate.ts
+    const relativePath =
+      config.directory === projectRoot
+        ? '.'
+        : config.directory.replace(`${projectRoot}/`, '');
 
-      // Check which files need validation using stale detection
-      const validationResult =
-        await sessionFileValidations.checkFilesNeedValidation(
+    // If --cache is enabled, check for changes (no lock needed for this)
+    if (cache && config.ifChanged && config.ifChanged.length > 0) {
+      const hasChanges = await checkForChangesAsync(
+        pluginName,
+        hookName,
+        config.directory,
+        config.ifChanged,
+        pluginRoot,
+        {
           sessionId,
-          pluginName,
-          hookName,
-          config.directory,
-          commandHash,
-          computeFileHash
-        );
-
-      if (validationResult.staleFiles.length > 0 && verbose) {
-        const relativePath =
-          config.directory === projectRoot
-            ? '.'
-            : config.directory.replace(`${projectRoot}/`, '');
-        console.log(
-          `[${pluginName}/${hookName}] ${relativePath}: Skipping ${validationResult.staleFiles.length} stale file(s) modified by another session`
-        );
-      }
-
-      if (!validationResult.needsValidation) {
-        if (validationResult.staleFiles.length > 0) {
-          // All files were stale (modified by another session)
-          staleSkippedCount++;
-        } else {
-          // All files already validated
-          skippedCount++;
+          directory: relativePath, // Use relative path to match cache entries
         }
+      );
+
+      if (!hasChanges) {
+        skippedCount++;
         continue;
       }
     }
-    // If no session ID or cache disabled, fall through to run the hook
 
     // This config needs to run
     configsToRun.push(config);
@@ -1079,20 +1081,10 @@ export async function runConfiguredHook(
     process.exit(0);
   }
 
-  if (
-    configsToRun.length === 0 &&
-    (skippedCount > 0 || staleSkippedCount > 0)
-  ) {
-    if (skippedCount > 0) {
-      console.log(
-        `Skipped ${skippedCount} director${skippedCount === 1 ? 'y' : 'ies'} (no changes detected)`
-      );
-    }
-    if (staleSkippedCount > 0) {
-      console.log(
-        `Skipped ${staleSkippedCount} director${staleSkippedCount === 1 ? 'y' : 'ies'} (files modified by another session)`
-      );
-    }
+  if (configsToRun.length === 0 && skippedCount > 0) {
+    console.log(
+      `Skipped ${skippedCount} director${skippedCount === 1 ? 'y' : 'ies'} (no changes detected)`
+    );
     console.log('No changes detected in any directories. Nothing to run.');
     process.exit(0);
   }
@@ -1132,66 +1124,54 @@ export async function runConfiguredHook(
       }
     }
 
-    // Compute the actual command to run
-    // If command uses ${HAN_FILES} template, substitute with:
-    // - session-filtered files (when cache=true and session filter enabled)
-    // - all files "." (when cache=false or session filter disabled)
-    let cmdToRun = config.command;
-    if (commandUsesSessionFiles(config.command)) {
-      if (
-        cache &&
-        sessionModifiedFiles &&
-        sessionModifiedFiles.success &&
-        isSessionFilteringEnabled()
-      ) {
-        // Session-scoped: only run on files THIS session modified
-        const sessionFiles = getSessionFilteredFiles(
-          sessionModifiedFiles,
-          config.directory,
-          config.ifChanged ?? []
-        );
-        cmdToRun = buildCommandWithFiles(config.command, sessionFiles);
-        if (verbose && sessionFiles.length > 0) {
-          console.log(
-            `[${pluginName}/${hookName}] Session files: ${sessionFiles.join(', ')}`
-          );
-        }
-      } else {
-        // cache=false or no session filter - run on all files
-        cmdToRun = buildCommandWithFiles(config.command, []);
-      }
-    }
-
     // In verbose mode, show what we're running
     if (verbose) {
       console.log(`\n[${pluginName}/${hookName}] Running in ${relativePath}:`);
-      console.log(`  $ ${cmdToRun}\n`);
+      console.log(`  $ ${config.command}\n`);
     }
 
-    // Run command (with slot management for CLI, without for MCP)
-    const runFn = async () =>
-      runCommand({
+    // Log hook run event (start)
+    const eventLogger = getEventLogger();
+    if (isDebugMode()) {
+      console.error(
+        `[validate] eventLogger=${eventLogger ? 'exists' : 'null'}, about to log hook_run`
+      );
+    }
+    eventLogger?.logHookRun(pluginName, hookName, 'Stop', relativePath, false);
+    const hookStartTime = Date.now();
+
+    // Acquire slot, run command, release slot (per directory)
+    // Use global slots for cross-session coordination when coordinator is available
+    const result = await withGlobalSlot(hookName, pluginName, async () => {
+      return runCommand({
         dir: config.directory,
-        cmd: cmdToRun,
+        cmd: config.command,
         verbose,
         idleTimeout: config.idleTimeout,
         hookName,
         pluginRoot,
       });
+    });
 
-    // MCP tools skip slot management - they have their own timeout handling
-    // Use global slots for cross-session coordination when coordinator is available
-    const result = skipSlot
-      ? await runFn()
-      : await withGlobalSlot(hookName, pluginName, runFn);
+    // Log hook validation event (end)
+    const hookDuration = Date.now() - hookStartTime;
+    eventLogger?.logHookValidation(
+      pluginName,
+      hookName,
+      'Stop', // hookType - han hook run is used for Stop hooks
+      relativePath,
+      false, // cached
+      hookDuration,
+      result.success ? 0 : 1, // exit code
+      result.success,
+      result.output,
+      result.success ? undefined : 'Hook failed'
+    );
 
     if (!result.success) {
-      // Show individual failure
-      console.error(`  ✗ ${relativePath} failed`);
-
       failures.push({
         dir: relativePath,
-        command: cmdToRun,
+        command: config.command,
         idleTimedOut: result.idleTimedOut,
         outputFile: result.outputFile,
         debugFile: result.debugFile,
@@ -1244,8 +1224,6 @@ export async function runConfiguredHook(
         process.exit(2);
       }
     } else {
-      // Show individual success
-      console.log(`  ✓ ${relativePath} passed`);
       successfulConfigs.push(config);
     }
   }
@@ -1258,44 +1236,47 @@ export async function runConfiguredHook(
       `Skipped ${skippedCount} director${skippedCount === 1 ? 'y' : 'ies'} (no changes detected)`
     );
   }
-  if (staleSkippedCount > 0) {
-    console.log(
-      `Skipped ${staleSkippedCount} director${staleSkippedCount === 1 ? 'y' : 'ies'} (files modified by another session)`
-    );
-  }
 
-  // Record file validations for successful executions
-  // Only hooks WITH ifChanged patterns record file validations (they validate specific files)
-  // Hooks without ifChanged validate the entire codebase, not specific files
-  if (cache && successfulConfigs.length > 0 && sessionId) {
+  // Update cache manifest and log validation events for successful executions
+  if (cache && successfulConfigs.length > 0) {
+    const logger = getEventLogger();
+
     for (const config of successfulConfigs) {
       if (config.ifChanged && config.ifChanged.length > 0) {
-        const commandHash = computeCommandHash(config.command);
+        // Compute relative path for consistent cache keys
+        // CRITICAL: Must use relative path to match orchestrate.ts checkForChangesAsync queries
+        const relativePath =
+          config.directory === projectRoot
+            ? '.'
+            : config.directory.replace(`${projectRoot}/`, '');
+
+        // Build manifest of file hashes for this config
         const matchedFiles = findFilesWithGlob(
           config.directory,
           config.ifChanged
         );
-
+        const manifest: Record<string, string> = {};
         for (const filePath of matchedFiles) {
-          const fileHash = computeFileHash(filePath);
-          try {
-            await sessionFileValidations.record({
-              sessionId,
-              filePath,
-              fileHash,
-              pluginName,
-              hookName,
-              directory: config.directory,
-              commandHash,
-            });
-          } catch (err) {
-            if (verbose) {
-              console.warn(
-                `[${pluginName}/${hookName}] Failed to record validation for ${filePath}: ${err}`
-              );
-            }
-          }
+          manifest[filePath] = computeFileHash(filePath);
         }
+
+        const commandHash = computeCommandHash(config.command);
+
+        // Track files in cache (uses hook_cache table)
+        // Also logs hook_validation_cache event if logger is available
+        await trackFilesAsync(
+          pluginName,
+          hookName,
+          config.directory,
+          config.ifChanged,
+          pluginRoot,
+          {
+            logger: logger ?? undefined,
+            directory: relativePath, // Use relative path for consistent cache keys
+            commandHash,
+            sessionId,
+          }
+        );
       }
     }
   }
@@ -1342,7 +1323,6 @@ export async function runConfiguredHook(
       );
     }
 
-    // For multi-failure, always recommend subagents since there are multiple directories to fix
     if (failures.length === 1) {
       console.error(
         `\nRead the output file above, fix the issues, and re-run.\n` +
@@ -1359,7 +1339,7 @@ export async function runConfiguredHook(
   }
 
   console.log(
-    `\n✅ ${ranCount} director${ranCount === 1 ? 'y' : 'ies'} passed`
+    `\n✅ All ${ranCount} director${ranCount === 1 ? 'y' : 'ies'} passed`
   );
   process.exit(0);
 }

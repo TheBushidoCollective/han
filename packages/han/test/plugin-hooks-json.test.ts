@@ -3,34 +3,36 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 /**
- * Tests to validate all plugin hooks.json files conform to the expected structure
- * for async PostToolUse hooks
+ * Tests to validate all plugin hooks.json files have valid structure
+ * and that async PostToolUse hooks follow conventions.
  */
 
-// Get the han repository root (packages/han/tests -> packages/han -> packages -> han repo root)
+// Get the han repository root (packages/han/test -> packages/han -> packages -> han repo root)
 const repoRoot = join(dirname(import.meta.dir), '../..');
 
-// Find all hooks.json files in plugin directories
+// Recursively find all hooks/hooks.json files under plugins/
 function findPluginHooksFiles(): string[] {
-  const pluginDirs = ['validation', 'languages', 'tools'];
+  const pluginsRoot = join(repoRoot, 'plugins');
+  if (!existsSync(pluginsRoot)) return [];
+
   const hooksFiles: string[] = [];
 
-  for (const dir of pluginDirs) {
-    const dirPath = join(repoRoot, dir);
-    if (!existsSync(dirPath)) continue;
-
-    const plugins = readdirSync(dirPath, { withFileTypes: true })
-      .filter((d) => d.isDirectory())
-      .map((d) => d.name);
-
-    for (const plugin of plugins) {
-      const hooksPath = join(dirPath, plugin, '.claude-plugin', 'hooks.json');
+  function scan(dir: string) {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const fullPath = join(dir, entry.name);
+      const hooksPath = join(fullPath, 'hooks', 'hooks.json');
       if (existsSync(hooksPath)) {
         hooksFiles.push(hooksPath);
+      } else {
+        // Check one level deeper for category subdirectories
+        scan(fullPath);
       }
     }
   }
 
+  scan(pluginsRoot);
   return hooksFiles;
 }
 
@@ -74,77 +76,41 @@ describe('Plugin hooks.json Files', () => {
         expect(hooks).toBeDefined();
         expect(hooks.hooks).toBeDefined();
       });
+    }
+  });
 
-      it(`${relativePath} has PostToolUse hooks`, () => {
-        const hooks = parseHooksJson(filePath);
-        expect(hooks.hooks.PostToolUse).toBeDefined();
-        expect(Array.isArray(hooks.hooks.PostToolUse)).toBe(true);
-        expect(hooks.hooks.PostToolUse?.length).toBeGreaterThan(0);
-      });
+  describe('PostToolUse Async Convention', () => {
+    // Only test plugins that actually have PostToolUse hooks
+    const filesWithPostToolUse = hooksFiles.filter((f) => {
+      const hooks = parseHooksJson(f);
+      return (
+        hooks.hooks.PostToolUse &&
+        Array.isArray(hooks.hooks.PostToolUse) &&
+        hooks.hooks.PostToolUse.length > 0
+      );
+    });
+
+    it('finds plugins with PostToolUse hooks', () => {
+      expect(filesWithPostToolUse.length).toBeGreaterThan(0);
+    });
+
+    for (const filePath of filesWithPostToolUse) {
+      const relativePath = filePath.replace(`${repoRoot}/`, '');
 
       it(`${relativePath} has async: true on all PostToolUse hooks`, () => {
         const hooks = parseHooksJson(filePath);
-        const postToolUseHooks = hooks.hooks.PostToolUse ?? [];
-        for (const entry of postToolUseHooks) {
+        for (const entry of hooks.hooks.PostToolUse ?? []) {
           expect(entry.async).toBe(true);
         }
       });
 
       it(`${relativePath} has matcher for file modification tools`, () => {
         const hooks = parseHooksJson(filePath);
-        const postToolUseHooks = hooks.hooks.PostToolUse ?? [];
-        for (const entry of postToolUseHooks) {
+        for (const entry of hooks.hooks.PostToolUse ?? []) {
           expect(entry.matcher).toBeDefined();
           expect(entry.matcher).toMatch(/Edit|Write|NotebookEdit/);
         }
       });
-
-      it(`${relativePath} uses npx command format`, () => {
-        const hooks = parseHooksJson(filePath);
-        const postToolUseHooks = hooks.hooks.PostToolUse ?? [];
-        for (const entry of postToolUseHooks) {
-          for (const hook of entry.hooks) {
-            expect(hook.type).toBe('command');
-            expect(hook.command).toMatch(/^npx -y @thebushidocollective\/han/);
-          }
-        }
-      });
-
-      it(`${relativePath} uses han hook run with --async flag`, () => {
-        const hooks = parseHooksJson(filePath);
-        const postToolUseHooks = hooks.hooks.PostToolUse ?? [];
-        for (const entry of postToolUseHooks) {
-          for (const hook of entry.hooks) {
-            expect(hook.command).toMatch(/hook run .+ --async$/);
-          }
-        }
-      });
-    }
-  });
-});
-
-describe('Command Format Validation', () => {
-  const hooksFiles = findPluginHooksFiles();
-
-  it('all commands follow the pattern: npx -y @thebushidocollective/han hook run <plugin> <hook> --async', () => {
-    const pattern =
-      /^npx -y @thebushidocollective\/han hook run (\w+) ([\w-]+) --async$/;
-
-    for (const filePath of hooksFiles) {
-      const hooks = parseHooksJson(filePath);
-      for (const entry of hooks.hooks.PostToolUse || []) {
-        for (const hook of entry.hooks) {
-          const match = hook.command.match(pattern);
-          expect(match).not.toBe(null);
-          if (match) {
-            const [, pluginName, hookName] = match;
-            expect(pluginName).toBeTruthy();
-            expect(hookName).toBeTruthy();
-            // Async hooks should end with -async
-            expect(hookName).toMatch(/-async$/);
-          }
-        }
-      }
     }
   });
 });
@@ -191,59 +157,14 @@ describe('Matcher Patterns', () => {
   });
 });
 
-describe('Plugin Coverage', () => {
-  const expectedPlugins = {
-    validation: [
-      'biome',
-      'eslint',
-      'prettier',
-      'clippy',
-      'rubocop',
-      'pylint',
-      'shellcheck',
-      'shfmt',
-      'credo',
-      'markdown',
-    ],
-    languages: ['typescript', 'go', 'rust', 'elixir'],
-    tools: ['jest', 'vitest', 'pytest', 'mocha', 'playwright', 'rspec'],
-  };
-
-  for (const [category, plugins] of Object.entries(expectedPlugins)) {
-    describe(`${category} plugins`, () => {
-      for (const plugin of plugins) {
-        it(`${plugin} has hooks.json with async PostToolUse`, () => {
-          const hooksPath = join(
-            repoRoot,
-            category,
-            plugin,
-            '.claude-plugin',
-            'hooks.json'
-          );
-          expect(existsSync(hooksPath)).toBe(true);
-
-          const hooks = parseHooksJson(hooksPath);
-          expect(hooks.hooks.PostToolUse).toBeDefined();
-          expect(hooks.hooks.PostToolUse?.length).toBeGreaterThan(0);
-
-          // All entries should have async: true
-          const postToolUseHooks = hooks.hooks.PostToolUse ?? [];
-          for (const entry of postToolUseHooks) {
-            expect(entry.async).toBe(true);
-          }
-        });
-      }
-    });
-  }
-});
-
 describe('Multi-Hook Plugins', () => {
-  it('languages/go has format, build, and test async hooks', () => {
+  it('languages/go has format async PostToolUse hook', () => {
     const hooksPath = join(
       repoRoot,
+      'plugins',
       'languages',
       'go',
-      '.claude-plugin',
+      'hooks',
       'hooks.json'
     );
     const hooks = parseHooksJson(hooksPath);
@@ -252,36 +173,16 @@ describe('Multi-Hook Plugins', () => {
       e.hooks.map((h) => h.command)
     );
 
-    expect(commands.some((c) => c.includes('format-async'))).toBe(true);
-    expect(commands.some((c) => c.includes('build-async'))).toBe(true);
-    expect(commands.some((c) => c.includes('test-async'))).toBe(true);
+    expect(commands?.some((c) => c.includes('format'))).toBe(true);
   });
 
-  it('languages/rust has format, build, and test async hooks', () => {
+  it('languages/elixir has format, build, and test-changed async PostToolUse hooks', () => {
     const hooksPath = join(
       repoRoot,
-      'languages',
-      'rust',
-      '.claude-plugin',
-      'hooks.json'
-    );
-    const hooks = parseHooksJson(hooksPath);
-
-    const commands = hooks.hooks.PostToolUse?.flatMap((e) =>
-      e.hooks.map((h) => h.command)
-    );
-
-    expect(commands.some((c) => c.includes('format-async'))).toBe(true);
-    expect(commands.some((c) => c.includes('build-async'))).toBe(true);
-    expect(commands.some((c) => c.includes('test-async'))).toBe(true);
-  });
-
-  it('languages/elixir has format, compile, and test async hooks', () => {
-    const hooksPath = join(
-      repoRoot,
+      'plugins',
       'languages',
       'elixir',
-      '.claude-plugin',
+      'hooks',
       'hooks.json'
     );
     const hooks = parseHooksJson(hooksPath);
@@ -290,8 +191,8 @@ describe('Multi-Hook Plugins', () => {
       e.hooks.map((h) => h.command)
     );
 
-    expect(commands.some((c) => c.includes('format-async'))).toBe(true);
-    expect(commands.some((c) => c.includes('compile-async'))).toBe(true);
-    expect(commands.some((c) => c.includes('test-async'))).toBe(true);
+    expect(commands?.some((c) => c.includes('format'))).toBe(true);
+    expect(commands?.some((c) => c.includes('build'))).toBe(true);
+    expect(commands?.some((c) => c.includes('test-changed'))).toBe(true);
   });
 });

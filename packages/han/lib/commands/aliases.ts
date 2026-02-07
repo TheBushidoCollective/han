@@ -1,7 +1,7 @@
 import type { Command } from 'commander';
+import { validate } from '../hook-runner.ts';
 import { install } from '../install.ts';
 import { uninstall } from '../uninstall.ts';
-import { validate } from '../validate.ts';
 import { orchestrate } from './hook/orchestrate.ts';
 
 /**

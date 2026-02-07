@@ -653,11 +653,13 @@ describe('Session ID Requirements', () => {
     expect(resolved).toBe('session-from-cli');
 
     // stdin takes priority if no CLI
-    const resolved2 = undefined || sources.stdin || sources.env;
+    const noCli: string | undefined = undefined;
+    const resolved2 = noCli || sources.stdin || sources.env;
     expect(resolved2).toBe('session-from-stdin');
 
     // env is fallback
-    const resolved3 = undefined || undefined || sources.env;
+    const noStdin: string | undefined = undefined;
+    const resolved3 = noCli || noStdin || sources.env;
     expect(resolved3).toBe('session-from-env');
   });
 });
