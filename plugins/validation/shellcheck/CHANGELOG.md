@@ -13,6 +13,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- async Stop hooks, merge test/test-async, fix plugin name resolution ([ba6474e8](../../commit/ba6474e8))
+- replace npx with direct han binary, fix auto-detect plugin matching ([11c3edfa](../../commit/11c3edfa))
+
+### Changed
+
+- remove file_filter, split test hooks into Stop + PostToolUse ([bd1b5e34](../../commit/bd1b5e34))
+
+## [1.4.0] - 2026-02-07
+
+### Added
+
+- auto-generate hooks.json from han-plugin.yml with shorthand events ([f3a39941](../../commit/f3a39941))
+
+### Fixed
+
 - replace npx with direct han binary, fix auto-detect plugin matching ([11c3edfa](../../commit/11c3edfa))
 
 ## [1.4.0] - 2026-01-30
