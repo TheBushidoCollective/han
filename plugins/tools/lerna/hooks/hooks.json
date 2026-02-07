@@ -5,9 +5,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run lerna bootstrap"
+            "command": "han hook run lerna bootstrap --async"
           }
-        ]
+        ],
+        "async": true
       }
     ],
     "SubagentStop": [
@@ -15,9 +16,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run lerna bootstrap"
+            "command": "han hook run lerna bootstrap --async"
           }
-        ]
+        ],
+        "async": true
       }
     ]
   }

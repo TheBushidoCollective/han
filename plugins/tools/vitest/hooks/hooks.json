@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run vitest test-async --async"
+            "command": "han hook run vitest test --async"
           }
         ],
         "matcher": "Edit|Write|NotebookEdit",
@@ -17,9 +17,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run vitest test"
+            "command": "han hook run vitest test --async"
           }
-        ]
+        ],
+        "async": true
       }
     ],
     "SubagentStop": [
@@ -27,9 +28,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run vitest test"
+            "command": "han hook run vitest test --async"
           }
-        ]
+        ],
+        "async": true
       }
     ]
   }

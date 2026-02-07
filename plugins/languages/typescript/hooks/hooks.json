@@ -17,9 +17,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run typescript typecheck"
+            "command": "han hook run typescript typecheck --async"
           }
-        ]
+        ],
+        "async": true
       }
     ],
     "SubagentStop": [
@@ -27,9 +28,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run typescript typecheck"
+            "command": "han hook run typescript typecheck --async"
           }
-        ]
+        ],
+        "async": true
       }
     ]
   }

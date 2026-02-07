@@ -5,9 +5,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run dialyzer typecheck"
+            "command": "han hook run dialyzer typecheck --async"
           }
-        ]
+        ],
+        "async": true
       }
     ],
     "SubagentStop": [
@@ -15,9 +16,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run dialyzer typecheck"
+            "command": "han hook run dialyzer typecheck --async"
           }
-        ]
+        ],
+        "async": true
       }
     ]
   }

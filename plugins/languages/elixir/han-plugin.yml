@@ -33,8 +33,8 @@ hooks:
       - "**/*.exs"
 
   test:
-    event: Stop
-    command: "mix test --stale"
+    event: [Stop, PostToolUse:Edit|Write]
+    command: "mix test ${HAN_FILES}"
     dirs_with:
       - "mix.exs"
     if_changed:
@@ -45,12 +45,6 @@ hooks:
       - "**/*.heex"
       - "mix.exs"
       - "mix.lock"
-
-  test-async:
-    event: PostToolUse:Edit|Write
-    command: "mix test ${HAN_FILES}"
-    dirs_with:
-      - "mix.exs"
     file_filter:
       - "**/*_test.exs"
       - "**/test/**/*.exs"

@@ -1,8 +1,7 @@
 hooks:
-  # Full test suite at Stop (checkpoint)
   test:
-    event: Stop
-    command: "PLAYWRIGHT_HTML_OPEN=never npx -y playwright test"
+    event: [Stop, PostToolUse:Edit|Write]
+    command: "PLAYWRIGHT_HTML_OPEN=never npx -y playwright test ${HAN_FILES}"
     dirs_with:
       - "playwright.config.ts"
       - "playwright.config.js"
@@ -12,14 +11,6 @@ hooks:
       - plugin: jutsu-playwright-bdd
         hook: generate
         optional: true
-
-  # Single test file async on PostToolUse
-  test-async:
-    event: PostToolUse:Edit|Write
-    command: "PLAYWRIGHT_HTML_OPEN=never npx -y playwright test ${HAN_FILES}"
-    dirs_with:
-      - "playwright.config.ts"
-      - "playwright.config.js"
     file_filter:
       - "**/*.spec.{js,ts}"
       - "**/*.test.{js,ts}"

@@ -17,9 +17,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run biome lint"
+            "command": "han hook run biome lint --async"
           }
-        ]
+        ],
+        "async": true
       }
     ],
     "SubagentStop": [
@@ -27,9 +28,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run biome lint"
+            "command": "han hook run biome lint --async"
           }
-        ]
+        ],
+        "async": true
       }
     ]
   }

@@ -5,9 +5,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rollup build"
+            "command": "han hook run rollup build --async"
           }
-        ]
+        ],
+        "async": true
       }
     ],
     "SubagentStop": [
@@ -15,9 +16,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rollup build"
+            "command": "han hook run rollup build --async"
           }
-        ]
+        ],
+        "async": true
       }
     ]
   }

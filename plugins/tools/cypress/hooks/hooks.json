@@ -5,9 +5,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run cypress test"
+            "command": "han hook run cypress test --async"
           }
-        ]
+        ],
+        "async": true
       }
     ],
     "SubagentStop": [
@@ -15,9 +16,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run cypress test"
+            "command": "han hook run cypress test --async"
           }
-        ]
+        ],
+        "async": true
       }
     ]
   }

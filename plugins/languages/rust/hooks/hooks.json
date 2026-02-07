@@ -5,25 +5,28 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust format"
+            "command": "han hook run rust format --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust lint"
+            "command": "han hook run rust lint --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust test"
+            "command": "han hook run rust test --async"
           }
-        ]
+        ],
+        "async": true
       }
     ],
     "SubagentStop": [
@@ -31,25 +34,28 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust format"
+            "command": "han hook run rust format --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust lint"
+            "command": "han hook run rust lint --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust test"
+            "command": "han hook run rust test --async"
           }
-        ]
+        ],
+        "async": true
       }
     ]
   }

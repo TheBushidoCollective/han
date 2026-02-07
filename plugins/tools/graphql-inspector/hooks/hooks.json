@@ -5,17 +5,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run graphql-inspector validate"
+            "command": "han hook run graphql-inspector validate --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run graphql-inspector diff"
+            "command": "han hook run graphql-inspector diff --async"
           }
-        ]
+        ],
+        "async": true
       }
     ],
     "SubagentStop": [
@@ -23,17 +25,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run graphql-inspector validate"
+            "command": "han hook run graphql-inspector validate --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run graphql-inspector diff"
+            "command": "han hook run graphql-inspector diff --async"
           }
-        ]
+        ],
+        "async": true
       }
     ]
   }

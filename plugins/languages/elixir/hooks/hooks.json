@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir test-async --async"
+            "command": "han hook run elixir test --async"
           }
         ],
         "matcher": "Edit|Write",
@@ -37,41 +37,46 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir format"
+            "command": "han hook run elixir format --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir build"
+            "command": "han hook run elixir build --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir test"
+            "command": "han hook run elixir test --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir typecheck"
+            "command": "han hook run elixir typecheck --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir coverage"
+            "command": "han hook run elixir coverage --async"
           }
-        ]
+        ],
+        "async": true
       }
     ],
     "SubagentStop": [
@@ -79,41 +84,46 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir format"
+            "command": "han hook run elixir format --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir build"
+            "command": "han hook run elixir build --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir test"
+            "command": "han hook run elixir test --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir typecheck"
+            "command": "han hook run elixir typecheck --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir coverage"
+            "command": "han hook run elixir coverage --async"
           }
-        ]
+        ],
+        "async": true
       }
     ]
   }

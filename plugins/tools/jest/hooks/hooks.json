@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jest test-async --async"
+            "command": "han hook run jest test --async"
           }
         ],
         "matcher": "Edit|Write|NotebookEdit",
@@ -17,9 +17,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jest test"
+            "command": "han hook run jest test --async"
           }
-        ]
+        ],
+        "async": true
       }
     ],
     "SubagentStop": [
@@ -27,9 +28,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jest test"
+            "command": "han hook run jest test --async"
           }
-        ]
+        ],
+        "async": true
       }
     ]
   }

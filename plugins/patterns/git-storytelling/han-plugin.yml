@@ -7,6 +7,7 @@
 hooks:
   check-commits:
     event: Stop
+    sync: true
     command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/check-commits.sh\" ${HAN_FILES}"
     if_changed:
       - "**/*"

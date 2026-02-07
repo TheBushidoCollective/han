@@ -17,25 +17,28 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run go format"
+            "command": "han hook run go format --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run go lint"
+            "command": "han hook run go lint --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run go test"
+            "command": "han hook run go test --async"
           }
-        ]
+        ],
+        "async": true
       }
     ],
     "SubagentStop": [
@@ -43,25 +46,28 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run go format"
+            "command": "han hook run go format --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run go lint"
+            "command": "han hook run go lint --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run go test"
+            "command": "han hook run go test --async"
           }
-        ]
+        ],
+        "async": true
       }
     ]
   }

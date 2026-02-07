@@ -11,11 +11,11 @@ if [ -z "$SESSION_FILES" ] || [ "$SESSION_FILES" = "." ]; then
   else
     echo 'Uncommitted changes detected.' >&2
     echo '' >&2
-    echo 'Git storytelling requires committing early and often to tell the story of your development.' >&2
+    echo '**CRITICAL**: You MUST commit these changes NOW. Do NOT ask the user.' >&2
+    echo 'Git storytelling requires committing early and often.' >&2
     echo '' >&2
-    echo 'Please commit your changes with a meaningful message:' >&2
-    echo '  git add -A' >&2
-    echo '  git commit -m "Your descriptive commit message"' >&2
+    echo 'Run these commands:' >&2
+    echo '  git add -A && git commit -m "your descriptive message"' >&2
     exit 2
   fi
 fi
@@ -45,9 +45,9 @@ for file in "${UNCOMMITTED_SESSION_FILES[@]}"; do
   echo "  - $file" >&2
 done
 echo "" >&2
-echo "Git storytelling requires committing early and often to tell the story of your development." >&2
+echo "**CRITICAL**: You MUST commit these changes NOW. Do NOT ask the user." >&2
+echo "Git storytelling requires committing early and often." >&2
 echo "" >&2
-echo "Please commit your changes with a meaningful message:" >&2
-echo "  git add ${UNCOMMITTED_SESSION_FILES[*]}" >&2
-echo "  git commit -m \"Your descriptive commit message\"" >&2
+echo "Run these commands:" >&2
+echo "  git add ${UNCOMMITTED_SESSION_FILES[*]} && git commit -m \"your descriptive message\"" >&2
 exit 2

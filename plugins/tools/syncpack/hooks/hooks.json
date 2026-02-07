@@ -5,17 +5,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run syncpack fix"
+            "command": "han hook run syncpack fix --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run syncpack format"
+            "command": "han hook run syncpack format --async"
           }
-        ]
+        ],
+        "async": true
       }
     ],
     "SubagentStop": [
@@ -23,17 +25,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run syncpack fix"
+            "command": "han hook run syncpack fix --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run syncpack format"
+            "command": "han hook run syncpack format --async"
           }
-        ]
+        ],
+        "async": true
       }
     ]
   }

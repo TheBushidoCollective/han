@@ -63,6 +63,7 @@ interface YamlHookDef {
   tip?: string;
   depends_on?: unknown[];
   mcp?: boolean;
+  sync?: boolean;
 }
 
 /**
@@ -91,11 +92,17 @@ export function generateHooksJson(
     const parsedEvents = parseEventShorthands(rawEvents);
 
     for (const [eventType, toolMatcher] of parsedEvents) {
-      const isAsync = eventType === 'PostToolUse' || eventType === 'PreToolUse';
+      const isToolUseEvent =
+        eventType === 'PostToolUse' || eventType === 'PreToolUse';
+      // All hooks are async by default unless explicitly marked sync
+      const isAsync = !hookDef.sync;
 
       // Build the han hook run command
       const commandParts = ['han hook run', pluginName, hookName];
-      if (isAsync) {
+      if (
+        isAsync &&
+        (isToolUseEvent || eventType === 'Stop' || eventType === 'SubagentStop')
+      ) {
         commandParts.push('--async');
       }
       const command = commandParts.join(' ');
@@ -116,7 +123,7 @@ export function generateHooksJson(
         hookGroup.matcher = effectiveMatcher;
       }
 
-      // Add async flag for tool-use hooks
+      // All hooks async by default (sync: true in YAML overrides)
       if (isAsync) {
         hookGroup.async = true;
       }
@@ -177,7 +184,20 @@ export function generateHooksForPlugin(
     return null;
   }
 
-  const pluginName = basename(pluginDir);
+  // Read plugin name from plugin.json (canonical name used by Claude Code)
+  // Fall back to directory basename if plugin.json doesn't exist
+  let pluginName = basename(pluginDir);
+  const pluginJsonPath = join(pluginDir, '.claude-plugin', 'plugin.json');
+  if (existsSync(pluginJsonPath)) {
+    try {
+      const pluginJson = JSON.parse(readFileSync(pluginJsonPath, 'utf-8'));
+      if (pluginJson.name) {
+        pluginName = pluginJson.name;
+      }
+    } catch {
+      // Fall back to directory name
+    }
+  }
   const result = generateHooksJson(pluginName, config.hooks);
 
   if (!result) {

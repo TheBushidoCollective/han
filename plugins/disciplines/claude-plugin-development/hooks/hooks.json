@@ -5,17 +5,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run claude-plugin-development lint"
+            "command": "han hook run plugin-development lint --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run claude-plugin-development config-sync"
+            "command": "han hook run plugin-development config-sync --async"
           }
-        ]
+        ],
+        "async": true
       }
     ],
     "SubagentStop": [
@@ -23,17 +25,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run claude-plugin-development lint"
+            "command": "han hook run plugin-development lint --async"
           }
-        ]
+        ],
+        "async": true
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run claude-plugin-development config-sync"
+            "command": "han hook run plugin-development config-sync --async"
           }
-        ]
+        ],
+        "async": true
       }
     ]
   }

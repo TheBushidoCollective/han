@@ -1,8 +1,7 @@
 hooks:
-  # Full test suite at Stop (checkpoint)
   test:
-    event: Stop
-    command: "npm test"
+    event: [Stop, PostToolUse:Edit|Write]
+    command: "npx mocha ${HAN_FILES}"
     dirs_with:
       - "package.json"
     dir_test: "grep -qE '\"mocha\":' package.json"
@@ -10,14 +9,6 @@ hooks:
       - "**/*.{js,jsx,ts,tsx,mjs,cjs}"
       - "test/**/*"
       - ".mocharc.*"
-
-  # Single test file async on PostToolUse
-  test-async:
-    event: PostToolUse:Edit|Write
-    command: "npx mocha ${HAN_FILES}"
-    dirs_with:
-      - "package.json"
-    dir_test: "grep -qE '\"mocha\":' package.json"
     file_filter:
       - "**/*.test.{js,ts}"
       - "**/*.spec.{js,ts}"
