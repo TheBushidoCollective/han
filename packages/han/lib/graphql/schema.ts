@@ -364,7 +364,7 @@ builder.queryField('dashboardAnalytics', (t) =>
     },
     description: 'Aggregated analytics for the enhanced dashboard',
     resolve: async (_parent, args) =>
-      queryDashboardAnalytics(args.days ?? 30),
+      queryDashboardAnalytics(args.days ?? 30, args.subscriptionTier ?? 200),
   })
 );
 

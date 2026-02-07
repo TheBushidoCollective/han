@@ -340,20 +340,75 @@ export const DashboardAnalyticsType = DashboardAnalyticsRef.implement({
 });
 
 // =============================================================================
-// Helper Functions
+// Constants
 // =============================================================================
 
 /**
- * Calculate estimated cost based on Claude pricing
+ * Effectiveness scoring weights (must sum to 1.0)
+ *
+ * - Sentiment: How positive/negative the conversation felt
+ * - Task completion: Ratio of completed tasks to created tasks
+ * - Turn efficiency: Fewer turns per completed task is better
+ * - Compaction penalty: More compactions = worse context management
+ * - Focus: Fewer unique tools = more focused session
+ */
+const EFFECTIVENESS_WEIGHTS = {
+  sentiment: 0.25,
+  taskCompletion: 0.25,
+  turnEfficiency: 0.2,
+  compaction: 0.15,
+  focus: 0.15,
+} as const;
+
+/** Number of unique tools in a typical focused session */
+const FOCUS_BASELINE_TOOLS = 3;
+/** Range of unique tools used to calculate focus (above baseline) */
+const FOCUS_TOOL_RANGE = 20;
+/** Default focus score when no tools are used */
+const FOCUS_DEFAULT = 0.5;
+/** Maximum turns-per-task before turn efficiency is zero */
+const TURN_EFFICIENCY_MAX = 50;
+/** Compaction count at which penalty score reaches zero */
+const COMPACTION_PENALTY_MAX = 5;
+/** Per-compaction penalty (100 / COMPACTION_PENALTY_MAX) */
+const COMPACTION_PENALTY_PER = 100 / COMPACTION_PENALTY_MAX;
+
+/**
+ * Claude API pricing (Sonnet-class, as of 2025).
+ * These are estimates — actual cost varies by model.
+ * stats-cache.json provides more accurate data when available.
+ */
+const PRICING = {
+  inputPerMTok: 3.0,
+  outputPerMTok: 15.0,
+  cacheReadPerMTok: 0.3,
+} as const;
+
+/** Theoretical optimal cache rate target for savings estimate */
+const OPTIMAL_CACHE_RATE = 0.8;
+
+// =============================================================================
+// Helper Functions
+// =============================================================================
+
+/** Round to N decimal places */
+function round(value: number, decimals: number): number {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+}
+
+/**
+ * Calculate estimated cost based on Claude pricing.
+ * Uses Sonnet-class pricing as a baseline estimate.
  */
 function calculateCost(
   inputTokens: number,
   outputTokens: number,
   cachedTokens: number
 ): number {
-  const inputCost = (inputTokens / 1_000_000) * 3.0;
-  const outputCost = (outputTokens / 1_000_000) * 15.0;
-  const cacheCost = (cachedTokens / 1_000_000) * 0.3;
+  const inputCost = (inputTokens / 1_000_000) * PRICING.inputPerMTok;
+  const outputCost = (outputTokens / 1_000_000) * PRICING.outputPerMTok;
+  const cacheCost = (cachedTokens / 1_000_000) * PRICING.cacheReadPerMTok;
   return inputCost + outputCost + cacheCost;
 }
 
@@ -365,30 +420,14 @@ function parseTokensFromRawJson(rawJson: string | null): {
   outputTokens: number;
   cachedTokens: number;
   cacheReadTokens: number;
-  cacheCreationTokens: number;
 } {
-  if (!rawJson) {
-    return {
-      inputTokens: 0,
-      outputTokens: 0,
-      cachedTokens: 0,
-      cacheReadTokens: 0,
-      cacheCreationTokens: 0,
-    };
-  }
+  const zero = { inputTokens: 0, outputTokens: 0, cachedTokens: 0, cacheReadTokens: 0 };
+  if (!rawJson) return zero;
 
   try {
     const parsed = JSON.parse(rawJson);
     const usage = parsed.message?.usage || parsed.usage;
-    if (!usage) {
-      return {
-        inputTokens: 0,
-        outputTokens: 0,
-        cachedTokens: 0,
-        cacheReadTokens: 0,
-        cacheCreationTokens: 0,
-      };
-    }
+    if (!usage) return zero;
 
     const cacheRead = usage.cache_read_input_tokens || 0;
     const cacheCreation = usage.cache_creation_input_tokens || 0;
@@ -398,21 +437,15 @@ function parseTokensFromRawJson(rawJson: string | null): {
       outputTokens: usage.output_tokens || 0,
       cachedTokens: cacheRead || cacheCreation || 0,
       cacheReadTokens: cacheRead,
-      cacheCreationTokens: cacheCreation,
     };
   } catch {
-    return {
-      inputTokens: 0,
-      outputTokens: 0,
-      cachedTokens: 0,
-      cacheReadTokens: 0,
-      cacheCreationTokens: 0,
-    };
+    return zero;
   }
 }
 
 /**
- * Read stats-cache.json from ~/.claude/ for model usage data
+ * Read stats-cache.json from ~/.claude/ for model usage data.
+ * Returns null if unavailable (logs warning on parse failure).
  */
 function readStatsCache(): {
   modelUsage?: Record<
@@ -428,18 +461,18 @@ function readStatsCache(): {
 } | null {
   try {
     const statsPath = join(homedir(), '.claude', 'stats-cache.json');
-    if (!existsSync(statsPath)) {
-      return null;
-    }
+    if (!existsSync(statsPath)) return null;
     const content = readFileSync(statsPath, 'utf-8');
     return JSON.parse(content);
-  } catch {
+  } catch (err) {
+    console.warn('Failed to read stats-cache.json, using estimated costs:', err);
     return null;
   }
 }
 
 /**
- * Determine sentiment trend from a series of sentiment scores
+ * Determine sentiment trend from a series of sentiment scores.
+ * Compares average of first half vs second half.
  */
 function computeSentimentTrend(scores: number[]): string {
   if (scores.length < 2) return 'neutral';
@@ -463,15 +496,43 @@ function computeSentimentTrend(scores: number[]): string {
   return 'stable';
 }
 
+/**
+ * Detect compaction type by parsing JSON fields (not string matching).
+ * Falls back to 'auto_compact' for unrecognized summary messages.
+ */
+function classifyCompactionType(rawJson: string | null): string {
+  if (!rawJson) return 'auto_compact';
+
+  try {
+    const parsed = JSON.parse(rawJson);
+
+    if (parsed.type === 'auto_compact' || parsed.auto_compacted) return 'auto_compact';
+    if (parsed.type === 'compact' || parsed.is_compact || parsed.isCompact) return 'compact';
+
+    // Check for continuation markers in the content
+    const content = parsed.content || parsed.message?.content || '';
+    const contentStr = typeof content === 'string' ? content : JSON.stringify(content);
+    if (contentStr.includes('continued from a previous conversation')) return 'continuation';
+
+    return 'auto_compact';
+  } catch {
+    return 'auto_compact';
+  }
+}
+
 // =============================================================================
 // Query Function
 // =============================================================================
 
 /**
- * Query dashboard analytics data from the database
+ * Query dashboard analytics data from the database.
+ *
+ * @param days Number of days to analyze (default 30)
+ * @param subscriptionTier Monthly subscription cost in USD (default 200 for Max)
  */
 export async function queryDashboardAnalytics(
-  days = 30
+  days = 30,
+  subscriptionTier = 200
 ): Promise<DashboardAnalytics> {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - days);
@@ -525,19 +586,16 @@ export async function queryDashboardAnalytics(
     const allSessions = await listSessions({ limit: 1000 });
 
     for (const session of allSessions) {
-      // Fetch assistant messages for token/cost data
-      const assistantMessages = await messages.list({
+      // Fetch ALL messages for this session in a single query
+      const allMessages = await messages.list({
         sessionId: session.id,
-        messageType: 'assistant',
-        limit: 10000,
+        limit: 50000,
       });
 
-      // Check if session is within our time window
-      const sessionStartedAt =
-        assistantMessages.length > 0
-          ? assistantMessages[0].timestamp
-          : null;
+      if (allMessages.length === 0) continue;
 
+      // Check if session is within our time window using first message
+      const sessionStartedAt = allMessages[0]?.timestamp ?? null;
       if (sessionStartedAt && sessionStartedAt < cutoffStr) continue;
 
       totalSessions++;
@@ -548,22 +606,85 @@ export async function queryDashboardAnalytics(
       let sessionInputTokens = 0;
       let sessionOutputTokens = 0;
       let sessionCachedTokens = 0;
+      let turnCount = 0;
+      let taskTotal = 0;
+      let taskCompleted = 0;
 
-      // Process assistant messages for token data
-      for (const msg of assistantMessages) {
+      // Process all messages in a single pass
+      for (const msg of allMessages) {
         if (msg.timestamp < cutoffStr) continue;
 
-        const tokens = parseTokensFromRawJson(msg.rawJson ?? null);
-        sessionInputTokens += tokens.inputTokens;
-        sessionOutputTokens += tokens.outputTokens;
-        sessionCachedTokens += tokens.cachedTokens;
-        totalCacheReadTokens += tokens.cacheReadTokens;
+        // Assistant messages: token tracking + sentiment
+        if (msg.messageType === 'assistant') {
+          const tokens = parseTokensFromRawJson(msg.rawJson ?? null);
+          sessionInputTokens += tokens.inputTokens;
+          sessionOutputTokens += tokens.outputTokens;
+          sessionCachedTokens += tokens.cachedTokens;
+          totalCacheReadTokens += tokens.cacheReadTokens;
 
-        if (
-          msg.sentimentScore !== undefined &&
-          msg.sentimentScore !== null
-        ) {
-          sentimentScores.push(msg.sentimentScore);
+          if (msg.sentimentScore != null) {
+            sentimentScores.push(msg.sentimentScore);
+          }
+        }
+
+        // User messages: count turns + sentiment
+        if (msg.messageType === 'human' || msg.messageType === 'user') {
+          turnCount++;
+          if (msg.sentimentScore != null) {
+            sentimentScores.push(msg.sentimentScore);
+          }
+        }
+
+        // Tool use messages: tool usage, subagent tracking, task tracking
+        if (msg.messageType === 'tool_use' && msg.toolName) {
+          toolCounts.set(msg.toolName, (toolCounts.get(msg.toolName) || 0) + 1);
+          sessionToolNames.add(msg.toolName);
+
+          // Extract subagent type from Task tool calls
+          if (msg.toolName === 'Task' && msg.toolInput) {
+            try {
+              const input = JSON.parse(msg.toolInput);
+              const subagentType =
+                input.subagent_type || input.subagentType || 'general-purpose';
+              subagentCounts.set(
+                subagentType,
+                (subagentCounts.get(subagentType) || 0) + 1
+              );
+            } catch {
+              subagentCounts.set(
+                'general-purpose',
+                (subagentCounts.get('general-purpose') || 0) + 1
+              );
+            }
+          }
+
+          // Track task creation and completion
+          if (msg.toolName === 'TaskCreate') {
+            taskTotal++;
+          }
+          if (msg.toolName === 'TaskUpdate' && msg.toolInput) {
+            try {
+              const input = JSON.parse(msg.toolInput);
+              if (input.status === 'completed') {
+                taskCompleted++;
+                totalCompletedTasks++;
+              }
+            } catch {
+              // Malformed tool input
+            }
+          }
+        }
+
+        // Summary messages: compaction tracking
+        if (msg.messageType === 'summary') {
+          const compactType = classifyCompactionType(msg.rawJson ?? null);
+          totalCompactions++;
+          sessionCompactions++;
+          sessionsWithCompactions.add(session.id);
+
+          if (compactType === 'auto_compact') autoCompactCount++;
+          else if (compactType === 'compact') manualCompactCount++;
+          else if (compactType === 'continuation') continuationCount++;
         }
       }
 
@@ -588,120 +709,6 @@ export async function queryDashboardAnalytics(
         dailyCostMap.set(date, existing);
       }
 
-      // Fetch tool_use messages for tool usage and subagent tracking
-      const toolUseMessages = await messages.list({
-        sessionId: session.id,
-        messageType: 'tool_use',
-        limit: 10000,
-      });
-
-      for (const msg of toolUseMessages) {
-        if (msg.timestamp < cutoffStr) continue;
-
-        const toolName = msg.toolName;
-        if (toolName) {
-          toolCounts.set(toolName, (toolCounts.get(toolName) || 0) + 1);
-          sessionToolNames.add(toolName);
-
-          // Extract subagent type from Task tool calls
-          if (toolName === 'Task' && msg.toolInput) {
-            try {
-              const input = JSON.parse(msg.toolInput);
-              const subagentType =
-                input.subagent_type || input.subagentType || 'general-purpose';
-              subagentCounts.set(
-                subagentType,
-                (subagentCounts.get(subagentType) || 0) + 1
-              );
-            } catch {
-              subagentCounts.set(
-                'general-purpose',
-                (subagentCounts.get('general-purpose') || 0) + 1
-              );
-            }
-          }
-
-          // Track task completions from TaskUpdate tool calls
-          if (toolName === 'TaskUpdate' && msg.toolInput) {
-            try {
-              const input = JSON.parse(msg.toolInput);
-              if (input.status === 'completed') {
-                totalCompletedTasks++;
-              }
-            } catch {
-              // Ignore parse errors
-            }
-          }
-        }
-      }
-
-      // Fetch summary messages for compaction tracking
-      const summaryMessages = await messages.list({
-        sessionId: session.id,
-        messageType: 'summary',
-        limit: 10000,
-      });
-
-      for (const msg of summaryMessages) {
-        if (msg.timestamp < cutoffStr) continue;
-
-        totalCompactions++;
-        sessionCompactions++;
-        sessionsWithCompactions.add(session.id);
-
-        // Classify compaction type from raw JSON
-        if (msg.rawJson) {
-          const rawLower = msg.rawJson.toLowerCase();
-          if (
-            rawLower.includes('auto_compact') ||
-            rawLower.includes('auto-compact')
-          ) {
-            autoCompactCount++;
-          } else if (rawLower.includes('continuation')) {
-            continuationCount++;
-          } else {
-            manualCompactCount++;
-          }
-        } else {
-          autoCompactCount++;
-        }
-      }
-
-      // Count user turns for effectiveness
-      const userMessages = await messages.list({
-        sessionId: session.id,
-        messageType: 'human',
-        limit: 10000,
-      });
-      const turnCount = userMessages.filter(
-        (m) => m.timestamp >= cutoffStr
-      ).length;
-
-      // Count native tasks for task completion rate
-      let taskTotal = 0;
-      let taskCompleted = 0;
-      const taskMessages = await messages.list({
-        sessionId: session.id,
-        messageType: 'tool_use',
-        limit: 10000,
-      });
-      for (const msg of taskMessages) {
-        if (msg.timestamp < cutoffStr) continue;
-        if (msg.toolName === 'TaskCreate') {
-          taskTotal++;
-        }
-        if (msg.toolName === 'TaskUpdate' && msg.toolInput) {
-          try {
-            const input = JSON.parse(msg.toolInput);
-            if (input.status === 'completed') {
-              taskCompleted++;
-            }
-          } catch {
-            // Ignore
-          }
-        }
-      }
-
       // Collect hook executions for this session
       try {
         const hookExecs = await getHookExecutionsForSession(session.id);
@@ -724,8 +731,8 @@ export async function queryDashboardAnalytics(
           existing.totalDurationMs += exec.durationMs;
           hookStats.set(name, existing);
         }
-      } catch {
-        // Ignore hook execution errors for individual sessions
+      } catch (err) {
+        console.warn(`Failed to load hook executions for session ${session.id}:`, err);
       }
 
       sessionData.push({
@@ -761,11 +768,10 @@ export async function queryDashboardAnalytics(
   const compactionStats: CompactionStats = {
     totalCompactions,
     sessionsWithCompactions: sessionsWithCompactions.size,
-    sessionsWithoutCompactions:
-      sessionsWithoutCompactions > 0 ? sessionsWithoutCompactions : 0,
+    sessionsWithoutCompactions: Math.max(0, sessionsWithoutCompactions),
     avgCompactionsPerSession:
       totalSessions > 0
-        ? Math.round((totalCompactions / totalSessions) * 100) / 100
+        ? round(totalCompactions / totalSessions, 2)
         : 0,
     autoCompactCount,
     manualCompactCount,
@@ -785,50 +791,53 @@ export async function queryDashboardAnalytics(
     // Normalize sentiment from [-5, +5] to [0, 100]
     const sentimentComponent = ((avgSentiment + 5) / 10) * 100;
 
-    // Turn efficiency: inverse of turns relative to tasks (lower turns per task = better)
+    // Turn efficiency: fewer turns per completed task = better
+    // When no tasks completed, cap at TURN_EFFICIENCY_MAX to avoid extreme scores
     const turnsPerTask =
-      s.taskCompleted > 0 ? s.turnCount / s.taskCompleted : s.turnCount;
+      s.taskCompleted > 0
+        ? s.turnCount / s.taskCompleted
+        : Math.min(s.turnCount, TURN_EFFICIENCY_MAX);
     const turnEfficiency = Math.max(
       0,
-      Math.min(100, 100 - Math.min(turnsPerTask, 50) * 2)
+      Math.min(100, 100 - Math.min(turnsPerTask, TURN_EFFICIENCY_MAX) * 2)
     );
 
-    // Task completion rate
+    // Task completion rate (default to 0.5 for sessions with no tasks to avoid penalizing)
     const taskCompletionRate =
       s.taskTotal > 0 ? s.taskCompleted / s.taskTotal : 0;
+    const taskComponent = (s.taskTotal > 0 ? taskCompletionRate : 0.5) * 100;
 
-    // Compaction penalty: fewer compactions = better (0 compactions = 100, 5+ = 0)
+    // Compaction penalty: 0 compactions = 100, COMPACTION_PENALTY_MAX+ = 0
     const compactionPenaltyScore = Math.max(
       0,
-      100 - s.compactionCount * 20
+      100 - s.compactionCount * COMPACTION_PENALTY_PER
     );
 
-    // Focus score: fewer unique tools suggests more focused work
+    // Focus score: fewer unique tools relative to baseline = more focused
     const uniqueToolCount = s.toolNames.size;
     const focusScore =
       uniqueToolCount > 0
-        ? Math.max(0, Math.min(1, 1 - (uniqueToolCount - 3) / 20))
-        : 0.5;
+        ? Math.max(0, Math.min(1, 1 - (uniqueToolCount - FOCUS_BASELINE_TOOLS) / FOCUS_TOOL_RANGE))
+        : FOCUS_DEFAULT;
 
-    // Composite score with weights
+    // Composite score with named weights
     const score =
-      sentimentComponent * 0.25 +
-      turnEfficiency * 0.2 +
-      taskCompletionRate * 100 * 0.25 +
-      compactionPenaltyScore * 0.15 +
-      focusScore * 100 * 0.15;
+      sentimentComponent * EFFECTIVENESS_WEIGHTS.sentiment +
+      turnEfficiency * EFFECTIVENESS_WEIGHTS.turnEfficiency +
+      taskComponent * EFFECTIVENESS_WEIGHTS.taskCompletion +
+      compactionPenaltyScore * EFFECTIVENESS_WEIGHTS.compaction +
+      focusScore * 100 * EFFECTIVENESS_WEIGHTS.focus;
 
     return {
       sessionId: s.sessionId,
       slug: s.slug,
-      score: Math.round(score * 100) / 100,
+      score: round(Math.max(0, Math.min(100, score)), 2),
       sentimentTrend: computeSentimentTrend(s.sentimentScores),
-      avgSentimentScore: Math.round(avgSentiment * 100) / 100,
+      avgSentimentScore: round(avgSentiment, 2),
       turnCount: s.turnCount,
-      taskCompletionRate:
-        Math.round(taskCompletionRate * 1000) / 1000,
+      taskCompletionRate: round(taskCompletionRate, 2),
       compactionCount: s.compactionCount,
-      focusScore: Math.round(focusScore * 1000) / 1000,
+      focusScore: round(focusScore, 2),
       startedAt: s.startedAt,
     };
   });
@@ -859,11 +868,11 @@ export async function queryDashboardAnalytics(
       failCount: stats.failCount,
       passRate:
         stats.totalRuns > 0
-          ? Math.round((stats.passCount / stats.totalRuns) * 1000) / 1000
+          ? round(stats.passCount / stats.totalRuns, 2)
           : 1,
       avgDurationMs:
         stats.totalRuns > 0
-          ? Math.round(stats.totalDurationMs / stats.totalRuns)
+          ? round(stats.totalDurationMs / stats.totalRuns, 2)
           : 0,
     }))
     .sort((a, b) => b.totalRuns - a.totalRuns);
@@ -877,7 +886,7 @@ export async function queryDashboardAnalytics(
     totalCachedTokens
   );
 
-  // Check stats-cache for more accurate cost data
+  // Check stats-cache for more accurate cost data (survives session cleanup)
   const statsCache = readStatsCache();
   let statsCacheCost = 0;
   if (statsCache?.modelUsage) {
@@ -889,9 +898,6 @@ export async function queryDashboardAnalytics(
   const finalCostUsd =
     statsCacheCost > 0 ? statsCacheCost : estimatedCostUsd;
 
-  // Default subscription cost (Max plan at $200/month)
-  const maxSubscriptionCostUsd = 200;
-
   // Compute daily cost trend
   const dailyCostTrend: DailyCost[] = [];
   const today = new Date();
@@ -902,52 +908,43 @@ export async function queryDashboardAnalytics(
     const dayData = dailyCostMap.get(dateStr);
     dailyCostTrend.push({
       date: dateStr,
-      costUsd: dayData
-        ? Math.round(dayData.costUsd * 10000) / 10000
-        : 0,
-      sessionCount: dayData ? dayData.sessionCount : 0,
+      costUsd: round(dayData?.costUsd ?? 0, 4),
+      sessionCount: dayData?.sessionCount ?? 0,
     });
   }
   dailyCostTrend.reverse();
 
-  // Cache hit rate: ratio of cache read tokens to total input tokens
-  const totalTokensForCache = totalInputTokens + totalCacheReadTokens;
+  // Cache hit rate: ratio of cache read tokens to total input-class tokens
+  const totalInputClassTokens = totalInputTokens + totalCacheReadTokens;
   const cacheHitRate =
-    totalTokensForCache > 0
-      ? Math.round((totalCacheReadTokens / totalTokensForCache) * 1000) /
-        1000
+    totalInputClassTokens > 0
+      ? round(totalCacheReadTokens / totalInputClassTokens, 2)
       : 0;
 
-  // Potential savings: estimate savings if cache hit rate were 80%
-  const optimalCacheRate = 0.8;
+  // Potential savings: estimate if cache hit rate reached optimal target
   const currentNonCachedInputCost =
-    ((totalInputTokens - totalCacheReadTokens) / 1_000_000) * 3.0;
+    ((totalInputTokens - totalCacheReadTokens) / 1_000_000) * PRICING.inputPerMTok;
   const savingsIfOptimal =
-    cacheHitRate < optimalCacheRate
-      ? currentNonCachedInputCost * (optimalCacheRate - cacheHitRate)
+    cacheHitRate < OPTIMAL_CACHE_RATE
+      ? currentNonCachedInputCost * (OPTIMAL_CACHE_RATE - cacheHitRate)
       : 0;
 
   const costAnalysis: CostAnalysis = {
-    estimatedCostUsd: Math.round(finalCostUsd * 100) / 100,
-    maxSubscriptionCostUsd,
+    estimatedCostUsd: round(finalCostUsd, 2),
+    maxSubscriptionCostUsd: subscriptionTier,
     costUtilizationPercent:
-      maxSubscriptionCostUsd > 0
-        ? Math.round(
-            (finalCostUsd / maxSubscriptionCostUsd) * 10000
-          ) / 100
-        : 0,
+      round((finalCostUsd / subscriptionTier) * 100, 2),
     dailyCostTrend,
     costPerSession:
       totalSessions > 0
-        ? Math.round((finalCostUsd / totalSessions) * 10000) / 10000
+        ? round(finalCostUsd / totalSessions, 2)
         : 0,
     costPerCompletedTask:
       totalCompletedTasks > 0
-        ? Math.round((finalCostUsd / totalCompletedTasks) * 10000) /
-          10000
+        ? round(finalCostUsd / totalCompletedTasks, 2)
         : 0,
     cacheHitRate,
-    potentialSavingsUsd: Math.round(savingsIfOptimal * 100) / 100,
+    potentialSavingsUsd: round(savingsIfOptimal, 2),
   };
 
   return {
