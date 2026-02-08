@@ -14,6 +14,106 @@ import type { DashboardPageQuery as DashboardPageQueryType } from "./__generated
 import { DashboardContent } from "./DashboardContent.tsx";
 
 /**
+ * Fragment for deferred analytics data (heavy computation)
+ * Relay requires @defer to be on fragment spreads, not inline fragments
+ */
+export const DashboardAnalyticsFragment = graphql`
+  fragment DashboardPageAnalytics_query on Query {
+    dashboardAnalytics(days: 30) {
+      subagentUsage {
+        subagentType
+        count
+      }
+      compactionStats {
+        totalCompactions
+        sessionsWithCompactions
+        sessionsWithoutCompactions
+        avgCompactionsPerSession
+        autoCompactCount
+        manualCompactCount
+        continuationCount
+      }
+      topSessions {
+        sessionId
+        slug
+        score
+        sentimentTrend
+        avgSentimentScore
+        turnCount
+        taskCompletionRate
+        compactionCount
+        focusScore
+        startedAt
+      }
+      bottomSessions {
+        sessionId
+        slug
+        score
+        sentimentTrend
+        avgSentimentScore
+        turnCount
+        taskCompletionRate
+        compactionCount
+        focusScore
+        startedAt
+      }
+      toolUsage {
+        toolName
+        count
+      }
+      hookHealth {
+        hookName
+        totalRuns
+        passCount
+        failCount
+        passRate
+        avgDurationMs
+      }
+      costAnalysis {
+        estimatedCostUsd
+        maxSubscriptionCostUsd
+        costUtilizationPercent
+        dailyCostTrend {
+          date
+          costUsd
+          sessionCount
+        }
+        weeklyCostTrend {
+          weekStart
+          weekLabel
+          costUsd
+          sessionCount
+          avgDailyCost
+        }
+        topSessionsByCost {
+          sessionId
+          slug
+          costUsd
+          inputTokens
+          outputTokens
+          cacheReadTokens
+          messageCount
+          startedAt
+        }
+        costPerSession
+        costPerCompletedTask
+        cacheHitRate
+        potentialSavingsUsd
+        subscriptionComparisons {
+          tierName
+          monthlyCostUsd
+          apiCreditCostUsd
+          savingsUsd
+          savingsPercent
+          recommendation
+        }
+        breakEvenDailySpend
+      }
+    }
+  }
+`;
+
+/**
  * Fragment for deferred activity data
  * Relay requires @defer to be on fragment spreads, not inline fragments
  */
@@ -113,6 +213,8 @@ export const DashboardPageQuery = graphql`
     }
     # Include activity data directly
     ...DashboardPageActivity_query
+    # Include analytics data (deferred for performance)
+    ...DashboardPageAnalytics_query @defer(label: "DashboardPageAnalytics")
   }
 `;
 
