@@ -96,6 +96,16 @@ jobs:
         run: bun test --coverage --coverage-reporter=lcov
         working-directory: ./packages/han
 
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: packages/han/coverage/lcov.info
+          flags: han-cli
+          name: han-cli-coverage
+          fail_ci_if_error: false
+
       - name: Extract coverage percentage
         if: github.ref == 'refs/heads/main'
         id: coverage
