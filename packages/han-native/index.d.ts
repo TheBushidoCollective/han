@@ -974,7 +974,7 @@ export declare function checkAndBuildManifest(
 ): CheckResult;
 /**
  * Initialize or open a database at the given path
- * Note: db_path is kept for API compatibility but the singleton uses ~/.claude/han/han.db
+ * Note: db_path is kept for API compatibility but the singleton uses ~/.han/han.db
  */
 export declare function dbInit(dbPath: string): boolean;
 /**
