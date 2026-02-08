@@ -170,6 +170,7 @@ function parseSimpleYaml(content: string): RawPluginConfig {
 
     if (!currentHook) continue;
     const hook = result.hooks?.[currentHook];
+    if (!hook) continue;
 
     // Simple key-value (4-space indent)
     const kvMatch = trimmed.match(/^ {4}(\S+):\s*(.+)$/);
