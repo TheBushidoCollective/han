@@ -201,8 +201,9 @@ export const CompactionStatsType = CompactionStatsRef.implement({
   }),
 });
 
-const SessionEffectivenessRef =
-  builder.objectRef<SessionEffectiveness>('SessionEffectiveness');
+const SessionEffectivenessRef = builder.objectRef<SessionEffectiveness>(
+  'SessionEffectiveness'
+);
 
 export const SessionEffectivenessType = SessionEffectivenessRef.implement({
   description: 'Composite effectiveness score for a session',
@@ -358,8 +359,9 @@ export const SessionCostType = SessionCostRef.implement({
   }),
 });
 
-const SubscriptionComparisonRef =
-  builder.objectRef<SubscriptionComparison>('SubscriptionComparison');
+const SubscriptionComparisonRef = builder.objectRef<SubscriptionComparison>(
+  'SubscriptionComparison'
+);
 
 export const SubscriptionComparisonType = SubscriptionComparisonRef.implement({
   description: 'Comparison of a subscription tier vs API credits',
@@ -579,7 +581,12 @@ export function parseTokensFromRawJson(rawJson: string | null): {
   cachedTokens: number;
   cacheReadTokens: number;
 } {
-  const zero = { inputTokens: 0, outputTokens: 0, cachedTokens: 0, cacheReadTokens: 0 };
+  const zero = {
+    inputTokens: 0,
+    outputTokens: 0,
+    cachedTokens: 0,
+    cacheReadTokens: 0,
+  };
   if (!rawJson) return zero;
 
   try {
@@ -623,7 +630,10 @@ function readStatsCache(): {
     const content = readFileSync(statsPath, 'utf-8');
     return JSON.parse(content);
   } catch (err) {
-    console.warn('Failed to read stats-cache.json, using estimated costs:', err);
+    console.warn(
+      'Failed to read stats-cache.json, using estimated costs:',
+      err
+    );
     return null;
   }
 }
@@ -662,7 +672,7 @@ export function getWeekStart(dateStr: string): string {
   const date = new Date(`${dateStr}T00:00:00Z`);
   const day = date.getUTCDay();
   // Shift Sunday (0) to 7 so Monday=1 is always the start
-  const diff = (day === 0 ? 6 : day - 1);
+  const diff = day === 0 ? 6 : day - 1;
   date.setUTCDate(date.getUTCDate() - diff);
   return date.toISOString().split('T')[0];
 }
@@ -675,7 +685,20 @@ export function formatWeekLabel(weekStartStr: string): string {
   const end = new Date(start);
   end.setUTCDate(end.getUTCDate() + 6);
 
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthNames = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
   const startMonth = monthNames[start.getUTCMonth()];
   const endMonth = monthNames[end.getUTCMonth()];
 
@@ -695,13 +718,17 @@ export function classifyCompactionType(rawJson: string | null): string {
   try {
     const parsed = JSON.parse(rawJson);
 
-    if (parsed.type === 'auto_compact' || parsed.auto_compacted) return 'auto_compact';
-    if (parsed.type === 'compact' || parsed.is_compact || parsed.isCompact) return 'compact';
+    if (parsed.type === 'auto_compact' || parsed.auto_compacted)
+      return 'auto_compact';
+    if (parsed.type === 'compact' || parsed.is_compact || parsed.isCompact)
+      return 'compact';
 
     // Check for continuation markers in the content
     const content = parsed.content || parsed.message?.content || '';
-    const contentStr = typeof content === 'string' ? content : JSON.stringify(content);
-    if (contentStr.includes('continued from a previous conversation')) return 'continuation';
+    const contentStr =
+      typeof content === 'string' ? content : JSON.stringify(content);
+    if (contentStr.includes('continued from a previous conversation'))
+      return 'continuation';
 
     return 'auto_compact';
   } catch {
@@ -938,7 +965,10 @@ export async function queryDashboardAnalytics(
           hookStats.set(name, existing);
         }
       } catch (err) {
-        console.warn(`Failed to load hook executions for session ${session.id}:`, err);
+        console.warn(
+          `Failed to load hook executions for session ${session.id}:`,
+          err
+        );
       }
 
       sessionData.push({
@@ -976,9 +1006,7 @@ export async function queryDashboardAnalytics(
     sessionsWithCompactions: sessionsWithCompactions.size,
     sessionsWithoutCompactions: Math.max(0, sessionsWithoutCompactions),
     avgCompactionsPerSession:
-      totalSessions > 0
-        ? round(totalCompactions / totalSessions, 2)
-        : 0,
+      totalSessions > 0 ? round(totalCompactions / totalSessions, 2) : 0,
     autoCompactCount,
     manualCompactCount,
     continuationCount,
@@ -1023,7 +1051,13 @@ export async function queryDashboardAnalytics(
     const uniqueToolCount = s.toolNames.size;
     const focusScore =
       uniqueToolCount > 0
-        ? Math.max(0, Math.min(1, 1 - (uniqueToolCount - FOCUS_BASELINE_TOOLS) / FOCUS_TOOL_RANGE))
+        ? Math.max(
+            0,
+            Math.min(
+              1,
+              1 - (uniqueToolCount - FOCUS_BASELINE_TOOLS) / FOCUS_TOOL_RANGE
+            )
+          )
         : FOCUS_DEFAULT;
 
     // Composite score with named weights
@@ -1051,9 +1085,7 @@ export async function queryDashboardAnalytics(
   scoredSessions.sort((a, b) => b.score - a.score);
 
   const topSessions = scoredSessions.slice(0, 10);
-  const bottomSessions = scoredSessions
-    .slice(-10)
-    .reverse();
+  const bottomSessions = scoredSessions.slice(-10).reverse();
 
   // ==========================================================================
   // Build tool usage
@@ -1073,9 +1105,7 @@ export async function queryDashboardAnalytics(
       passCount: stats.passCount,
       failCount: stats.failCount,
       passRate:
-        stats.totalRuns > 0
-          ? round(stats.passCount / stats.totalRuns, 2)
-          : 1,
+        stats.totalRuns > 0 ? round(stats.passCount / stats.totalRuns, 2) : 1,
       avgDurationMs:
         stats.totalRuns > 0
           ? round(stats.totalDurationMs / stats.totalRuns, 2)
@@ -1101,8 +1131,7 @@ export async function queryDashboardAnalytics(
     }
   }
 
-  const finalCostUsd =
-    statsCacheCost > 0 ? statsCacheCost : estimatedCostUsd;
+  const finalCostUsd = statsCacheCost > 0 ? statsCacheCost : estimatedCostUsd;
 
   // Compute daily cost trend
   const dailyCostTrend: DailyCost[] = [];
@@ -1121,11 +1150,18 @@ export async function queryDashboardAnalytics(
   dailyCostTrend.reverse();
 
   // Aggregate daily costs into weekly buckets
-  const weeklyMap = new Map<string, { costUsd: number; sessionCount: number; dayCount: number }>();
+  const weeklyMap = new Map<
+    string,
+    { costUsd: number; sessionCount: number; dayCount: number }
+  >();
   for (const day of dailyCostTrend) {
     if (day.costUsd === 0 && day.sessionCount === 0) continue;
     const weekStart = getWeekStart(day.date);
-    const existing = weeklyMap.get(weekStart) || { costUsd: 0, sessionCount: 0, dayCount: 0 };
+    const existing = weeklyMap.get(weekStart) || {
+      costUsd: 0,
+      sessionCount: 0,
+      dayCount: 0,
+    };
     existing.costUsd += day.costUsd;
     existing.sessionCount += day.sessionCount;
     existing.dayCount++;
@@ -1138,7 +1174,8 @@ export async function queryDashboardAnalytics(
       weekLabel: formatWeekLabel(weekStart),
       costUsd: round(data.costUsd, 2),
       sessionCount: data.sessionCount,
-      avgDailyCost: data.dayCount > 0 ? round(data.costUsd / data.dayCount, 2) : 0,
+      avgDailyCost:
+        data.dayCount > 0 ? round(data.costUsd / data.dayCount, 2) : 0,
     }))
     .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
 
@@ -1157,7 +1194,8 @@ export async function queryDashboardAnalytics(
 
   // Potential savings: estimate if cache hit rate reached optimal target
   const currentNonCachedInputCost =
-    ((totalInputTokens - totalCacheReadTokens) / 1_000_000) * PRICING.inputPerMTok;
+    ((totalInputTokens - totalCacheReadTokens) / 1_000_000) *
+    PRICING.inputPerMTok;
   const savingsIfOptimal =
     cacheHitRate < OPTIMAL_CACHE_RATE
       ? currentNonCachedInputCost * (OPTIMAL_CACHE_RATE - cacheHitRate)
@@ -1168,13 +1206,11 @@ export async function queryDashboardAnalytics(
   const monthlyApiCost = days > 0 ? (finalCostUsd / days) * 30 : finalCostUsd;
 
   // Build per-tier comparisons
-  const subscriptionComparisons: SubscriptionComparison[] = SUBSCRIPTION_TIERS.map(
-    (tier) => {
+  const subscriptionComparisons: SubscriptionComparison[] =
+    SUBSCRIPTION_TIERS.map((tier) => {
       const savingsUsd = round(monthlyApiCost - tier.monthlyCostUsd, 2);
       const savingsPercent =
-        monthlyApiCost > 0
-          ? round((savingsUsd / monthlyApiCost) * 100, 2)
-          : 0;
+        monthlyApiCost > 0 ? round((savingsUsd / monthlyApiCost) * 100, 2) : 0;
 
       let recommendation: string;
       if (monthlyApiCost < tier.monthlyCostUsd * 0.5) {
@@ -1196,8 +1232,7 @@ export async function queryDashboardAnalytics(
         savingsPercent,
         recommendation,
       };
-    }
-  );
+    });
 
   // Break-even: daily API spend at which the user's subscription tier pays for itself
   const breakEvenDailySpend = round(subscriptionTier / 30, 2);
@@ -1205,15 +1240,12 @@ export async function queryDashboardAnalytics(
   const costAnalysis: CostAnalysis = {
     estimatedCostUsd: round(finalCostUsd, 2),
     maxSubscriptionCostUsd: subscriptionTier,
-    costUtilizationPercent:
-      round((finalCostUsd / subscriptionTier) * 100, 2),
+    costUtilizationPercent: round((finalCostUsd / subscriptionTier) * 100, 2),
     dailyCostTrend,
     weeklyCostTrend,
     topSessionsByCost,
     costPerSession:
-      totalSessions > 0
-        ? round(finalCostUsd / totalSessions, 2)
-        : 0,
+      totalSessions > 0 ? round(finalCostUsd / totalSessions, 2) : 0,
     costPerCompletedTask:
       totalCompletedTasks > 0
         ? round(finalCostUsd / totalCompletedTasks, 2)

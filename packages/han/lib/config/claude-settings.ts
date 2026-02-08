@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, renameSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 /**
@@ -120,7 +120,7 @@ export function getHanDataDir(): string {
       // Fall back to old path — next restart will retry
       console.error(
         `[han] Could not migrate ${oldDir} → ${newDir}, using old path. ` +
-          `Stop the coordinator and retry, or move manually.`,
+          `Stop the coordinator and retry, or move manually.`
       );
       _hanDataDir = oldDir;
       return _hanDataDir;

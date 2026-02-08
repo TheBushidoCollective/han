@@ -7,11 +7,11 @@
 
 import type React from "react";
 import { useMemo } from "react";
+import { theme } from "@/components/atoms";
 import { Box } from "@/components/atoms/Box.tsx";
 import { HStack } from "@/components/atoms/HStack.tsx";
 import { Text } from "@/components/atoms/Text.tsx";
 import { VStack } from "@/components/atoms/VStack.tsx";
-import { theme } from "@/components/atoms";
 
 interface SubagentUsageStats {
 	readonly subagentType: string;
@@ -114,17 +114,11 @@ export function SubagentUsageChart({
 			<VStack gap="sm" style={{ width: "100%" }}>
 				{sorted.map((entry) => {
 					const barWidth =
-						maxCount > 0
-							? Math.max((entry.count / maxCount) * 100, 2)
-							: 0;
+						maxCount > 0 ? Math.max((entry.count / maxCount) * 100, 2) : 0;
 					const color = getAgentColor(entry.subagentType);
 
 					return (
-						<VStack
-							key={entry.subagentType}
-							gap="xs"
-							style={{ width: "100%" }}
-						>
+						<VStack key={entry.subagentType} gap="xs" style={{ width: "100%" }}>
 							<HStack
 								justify="space-between"
 								align="center"
@@ -163,11 +157,7 @@ export function SubagentUsageChart({
 			{/* Legend */}
 			<HStack gap="md" align="center" style={{ flexWrap: "wrap" }}>
 				{sorted.map((entry) => (
-					<HStack
-						key={`legend-${entry.subagentType}`}
-						gap="xs"
-						align="center"
-					>
+					<HStack key={`legend-${entry.subagentType}`} gap="xs" align="center">
 						<Box
 							style={{
 								width: "10px",

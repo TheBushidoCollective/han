@@ -28,6 +28,8 @@ import type { DashboardPageActivity_query$key } from "./__generated__/DashboardP
 import type { DashboardPageAnalytics_query$key } from "./__generated__/DashboardPageAnalytics_query.graphql.ts";
 import type { DashboardPageQuery } from "./__generated__/DashboardPageQuery.graphql.ts";
 import { ActivityHeatmap } from "./ActivityHeatmap.tsx";
+import { CompactionHealthCard } from "./CompactionHealthCard.tsx";
+import { CostAnalysisCard } from "./CostAnalysisCard.tsx";
 import {
 	getFrustrationLabel,
 	getFrustrationVariant,
@@ -35,8 +37,6 @@ import {
 	StatCard,
 	StatusItem,
 } from "./components.ts";
-import { CompactionHealthCard } from "./CompactionHealthCard.tsx";
-import { CostAnalysisCard } from "./CostAnalysisCard.tsx";
 import { HookHealthCard } from "./HookHealthCard.tsx";
 import {
 	DashboardActivityFragment,
@@ -235,12 +235,10 @@ export function DashboardContent({
 				rawAnalytics?.compactionStats?.sessionsWithoutCompactions ?? 0,
 			avgCompactionsPerSession:
 				rawAnalytics?.compactionStats?.avgCompactionsPerSession ?? 0,
-			autoCompactCount:
-				rawAnalytics?.compactionStats?.autoCompactCount ?? 0,
+			autoCompactCount: rawAnalytics?.compactionStats?.autoCompactCount ?? 0,
 			manualCompactCount:
 				rawAnalytics?.compactionStats?.manualCompactCount ?? 0,
-			continuationCount:
-				rawAnalytics?.compactionStats?.continuationCount ?? 0,
+			continuationCount: rawAnalytics?.compactionStats?.continuationCount ?? 0,
 		},
 		topSessions: (rawAnalytics?.topSessions ?? []).map((s) => ({
 			sessionId: s?.sessionId ?? "",
@@ -279,28 +277,27 @@ export function DashboardContent({
 			avgDurationMs: h?.avgDurationMs ?? 0,
 		})),
 		costAnalysis: {
-			estimatedCostUsd:
-				rawAnalytics?.costAnalysis?.estimatedCostUsd ?? 0,
+			estimatedCostUsd: rawAnalytics?.costAnalysis?.estimatedCostUsd ?? 0,
 			maxSubscriptionCostUsd:
 				rawAnalytics?.costAnalysis?.maxSubscriptionCostUsd ?? 200,
 			costUtilizationPercent:
 				rawAnalytics?.costAnalysis?.costUtilizationPercent ?? 0,
-			dailyCostTrend: (
-				rawAnalytics?.costAnalysis?.dailyCostTrend ?? []
-			).map((d) => ({
-				date: d?.date ?? "",
-				costUsd: d?.costUsd ?? 0,
-				sessionCount: d?.sessionCount ?? 0,
-			})),
-			weeklyCostTrend: (
-				rawAnalytics?.costAnalysis?.weeklyCostTrend ?? []
-			).map((w) => ({
-				weekStart: w?.weekStart ?? "",
-				weekLabel: w?.weekLabel ?? "",
-				costUsd: w?.costUsd ?? 0,
-				sessionCount: w?.sessionCount ?? 0,
-				avgDailyCost: w?.avgDailyCost ?? 0,
-			})),
+			dailyCostTrend: (rawAnalytics?.costAnalysis?.dailyCostTrend ?? []).map(
+				(d) => ({
+					date: d?.date ?? "",
+					costUsd: d?.costUsd ?? 0,
+					sessionCount: d?.sessionCount ?? 0,
+				}),
+			),
+			weeklyCostTrend: (rawAnalytics?.costAnalysis?.weeklyCostTrend ?? []).map(
+				(w) => ({
+					weekStart: w?.weekStart ?? "",
+					weekLabel: w?.weekLabel ?? "",
+					costUsd: w?.costUsd ?? 0,
+					sessionCount: w?.sessionCount ?? 0,
+					avgDailyCost: w?.avgDailyCost ?? 0,
+				}),
+			),
 			topSessionsByCost: (
 				rawAnalytics?.costAnalysis?.topSessionsByCost ?? []
 			).map((s) => ({
@@ -313,13 +310,11 @@ export function DashboardContent({
 				messageCount: s?.messageCount ?? 0,
 				startedAt: s?.startedAt ?? null,
 			})),
-			costPerSession:
-				rawAnalytics?.costAnalysis?.costPerSession ?? 0,
+			costPerSession: rawAnalytics?.costAnalysis?.costPerSession ?? 0,
 			costPerCompletedTask:
 				rawAnalytics?.costAnalysis?.costPerCompletedTask ?? 0,
 			cacheHitRate: rawAnalytics?.costAnalysis?.cacheHitRate ?? 0,
-			potentialSavingsUsd:
-				rawAnalytics?.costAnalysis?.potentialSavingsUsd ?? 0,
+			potentialSavingsUsd: rawAnalytics?.costAnalysis?.potentialSavingsUsd ?? 0,
 			subscriptionComparisons: (
 				rawAnalytics?.costAnalysis?.subscriptionComparisons ?? []
 			).map((c) => ({
@@ -330,8 +325,7 @@ export function DashboardContent({
 				savingsPercent: c?.savingsPercent ?? 0,
 				recommendation: c?.recommendation ?? "overkill",
 			})),
-			breakEvenDailySpend:
-				rawAnalytics?.costAnalysis?.breakEvenDailySpend ?? 0,
+			breakEvenDailySpend: rawAnalytics?.costAnalysis?.breakEvenDailySpend ?? 0,
 		},
 	};
 
@@ -509,9 +503,7 @@ export function DashboardContent({
 					<SessionEffectivenessCard
 						topSessions={analytics.topSessions}
 						bottomSessions={analytics.bottomSessions}
-						onSessionClick={(sessionId) =>
-							navigate(`/sessions/${sessionId}`)
-						}
+						onSessionClick={(sessionId) => navigate(`/sessions/${sessionId}`)}
 					/>
 				) : (
 					<Box
@@ -579,9 +571,7 @@ export function DashboardContent({
 				<Box style={{ flex: 1 }}>
 					<SectionCard title="Subagent Usage">
 						{analyticsLoaded ? (
-							<SubagentUsageChart
-								subagentUsage={analytics.subagentUsage}
-							/>
+							<SubagentUsageChart subagentUsage={analytics.subagentUsage} />
 						) : (
 							<Box
 								style={{
