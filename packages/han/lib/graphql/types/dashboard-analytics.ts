@@ -550,7 +550,7 @@ const SUBSCRIPTION_TIERS = [
 // =============================================================================
 
 /** Round to N decimal places */
-function round(value: number, decimals: number): number {
+export function round(value: number, decimals: number): number {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
 }
@@ -559,7 +559,7 @@ function round(value: number, decimals: number): number {
  * Calculate estimated cost based on Claude pricing.
  * Uses Sonnet-class pricing as a baseline estimate.
  */
-function calculateCost(
+export function calculateCost(
   inputTokens: number,
   outputTokens: number,
   cachedTokens: number
@@ -573,7 +573,7 @@ function calculateCost(
 /**
  * Parse token usage from raw JSONL message
  */
-function parseTokensFromRawJson(rawJson: string | null): {
+export function parseTokensFromRawJson(rawJson: string | null): {
   inputTokens: number;
   outputTokens: number;
   cachedTokens: number;
@@ -632,7 +632,7 @@ function readStatsCache(): {
  * Determine sentiment trend from a series of sentiment scores.
  * Compares average of first half vs second half.
  */
-function computeSentimentTrend(scores: number[]): string {
+export function computeSentimentTrend(scores: number[]): string {
   if (scores.length < 2) return 'neutral';
 
   const mid = Math.floor(scores.length / 2);
@@ -658,7 +658,7 @@ function computeSentimentTrend(scores: number[]): string {
  * Get the Monday of the ISO week containing the given date string.
  * Returns YYYY-MM-DD of the Monday.
  */
-function getWeekStart(dateStr: string): string {
+export function getWeekStart(dateStr: string): string {
   const date = new Date(`${dateStr}T00:00:00Z`);
   const day = date.getUTCDay();
   // Shift Sunday (0) to 7 so Monday=1 is always the start
@@ -670,7 +670,7 @@ function getWeekStart(dateStr: string): string {
 /**
  * Format a week label like "Jan 27 - Feb 2"
  */
-function formatWeekLabel(weekStartStr: string): string {
+export function formatWeekLabel(weekStartStr: string): string {
   const start = new Date(`${weekStartStr}T00:00:00Z`);
   const end = new Date(start);
   end.setUTCDate(end.getUTCDate() + 6);
@@ -689,7 +689,7 @@ function formatWeekLabel(weekStartStr: string): string {
  * Detect compaction type by parsing JSON fields (not string matching).
  * Falls back to 'auto_compact' for unrecognized summary messages.
  */
-function classifyCompactionType(rawJson: string | null): string {
+export function classifyCompactionType(rawJson: string | null): string {
   if (!rawJson) return 'auto_compact';
 
   try {
