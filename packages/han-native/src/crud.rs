@@ -2364,10 +2364,10 @@ pub fn query_task_metrics(
     let base_sql = format!(
         "SELECT
             COUNT(*) as total,
-            SUM(CASE WHEN completed_at IS NOT NULL THEN 1 ELSE 0 END) as completed,
-            SUM(CASE WHEN outcome = 'success' THEN 1 ELSE 0 END) as successful,
-            SUM(CASE WHEN outcome = 'partial' THEN 1 ELSE 0 END) as partial,
-            SUM(CASE WHEN outcome = 'failure' THEN 1 ELSE 0 END) as failed,
+            COALESCE(SUM(CASE WHEN completed_at IS NOT NULL THEN 1 ELSE 0 END), 0) as completed,
+            COALESCE(SUM(CASE WHEN outcome = 'success' THEN 1 ELSE 0 END), 0) as successful,
+            COALESCE(SUM(CASE WHEN outcome = 'partial' THEN 1 ELSE 0 END), 0) as partial,
+            COALESCE(SUM(CASE WHEN outcome = 'failure' THEN 1 ELSE 0 END), 0) as failed,
             AVG(confidence) as avg_conf,
             AVG(CASE WHEN completed_at IS NOT NULL THEN
                 (julianday(completed_at) - julianday(started_at)) * 86400
