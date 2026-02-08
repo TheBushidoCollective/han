@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.10.0] - 2026-02-08
+
+### Added
+
+- add dashboard analytics enhancements with effectiveness scoring, subagent tracking, and cost analysis (#63) ([351e9960](../../commit/351e9960))
+- auto-generate hooks.json from han-plugin.yml with shorthand events ([f3a39941](../../commit/f3a39941))
+- use marketplace.json as source of truth and auto-run on session start ([93d75cd8](../../commit/93d75cd8))
+
+### Fixed
+
+- inline small hook output instead of writing to file ([9adfef93](../../commit/9adfef93))
+- use output size to decide subagent vs direct fix in hook failures ([1e97aaf6](../../commit/1e97aaf6))
+- async Stop hooks, merge test/test-async, fix plugin name resolution ([ba6474e8](../../commit/ba6474e8))
+- skip opening browser in test environments during han browse ([febd1476](../../commit/febd1476))
+- migrate deprecated plugin names in YAML config files ([06882b3b](../../commit/06882b3b))
+- improve npm wrapper resolution, simplify migration, remove stale MCP entry ([b10b4868](../../commit/b10b4868))
+- use imported HAN_VERSION instead of process.env for health endpoint ([670532cd](../../commit/670532cd))
+- fix marketplace source paths, stale alias, and missing SKILL.md names (#60) ([4774fca5](../../commit/4774fca5))
+- run plugin install from git root to prevent nested config writes ([c1d2e419](../../commit/c1d2e419))
+- replace npx with direct han binary, fix auto-detect plugin matching ([11c3edfa](../../commit/11c3edfa))
+- update plugin discovery to use marketplace.json ([d07a773d](../../commit/d07a773d))
+- fix CORS configuration and improve error logging ([1bab9383](../../commit/1bab9383))
+- add explicit CORS preflight handling ([74b65d3a](../../commit/74b65d3a))
+
+### Changed
+
+- remove file_filter, split test hooks into Stop + PostToolUse ([bd1b5e34](../../commit/bd1b5e34))
+
+### Other
+
+- Add OpenCode bridge plugin for Han hook ecosystem (#61) ([322d0324](../../commit/322d0324))
+- reformat package.json indentation ([ebab8d64](../../commit/ebab8d64))
+- document validate.ts duplication and dead code ([3939add5](../../commit/3939add5))
+
 ## [3.9.3] - 2026-02-08
 
 ### Added
