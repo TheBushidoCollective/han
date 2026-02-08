@@ -11,7 +11,7 @@
  * - All reads go through this interface (never direct file access)
  * - All writes go through this interface
  *
- * Storage location: ~/.claude/han/han.db
+ * Storage location: ~/.han/han.db
  *
  * Lazy Start Pattern:
  * - SQLite operations work directly without coordinator
@@ -23,7 +23,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 // Import directly from claude-settings to avoid circular dependency
 // (config/index.ts -> validation/index.ts -> db/index.ts)
-import { getClaudeConfigDir } from '../config/claude-settings.ts';
+import { getClaudeConfigDir, getHanDataDir } from '../config/claude-settings.ts';
 import { getNativeModule } from '../native.ts';
 
 // ============================================================================
@@ -102,19 +102,18 @@ export function _resetDbState(): void {
 
 /**
  * Get the SQLite database file path
- * Stored in CLAUDE_CONFIG_DIR/han/han.db
+ * Stored in ~/.han/han.db (provider-agnostic)
  */
 export function getDbPath(): string {
   if (_dbPath) return _dbPath;
 
-  const configDir = getClaudeConfigDir();
-  if (!configDir) {
+  const hanDir = getHanDataDir();
+  if (!hanDir) {
     throw new Error(
-      'Could not determine Claude config directory. Set CLAUDE_CONFIG_DIR or HOME environment variable.'
+      'Could not determine Han data directory. Set HAN_DATA_DIR or HOME environment variable.'
     );
   }
 
-  const hanDir = join(configDir, 'han');
   // Use try/catch for directory creation - mkdirSync with recursive is idempotent
   // but can still race with other processes
   try {

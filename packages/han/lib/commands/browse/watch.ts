@@ -3,10 +3,10 @@
  *
  * Monitors memory directories for changes and emits events for SSE streaming.
  * Watches:
- * - ~/.claude/han/memory/personal/sessions/ (session observations)
- * - ~/.claude/han/memory/personal/summaries/ (session summaries)
+ * - ~/.han/memory/personal/sessions/ (session observations)
+ * - ~/.han/memory/personal/summaries/ (session summaries)
  * - ~/.claude/rules/ and .claude/rules/ (project rules)
- * - ~/.claude/han/memory/projects/ (team memory)
+ * - ~/.han/memory/projects/ (team memory)
  */
 
 import { existsSync, type FSWatcher, watch } from 'node:fs';

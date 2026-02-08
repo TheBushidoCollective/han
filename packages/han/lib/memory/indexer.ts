@@ -5,14 +5,14 @@
  * Provides FTS5 (BM25) search and embedding generation for the 5-layer
  * memory system: rules, summaries, observations, transcripts, and team memory.
  *
- * Storage location: ~/.claude/han/han.db
+ * Storage location: ~/.han/han.db
  *
  * @note The native module uses SQLite with FTS5 and sqlite-vec extensions.
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { getHanDataDir } from '../config/claude-settings.ts';
 import { tryGetNativeModule } from '../native.ts';
 import {
   getGitRemote,
@@ -70,14 +70,14 @@ export interface IndexStatus {
  * All data is stored in the main han.db database
  */
 export function getIndexDbPath(): string {
-  return join(homedir(), '.claude', 'han', 'han.db');
+  return join(getHanDataDir(), 'han.db');
 }
 
 /**
  * Ensure database directory exists
  */
 export function ensureIndexDir(): void {
-  const dbDir = join(homedir(), '.claude', 'han');
+  const dbDir = getHanDataDir();
   if (!existsSync(dbDir)) {
     mkdirSync(dbDir, { recursive: true });
   }
@@ -567,7 +567,7 @@ export async function indexHanEvents(_projectSlug?: string): Promise<number> {
  *
  * @deprecated This function reads JSONL files directly. In the future, Han's personal
  * memory system should be migrated to use the Rust indexer. For now, this function
- * remains as-is since it reads from a different location (~/.claude/han/personal/sessions)
+ * remains as-is since it reads from a different location (~/.han/memory/personal/sessions)
  * than the Claude Code transcripts indexed by the Rust coordinator.
  *
  * TODO: Migrate Han personal memory to Rust indexer for consistency.

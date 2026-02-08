@@ -33,15 +33,7 @@ export interface CoordinatorOptions {
   foreground?: boolean; // Run in foreground (don't daemonize)
 }
 
-/**
- * PID file location
- */
-export const PID_FILE = '.han-coordinator.pid';
-
-/**
- * Log file location (relative to ~/.claude/han/)
- */
-export const LOG_FILE = 'han/coordinator.log';
+// PID and log files now live in ~/.han/ (see daemon.ts getLogFilePath/getPidFilePath)
 
 /**
  * Get the coordinator port

@@ -48,7 +48,6 @@ describe('memory indexer', () => {
       const path = getIndexDbPath();
 
       // All data is stored in the main han.db database
-      expect(path).toContain('.claude');
       expect(path).toContain('han');
       expect(path).toContain('han.db');
     });

@@ -952,6 +952,20 @@
       "keywords": ["oop", "object-oriented", "design-patterns", "encapsulation"]
     },
     {
+      "name": "opencode",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with OpenCode by translating OpenCode events into Claude Code hook invocations.",
+      "source": "./plugins/bridges/opencode",
+      "category": "Integration",
+      "keywords": [
+        "opencode",
+        "bridge",
+        "hooks",
+        "compatibility",
+        "claude-code",
+        "validation"
+      ]
+    },
+    {
       "name": "performance",
       "description": "Performance engineering agents providing expertise in profiling, optimization, and scalability",
       "source": "./plugins/disciplines/performance",
@@ -2468,6 +2482,20 @@
         "documentation",
         "productivity",
         "server"
+      ]
+    },
+    {
+      "name": "hashi-opencode",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with OpenCode by translating OpenCode events into Claude Code hook invocations.",
+      "source": "./plugins/bridges/opencode",
+      "category": "Integration",
+      "keywords": [
+        "opencode",
+        "bridge",
+        "hooks",
+        "compatibility",
+        "claude-code",
+        "validation"
       ]
     },
     {

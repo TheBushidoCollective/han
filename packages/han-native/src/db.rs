@@ -18,20 +18,67 @@ static DB: OnceLock<Mutex<Connection>> = OnceLock::new();
 #[cfg(test)]
 static TEST_DB_PATH: OnceLock<String> = OnceLock::new();
 
-/// Get the default database path
-/// Respects CLAUDE_CONFIG_DIR environment variable for testing
-pub fn get_db_path() -> String {
-    // Check for CLAUDE_CONFIG_DIR first (for testing)
-    let base_dir = std::env::var("CLAUDE_CONFIG_DIR")
-        .ok()
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| {
-            dirs::home_dir()
-                .unwrap_or_else(|| std::path::PathBuf::from("."))
-                .join(".claude")
-        });
+/// Get the Han data directory (~/.han)
+/// Auto-migrates from ~/.claude/han on first access if needed.
+/// Priority: HAN_DATA_DIR > CLAUDE_CONFIG_DIR/han (testing) > ~/.han (with auto-migrate)
+/// Compute the Han data directory without caching (for tests).
+fn compute_han_data_dir() -> std::path::PathBuf {
+    // Explicit override (testing/custom)
+    if let Ok(dir) = std::env::var("HAN_DATA_DIR") {
+        return std::path::PathBuf::from(dir);
+    }
 
-    let han_dir = base_dir.join("han");
+    // Legacy override for testing
+    if let Ok(dir) = std::env::var("CLAUDE_CONFIG_DIR") {
+        return std::path::PathBuf::from(dir).join("han");
+    }
+
+    let home = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+    let new_dir = home.join(".han");
+    let old_dir = home.join(".claude").join("han");
+
+    // Already migrated or fresh install with data
+    if new_dir.exists() {
+        return new_dir;
+    }
+
+    // Old directory exists — auto-migrate
+    if old_dir.exists() {
+        match std::fs::rename(&old_dir, &new_dir) {
+            Ok(()) => {
+                eprintln!(
+                    "[han] Migrated data directory: {} → {}",
+                    old_dir.display(),
+                    new_dir.display()
+                );
+                return new_dir;
+            }
+            Err(_) => {
+                // Migration failed — fall back to old path, retry next restart
+                eprintln!(
+                    "[han] Could not migrate {} → {}, using old path.",
+                    old_dir.display(),
+                    new_dir.display()
+                );
+                return old_dir;
+            }
+        }
+    }
+
+    // Neither exists — fresh install
+    new_dir
+}
+
+pub(crate) fn get_han_data_dir() -> std::path::PathBuf {
+    use std::sync::OnceLock;
+    static CACHED: OnceLock<std::path::PathBuf> = OnceLock::new();
+
+    CACHED.get_or_init(compute_han_data_dir).clone()
+}
+
+/// Get the default database path (~/.han/han.db)
+pub fn get_db_path() -> String {
+    let han_dir = get_han_data_dir();
     std::fs::create_dir_all(&han_dir).ok();
     han_dir.join("han.db").to_string_lossy().to_string()
 }
@@ -893,25 +940,24 @@ mod tests {
 
     #[test]
     fn test_get_db_path_default() {
-        // Clear CLAUDE_CONFIG_DIR to test default behavior
-        std::env::remove_var("CLAUDE_CONFIG_DIR");
         let path = get_db_path();
-        assert!(path.ends_with("han/han.db") || path.contains(".claude"));
+        assert!(path.ends_with("han.db"));
     }
 
     #[test]
     fn test_get_db_path_with_config_dir() {
+        // Test compute_han_data_dir directly to avoid OnceLock caching
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let config_path = temp_dir.path().to_string_lossy().to_string();
         std::env::set_var("CLAUDE_CONFIG_DIR", &config_path);
 
-        let path = get_db_path();
+        let dir = compute_han_data_dir();
 
         // Clean up env var
         std::env::remove_var("CLAUDE_CONFIG_DIR");
 
-        assert!(path.starts_with(&config_path));
-        assert!(path.ends_with("han/han.db"));
+        assert!(dir.starts_with(&config_path));
+        assert!(dir.ends_with("han"));
     }
 
     // ========================================================================
