@@ -1,0 +1,38 @@
+{
+  "name": "han",
+  "description": "Default coding agent enhanced with Han validation hooks, skills, and disciplines. Provides automated linting, formatting, type checking, and quality guidelines.",
+  "hooks": {
+    "agentSpawn": [
+      {
+        "command": "npx -y kiro-plugin-han agent-spawn",
+        "timeout_ms": 15000
+      }
+    ],
+    "userPromptSubmit": [
+      {
+        "command": "npx -y kiro-plugin-han user-prompt-submit",
+        "timeout_ms": 5000
+      }
+    ],
+    "preToolUse": [
+      {
+        "matcher": "*",
+        "command": "npx -y kiro-plugin-han pre-tool-use",
+        "timeout_ms": 30000
+      }
+    ],
+    "postToolUse": [
+      {
+        "matcher": "fs_write",
+        "command": "npx -y kiro-plugin-han post-tool-use",
+        "timeout_ms": 60000
+      }
+    ],
+    "stop": [
+      {
+        "command": "npx -y kiro-plugin-han stop",
+        "timeout_ms": 120000
+      }
+    ]
+  }
+}
