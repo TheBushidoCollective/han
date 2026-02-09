@@ -5,9 +5,9 @@ import Footer from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 
 export const metadata: Metadata = {
-	title: "Han - Automatic Quality Gates for AI Coding Agents",
+	title: "Han - Ship-Ready Code from AI Coding Agents",
 	description:
-		"Automatic quality gates for AI coding agents. Linting, formatting, type-checking, and tests run automatically, catching issues before they ship.",
+		"139+ plugins for quality gates, tooling, memory, and specialized agents. Your AI coding agent writes code that's ready to merge.",
 	keywords: [
 		"ai-coding-agents",
 		"claude-code",
