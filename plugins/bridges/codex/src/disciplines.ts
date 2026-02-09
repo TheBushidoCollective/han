@@ -10,7 +10,7 @@
  * changes what gets injected into the system prompt on subsequent calls.
  */
 
-import { readFileSync, existsSync, readdirSync } from "node:fs"
+import { readFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
 import type { SkillInfo } from "./skills"
 
