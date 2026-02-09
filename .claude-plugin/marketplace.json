@@ -952,6 +952,21 @@
       "keywords": ["oop", "object-oriented", "design-patterns", "encapsulation"]
     },
     {
+      "name": "antigravity",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, skills, disciplines) to work with Google Antigravity IDE via MCP server.",
+      "source": "./plugins/bridges/antigravity",
+      "category": "Integration",
+      "keywords": [
+        "antigravity",
+        "google",
+        "bridge",
+        "mcp",
+        "hooks",
+        "validation",
+        "skills"
+      ]
+    },
+    {
       "name": "opencode",
       "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with OpenCode by translating OpenCode events into Claude Code hook invocations.",
       "source": "./plugins/bridges/opencode",
@@ -2482,6 +2497,21 @@
         "documentation",
         "productivity",
         "server"
+      ]
+    },
+    {
+      "name": "hashi-antigravity",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, skills, disciplines) to work with Google Antigravity IDE via MCP server.",
+      "source": "./plugins/bridges/antigravity",
+      "category": "Integration",
+      "keywords": [
+        "antigravity",
+        "google",
+        "bridge",
+        "mcp",
+        "hooks",
+        "validation",
+        "skills"
       ]
     },
     {

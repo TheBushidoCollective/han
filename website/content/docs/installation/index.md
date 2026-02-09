@@ -1,9 +1,9 @@
 ---
 title: "Installation Methods"
-description: "Install Han for Claude Code, OpenCode, or standalone use via curl, Homebrew, or plugin install."
+description: "Install Han for Claude Code, OpenCode, Antigravity, or standalone use via curl, Homebrew, or plugin install."
 ---
 
-Han works with Claude Code, OpenCode, and as a standalone CLI. Choose the method that fits your workflow.
+Han works with Claude Code, OpenCode, Google Antigravity, and as a standalone CLI. Choose the method that fits your workflow.
 
 ## Quick Install (Recommended)
 
@@ -75,6 +75,27 @@ Han works with [OpenCode](https://opencode.ai) through a bridge plugin that tran
 ```
 
 Your Han validation hooks (biome, eslint, typescript, etc.) now run in OpenCode. See the [full OpenCode guide](/docs/installation/opencode) for details.
+
+## Google Antigravity
+
+Han works with [Google Antigravity](https://antigravity.google/) through an MCP server bridge that exposes skills, disciplines, and validation as tools.
+
+1. Install Han using any method above
+2. Install Han plugins: `han plugin install --auto`
+3. Add the MCP server to `~/.gemini/antigravity/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "han": {
+      "command": "npx",
+      "args": ["-y", "antigravity-han-mcp"]
+    }
+  }
+}
+```
+
+Han's 400+ skills, 25 disciplines, and validation hooks are now available as MCP tools in Antigravity. See the [full Antigravity guide](/docs/installation/antigravity) for details.
 
 ## Next Steps
 

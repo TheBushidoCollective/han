@@ -131,6 +131,7 @@ export const PLUGIN_ALIASES: Record<string, string> = {
   blueprints: 'tools/blueprints',
 
   // bridges
+  'hashi-antigravity': 'bridges/antigravity',
   'hashi-opencode': 'bridges/opencode',
 
   // services
