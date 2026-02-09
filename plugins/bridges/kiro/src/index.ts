@@ -32,6 +32,7 @@
  *     -> stdout/stderr output + exit code
  */
 
+import { resolve, isAbsolute } from "node:path"
 import { discoverHooks, resolvePluginPaths, getHooksByEvent } from "./discovery"
 import { matchPostToolUseHooks, matchStopHooks } from "./matcher"
 import { executeHooksParallel } from "./executor"
@@ -90,6 +91,7 @@ async function readStdin(): Promise<KiroHookPayload> {
  */
 function extractFilePaths(payload: KiroHookPayload): string[] {
   const paths: string[] = []
+  const cwd = payload.cwd || process.cwd()
 
   if (payload.tool_input) {
     const input = payload.tool_input
@@ -105,7 +107,17 @@ function extractFilePaths(payload: KiroHookPayload): string[] {
     }
   }
 
+  // Normalize and validate paths - reject traversal attempts
   return paths
+    .map((p) => (isAbsolute(p) ? resolve(p) : resolve(cwd, p)))
+    .filter((p) => {
+      // Must be under the project directory
+      if (!p.startsWith(cwd)) {
+        console.error(`${PREFIX} Rejected path outside project: ${p}`)
+        return false
+      }
+      return true
+    })
 }
 
 /**
@@ -124,6 +136,7 @@ function startCoordinator(watchDir: string): void {
         env: {
           ...process.env,
           HAN_PROVIDER: "kiro",
+          HAN_SESSION_ID: process.env.HAN_SESSION_ID ?? "",
         },
       },
     )

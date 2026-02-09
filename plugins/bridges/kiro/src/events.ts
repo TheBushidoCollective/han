@@ -128,13 +128,16 @@ export class BridgeEventLogger {
     }, 100)
   }
 
+  private isFlushing = false
+
   flush(): void {
     if (this.flushTimer) {
       clearTimeout(this.flushTimer)
       this.flushTimer = null
     }
-    if (this.buffer.length === 0) return
+    if (this.buffer.length === 0 || this.isFlushing) return
 
+    this.isFlushing = true
     try {
       appendFileSync(this.logPath, this.buffer.join(""))
       this.buffer = []
@@ -143,6 +146,8 @@ export class BridgeEventLogger {
         `[han] Failed to write events:`,
         err instanceof Error ? err.message : err,
       )
+    } finally {
+      this.isFlushing = false
     }
   }
 
