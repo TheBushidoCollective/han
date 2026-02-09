@@ -44,7 +44,6 @@ export default function SplitFlapBoard() {
 	const [providerIndex, setProviderIndex] = useState(0);
 	const [tiles, setTiles] = useState<TileState[]>(() => createInitialTiles(0));
 	const [reducedMotion, setReducedMotion] = useState(false);
-	const [iconFading, setIconFading] = useState(false);
 	const visibleRef = useRef(true);
 	const flippingRef = useRef(false);
 
@@ -66,17 +65,13 @@ export default function SplitFlapBoard() {
 			const toName = padName(PROVIDERS[nextIndex].name);
 
 			if (reducedMotion) {
-				setIconFading(true);
 				setTiles(createInitialTiles(nextIndex));
 				setProviderIndex(nextIndex);
 				setTimeout(() => {
-					setIconFading(false);
 					flippingRef.current = false;
 				}, 300);
 				return;
 			}
-
-			setIconFading(true);
 
 			// Kick off staggered flips: each tile starts its flip animation
 			// at a different time, then settles individually when done
@@ -111,11 +106,10 @@ export default function SplitFlapBoard() {
 				}, delay + FLIP_DURATION);
 			}
 
-			// After all tiles have settled, update provider index and icon
+			// After all tiles have settled, update provider index
 			const totalDuration = MAX_LENGTH * STAGGER_DELAY + FLIP_DURATION + 50;
 			setTimeout(() => {
 				setProviderIndex(nextIndex);
-				setIconFading(false);
 				flippingRef.current = false;
 			}, totalDuration);
 		},
@@ -148,21 +142,15 @@ export default function SplitFlapBoard() {
 	}, []);
 
 	const currentProvider = PROVIDERS[providerIndex];
-	const CurrentIcon = currentProvider.icon;
 
 	// SSR-safe: render first provider as plain text
 	if (!mounted) {
 		return (
 			<span
-				className="inline-flex items-center gap-2"
+				className="inline-flex items-center"
 				role="img"
 				aria-label={`for ${PROVIDERS[0].name}`}
 			>
-				<ProviderIcon
-					Icon={PROVIDERS[0].icon}
-					label={PROVIDERS[0].name}
-					fading={false}
-				/>
 				<span
 					style={{
 						fontFamily: "'Courier New', Courier, monospace",
@@ -177,16 +165,11 @@ export default function SplitFlapBoard() {
 
 	return (
 		<span
-			className="inline-flex items-center gap-2"
+			className="inline-flex items-center"
 			role="img"
 			aria-label={`for ${currentProvider.name}`}
 			aria-live="polite"
 		>
-			<ProviderIcon
-				Icon={CurrentIcon}
-				label={currentProvider.name}
-				fading={iconFading}
-			/>
 			<span
 				className="inline-flex"
 				style={{
@@ -207,35 +190,6 @@ export default function SplitFlapBoard() {
 					);
 				})}
 			</span>
-		</span>
-	);
-}
-
-function ProviderIcon({
-	Icon,
-	label,
-	fading,
-}: {
-	Icon: React.FC<React.SVGProps<SVGSVGElement>>;
-	label: string;
-	fading: boolean;
-}) {
-	return (
-		<span
-			className="inline-flex items-center"
-			style={{
-				width: "1.1em",
-				height: "1.1em",
-				transition: "opacity 200ms ease-in-out",
-				opacity: fading ? 0.3 : 1,
-			}}
-		>
-			<Icon
-				width="100%"
-				height="100%"
-				aria-label={label}
-				style={{ display: "block" }}
-			/>
 		</span>
 	);
 }
