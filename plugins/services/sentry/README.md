@@ -77,20 +77,13 @@ The Sentry MCP server uses OAuth for authentication:
 
 ### Self-Hosted Sentry
 
-For self-hosted Sentry instances that expose an MCP endpoint, override the URL in your `.claude/settings.local.json`:
+For self-hosted Sentry instances, set the `SENTRY_MCP_URL` environment variable:
 
-```json
-{
-  "mcpServers": {
-    "sentry": {
-      "type": "http",
-      "url": "https://sentry.example.com/mcp"
-    }
-  }
-}
+```bash
+export SENTRY_MCP_URL=https://sentry.example.com/mcp
 ```
 
-Replace `sentry.example.com` with your Sentry instance hostname. OAuth authentication is handled by Claude Code automatically.
+The plugin defaults to `https://mcp.sentry.dev/mcp` (Sentry cloud) when the variable is not set. OAuth authentication is handled by Claude Code automatically.
 
 ## Available Slash Commands
 
