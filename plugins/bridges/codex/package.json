@@ -1,0 +1,38 @@
+{
+  "name": "codex-plugin-han",
+  "version": "0.1.0",
+  "description": "Han bridge for Codex CLI - enables Han's validation hooks and plugin ecosystem in Codex sessions",
+  "main": "src/index.ts",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src/"
+  ],
+  "keywords": [
+    "codex",
+    "codex-plugin",
+    "openai",
+    "han",
+    "claude-code",
+    "hooks",
+    "validation",
+    "linting",
+    "bridge"
+  ],
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thebushidocollective/han",
+    "directory": "plugins/bridges/codex"
+  },
+  "homepage": "https://github.com/thebushidocollective/han/tree/main/plugins/bridges/codex",
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}

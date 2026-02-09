@@ -952,12 +952,42 @@
       "keywords": ["oop", "object-oriented", "design-patterns", "encapsulation"]
     },
     {
+      "name": "gemini-cli",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with Gemini CLI by translating Gemini CLI events into Han hook invocations.",
+      "source": "./plugins/bridges/gemini-cli",
+      "category": "Integration",
+      "keywords": [
+        "gemini-cli",
+        "gemini",
+        "bridge",
+        "hooks",
+        "compatibility",
+        "claude-code",
+        "validation"
+      ]
+    },
+    {
       "name": "opencode",
       "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with OpenCode by translating OpenCode events into Claude Code hook invocations.",
       "source": "./plugins/bridges/opencode",
       "category": "Integration",
       "keywords": [
         "opencode",
+        "bridge",
+        "hooks",
+        "compatibility",
+        "claude-code",
+        "validation"
+      ]
+    },
+    {
+      "name": "codex",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with OpenAI Codex CLI by translating Codex events into Claude Code hook invocations.",
+      "source": "./plugins/bridges/codex",
+      "category": "Integration",
+      "keywords": [
+        "codex",
+        "openai",
         "bridge",
         "hooks",
         "compatibility",
@@ -2485,12 +2515,42 @@
       ]
     },
     {
+      "name": "hashi-gemini-cli",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with Gemini CLI by translating Gemini CLI events into Han hook invocations.",
+      "source": "./plugins/bridges/gemini-cli",
+      "category": "Integration",
+      "keywords": [
+        "gemini-cli",
+        "gemini",
+        "bridge",
+        "hooks",
+        "compatibility",
+        "claude-code",
+        "validation"
+      ]
+    },
+    {
       "name": "hashi-opencode",
       "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with OpenCode by translating OpenCode events into Claude Code hook invocations.",
       "source": "./plugins/bridges/opencode",
       "category": "Integration",
       "keywords": [
         "opencode",
+        "bridge",
+        "hooks",
+        "compatibility",
+        "claude-code",
+        "validation"
+      ]
+    },
+    {
+      "name": "hashi-codex",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with OpenAI Codex CLI by translating Codex events into Claude Code hook invocations.",
+      "source": "./plugins/bridges/codex",
+      "category": "Integration",
+      "keywords": [
+        "codex",
+        "openai",
         "bridge",
         "hooks",
         "compatibility",

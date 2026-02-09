@@ -5,7 +5,7 @@ import Footer from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 
 export const metadata: Metadata = {
-	title: "Han - Ship-Ready Code from AI Coding Agents",
+	title: "Han - Releasable Code from AI Coding Agents",
 	description:
 		"139+ plugins for quality gates, tooling, memory, and specialized agents. Your AI coding agent writes code that's ready to merge.",
 	keywords: [
