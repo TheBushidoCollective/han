@@ -144,6 +144,7 @@ The bridge communicates with Gemini CLI using the standard hook protocol:
 - **Logging** (stderr): All debug output goes to stderr
 
 Exit codes:
+
 - **0**: Success — Gemini CLI parses stdout JSON
 - **2**: Critical block — Gemini CLI aborts the action
 - **Other**: Warning — Gemini CLI continues unchanged
@@ -168,12 +169,12 @@ The bridge translates Gemini CLI tool names (snake_case) to Claude Code tool nam
 | Gemini CLI Tool | Claude Code Equivalent |
 |-----------------|----------------------|
 | `write_file` | `Write` |
-| `edit_file` | `Edit` |
 | `replace` | `Edit` |
 | `run_shell_command` | `Bash` |
 | `read_file` | `Read` |
+| `list_directory` | `Glob` |
 | `glob` | `Glob` |
-| `grep` | `Grep` |
+| `search_file_content` | `Grep` |
 
 ## Architecture
 
@@ -194,7 +195,7 @@ Gemini CLI Extension System
   |     -> PreToolUse hooks
   |     -> stdout: { "decision": "allow" } or { "decision": "deny", "reason": "..." }
   |
-  |-- AfterTool hook (matcher: write_file|edit_file|...)
+  |-- AfterTool hook (matcher: write_file|replace)
   |     -> bun bridge.ts AfterTool
   |     -> PostToolUse hooks (biome, eslint, tsc)
   |     -> stdout: { "systemMessage": "Validation errors..." } or {}

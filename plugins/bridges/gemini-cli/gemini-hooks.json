@@ -38,7 +38,7 @@
   ],
   "AfterTool": [
     {
-      "matcher": "write_file|edit_file|replace|patch_file|create_file",
+      "matcher": "write_file|replace",
       "hooks": [
         {
           "name": "han-post-tool",

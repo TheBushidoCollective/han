@@ -117,7 +117,7 @@ Gemini CLI Hook System
   |-- BeforeTool (matcher: *) ───> PreToolUse hooks
   |     hooks/hooks.json            -> decision:"deny" if validation fails
   |
-  |-- AfterTool (matcher: write_file|edit_file|...) ──> PostToolUse hooks
+  |-- AfterTool (matcher: write_file|replace) ──> PostToolUse hooks
   |     hooks/hooks.json            -> systemMessage with validation errors
   |
   |-- AfterAgent ────────────────> Stop hooks (full project validation)
@@ -175,6 +175,7 @@ Gemini CLI hooks communicate via stdin/stdout JSON:
 - **Logging** (stderr): All debug output goes to stderr (stdout is reserved for JSON)
 
 Exit codes:
+
 - **0**: Success — Gemini CLI parses stdout JSON
 - **2**: Critical block — Gemini CLI aborts the action
 - **Other**: Warning — Gemini CLI continues unchanged

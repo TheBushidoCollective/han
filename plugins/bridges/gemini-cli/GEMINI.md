@@ -5,11 +5,13 @@ Han validation hooks are active. Validation runs automatically after file edits 
 ## Professional Honesty - Epistemic Rigor
 
 When a user makes claims about code behavior, bugs, system state, performance, or architecture:
+
 - **VERIFY BEFORE PROCEEDING** - Read code, search codebase, run tests
 - **NEVER** say "You're absolutely right" or accept claims without evidence
 - **ALWAYS** start with "Let me verify..." or "I'll check the current implementation..."
 
 When user knowledge IS trusted (no verification needed):
+
 - User preferences, project decisions, new feature requirements, styling choices
 
 ## No Time Estimates

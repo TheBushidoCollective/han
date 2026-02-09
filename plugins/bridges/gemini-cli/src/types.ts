@@ -103,23 +103,33 @@ export function getProvider(): HanProvider {
 /**
  * Map Gemini CLI tool names to Claude Code tool names.
  * Gemini CLI uses snake_case; Claude Code uses PascalCase.
+ *
+ * See: https://geminicli.com/docs/tools/file-system/
+ * See: https://geminicli.com/docs/tools/shell/
  */
 export const TOOL_NAME_MAP: Record<string, string> = {
   write_file: "Write",
-  edit_file: "Edit",
   replace: "Edit",
-  patch_file: "Edit",
-  create_file: "Write",
   run_shell_command: "Bash",
-  shell: "Bash",
   read_file: "Read",
-  read_many_files: "Read",
+  list_directory: "Glob",
   glob: "Glob",
-  list_files: "Glob",
-  grep: "Grep",
-  search_files: "Grep",
+  search_file_content: "Grep",
+  google_web_search: "WebSearch",
+  web_fetch: "WebFetch",
+  save_memory: "Write",
+  write_todos: "TodoWrite",
 }
 
 export function mapToolName(geminiTool: string): string {
   return TOOL_NAME_MAP[geminiTool.toLowerCase()] ?? geminiTool
+}
+
+/**
+ * Check if a Gemini CLI tool name is a file-writing tool.
+ * Used to determine if PostToolUse validation should run.
+ */
+export function isFileWriteTool(geminiTool: string): boolean {
+  const name = geminiTool.toLowerCase()
+  return name === "write_file" || name === "replace"
 }

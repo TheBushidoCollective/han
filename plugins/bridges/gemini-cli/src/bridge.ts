@@ -62,24 +62,17 @@ const PREFIX = "[han]"
  * Read stdin as JSON. Gemini CLI passes hook context via stdin.
  */
 async function readStdin(): Promise<GeminiHookInput> {
-  const chunks: string[] = []
+  const chunks: Buffer[] = []
 
-  const reader = Bun.stdin.stream().getReader()
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      chunks.push(new TextDecoder().decode(value))
-    }
-  } finally {
-    reader.releaseLock()
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk as Buffer)
   }
 
-  const raw = chunks.join("")
-  if (!raw.trim()) return {}
+  const raw = Buffer.concat(chunks).toString("utf-8").trim()
+  if (!raw) return {}
 
   try {
-    return JSON.parse(raw)
+    return JSON.parse(raw) as GeminiHookInput
   } catch {
     console.error(`${PREFIX} Failed to parse stdin JSON`)
     return {}
