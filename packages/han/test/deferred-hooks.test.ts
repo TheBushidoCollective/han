@@ -56,7 +56,7 @@ async function createTestSession(sessionId: string) {
   });
 }
 
-// Helper to create an orchestration for testing (uses native module directly)
+// Helper to create an orchestration for testing (uses centralized native loader)
 async function createTestOrchestration(sessionId?: string) {
   const { initDb } = await import('../lib/db/index.ts');
   await initDb();
@@ -64,7 +64,8 @@ async function createTestOrchestration(sessionId?: string) {
   if (sessionId) {
     await createTestSession(sessionId);
   }
-  const native = require('../../../han-native');
+  const { getNativeModule } = await import('../lib/native.ts');
+  const native = getNativeModule();
   return native.createOrchestration({
     sessionId,
     hookType: 'Stop',
