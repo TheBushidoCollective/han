@@ -624,6 +624,7 @@ pub struct SessionFileChange {
     pub file_hash_before: Option<String>,
     pub file_hash_after: Option<String>,
     pub tool_name: Option<String>,
+    pub agent_id: Option<String>,
     pub recorded_at: Option<String>,
 }
 
@@ -636,6 +637,7 @@ pub struct SessionFileChangeInput {
     pub file_hash_before: Option<String>,
     pub file_hash_after: Option<String>,
     pub tool_name: Option<String>,
+    pub agent_id: Option<String>,
 }
 
 // ============================================================================

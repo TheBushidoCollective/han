@@ -2883,9 +2883,9 @@ pub fn record_file_change(input: SessionFileChangeInput) -> napi::Result<Session
     let now = chrono::Utc::now().to_rfc3339();
 
     let mut stmt = conn.prepare(
-        "INSERT INTO session_file_changes (id, session_id, file_path, action, file_hash_before, file_hash_after, tool_name, recorded_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-         RETURNING id, session_id, file_path, action, file_hash_before, file_hash_after, tool_name, recorded_at"
+        "INSERT INTO session_file_changes (id, session_id, file_path, action, file_hash_before, file_hash_after, tool_name, agent_id, recorded_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+         RETURNING id, session_id, file_path, action, file_hash_before, file_hash_after, tool_name, agent_id, recorded_at"
     ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare insert: {}", e)))?;
 
     stmt.query_row(
@@ -2897,6 +2897,7 @@ pub fn record_file_change(input: SessionFileChangeInput) -> napi::Result<Session
             input.file_hash_before,
             input.file_hash_after,
             input.tool_name,
+            input.agent_id,
             now
         ],
         |row| {
@@ -2908,55 +2909,84 @@ pub fn record_file_change(input: SessionFileChangeInput) -> napi::Result<Session
                 file_hash_before: row.get(4)?,
                 file_hash_after: row.get(5)?,
                 tool_name: row.get(6)?,
-                recorded_at: row.get(7)?,
+                agent_id: row.get(7)?,
+                recorded_at: row.get(8)?,
             })
         },
     )
     .map_err(|e| napi::Error::from_reason(format!("Failed to record file change: {}", e)))
 }
 
-pub fn get_session_file_changes(session_id: &str) -> napi::Result<Vec<SessionFileChange>> {
+pub fn get_session_file_changes(
+    session_id: &str,
+    agent_id: Option<&str>,
+) -> napi::Result<Vec<SessionFileChange>> {
     let db = db::get_db()?;
     let conn = db
         .lock()
         .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
-    let mut stmt = conn.prepare(
-        "SELECT id, session_id, file_path, action, file_hash_before, file_hash_after, tool_name, recorded_at
-         FROM session_file_changes WHERE session_id = ?1 ORDER BY recorded_at DESC"
-    ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
-
-    let rows = stmt
-        .query_map(params![session_id], |row| {
-            Ok(SessionFileChange {
-                id: Some(row.get(0)?),
-                session_id: row.get(1)?,
-                file_path: row.get(2)?,
-                action: row.get(3)?,
-                file_hash_before: row.get(4)?,
-                file_hash_after: row.get(5)?,
-                tool_name: row.get(6)?,
-                recorded_at: row.get(7)?,
-            })
+    let row_mapper = |row: &rusqlite::Row| -> rusqlite::Result<SessionFileChange> {
+        Ok(SessionFileChange {
+            id: Some(row.get(0)?),
+            session_id: row.get(1)?,
+            file_path: row.get(2)?,
+            action: row.get(3)?,
+            file_hash_before: row.get(4)?,
+            file_hash_after: row.get(5)?,
+            tool_name: row.get(6)?,
+            agent_id: row.get(7)?,
+            recorded_at: row.get(8)?,
         })
-        .map_err(|e| napi::Error::from_reason(format!("Failed to get file changes: {}", e)))?;
+    };
 
-    Ok(rows.filter_map(|r| r.ok()).collect())
+    if let Some(aid) = agent_id {
+        let mut stmt = conn.prepare(
+            "SELECT id, session_id, file_path, action, file_hash_before, file_hash_after, tool_name, agent_id, recorded_at
+             FROM session_file_changes WHERE session_id = ?1 AND agent_id = ?2 ORDER BY recorded_at DESC"
+        ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+        let rows: Vec<SessionFileChange> = stmt
+            .query_map(params![session_id, aid], row_mapper)
+            .map_err(|e| napi::Error::from_reason(format!("Failed to get file changes: {}", e)))?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(rows)
+    } else {
+        let mut stmt = conn.prepare(
+            "SELECT id, session_id, file_path, action, file_hash_before, file_hash_after, tool_name, agent_id, recorded_at
+             FROM session_file_changes WHERE session_id = ?1 ORDER BY recorded_at DESC"
+        ).map_err(|e| napi::Error::from_reason(format!("Failed to prepare query: {}", e)))?;
+
+        let rows: Vec<SessionFileChange> = stmt
+            .query_map(params![session_id], row_mapper)
+            .map_err(|e| napi::Error::from_reason(format!("Failed to get file changes: {}", e)))?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(rows)
+    }
 }
 
-pub fn has_session_changes(session_id: &str) -> napi::Result<bool> {
+pub fn has_session_changes(session_id: &str, agent_id: Option<&str>) -> napi::Result<bool> {
     let db = db::get_db()?;
     let conn = db
         .lock()
         .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
-    let count: i64 = conn
-        .query_row(
+    let count: i64 = if let Some(aid) = agent_id {
+        conn.query_row(
+            "SELECT COUNT(*) FROM session_file_changes WHERE session_id = ?1 AND agent_id = ?2",
+            params![session_id, aid],
+            |row| row.get(0),
+        )
+    } else {
+        conn.query_row(
             "SELECT COUNT(*) FROM session_file_changes WHERE session_id = ?1",
             params![session_id],
             |row| row.get(0),
         )
-        .map_err(|e| napi::Error::from_reason(format!("Failed to check session changes: {}", e)))?;
+    }
+    .map_err(|e| napi::Error::from_reason(format!("Failed to check session changes: {}", e)))?;
 
     Ok(count > 0)
 }
@@ -6502,11 +6532,13 @@ mod tests {
             file_hash_before: Some("abc123".to_string()),
             file_hash_after: Some("def456".to_string()),
             tool_name: Some("Edit".to_string()),
+            agent_id: None,
         };
 
         let result = record_file_change(input).expect("Failed to record file change");
         assert!(result.id.is_some());
         assert_eq!(result.action, "modified");
+        assert!(result.agent_id.is_none());
     }
 
     #[test]
@@ -6532,12 +6564,14 @@ mod tests {
                 file_hash_before: None,
                 file_hash_after: Some(format!("hash{}", i)),
                 tool_name: None,
+                agent_id: None,
             };
             record_file_change(input).expect("Failed to record file change");
         }
 
         let changes =
-            get_session_file_changes("list-file-changes-session").expect("Query should succeed");
+            get_session_file_changes("list-file-changes-session", None)
+                .expect("Query should succeed");
         assert_eq!(changes.len(), 3);
     }
 
@@ -6558,7 +6592,7 @@ mod tests {
 
         // Should be false initially
         let has_changes_before =
-            has_session_changes("has-changes-session").expect("Query should succeed");
+            has_session_changes("has-changes-session", None).expect("Query should succeed");
         assert!(!has_changes_before);
 
         // Add a change
@@ -6569,13 +6603,103 @@ mod tests {
             file_hash_before: None,
             file_hash_after: Some("newhash".to_string()),
             tool_name: None,
+            agent_id: None,
         };
         record_file_change(input).expect("Failed to record file change");
 
         // Should be true now
         let has_changes_after =
-            has_session_changes("has-changes-session").expect("Query should succeed");
+            has_session_changes("has-changes-session", None).expect("Query should succeed");
         assert!(has_changes_after);
+    }
+
+    #[test]
+    fn test_get_session_file_changes_by_agent() {
+        let _temp_dir = init_test_db_singleton();
+
+        // Create session
+        let session_input = SessionInput {
+            id: "agent-file-changes-session".to_string(),
+            project_id: None,
+            status: Some("active".to_string()),
+            transcript_path: None,
+            slug: None,
+            source_config_dir: None,
+        };
+        upsert_session(session_input).expect("Failed to insert session");
+
+        // Record changes from main conversation (no agent_id)
+        let input = SessionFileChangeInput {
+            session_id: "agent-file-changes-session".to_string(),
+            file_path: "/path/to/main-file.rs".to_string(),
+            action: "modified".to_string(),
+            file_hash_before: None,
+            file_hash_after: Some("hash1".to_string()),
+            tool_name: Some("Edit".to_string()),
+            agent_id: None,
+        };
+        record_file_change(input).expect("Failed to record main change");
+
+        // Record changes from agent-1
+        let input = SessionFileChangeInput {
+            session_id: "agent-file-changes-session".to_string(),
+            file_path: "/path/to/agent1-file.rs".to_string(),
+            action: "created".to_string(),
+            file_hash_before: None,
+            file_hash_after: Some("hash2".to_string()),
+            tool_name: Some("Write".to_string()),
+            agent_id: Some("agent-1".to_string()),
+        };
+        record_file_change(input).expect("Failed to record agent-1 change");
+
+        // Record changes from agent-2
+        let input = SessionFileChangeInput {
+            session_id: "agent-file-changes-session".to_string(),
+            file_path: "/path/to/agent2-file.rs".to_string(),
+            action: "modified".to_string(),
+            file_hash_before: None,
+            file_hash_after: Some("hash3".to_string()),
+            tool_name: Some("Edit".to_string()),
+            agent_id: Some("agent-2".to_string()),
+        };
+        record_file_change(input).expect("Failed to record agent-2 change");
+
+        // Query all changes (no agent filter) - should return 3
+        let all_changes =
+            get_session_file_changes("agent-file-changes-session", None)
+                .expect("Query should succeed");
+        assert_eq!(all_changes.len(), 3);
+
+        // Query agent-1 changes only - should return 1
+        let agent1_changes =
+            get_session_file_changes("agent-file-changes-session", Some("agent-1"))
+                .expect("Query should succeed");
+        assert_eq!(agent1_changes.len(), 1);
+        assert_eq!(agent1_changes[0].file_path, "/path/to/agent1-file.rs");
+        assert_eq!(agent1_changes[0].agent_id, Some("agent-1".to_string()));
+
+        // Query agent-2 changes only - should return 1
+        let agent2_changes =
+            get_session_file_changes("agent-file-changes-session", Some("agent-2"))
+                .expect("Query should succeed");
+        assert_eq!(agent2_changes.len(), 1);
+        assert_eq!(agent2_changes[0].file_path, "/path/to/agent2-file.rs");
+
+        // Query non-existent agent - should return 0
+        let no_changes =
+            get_session_file_changes("agent-file-changes-session", Some("agent-99"))
+                .expect("Query should succeed");
+        assert_eq!(no_changes.len(), 0);
+
+        // has_session_changes with agent filter
+        assert!(
+            has_session_changes("agent-file-changes-session", Some("agent-1"))
+                .expect("Query should succeed")
+        );
+        assert!(
+            !has_session_changes("agent-file-changes-session", Some("agent-99"))
+                .expect("Query should succeed")
+        );
     }
 
     // ========================================================================
@@ -6674,6 +6798,7 @@ mod tests {
             file_hash_before: Some("old".to_string()),
             file_hash_after: Some("new".to_string()),
             tool_name: None,
+            agent_id: None,
         };
         record_file_change(change).expect("Failed to record file change");
 

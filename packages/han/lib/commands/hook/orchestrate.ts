@@ -955,10 +955,16 @@ async function executeHookInDirectory(
   let command = resolveHanCommand(rawCommand);
 
   // Substitute ${HAN_FILES} with session-modified files from coordinator
+  // For SubagentStop, scope to only that agent's file changes
   // biome-ignore lint/suspicious/noTemplateCurlyInString: This is intentionally a literal string pattern, not a template
   if (command.includes('${HAN_FILES}')) {
     try {
-      const sessionFiles = await getSessionModifiedFiles(options.sessionId);
+      const agentId =
+        options.hookType === 'SubagentStop' ? payload.agent_id : undefined;
+      const sessionFiles = await getSessionModifiedFiles(
+        options.sessionId,
+        agentId
+      );
       if (sessionFiles.success && sessionFiles.allModified.length > 0) {
         // Files from coordinator are already absolute paths
         // Filter to files in current directory and make relative
