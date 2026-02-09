@@ -118,6 +118,15 @@ struct ParsedMessage {
     uuid: String,
     agent_id: Option<String>,
     parent_id: Option<String>,
+    // Token usage (extracted from message.usage)
+    input_tokens: Option<i64>,
+    output_tokens: Option<i64>,
+    cache_read_tokens: Option<i64>,
+    cache_creation_tokens: Option<i64>,
+    // Line changes (extracted from tool_use content blocks)
+    lines_added: Option<i32>,
+    lines_removed: Option<i32>,
+    files_changed: Option<i32>,
 }
 
 // ============================================================================
@@ -290,6 +299,22 @@ fn finalize_parsed_message(
         _ => None,
     };
 
+    // Extract token usage from assistant messages (message.usage)
+    let (input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens) =
+        if message_type == MessageType::Assistant {
+            extract_token_usage(json)
+        } else {
+            (None, None, None, None)
+        };
+
+    // Extract line changes from assistant messages with tool_use content blocks
+    let (lines_added, lines_removed, files_changed) =
+        if message_type == MessageType::Assistant {
+            extract_line_changes(json)
+        } else {
+            (None, None, None)
+        };
+
     Some(ParsedMessage {
         message_type,
         role,
@@ -302,6 +327,13 @@ fn finalize_parsed_message(
         uuid: parsed.uuid,
         agent_id,
         parent_id,
+        input_tokens,
+        output_tokens,
+        cache_read_tokens,
+        cache_creation_tokens,
+        lines_added,
+        lines_removed,
+        files_changed,
     })
 }
 
@@ -408,6 +440,120 @@ fn extract_message_content(json: &Value) -> Option<String> {
     }
 
     None
+}
+
+/// Extract token usage from a JSONL message's usage field.
+/// Looks at message.usage.{input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens}
+fn extract_token_usage(json: &Value) -> (Option<i64>, Option<i64>, Option<i64>, Option<i64>) {
+    let usage = json
+        .get("message")
+        .and_then(|m| m.get("usage"))
+        .or_else(|| json.get("usage"));
+
+    match usage {
+        Some(u) => {
+            let input = u.get("input_tokens").and_then(|v| v.as_i64());
+            let output = u.get("output_tokens").and_then(|v| v.as_i64());
+            let cache_read = u.get("cache_read_input_tokens").and_then(|v| v.as_i64());
+            let cache_creation = u
+                .get("cache_creation_input_tokens")
+                .and_then(|v| v.as_i64());
+
+            // Only return Some values if at least one token field exists
+            if input.is_some() || output.is_some() {
+                (input, output, cache_read, cache_creation)
+            } else {
+                (None, None, None, None)
+            }
+        }
+        None => (None, None, None, None),
+    }
+}
+
+/// Extract line changes from assistant messages that contain tool_use content blocks.
+/// Looks at Edit (old_string vs new_string delta) and Write (content lines) tools.
+fn extract_line_changes(json: &Value) -> (Option<i32>, Option<i32>, Option<i32>) {
+    let content = json
+        .get("message")
+        .and_then(|m| m.get("content"))
+        .or_else(|| json.get("content"));
+
+    let arr = match content.and_then(|c| c.as_array()) {
+        Some(a) => a,
+        None => return (None, None, None),
+    };
+
+    let mut lines_added: i32 = 0;
+    let mut lines_removed: i32 = 0;
+    let mut files = std::collections::HashSet::new();
+    let mut found_any = false;
+
+    for block in arr {
+        let block_type = block.get("type").and_then(|t| t.as_str());
+        if block_type != Some("tool_use") {
+            continue;
+        }
+
+        let tool_name = block
+            .get("name")
+            .and_then(|n| n.as_str())
+            .unwrap_or("")
+            .to_lowercase();
+        let input = match block.get("input") {
+            Some(i) => i,
+            None => continue,
+        };
+
+        match tool_name.as_str() {
+            "edit" => {
+                if let Some(fp) = input.get("file_path").and_then(|v| v.as_str()) {
+                    files.insert(fp.to_string());
+                    found_any = true;
+
+                    let old_str = input
+                        .get("old_string")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    let new_str = input
+                        .get("new_string")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+
+                    let old_lines = old_str.split('\n').count() as i32;
+                    let new_lines = new_str.split('\n').count() as i32;
+
+                    if new_lines > old_lines {
+                        lines_added += new_lines - old_lines;
+                    } else if old_lines > new_lines {
+                        lines_removed += old_lines - new_lines;
+                    }
+                }
+            }
+            "write" => {
+                if let Some(fp) = input.get("file_path").and_then(|v| v.as_str()) {
+                    files.insert(fp.to_string());
+                    found_any = true;
+
+                    let content_str = input
+                        .get("content")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    lines_added += content_str.split('\n').count() as i32;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if found_any {
+        (
+            Some(lines_added),
+            Some(lines_removed),
+            Some(files.len() as i32),
+        )
+    } else {
+        (None, None, None)
+    }
 }
 
 /// File type classification for JSONL files
@@ -1070,6 +1216,14 @@ fn han_event_to_message_input(
         sentiment_level: None,
         frustration_score: None,
         frustration_level: None,
+        // Han events don't have token usage or line changes
+        input_tokens: None,
+        output_tokens: None,
+        cache_read_tokens: None,
+        cache_creation_tokens: None,
+        lines_added: None,
+        lines_removed: None,
+        files_changed: None,
     }
 }
 
@@ -1364,6 +1518,14 @@ fn generate_sentiment_event(
         sentiment_level: None,
         frustration_score: None,
         frustration_level: None,
+        // Sentiment events don't have token usage or line changes
+        input_tokens: None,
+        output_tokens: None,
+        cache_read_tokens: None,
+        cache_creation_tokens: None,
+        lines_added: None,
+        lines_removed: None,
+        files_changed: None,
     })
 }
 
@@ -1734,6 +1896,13 @@ pub fn index_session_file(
                 sentiment_level,
                 frustration_score,
                 frustration_level,
+                input_tokens: finalized.input_tokens,
+                output_tokens: finalized.output_tokens,
+                cache_read_tokens: finalized.cache_read_tokens,
+                cache_creation_tokens: finalized.cache_creation_tokens,
+                lines_added: finalized.lines_added,
+                lines_removed: finalized.lines_removed,
+                files_changed: finalized.files_changed,
             });
 
             // Generate sentiment analysis event for user messages

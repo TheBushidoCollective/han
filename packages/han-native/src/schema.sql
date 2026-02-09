@@ -163,6 +163,9 @@ CREATE TABLE IF NOT EXISTS messages (
     output_tokens INTEGER,  -- Output tokens for this message  
     cache_read_tokens INTEGER,  -- Cache read tokens
     cache_creation_tokens INTEGER,  -- Cache creation tokens
+    lines_added INTEGER,  -- Lines added by tool_use blocks in this message
+    lines_removed INTEGER,  -- Lines removed by tool_use blocks in this message
+    files_changed INTEGER,  -- Files changed by tool_use blocks in this message
     indexed_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

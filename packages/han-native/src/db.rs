@@ -482,7 +482,8 @@ fn run_migrations(conn: &Connection) -> Result<(), rusqlite::Error> {
 /// 1 - Initial version
 /// 2 - source_config_dir tracking for sessions and projects
 /// 3 - Full reindex for dashboard analytics (tool_use extracted from raw_json)
-const CURRENT_DATA_VERSION: u32 = 3;
+/// 4 - Token usage + line change columns populated during indexing, SQL aggregation
+const CURRENT_DATA_VERSION: u32 = 4;
 
 /// Check if data version matches and flag for reindex if needed
 /// Returns Ok(true) if reindex is needed, Ok(false) otherwise

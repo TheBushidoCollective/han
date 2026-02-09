@@ -1648,8 +1648,8 @@ pub fn insert_messages_batch(session_id: &str, messages: Vec<MessageInput>) -> n
         // NOTE: message_type must be updated to fix sentiment events that were stored with wrong type
         conn.execute(
             "INSERT INTO messages
-             (id, session_id, agent_id, parent_id, message_type, role, content, tool_name, tool_input, tool_result, raw_json, timestamp, line_number, source_file_name, source_file_type, sentiment_score, sentiment_level, frustration_score, frustration_level, indexed_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20)
+             (id, session_id, agent_id, parent_id, message_type, role, content, tool_name, tool_input, tool_result, raw_json, timestamp, line_number, source_file_name, source_file_type, sentiment_score, sentiment_level, frustration_score, frustration_level, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, lines_added, lines_removed, files_changed, indexed_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27)
              ON CONFLICT(id) DO UPDATE SET
                 message_type = excluded.message_type,
                 agent_id = COALESCE(excluded.agent_id, agent_id),
@@ -1663,6 +1663,13 @@ pub fn insert_messages_batch(session_id: &str, messages: Vec<MessageInput>) -> n
                 sentiment_level = COALESCE(excluded.sentiment_level, sentiment_level),
                 frustration_score = COALESCE(excluded.frustration_score, frustration_score),
                 frustration_level = COALESCE(excluded.frustration_level, frustration_level),
+                input_tokens = COALESCE(excluded.input_tokens, input_tokens),
+                output_tokens = COALESCE(excluded.output_tokens, output_tokens),
+                cache_read_tokens = COALESCE(excluded.cache_read_tokens, cache_read_tokens),
+                cache_creation_tokens = COALESCE(excluded.cache_creation_tokens, cache_creation_tokens),
+                lines_added = COALESCE(excluded.lines_added, lines_added),
+                lines_removed = COALESCE(excluded.lines_removed, lines_removed),
+                files_changed = COALESCE(excluded.files_changed, files_changed),
                 indexed_at = excluded.indexed_at",
             params![
                 msg.id,  // id IS the message UUID from JSONL
@@ -1684,6 +1691,13 @@ pub fn insert_messages_batch(session_id: &str, messages: Vec<MessageInput>) -> n
                 msg.sentiment_level,
                 msg.frustration_score,
                 msg.frustration_level,
+                msg.input_tokens,
+                msg.output_tokens,
+                msg.cache_read_tokens,
+                msg.cache_creation_tokens,
+                msg.lines_added,
+                msg.lines_removed,
+                msg.files_changed,
                 now
             ],
         ).map_err(|e| napi::Error::from_reason(format!("Failed to insert message: {}", e)))?;
