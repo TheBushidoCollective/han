@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - add Codex CLI bridge plugin for Han hook ecosystem (#65) ([f29edef3](../../commit/f29edef3))
 
+### Fixed
+
+- resolve biome lint errors in bridge plugins and gitignore dist ([e80d2d3e](../../commit/e80d2d3e))
+
+## [0.1.0] - 2026-02-09
+
+### Added
+
+- add Codex CLI bridge plugin for Han hook ecosystem (#65) ([f29edef3](../../commit/f29edef3))
+
 ## [0.1.0] - 2026-02-08
 
 ### Added

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0] - 2026-02-09
+
+### Added
+
+- add Gemini CLI bridge plugin for Han hook ecosystem (#66) ([b24c623e](../../commit/b24c623e))
+
+### Fixed
+
+- resolve biome lint errors in bridge plugins and gitignore dist ([e80d2d3e](../../commit/e80d2d3e))
+
 ## [0.1.0] - 2026-02-08
 
 ### Added
