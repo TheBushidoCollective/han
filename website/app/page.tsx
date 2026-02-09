@@ -17,7 +17,7 @@ export default function Home() {
 			{/* Hero */}
 			<section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">
 				<h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 leading-tight">
-					Ship-Ready Code from
+					&ldquo;Ship-Ready&rdquo; Code from
 					<br />
 					<SplitFlapBoard />
 				</h1>

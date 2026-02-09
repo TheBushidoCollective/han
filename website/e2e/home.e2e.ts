@@ -9,7 +9,7 @@ test.describe("Home Page", () => {
 	test("should display the main heading", async ({ page }) => {
 		await page.goto("/");
 		const heading = page.locator("h1");
-		await expect(heading).toContainText("Ship-Ready Code");
+		await expect(heading).toContainText(/Ship-Ready.*Code/);
 	});
 
 	test("should have navigation links", async ({ page }) => {
