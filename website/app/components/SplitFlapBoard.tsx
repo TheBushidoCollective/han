@@ -19,17 +19,35 @@ function padName(name: string): string {
 	return name.padEnd(MAX_LENGTH);
 }
 
+/**
+ * Per-tile state: each character position tracks what it currently shows
+ * and whether it's mid-flip. This lets tiles settle individually rather
+ * than all snapping at once.
+ */
+interface TileState {
+	char: string;
+	flipping: boolean;
+	fromChar: string;
+}
+
+function createInitialTiles(providerIndex: number): TileState[] {
+	const name = padName(PROVIDERS[providerIndex].name);
+	return Array.from({ length: MAX_LENGTH }, (_, i) => ({
+		char: name[i],
+		flipping: false,
+		fromChar: name[i],
+	}));
+}
+
 export default function SplitFlapBoard() {
 	const [mounted, setMounted] = useState(false);
-	const [currentIndex, setCurrentIndex] = useState(0);
-	const [prevIndex, setPrevIndex] = useState(0);
-	const [flippingChars, setFlippingChars] = useState<Set<number>>(new Set());
+	const [providerIndex, setProviderIndex] = useState(0);
+	const [tiles, setTiles] = useState<TileState[]>(() => createInitialTiles(0));
 	const [reducedMotion, setReducedMotion] = useState(false);
 	const [iconFading, setIconFading] = useState(false);
-	const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const visibleRef = useRef(true);
+	const flippingRef = useRef(false);
 
-	// Mounted check for SSR safety
 	useEffect(() => {
 		setMounted(true);
 
@@ -42,57 +60,85 @@ export default function SplitFlapBoard() {
 
 	const triggerFlip = useCallback(
 		(nextIndex: number) => {
-			const fromName = padName(PROVIDERS[currentIndex].name);
+			if (flippingRef.current) return;
+			flippingRef.current = true;
+
 			const toName = padName(PROVIDERS[nextIndex].name);
 
 			if (reducedMotion) {
-				// Simple crossfade for reduced motion
 				setIconFading(true);
-				setPrevIndex(currentIndex);
-				setCurrentIndex(nextIndex);
-				setTimeout(() => setIconFading(false), 300);
+				setTiles(createInitialTiles(nextIndex));
+				setProviderIndex(nextIndex);
+				setTimeout(() => {
+					setIconFading(false);
+					flippingRef.current = false;
+				}, 300);
 				return;
 			}
 
-			setPrevIndex(currentIndex);
 			setIconFading(true);
 
-			// Stagger character flips
+			// Kick off staggered flips: each tile starts its flip animation
+			// at a different time, then settles individually when done
+			setTiles((prev) =>
+				prev.map((tile, i) => {
+					if (tile.char === toName[i]) return tile;
+					return { char: toName[i], flipping: false, fromChar: tile.char };
+				}),
+			);
+
 			for (let i = 0; i < MAX_LENGTH; i++) {
-				if (fromName[i] !== toName[i]) {
-					setTimeout(() => {
-						setFlippingChars((prev) => new Set(prev).add(i));
-					}, i * STAGGER_DELAY);
-				}
+				const delay = i * STAGGER_DELAY;
+
+				// Start this tile's flip
+				setTimeout(() => {
+					setTiles((prev) =>
+						prev.map((tile, j) =>
+							j === i && tile.fromChar !== tile.char
+								? { ...tile, flipping: true }
+								: tile,
+						),
+					);
+				}, delay);
+
+				// Settle this tile after its animation completes
+				setTimeout(() => {
+					setTiles((prev) =>
+						prev.map((tile, j) =>
+							j === i ? { ...tile, flipping: false } : tile,
+						),
+					);
+				}, delay + FLIP_DURATION);
 			}
 
-			// After all flips complete, update state
+			// After all tiles have settled, update provider index and icon
 			const totalDuration = MAX_LENGTH * STAGGER_DELAY + FLIP_DURATION + 50;
 			setTimeout(() => {
-				setCurrentIndex(nextIndex);
-				setFlippingChars(new Set());
+				setProviderIndex(nextIndex);
 				setIconFading(false);
+				flippingRef.current = false;
 			}, totalDuration);
 		},
-		[currentIndex, reducedMotion],
+		[reducedMotion],
 	);
 
 	// Cycle timer
 	useEffect(() => {
 		if (!mounted) return;
 
-		timerRef.current = setInterval(() => {
-			if (!visibleRef.current) return;
-			const nextIndex = (currentIndex + 1) % PROVIDERS.length;
-			triggerFlip(nextIndex);
+		const timer = setInterval(() => {
+			if (!visibleRef.current || flippingRef.current) return;
+			setProviderIndex((prev) => {
+				const nextIndex = (prev + 1) % PROVIDERS.length;
+				triggerFlip(nextIndex);
+				return prev; // Don't update here - triggerFlip handles it
+			});
 		}, CYCLE_INTERVAL);
 
-		return () => {
-			if (timerRef.current) clearInterval(timerRef.current);
-		};
-	}, [mounted, currentIndex, triggerFlip]);
+		return () => clearInterval(timer);
+	}, [mounted, triggerFlip]);
 
-	// Visibility API - pause when tab hidden
+	// Visibility API
 	useEffect(() => {
 		const handler = () => {
 			visibleRef.current = !document.hidden;
@@ -101,11 +147,10 @@ export default function SplitFlapBoard() {
 		return () => document.removeEventListener("visibilitychange", handler);
 	}, []);
 
-	const currentProvider = PROVIDERS[currentIndex];
-	const prevProvider = PROVIDERS[prevIndex];
+	const currentProvider = PROVIDERS[providerIndex];
 	const CurrentIcon = currentProvider.icon;
 
-	// Pre-mount: render first provider as plain text (SSR-safe)
+	// SSR-safe: render first provider as plain text
 	if (!mounted) {
 		return (
 			<span
@@ -130,9 +175,6 @@ export default function SplitFlapBoard() {
 		);
 	}
 
-	const fromChars = padName(prevProvider.name);
-	const toChars = padName(currentProvider.name);
-
 	return (
 		<span
 			className="inline-flex items-center gap-2"
@@ -152,15 +194,18 @@ export default function SplitFlapBoard() {
 					lineHeight: 1,
 				}}
 			>
-				{TILE_KEYS.map((key, i) => (
-					<SplitFlapChar
-						key={key}
-						from={flippingChars.has(i) ? fromChars[i] : toChars[i]}
-						to={toChars[i]}
-						flipping={flippingChars.has(i)}
-						duration={FLIP_DURATION}
-					/>
-				))}
+				{TILE_KEYS.map((key, i) => {
+					const tile = tiles[i];
+					return (
+						<SplitFlapChar
+							key={key}
+							from={tile.fromChar}
+							to={tile.char}
+							flipping={tile.flipping}
+							duration={FLIP_DURATION}
+						/>
+					);
+				})}
 			</span>
 		</span>
 	);
