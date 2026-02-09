@@ -952,6 +952,21 @@
       "keywords": ["oop", "object-oriented", "design-patterns", "encapsulation"]
     },
     {
+      "name": "gemini-cli",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with Gemini CLI by translating Gemini CLI events into Han hook invocations.",
+      "source": "./plugins/bridges/gemini-cli",
+      "category": "Integration",
+      "keywords": [
+        "gemini-cli",
+        "gemini",
+        "bridge",
+        "hooks",
+        "compatibility",
+        "claude-code",
+        "validation"
+      ]
+    },
+    {
       "name": "opencode",
       "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with OpenCode by translating OpenCode events into Claude Code hook invocations.",
       "source": "./plugins/bridges/opencode",
@@ -2482,6 +2497,21 @@
         "documentation",
         "productivity",
         "server"
+      ]
+    },
+    {
+      "name": "hashi-gemini-cli",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with Gemini CLI by translating Gemini CLI events into Han hook invocations.",
+      "source": "./plugins/bridges/gemini-cli",
+      "category": "Integration",
+      "keywords": [
+        "gemini-cli",
+        "gemini",
+        "bridge",
+        "hooks",
+        "compatibility",
+        "claude-code",
+        "validation"
       ]
     },
     {

@@ -1,0 +1,76 @@
+{
+  "SessionStart": [
+    {
+      "hooks": [
+        {
+          "name": "han-session-start",
+          "type": "command",
+          "command": "bun ${extensionPath}/src/bridge.ts SessionStart",
+          "timeout": 15000
+        }
+      ]
+    }
+  ],
+  "BeforeAgent": [
+    {
+      "hooks": [
+        {
+          "name": "han-context",
+          "type": "command",
+          "command": "bun ${extensionPath}/src/bridge.ts BeforeAgent",
+          "timeout": 5000
+        }
+      ]
+    }
+  ],
+  "BeforeTool": [
+    {
+      "matcher": "*",
+      "hooks": [
+        {
+          "name": "han-pre-tool",
+          "type": "command",
+          "command": "bun ${extensionPath}/src/bridge.ts BeforeTool",
+          "timeout": 30000
+        }
+      ]
+    }
+  ],
+  "AfterTool": [
+    {
+      "matcher": "write_file|replace",
+      "hooks": [
+        {
+          "name": "han-post-tool",
+          "type": "command",
+          "command": "bun ${extensionPath}/src/bridge.ts AfterTool",
+          "timeout": 60000
+        }
+      ]
+    }
+  ],
+  "AfterAgent": [
+    {
+      "hooks": [
+        {
+          "name": "han-stop",
+          "type": "command",
+          "command": "bun ${extensionPath}/src/bridge.ts AfterAgent",
+          "timeout": 120000
+        }
+      ]
+    }
+  ],
+  "PreCompress": [
+    {
+      "hooks": [
+        {
+          "name": "han-pre-compress",
+          "type": "command",
+          "command": "bun ${extensionPath}/src/bridge.ts PreCompress",
+          "timeout": 5000
+        }
+      ]
+    }
+  ]
+}

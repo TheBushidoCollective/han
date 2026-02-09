@@ -1,0 +1,15 @@
+# Han plugin configuration for the Gemini CLI bridge.
+#
+# This plugin has no hooks of its own - it IS the bridge that enables
+# other Han plugins' hooks to run inside Gemini CLI.
+#
+# Installation:
+#   1. Install Han plugins as usual: han plugin install --auto
+#   2. Copy this extension to ~/.gemini/extensions/han/
+#   3. Han hooks (validation, context injection) now work in Gemini CLI.
+
+hooks: {}
+
+learn_patterns:
+  - "gemini"
+  - "gemini.?cli"
