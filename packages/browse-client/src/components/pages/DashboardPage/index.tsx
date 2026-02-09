@@ -211,10 +211,12 @@ export const DashboardPageQuery = graphql`
       category
       count
     }
-    # Include activity data (deferred for performance)
-    ...DashboardPageActivity_query @defer(label: "DashboardPageActivity")
-    # Include analytics data (deferred for performance)
-    ...DashboardPageAnalytics_query @defer(label: "DashboardPageAnalytics")
+    # Include activity and analytics data directly
+    # Note: @defer is disabled due to a multipart streaming parser bug where the
+    # initial response isn't yielded until the next chunk's delimiter arrives.
+    # The 30s TTL cache on both queries makes subsequent loads instant.
+    ...DashboardPageActivity_query
+    ...DashboardPageAnalytics_query
   }
 `;
 
