@@ -287,9 +287,9 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
     );
   }
 
-  // If not local mode, open remote dashboard with coordinator port and return
+  // If not local mode, open remote dashboard and return
   if (!local) {
-    const dashboardUrl = `https://dashboard.local.han.guru?coordinatorPort=${coordinatorPort}`;
+    const dashboardUrl = 'https://dashboard.local.han.guru';
     console.log(`[han] Opening remote dashboard at ${dashboardUrl}`);
     await openBrowser(dashboardUrl);
     return;
@@ -608,16 +608,18 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
     }
     console.log('Press Ctrl+C to stop');
 
-    // Open browser
-    openBrowser(serverUrl).then((opened) => {
-      if (opened) {
-        console.log('Browser opened');
-      } else {
-        console.log(
-          `Could not open browser automatically. Visit ${serverUrl} manually.`
-        );
-      }
-    });
+    // Open browser (skip in test environments)
+    if (!isTestEnvironment) {
+      openBrowser(serverUrl).then((opened) => {
+        if (opened) {
+          console.log('Browser opened');
+        } else {
+          console.log(
+            `Could not open browser automatically. Visit ${serverUrl} manually.`
+          );
+        }
+      });
+    }
   });
 
   // Setup graceful shutdown

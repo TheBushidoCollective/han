@@ -4,6 +4,7 @@ description: |
   Specialized mobile developer with expertise in mobile app development, cross-platform frameworks, and mobile UX patterns. Use when building mobile applications, implementing mobile features, or optimizing mobile performance.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Mobile Developer

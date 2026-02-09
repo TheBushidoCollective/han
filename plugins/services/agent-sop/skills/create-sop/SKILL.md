@@ -1,4 +1,5 @@
 ---
+name: create-sop
 description: Create a new Standard Operating Procedure (SOP) file with proper structure
 ---
 

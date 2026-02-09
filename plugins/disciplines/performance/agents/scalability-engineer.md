@@ -4,6 +4,7 @@ description: |
   Specialized scalability engineer with expertise in horizontal scaling, distributed systems, and capacity planning. Use when designing for scale, implementing distributed architectures, or planning capacity.
 model: inherit
 color: yellow
+memory: project
 ---
 
 # Scalability Engineer

@@ -4,6 +4,7 @@ description: |
   Specialized database designer with expertise in schema design, normalization, and data modeling. Use when designing database schemas, modeling data relationships, or optimizing data structures.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Database Designer

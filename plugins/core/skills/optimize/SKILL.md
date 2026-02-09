@@ -1,4 +1,5 @@
 ---
+name: optimize
 description: Optimize code for performance, readability, or efficiency
 disable-model-invocation: false
 ---

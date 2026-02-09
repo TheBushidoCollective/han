@@ -1,4 +1,5 @@
 ---
+name: incident-response
 description: Manage incident response workflow with Sentry alerts and issue tracking
 ---
 

@@ -4,7 +4,7 @@
  * Logs Han events (hooks, MCP calls, memory operations) to session-scoped
  * JSONL files that are indexed into SQLite by the coordinator.
  *
- * File location: ~/.claude/han/memory/personal/sessions/{date}-{session-id}-han.jsonl
+ * File location: ~/.han/memory/personal/sessions/{date}-{session-id}-han.jsonl
  * (Same location as session observation files, with -han suffix)
  */
 

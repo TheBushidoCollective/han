@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/check-commits.sh\""
+            "command": "han hook run git-storytelling check-commits"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/check-commits.sh\""
+            "command": "han hook run git-storytelling check-commits"
           }
         ]
       }

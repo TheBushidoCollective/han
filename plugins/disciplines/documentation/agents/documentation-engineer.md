@@ -19,6 +19,7 @@ description: |
    documentation.</commentary></example>
 model: inherit
 color: blue
+memory: project
 ---
 
 # Documentation Engineer

@@ -4,6 +4,7 @@ description: |
   Specialized inclusive design engineer with expertise in universal design, internationalization (i18n), and localization (l10n). Use when implementing multi-language support or designing for global audiences.
 model: inherit
 color: purple
+memory: project
 ---
 
 # Inclusive Design Engineer

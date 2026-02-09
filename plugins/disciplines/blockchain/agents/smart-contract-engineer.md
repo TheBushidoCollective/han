@@ -4,6 +4,7 @@ description: |
   Specialized smart contract engineer with expertise in Solidity, contract security, and gas optimization. Use when developing, auditing, or optimizing smart contracts for blockchain platforms.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Smart Contract Engineer

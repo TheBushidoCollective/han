@@ -1,4 +1,5 @@
 ---
+name: search-code
 description: Search for code across your GitLab instance
 ---
 

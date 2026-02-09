@@ -1,0 +1,18 @@
+# Ignore build output - Docker will build fresh
+out/
+.dev-out/
+
+# Ignore node_modules - Docker will install fresh
+node_modules/
+
+# Test files
+tests/
+*.test.ts
+playwright.config.ts
+playwright-report/
+test-results/
+
+# Dev files
+.git/
+*.md
+biome.json

@@ -4,6 +4,7 @@ description: |
   Specialized network protocol engineer with expertise in protocol design, network programming, and communication patterns. Use when designing network protocols, implementing network features, or optimizing network communication.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Network Protocol Engineer

@@ -14,3 +14,17 @@ hooks:
     dir_test: "test -d packages/han && test -f packages/han/package.json"
     if_changed:
       - "**/han-plugin.yml"
+  generate-hooks:
+    event: [Stop, PostToolUse:Edit|Write]
+    command: |
+      for f in ${HAN_FILES}; do
+        case "$f" in
+          */han-plugin.yml|han-plugin.yml)
+            han plugin generate-hooks "$(dirname "$f")" --quiet
+            ;;
+        esac
+      done
+    dirs_with:
+      - "han-plugin.yml"
+    if_changed:
+      - "**/han-plugin.yml"

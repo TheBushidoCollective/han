@@ -1,7 +1,7 @@
 hooks:
-  # Full project format check at Stop (checkpoint)
   format:
-    command: "shfmt -d ."
+    event: [Stop, PostToolUse:Edit|Write]
+    command: "shfmt -d ${HAN_FILES}"
     dirs_with:
       - ".shfmt.toml"
       - "shfmt.toml"
@@ -10,18 +10,3 @@ hooks:
       - "**/*.sh"
       - "**/*.bash"
       - "**/.[!.]*"
-
-  # Single-file async format check on PostToolUse
-  format-async:
-    event: PostToolUse
-    command: "shfmt -d ${HAN_FILES}"
-    dirs_with:
-      - ".shfmt.toml"
-      - "shfmt.toml"
-      - "*.sh"
-    tool_filter:
-      - Edit
-      - Write
-    file_filter:
-      - "**/*.sh"
-      - "**/*.bash"

@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-02-07
+
+### Added
+
+- auto-regenerate hooks.json when han-plugin.yml is edited ([f3e0d4af](../../commit/f3e0d4af))
+- auto-generate hooks.json from han-plugin.yml with shorthand events ([f3a39941](../../commit/f3a39941))
+
+### Fixed
+
+- async Stop hooks, merge test/test-async, fix plugin name resolution ([ba6474e8](../../commit/ba6474e8))
+
+### Changed
+
+- remove file_filter, split test hooks into Stop + PostToolUse ([bd1b5e34](../../commit/bd1b5e34))
+- add frontmatter metadata and memory config to agent definitions ([8104acfe](../../commit/8104acfe))
+
+## [1.3.0] - 2026-02-07
+
+### Added
+
+- auto-generate hooks.json from han-plugin.yml with shorthand events ([f3a39941](../../commit/f3a39941))
+
+### Changed
+
+- add frontmatter metadata and memory config to agent definitions ([8104acfe](../../commit/8104acfe))
+
+## [1.3.0] - 2026-02-06
+
+### Changed
+
+- add frontmatter metadata and memory config to agent definitions ([8104acfe](../../commit/8104acfe))
+
 ## [1.3.0] - 2026-01-30
 
 ## [1.3.0] - 2026-01-24

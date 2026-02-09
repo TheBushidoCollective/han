@@ -118,7 +118,6 @@ export const PLUGIN_ALIASES: Record<string, string> = {
   'jutsu-typescript': 'languages/typescript',
 
   // patterns
-  'jutsu-ai-dlc': 'patterns/ai-dlc',
   'jutsu-atomic-design': 'patterns/atomic-design',
   'jutsu-bdd': 'patterns/bdd',
   'jutsu-functional-programming': 'patterns/functional-programming',
@@ -130,6 +129,9 @@ export const PLUGIN_ALIASES: Record<string, string> = {
   // tools (non-service MCP tools)
   'hashi-blueprints': 'tools/blueprints',
   blueprints: 'tools/blueprints',
+
+  // bridges
+  'hashi-opencode': 'bridges/opencode',
 
   // services
   'hashi-agent-sop': 'services/agent-sop',

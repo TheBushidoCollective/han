@@ -1,4 +1,5 @@
 ---
+name: create-issue
 description: Create a new issue in a GitLab project
 ---
 

@@ -4,6 +4,7 @@ description: |
   Specialized monitoring engineer with expertise in metrics collection, dashboards, and alerting systems. Use when setting up monitoring, creating dashboards, or configuring alerts.
 model: inherit
 color: yellow
+memory: project
 ---
 
 # Monitoring Engineer

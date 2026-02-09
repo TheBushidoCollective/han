@@ -2,12 +2,15 @@
  * Han Memory Path Resolution
  *
  * Handles path resolution for personal and team memory storage.
- * All derived memory lives in ~/.claude/han/memory/, NOT in project repos.
+ * All derived memory lives in ~/.han/memory/, NOT in project repos.
  */
 
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { getClaudeConfigDir } from '../config/claude-settings.ts';
+import {
+  getClaudeConfigDir,
+  getHanDataDir,
+} from '../config/claude-settings.ts';
 import { getGitRemoteUrl } from '../native.ts';
 
 /**
@@ -31,7 +34,7 @@ export function getMemoryRoot(): string {
   if (memoryRootOverride) {
     return memoryRootOverride;
   }
-  return join(getClaudeConfigDir(), 'han', 'memory');
+  return join(getHanDataDir(), 'memory');
 }
 
 /**
@@ -209,7 +212,7 @@ export function getClaudeProjectPath(projectPath: string): string {
  *
  * // Without project path (stores in sessions directory):
  * getHanEventsFilePath("abc123")
- * // ~/.claude/han/memory/personal/sessions/2025-01-15-abc123-han.jsonl
+ * // ~/.han/memory/personal/sessions/2025-01-15-abc123-han.jsonl
  */
 export function getHanEventsFilePath(sessionId: string): string;
 export function getHanEventsFilePath(

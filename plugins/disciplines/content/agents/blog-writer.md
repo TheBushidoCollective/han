@@ -1,6 +1,7 @@
 ---
 name: blog-writer
 description: Use when writing blog posts, articles, or long-form content. Expert at SEO optimization, compelling narratives, and audience-focused content.
+memory: project
 ---
 
 # Blog Writer Agent

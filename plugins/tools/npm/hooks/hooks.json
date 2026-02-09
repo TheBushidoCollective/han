@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run npm install --async"
+          }
+        ],
+        "async": true
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run npm install --async"
+          }
+        ],
+        "async": true
+      }
+    ]
+  }
+}

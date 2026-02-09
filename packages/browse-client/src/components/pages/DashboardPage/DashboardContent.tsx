@@ -25,8 +25,11 @@ import { VStack } from "@/components/atoms/VStack.tsx";
 import { SessionListItem } from "@/components/organisms/SessionListItem.tsx";
 import type { DashboardContentSubscription } from "./__generated__/DashboardContentSubscription.graphql.ts";
 import type { DashboardPageActivity_query$key } from "./__generated__/DashboardPageActivity_query.graphql.ts";
+import type { DashboardPageAnalytics_query$key } from "./__generated__/DashboardPageAnalytics_query.graphql.ts";
 import type { DashboardPageQuery } from "./__generated__/DashboardPageQuery.graphql.ts";
 import { ActivityHeatmap } from "./ActivityHeatmap.tsx";
+import { CompactionHealthCard } from "./CompactionHealthCard.tsx";
+import { CostAnalysisCard } from "./CostAnalysisCard.tsx";
 import {
 	getFrustrationLabel,
 	getFrustrationVariant,
@@ -34,14 +37,19 @@ import {
 	StatCard,
 	StatusItem,
 } from "./components.ts";
+import { HookHealthCard } from "./HookHealthCard.tsx";
 import {
 	DashboardActivityFragment,
+	DashboardAnalyticsFragment,
 	DashboardPageQuery as DashboardPageQueryDef,
 } from "./index.tsx";
 import { LineChangesChart } from "./LineChangesChart.tsx";
 import { ModelUsageChart } from "./ModelUsageChart.tsx";
+import { SessionEffectivenessCard } from "./SessionEffectivenessCard.tsx";
+import { SubagentUsageChart } from "./SubagentUsageChart.tsx";
 import { TimeOfDayChart } from "./TimeOfDayChart.tsx";
 import { TokenUsageCard } from "./TokenUsageCard.tsx";
+import { ToolUsageChart } from "./ToolUsageChart.tsx";
 
 /**
  * Subscription for live dashboard updates
@@ -84,6 +92,12 @@ export function DashboardContent({
 	// This will be null initially, then populate when @defer resolves
 	const activityData = useFragment<DashboardPageActivity_query$key>(
 		DashboardActivityFragment,
+		data,
+	);
+
+	// Use fragment for deferred analytics data
+	const analyticsData = useFragment<DashboardPageAnalytics_query$key>(
+		DashboardAnalyticsFragment,
 		data,
 	);
 
@@ -203,6 +217,118 @@ export function DashboardContent({
 		firstSessionDate: rawActivity?.firstSessionDate ?? null,
 		streakDays: rawActivity?.streakDays ?? 0,
 		totalActiveDays: rawActivity?.totalActiveDays ?? 0,
+	};
+
+	// Normalize analytics data with defaults
+	const rawAnalytics = analyticsData?.dashboardAnalytics;
+	const analyticsLoaded = rawAnalytics != null;
+	const analytics = {
+		subagentUsage: (rawAnalytics?.subagentUsage ?? []).map((s) => ({
+			subagentType: s?.subagentType ?? "unknown",
+			count: s?.count ?? 0,
+		})),
+		compactionStats: {
+			totalCompactions: rawAnalytics?.compactionStats?.totalCompactions ?? 0,
+			sessionsWithCompactions:
+				rawAnalytics?.compactionStats?.sessionsWithCompactions ?? 0,
+			sessionsWithoutCompactions:
+				rawAnalytics?.compactionStats?.sessionsWithoutCompactions ?? 0,
+			avgCompactionsPerSession:
+				rawAnalytics?.compactionStats?.avgCompactionsPerSession ?? 0,
+			autoCompactCount: rawAnalytics?.compactionStats?.autoCompactCount ?? 0,
+			manualCompactCount:
+				rawAnalytics?.compactionStats?.manualCompactCount ?? 0,
+			continuationCount: rawAnalytics?.compactionStats?.continuationCount ?? 0,
+		},
+		topSessions: (rawAnalytics?.topSessions ?? []).map((s) => ({
+			sessionId: s?.sessionId ?? "",
+			slug: s?.slug ?? null,
+			summary: s?.summary ?? null,
+			score: s?.score ?? 0,
+			sentimentTrend: s?.sentimentTrend ?? "neutral",
+			avgSentimentScore: s?.avgSentimentScore ?? 0,
+			turnCount: s?.turnCount ?? 0,
+			taskCompletionRate: s?.taskCompletionRate ?? 0,
+			compactionCount: s?.compactionCount ?? 0,
+			focusScore: s?.focusScore ?? 0,
+			startedAt: s?.startedAt ?? null,
+		})),
+		bottomSessions: (rawAnalytics?.bottomSessions ?? []).map((s) => ({
+			sessionId: s?.sessionId ?? "",
+			slug: s?.slug ?? null,
+			summary: s?.summary ?? null,
+			score: s?.score ?? 0,
+			sentimentTrend: s?.sentimentTrend ?? "neutral",
+			avgSentimentScore: s?.avgSentimentScore ?? 0,
+			turnCount: s?.turnCount ?? 0,
+			taskCompletionRate: s?.taskCompletionRate ?? 0,
+			compactionCount: s?.compactionCount ?? 0,
+			focusScore: s?.focusScore ?? 0,
+			startedAt: s?.startedAt ?? null,
+		})),
+		toolUsage: (rawAnalytics?.toolUsage ?? []).map((t) => ({
+			toolName: t?.toolName ?? "unknown",
+			count: t?.count ?? 0,
+		})),
+		hookHealth: (rawAnalytics?.hookHealth ?? []).map((h) => ({
+			hookName: h?.hookName ?? "unknown",
+			totalRuns: h?.totalRuns ?? 0,
+			passCount: h?.passCount ?? 0,
+			failCount: h?.failCount ?? 0,
+			passRate: h?.passRate ?? 1,
+			avgDurationMs: h?.avgDurationMs ?? 0,
+		})),
+		costAnalysis: {
+			estimatedCostUsd: rawAnalytics?.costAnalysis?.estimatedCostUsd ?? 0,
+			maxSubscriptionCostUsd:
+				rawAnalytics?.costAnalysis?.maxSubscriptionCostUsd ?? 200,
+			costUtilizationPercent:
+				rawAnalytics?.costAnalysis?.costUtilizationPercent ?? 0,
+			dailyCostTrend: (rawAnalytics?.costAnalysis?.dailyCostTrend ?? []).map(
+				(d) => ({
+					date: d?.date ?? "",
+					costUsd: d?.costUsd ?? 0,
+					sessionCount: d?.sessionCount ?? 0,
+				}),
+			),
+			weeklyCostTrend: (rawAnalytics?.costAnalysis?.weeklyCostTrend ?? []).map(
+				(w) => ({
+					weekStart: w?.weekStart ?? "",
+					weekLabel: w?.weekLabel ?? "",
+					costUsd: w?.costUsd ?? 0,
+					sessionCount: w?.sessionCount ?? 0,
+					avgDailyCost: w?.avgDailyCost ?? 0,
+				}),
+			),
+			topSessionsByCost: (
+				rawAnalytics?.costAnalysis?.topSessionsByCost ?? []
+			).map((s) => ({
+				sessionId: s?.sessionId ?? "",
+				slug: s?.slug ?? null,
+				costUsd: s?.costUsd ?? 0,
+				inputTokens: s?.inputTokens ?? 0,
+				outputTokens: s?.outputTokens ?? 0,
+				cacheReadTokens: s?.cacheReadTokens ?? 0,
+				messageCount: s?.messageCount ?? 0,
+				startedAt: s?.startedAt ?? null,
+			})),
+			costPerSession: rawAnalytics?.costAnalysis?.costPerSession ?? 0,
+			costPerCompletedTask:
+				rawAnalytics?.costAnalysis?.costPerCompletedTask ?? 0,
+			cacheHitRate: rawAnalytics?.costAnalysis?.cacheHitRate ?? 0,
+			potentialSavingsUsd: rawAnalytics?.costAnalysis?.potentialSavingsUsd ?? 0,
+			subscriptionComparisons: (
+				rawAnalytics?.costAnalysis?.subscriptionComparisons ?? []
+			).map((c) => ({
+				tierName: c?.tierName ?? "",
+				monthlyCostUsd: c?.monthlyCostUsd ?? 0,
+				apiCreditCostUsd: c?.apiCreditCostUsd ?? 0,
+				savingsUsd: c?.savingsUsd ?? 0,
+				savingsPercent: c?.savingsPercent ?? 0,
+				recommendation: c?.recommendation ?? "overkill",
+			})),
+			breakEvenDailySpend: rawAnalytics?.costAnalysis?.breakEvenDailySpend ?? 0,
+		},
 	};
 
 	return (
@@ -373,6 +499,115 @@ export function DashboardContent({
 				)}
 			</SectionCard>
 
+			{/* Session Effectiveness - full width */}
+			<SectionCard title="Session Effectiveness (30 days)">
+				{analyticsLoaded ? (
+					<SessionEffectivenessCard
+						topSessions={analytics.topSessions}
+						bottomSessions={analytics.bottomSessions}
+						onSessionClick={(sessionId) => navigate(`/sessions/${sessionId}`)}
+					/>
+				) : (
+					<Box
+						style={{
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							minHeight: "120px",
+						}}
+					>
+						<Text color="muted">Loading analytics...</Text>
+					</Box>
+				)}
+			</SectionCard>
+
+			{/* Cost Analysis and Compaction Health - side by side */}
+			<HStack gap="lg" style={{ alignItems: "flex-start" }}>
+				<Box style={{ flex: 1 }}>
+					<SectionCard title="Cost Analysis">
+						{analyticsLoaded ? (
+							<CostAnalysisCard
+								costAnalysis={analytics.costAnalysis}
+								onSessionClick={(sessionId) =>
+									navigate(`/sessions/${sessionId}`)
+								}
+							/>
+						) : (
+							<Box
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									minHeight: "200px",
+								}}
+							>
+								<Text color="muted">Loading cost data...</Text>
+							</Box>
+						)}
+					</SectionCard>
+				</Box>
+				<Box style={{ flex: 1 }}>
+					<SectionCard title="Compaction Health">
+						{analyticsLoaded ? (
+							<CompactionHealthCard
+								compactionStats={analytics.compactionStats}
+							/>
+						) : (
+							<Box
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									minHeight: "200px",
+								}}
+							>
+								<Text color="muted">Loading compaction data...</Text>
+							</Box>
+						)}
+					</SectionCard>
+				</Box>
+			</HStack>
+
+			{/* Subagent Usage and Tool Usage - side by side */}
+			<HStack gap="lg" style={{ alignItems: "flex-start" }}>
+				<Box style={{ flex: 1 }}>
+					<SectionCard title="Subagent Usage">
+						{analyticsLoaded ? (
+							<SubagentUsageChart subagentUsage={analytics.subagentUsage} />
+						) : (
+							<Box
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									minHeight: "120px",
+								}}
+							>
+								<Text color="muted">Loading subagent data...</Text>
+							</Box>
+						)}
+					</SectionCard>
+				</Box>
+				<Box style={{ flex: 1 }}>
+					<SectionCard title="Tool Usage">
+						{analyticsLoaded ? (
+							<ToolUsageChart toolUsage={analytics.toolUsage} />
+						) : (
+							<Box
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									minHeight: "120px",
+								}}
+							>
+								<Text color="muted">Loading tool data...</Text>
+							</Box>
+						)}
+					</SectionCard>
+				</Box>
+			</HStack>
+
 			{/* Token Usage and Time of Day - side by side */}
 			<HStack gap="lg" style={{ alignItems: "flex-start" }}>
 				<Box style={{ flex: 1 }}>
@@ -434,6 +669,24 @@ export function DashboardContent({
 					<Text color="muted" size="sm">
 						No recent sessions
 					</Text>
+				)}
+			</SectionCard>
+
+			{/* Hook Health - full width */}
+			<SectionCard title="Hook Health">
+				{analyticsLoaded ? (
+					<HookHealthCard hookHealth={analytics.hookHealth} />
+				) : (
+					<Box
+						style={{
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							minHeight: "120px",
+						}}
+					>
+						<Text color="muted">Loading hook data...</Text>
+					</Box>
 				)}
 			</SectionCard>
 

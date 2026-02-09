@@ -4,6 +4,7 @@ description: |
   Specialized API designer with expertise in API architecture, contract design, and API evolution strategies. Use when designing APIs, creating API contracts, or planning API versioning.
 model: inherit
 color: purple
+memory: project
 ---
 
 # API Designer

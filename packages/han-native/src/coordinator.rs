@@ -40,10 +40,10 @@ pub struct CoordinatorStatus {
     pub lock_info: Option<LockInfo>,
 }
 
-/// Lock file path
+/// Lock file path (~/.han/coordinator.lock)
+/// Delegates to db::get_han_data_dir() which handles auto-migration.
 fn get_lock_path() -> PathBuf {
-    let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-    home.join(".claude").join("han").join("coordinator.lock")
+    crate::db::get_han_data_dir().join("coordinator.lock")
 }
 
 /// Lock file stale timeout (seconds)

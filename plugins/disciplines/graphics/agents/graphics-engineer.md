@@ -4,6 +4,7 @@ description: |
   Specialized graphics engineer with expertise in graphics APIs, rendering pipelines, and GPU programming. Use when implementing graphics features, optimizing rendering performance, or working with graphics hardware.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Graphics Engineer

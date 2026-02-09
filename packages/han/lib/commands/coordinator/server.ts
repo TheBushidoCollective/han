@@ -13,6 +13,7 @@ import { useDeferStream } from '@graphql-yoga/plugin-defer-stream';
 import { makeServer } from 'graphql-ws';
 import { createYoga } from 'graphql-yoga';
 import { WebSocketServer } from 'ws';
+import { HAN_VERSION } from '../../build-info.generated.ts';
 import {
   coordinator,
   deferredHooks,
@@ -446,9 +447,10 @@ export async function startServer(
       useDeferStream(), // Enable @defer and @stream directives
     ],
     cors: {
-      origin: ['http://localhost:41956', 'https://dashboard.local.han.guru'],
-      credentials: true,
+      origin: '*',
+      credentials: false,
       methods: ['GET', 'POST', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
     },
     context: ({ request }) => ({
       request,
@@ -479,7 +481,7 @@ export async function startServer(
               status: 'ok',
               pid: process.pid,
               uptime,
-              version: process.env.HAN_VERSION || 'dev',
+              version: HAN_VERSION || 'dev',
             })
           );
           return;
@@ -487,12 +489,37 @@ export async function startServer(
 
         // GraphQL endpoint
         if (pathname === '/graphql') {
+          // Handle CORS preflight
+          if (req.method === 'OPTIONS') {
+            const origin = req.headers.origin || '*';
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+            res.setHeader(
+              'Access-Control-Allow-Headers',
+              'Content-Type, Authorization'
+            );
+            res.setHeader('Access-Control-Max-Age', '86400');
+            res.statusCode = 204;
+            res.end();
+            return;
+          }
+
+          // Add CORS headers to all responses
+          const origin = req.headers.origin || '*';
+          res.setHeader('Access-Control-Allow-Origin', origin);
+
           try {
             const webRequest = await nodeToWebRequest(req);
             const webResponse = await yoga.fetch(webRequest);
             await sendWebResponse(res, webResponse);
           } catch (error) {
-            log.error('GraphQL error:', error);
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            const errorStack = error instanceof Error ? error.stack : undefined;
+            log.error('GraphQL error:', errorMessage);
+            if (errorStack) {
+              log.error('Stack:', errorStack);
+            }
             res.statusCode = 500;
             res.end('Internal Server Error');
           }
@@ -521,7 +548,7 @@ export async function startServer(
               status: 'ok',
               pid: process.pid,
               uptime,
-              version: process.env.HAN_VERSION || 'dev',
+              version: HAN_VERSION || 'dev',
             })
           );
           return;
@@ -529,12 +556,37 @@ export async function startServer(
 
         // GraphQL endpoint
         if (pathname === '/graphql') {
+          // Handle CORS preflight
+          if (req.method === 'OPTIONS') {
+            const origin = req.headers.origin || '*';
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+            res.setHeader(
+              'Access-Control-Allow-Headers',
+              'Content-Type, Authorization'
+            );
+            res.setHeader('Access-Control-Max-Age', '86400');
+            res.statusCode = 204;
+            res.end();
+            return;
+          }
+
+          // Add CORS headers to all responses
+          const origin = req.headers.origin || '*';
+          res.setHeader('Access-Control-Allow-Origin', origin);
+
           try {
             const webRequest = await nodeToWebRequest(req);
             const webResponse = await yoga.fetch(webRequest);
             await sendWebResponse(res, webResponse);
           } catch (error) {
-            log.error('GraphQL error:', error);
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            const errorStack = error instanceof Error ? error.stack : undefined;
+            log.error('GraphQL error:', errorMessage);
+            if (errorStack) {
+              log.error('Stack:', errorStack);
+            }
             res.statusCode = 500;
             res.end('Internal Server Error');
           }

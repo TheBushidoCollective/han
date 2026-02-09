@@ -4,6 +4,7 @@ description: |
   Specialized infrastructure engineer with expertise in cloud infrastructure, infrastructure as code, and system reliability. Use when managing infrastructure, implementing IaC, or optimizing system performance.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Infrastructure Engineer

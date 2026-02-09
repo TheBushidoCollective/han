@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const { execFileSync } = require('node:child_process');
 const { existsSync } = require('node:fs');
-const { join } = require('node:path');
+const { dirname, join } = require('node:path');
 
 const platform = process.platform;
 const arch = process.arch;
@@ -23,47 +23,76 @@ if (!pkgName) {
   process.exit(1);
 }
 
-// Try to find the binary in node_modules
+const pkg = `@thebushidocollective/han-${pkgName}`;
 const binName = platform === 'win32' ? 'han.exe' : 'han';
-const paths = [
-  // Installed as dependency
-  join(__dirname, '..', '@thebushidocollective', `han-${pkgName}`, binName),
-  // npx cache location
-  join(
-    __dirname,
-    'node_modules',
-    '@thebushidocollective',
-    `han-${pkgName}`,
-    binName
-  ),
-];
 
-let binPath = paths.find((p) => existsSync(p));
-
-if (!binPath) {
-  // Try to install the platform package on-demand
+/**
+ * Find the platform binary using require.resolve (the canonical way to locate
+ * packages in Node.js). This works regardless of whether npm hoisted the
+ * optional dependency or kept it nested.
+ */
+function findBinaryViaResolve() {
   try {
-    const pkg = `@thebushidocollective/han-${pkgName}`;
-    console.error(`Installing ${pkg}...`);
-    execFileSync('npm', ['install', '--no-save', pkg], {
-      stdio: 'inherit',
-      cwd: __dirname,
-    });
-    binPath = join(
+    const pkgJson = require.resolve(`${pkg}/package.json`);
+    const binPath = join(dirname(pkgJson), binName);
+    if (existsSync(binPath)) return binPath;
+  } catch {
+    // Package not resolvable
+  }
+  return null;
+}
+
+/**
+ * Hardcoded path fallbacks for environments where require.resolve may not
+ * traverse into the expected node_modules tree (e.g., npx cache quirks).
+ */
+function findBinaryViaHardcodedPaths() {
+  const candidates = [
+    // Hoisted (standard npm layout)
+    join(__dirname, '..', '@thebushidocollective', `han-${pkgName}`, binName),
+    // Nested under wrapper
+    join(
       __dirname,
       'node_modules',
       '@thebushidocollective',
       `han-${pkgName}`,
       binName
-    );
-  } catch (e) {
-    console.error(`Failed to install platform package: ${e.message}`);
-    process.exit(1);
-  }
+    ),
+  ];
+  return candidates.find((p) => existsSync(p)) || null;
 }
 
-if (!existsSync(binPath)) {
-  console.error(`Binary not found at ${binPath}`);
+/**
+ * Last resort: install the platform package on-demand and re-check all
+ * locations (both hoisted and nested) after the install.
+ */
+function installAndFind() {
+  try {
+    execFileSync('npm', ['install', '--no-save', '--ignore-scripts', pkg], {
+      stdio: 'pipe',
+      cwd: __dirname,
+    });
+  } catch {
+    // Install failed - fall through to checks anyway
+  }
+  // Re-check all locations after install
+  return findBinaryViaResolve() || findBinaryViaHardcodedPaths();
+}
+
+// Resolution chain: resolve → hardcoded paths → install-and-retry
+let binPath = findBinaryViaResolve() || findBinaryViaHardcodedPaths();
+
+if (!binPath) {
+  binPath = installAndFind();
+}
+
+if (!binPath) {
+  console.error(`Error: han binary not found for ${key}`);
+  console.error(`Package: ${pkg}`);
+  console.error('');
+  console.error(
+    'Try:  npx clear-npx-cache && npx -y @thebushidocollective/han --version'
+  );
   process.exit(1);
 }
 

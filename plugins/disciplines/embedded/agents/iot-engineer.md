@@ -4,6 +4,7 @@ description: |
   Specialized IoT engineer with expertise in IoT protocols, device connectivity, and edge computing. Use when building IoT solutions, implementing device communication, or managing IoT infrastructure.
 model: inherit
 color: blue
+memory: project
 ---
 
 # IoT Engineer

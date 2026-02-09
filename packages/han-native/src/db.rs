@@ -18,20 +18,67 @@ static DB: OnceLock<Mutex<Connection>> = OnceLock::new();
 #[cfg(test)]
 static TEST_DB_PATH: OnceLock<String> = OnceLock::new();
 
-/// Get the default database path
-/// Respects CLAUDE_CONFIG_DIR environment variable for testing
-pub fn get_db_path() -> String {
-    // Check for CLAUDE_CONFIG_DIR first (for testing)
-    let base_dir = std::env::var("CLAUDE_CONFIG_DIR")
-        .ok()
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| {
-            dirs::home_dir()
-                .unwrap_or_else(|| std::path::PathBuf::from("."))
-                .join(".claude")
-        });
+/// Get the Han data directory (~/.han)
+/// Auto-migrates from ~/.claude/han on first access if needed.
+/// Priority: HAN_DATA_DIR > CLAUDE_CONFIG_DIR/han (testing) > ~/.han (with auto-migrate)
+/// Compute the Han data directory without caching (for tests).
+fn compute_han_data_dir() -> std::path::PathBuf {
+    // Explicit override (testing/custom)
+    if let Ok(dir) = std::env::var("HAN_DATA_DIR") {
+        return std::path::PathBuf::from(dir);
+    }
 
-    let han_dir = base_dir.join("han");
+    // Legacy override for testing
+    if let Ok(dir) = std::env::var("CLAUDE_CONFIG_DIR") {
+        return std::path::PathBuf::from(dir).join("han");
+    }
+
+    let home = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+    let new_dir = home.join(".han");
+    let old_dir = home.join(".claude").join("han");
+
+    // Already migrated or fresh install with data
+    if new_dir.exists() {
+        return new_dir;
+    }
+
+    // Old directory exists — auto-migrate
+    if old_dir.exists() {
+        match std::fs::rename(&old_dir, &new_dir) {
+            Ok(()) => {
+                eprintln!(
+                    "[han] Migrated data directory: {} → {}",
+                    old_dir.display(),
+                    new_dir.display()
+                );
+                return new_dir;
+            }
+            Err(_) => {
+                // Migration failed — fall back to old path, retry next restart
+                eprintln!(
+                    "[han] Could not migrate {} → {}, using old path.",
+                    old_dir.display(),
+                    new_dir.display()
+                );
+                return old_dir;
+            }
+        }
+    }
+
+    // Neither exists — fresh install
+    new_dir
+}
+
+pub(crate) fn get_han_data_dir() -> std::path::PathBuf {
+    use std::sync::OnceLock;
+    static CACHED: OnceLock<std::path::PathBuf> = OnceLock::new();
+
+    CACHED.get_or_init(compute_han_data_dir).clone()
+}
+
+/// Get the default database path (~/.han/han.db)
+pub fn get_db_path() -> String {
+    let han_dir = get_han_data_dir();
     std::fs::create_dir_all(&han_dir).ok();
     han_dir.join("han.db").to_string_lossy().to_string()
 }
@@ -423,6 +470,114 @@ fn run_migrations(conn: &Connection) -> Result<(), rusqlite::Error> {
         }
     }
 
+    // Migration: Add lines_added, lines_removed, files_changed columns to messages
+    let has_lines_added: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM pragma_table_info('messages') WHERE name = 'lines_added'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    if !has_lines_added {
+        conn.execute("ALTER TABLE messages ADD COLUMN lines_added INTEGER", [])?;
+        conn.execute("ALTER TABLE messages ADD COLUMN lines_removed INTEGER", [])?;
+        conn.execute("ALTER TABLE messages ADD COLUMN files_changed INTEGER", [])?;
+    }
+
+    // Version tracking - check and update data version at end of migrations
+    // This allows triggering reindex when new features require backfill
+    check_and_update_data_version(conn)?;
+
+    Ok(())
+}
+
+/// Current data version - increment this when new features require reindex
+/// Version history:
+/// 1 - Initial version
+/// 2 - source_config_dir tracking for sessions and projects
+/// 3 - Full reindex for dashboard analytics (tool_use extracted from raw_json)
+/// 4 - Token usage + line change columns populated during indexing, SQL aggregation
+const CURRENT_DATA_VERSION: u32 = 4;
+
+/// Check if data version matches and flag for reindex if needed
+/// Returns Ok(true) if reindex is needed, Ok(false) otherwise
+fn check_and_update_data_version(conn: &Connection) -> Result<(), rusqlite::Error> {
+    // Ensure han_metadata table exists (might not exist on fresh DB before schema.sql)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS han_metadata (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )",
+        [],
+    )?;
+
+    // Get current stored version
+    let stored_version: Option<u32> = conn
+        .query_row(
+            "SELECT value FROM han_metadata WHERE key = 'data_version'",
+            [],
+            |row| {
+                let v: String = row.get(0)?;
+                Ok(v.parse().unwrap_or(0))
+            },
+        )
+        .ok();
+
+    if stored_version.unwrap_or(0) < CURRENT_DATA_VERSION {
+        // Flag that reindex is needed
+        conn.execute(
+            "INSERT OR REPLACE INTO han_metadata (key, value, updated_at) VALUES ('needs_reindex', 'true', datetime('now'))",
+            [],
+        )?;
+        tracing::info!(
+            "Data version {} < {}, flagging for reindex",
+            stored_version.unwrap_or(0),
+            CURRENT_DATA_VERSION
+        );
+    }
+
+    // Update to current version
+    conn.execute(
+        "INSERT OR REPLACE INTO han_metadata (key, value, updated_at) VALUES ('data_version', ?1, datetime('now'))",
+        params![CURRENT_DATA_VERSION.to_string()],
+    )?;
+
+    Ok(())
+}
+
+/// Check if database needs reindex (after schema upgrade or version change)
+pub fn needs_reindex() -> napi::Result<bool> {
+    let db = get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    let needs: bool = conn
+        .query_row(
+            "SELECT value = 'true' FROM han_metadata WHERE key = 'needs_reindex'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    Ok(needs)
+}
+
+/// Clear the needs_reindex flag after successful reindex
+pub fn clear_reindex_flag() -> napi::Result<()> {
+    let db = get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    conn.execute(
+        "INSERT OR REPLACE INTO han_metadata (key, value, updated_at) VALUES ('needs_reindex', 'false', datetime('now'))",
+        [],
+    )
+    .map_err(|e| napi::Error::from_reason(format!("Failed to clear reindex flag: {}", e)))?;
+
     Ok(())
 }
 
@@ -802,25 +957,24 @@ mod tests {
 
     #[test]
     fn test_get_db_path_default() {
-        // Clear CLAUDE_CONFIG_DIR to test default behavior
-        std::env::remove_var("CLAUDE_CONFIG_DIR");
         let path = get_db_path();
-        assert!(path.ends_with("han/han.db") || path.contains(".claude"));
+        assert!(path.ends_with("han.db"));
     }
 
     #[test]
     fn test_get_db_path_with_config_dir() {
+        // Test compute_han_data_dir directly to avoid OnceLock caching
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let config_path = temp_dir.path().to_string_lossy().to_string();
         std::env::set_var("CLAUDE_CONFIG_DIR", &config_path);
 
-        let path = get_db_path();
+        let dir = compute_han_data_dir();
 
         // Clean up env var
         std::env::remove_var("CLAUDE_CONFIG_DIR");
 
-        assert!(path.starts_with(&config_path));
-        assert!(path.ends_with("han/han.db"));
+        assert!(dir.starts_with(&config_path));
+        assert!(dir.ends_with("han"));
     }
 
     // ========================================================================

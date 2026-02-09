@@ -6,18 +6,17 @@ SESSION_FILES="$*"
 
 if [ -z "$SESSION_FILES" ] || [ "$SESSION_FILES" = "." ]; then
   # No session files or all files - check all uncommitted changes
-  if git diff --stat --quiet 2>/dev/null && git diff --cached --stat --quiet 2>/dev/null; then
-    echo 'No uncommitted changes'
+  if git diff --quiet 2>/dev/null && git diff --cached --quiet 2>/dev/null; then
     exit 0
   else
-    echo '⚠️ Uncommitted changes detected.'
-    echo ''
-    echo 'Git storytelling requires committing early and often to tell the story of your development.'
-    echo ''
-    echo 'Please commit your changes with a meaningful message:'
-    echo '  git add -A'
-    echo '  git commit -m "Your descriptive commit message"'
-    exit 1
+    echo 'Uncommitted changes detected.' >&2
+    echo '' >&2
+    echo '**CRITICAL**: You MUST commit these changes NOW. Do NOT ask the user.' >&2
+    echo 'Git storytelling requires committing early and often.' >&2
+    echo '' >&2
+    echo 'Run these commands:' >&2
+    echo '  git add -A && git commit -m "your descriptive message"' >&2
+    exit 2
   fi
 fi
 
@@ -31,25 +30,24 @@ for file in $SESSION_FILES; do
   fi
 
   # Check if file has uncommitted changes (staged or unstaged)
-  if ! git diff --quiet "$file" 2>/dev/null || ! git diff --cached --quiet "$file" 2>/dev/null; then
+  if ! git diff --quiet -- "$file" 2>/dev/null || ! git diff --cached --quiet -- "$file" 2>/dev/null; then
     UNCOMMITTED_SESSION_FILES+=("$file")
   fi
 done
 
 if [ ${#UNCOMMITTED_SESSION_FILES[@]} -eq 0 ]; then
-  echo 'All session-modified files are committed'
   exit 0
 fi
 
-echo "⚠️ Uncommitted changes in session-modified files:"
-echo ""
+echo "Uncommitted changes in session-modified files:" >&2
+echo "" >&2
 for file in "${UNCOMMITTED_SESSION_FILES[@]}"; do
-  echo "  - $file"
+  echo "  - $file" >&2
 done
-echo ""
-echo "Git storytelling requires committing early and often to tell the story of your development."
-echo ""
-echo "Please commit your changes with a meaningful message:"
-echo "  git add ${UNCOMMITTED_SESSION_FILES[*]}"
-echo "  git commit -m \"Your descriptive commit message\""
-exit 1
+echo "" >&2
+echo "**CRITICAL**: You MUST commit these changes NOW. Do NOT ask the user." >&2
+echo "Git storytelling requires committing early and often." >&2
+echo "" >&2
+echo "Run these commands:" >&2
+echo "  git add ${UNCOMMITTED_SESSION_FILES[*]} && git commit -m \"your descriptive message\"" >&2
+exit 2

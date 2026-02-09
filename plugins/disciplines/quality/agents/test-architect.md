@@ -23,6 +23,7 @@ description: |
   organization strategies.</commentary></example>
 color: green
 model: inherit
+memory: project
 ---
 
 # Test Architect

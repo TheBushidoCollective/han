@@ -1,99 +1,77 @@
 hooks:
-  # Full project hooks at Stop (checkpoint)
-  test:
-    dirs_with:
-      - "mix.exs"
-    command: "mix test --stale"
-    if_changed:
-      - "**/*.ex"
-      - "**/*.exs"
-      - "**/*.eex"
-      - "**/*.leex"
-      - "**/*.heex"
-      - "mix.exs"
-      - "mix.lock"
   format:
-    dirs_with:
-      - ".formatter.exs"
-    command: "mix format --check-formatted"
-    if_changed:
-      - "**/*.ex"
-      - "**/*.exs"
-      - "**/*.eex"
-      - "**/*.leex"
-      - "**/*.heex"
-      - ".formatter.exs"
-  build:
-    dirs_with:
-      - "mix.exs"
-    command: "mix compile --warnings-as-errors"
-    if_changed:
-      - "**/*.ex"
-      - "**/*.exs"
-      - "**/*.eex"
-      - "**/*.leex"
-      - "**/*.heex"
-      - "mix.exs"
-      - "mix.lock"
-  typecheck:
-    dirs_with:
-      - "mix.exs"
-    command: "mix dialyzer"
-    if_changed:
-      - "**/*.ex"
-      - "**/*.exs"
-      - "**/*.eex"
-      - "**/*.leex"
-      - "**/*.heex"
-      - "mix.exs"
-      - "mix.lock"
-  coverage:
-    dirs_with:
-      - "coveralls.json"
-    # Only enforces coverage if minimum_coverage is set in coveralls.json
-    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/coverage-ratchet.sh\""
-    if_changed:
-      - "**/*.ex"
-      - "**/*.exs"
-      - "mix.exs"
-      - "mix.lock"
-      - "coveralls.json"
-
-  # Async hooks on PostToolUse - immediate feedback on file changes
-  format-async:
-    event: PostToolUse
+    event: [Stop, PostToolUse:Edit|Write]
     command: "mix format --check-formatted ${HAN_FILES}"
     dirs_with:
       - ".formatter.exs"
-    tool_filter:
-      - Edit
-      - Write
-    file_filter:
+    if_changed:
       - "**/*.ex"
       - "**/*.exs"
+      - "**/*.eex"
+      - "**/*.leex"
+      - "**/*.heex"
+      - ".formatter.exs"
 
-  compile-async:
-    event: PostToolUse
+  build:
+    event: [Stop, PostToolUse:Edit|Write]
     command: "mix compile --warnings-as-errors"
     dirs_with:
       - "mix.exs"
-    tool_filter:
-      - Edit
-      - Write
-    file_filter:
+    if_changed:
       - "**/*.ex"
       - "**/*.exs"
+      - "**/*.eex"
+      - "**/*.leex"
+      - "**/*.heex"
+      - "mix.exs"
+      - "mix.lock"
 
-  test-async:
-    event: PostToolUse
+  test:
+    event: Stop
+    command: "mix test"
+    dirs_with:
+      - "mix.exs"
+    if_changed:
+      - "**/*.ex"
+      - "**/*.exs"
+      - "**/*.eex"
+      - "**/*.leex"
+      - "**/*.heex"
+      - "mix.exs"
+      - "mix.lock"
+
+  test-changed:
+    event: PostToolUse:Edit|Write
     command: "mix test ${HAN_FILES}"
     dirs_with:
       - "mix.exs"
-    tool_filter:
-      - Edit
-      - Write
-    file_filter:
+    if_changed:
       - "**/*_test.exs"
       - "**/test/**/*.exs"
-    # Only run if file contains test code
     file_test: grep -qE "(describe|test|doctest)" "${HAN_FILE}"
+
+  typecheck:
+    event: Stop
+    command: "mix dialyzer"
+    dirs_with:
+      - "mix.exs"
+    if_changed:
+      - "**/*.ex"
+      - "**/*.exs"
+      - "**/*.eex"
+      - "**/*.leex"
+      - "**/*.heex"
+      - "mix.exs"
+      - "mix.lock"
+
+  coverage:
+    event: Stop
+    command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/coverage-ratchet.sh\""
+    dirs_with:
+      - "coveralls.json"
+    if_changed:
+      - "**/*.ex"
+      - "**/*.exs"
+      - "mix.exs"
+      - "mix.lock"
+      - "coveralls.json"

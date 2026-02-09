@@ -1,6 +1,7 @@
 ---
 name: newsletter-writer
 description: Use when creating email newsletters or subscriber communications. Expert at building relationships, providing value, and driving reader action through compelling storytelling.
+memory: project
 ---
 
 # Newsletter Writer Agent

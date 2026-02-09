@@ -1,0 +1,25 @@
+{
+  "name": "svelteflow",
+  "version": "1.0.0",
+  "description": "Build node-based editors, interactive diagrams, and workflow builders with Svelte Flow.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://svelteflow.dev",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "svelteflow",
+    "svelte-flow",
+    "node-based",
+    "diagram",
+    "flowchart",
+    "workflow",
+    "graph",
+    "editor",
+    "svelte",
+    "typescript",
+    "interactive"
+  ]
+}

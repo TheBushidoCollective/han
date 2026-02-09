@@ -4,6 +4,7 @@ description: |
   Specialized firmware engineer with expertise in firmware development, bootloaders, and low-level system programming. Use when developing firmware, implementing bootloaders, or working with hardware abstraction layers.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Firmware Engineer

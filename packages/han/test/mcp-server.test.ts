@@ -121,7 +121,7 @@ describe('mcp-server.ts helper functions', () => {
   describe('MCP tool annotations', () => {
     test('readOnlyHint for read-only tools', () => {
       const annotations = {
-        title: 'Query Metrics',
+        title: 'Query Memory',
         readOnlyHint: true,
         destructiveHint: false,
         idempotentHint: true,
@@ -134,8 +134,8 @@ describe('mcp-server.ts helper functions', () => {
 
     test('idempotentHint for safe-to-retry tools', () => {
       const annotations = {
-        title: 'Lint Code',
-        readOnlyHint: false,
+        title: 'Memory (Unified)',
+        readOnlyHint: true,
         destructiveHint: false,
         idempotentHint: true,
         openWorldHint: false,
@@ -155,100 +155,41 @@ describe('mcp-server.ts helper functions', () => {
       const schema = {
         type: 'object' as const,
         properties: {
-          cache: { type: 'boolean' },
+          question: { type: 'string' },
         },
-        required: [],
+        required: ['question'],
       };
 
       expect(schema.type).toBe('object');
-      expect(schema.properties.cache).toBeDefined();
-      expect(schema.required).toEqual([]);
+      expect(schema.properties.question).toBeDefined();
+      expect(schema.required).toContain('question');
     });
 
     test('supports required fields', () => {
       const schema = {
         type: 'object' as const,
         properties: {
-          description: { type: 'string' },
-          type: { type: 'string', enum: ['fix', 'feature', 'refactor'] },
+          question: { type: 'string' },
+          session_id: { type: 'string' },
         },
-        required: ['description', 'type'],
+        required: ['question'],
       };
 
-      expect(schema.required).toContain('description');
-      expect(schema.required).toContain('type');
+      expect(schema.required).toContain('question');
     });
 
-    test('supports enum values', () => {
+    test('supports optional fields', () => {
       const schema = {
         type: 'object' as const,
         properties: {
-          outcome: {
-            type: 'string',
-            enum: ['success', 'partial', 'failure'],
-          },
+          question: { type: 'string' },
+          session_id: { type: 'string' },
         },
+        required: ['question'],
       };
 
-      const enumValues = schema.properties.outcome.enum;
-      expect(enumValues).toContain('success');
-      expect(enumValues).toContain('partial');
-      expect(enumValues).toContain('failure');
-    });
-
-    test('supports numeric ranges', () => {
-      const schema = {
-        type: 'object' as const,
-        properties: {
-          confidence: {
-            type: 'number',
-            minimum: 0,
-            maximum: 1,
-          },
-        },
-      };
-
-      expect(schema.properties.confidence.minimum).toBe(0);
-      expect(schema.properties.confidence.maximum).toBe(1);
-    });
-  });
-
-  describe('formatToolsForMcp logic', () => {
-    test('generates title from hook name', () => {
-      const hookName = 'lint';
-      const title = hookName.charAt(0).toUpperCase() + hookName.slice(1);
-      expect(title).toBe('Lint');
-    });
-
-    test('extracts technology from plugin name with jutsu prefix', () => {
-      const pluginName = 'jutsu-typescript';
-      const technology = pluginName.replace(/^(jutsu|do|hashi)-/, '');
-      expect(technology).toBe('typescript');
-    });
-
-    test('extracts technology from plugin name with do prefix', () => {
-      const pluginName = 'do-accessibility';
-      const technology = pluginName.replace(/^(jutsu|do|hashi)-/, '');
-      expect(technology).toBe('accessibility');
-    });
-
-    test('extracts technology from plugin name with hashi prefix', () => {
-      const pluginName = 'hashi-github';
-      const technology = pluginName.replace(/^(jutsu|do|hashi)-/, '');
-      expect(technology).toBe('github');
-    });
-
-    test('handles plugin names without prefix', () => {
-      const pluginName = 'core';
-      const technology = pluginName.replace(/^(jutsu|do|hashi)-/, '');
-      expect(technology).toBe('core');
-    });
-
-    test('capitalizes technology display name', () => {
-      const technology = 'typescript';
-      const techDisplay =
-        technology.charAt(0).toUpperCase() + technology.slice(1);
-      expect(techDisplay).toBe('Typescript');
+      // session_id is not required
+      expect(schema.required).not.toContain('session_id');
     });
   });
 
@@ -279,125 +220,24 @@ describe('mcp-server.ts helper functions', () => {
     });
   });
 
-  describe('metrics tools definition', () => {
-    test('start_task tool has required fields', () => {
-      const tool = {
-        name: 'start_task',
-        description: 'Start tracking a new task',
-        inputSchema: {
-          type: 'object' as const,
-          properties: {
-            description: { type: 'string' },
-            type: {
-              type: 'string',
-              enum: ['implementation', 'fix', 'refactor', 'research'],
-            },
-          },
-          required: ['description', 'type'],
-        },
-      };
-
-      expect(tool.name).toBe('start_task');
-      expect(tool.inputSchema.required).toContain('description');
-      expect(tool.inputSchema.required).toContain('type');
-    });
-
-    test('complete_task tool has confidence field', () => {
-      const tool = {
-        name: 'complete_task',
-        inputSchema: {
-          type: 'object' as const,
-          properties: {
-            task_id: { type: 'string' },
-            outcome: {
-              type: 'string',
-              enum: ['success', 'partial', 'failure'],
-            },
-            confidence: {
-              type: 'number',
-              minimum: 0,
-              maximum: 1,
-            },
-          },
-          required: ['task_id', 'outcome', 'confidence'],
-        },
-      };
-
-      expect(tool.inputSchema.properties.confidence).toBeDefined();
-      expect(tool.inputSchema.properties.confidence.minimum).toBe(0);
-      expect(tool.inputSchema.properties.confidence.maximum).toBe(1);
-    });
-
-    test('query_metrics tool has period enum', () => {
-      const tool = {
-        name: 'query_metrics',
-        inputSchema: {
-          type: 'object' as const,
-          properties: {
-            period: {
-              type: 'string',
-              enum: ['day', 'week', 'month'],
-            },
-          },
-        },
-      };
-
-      const periodEnum = tool.inputSchema.properties.period.enum;
-      expect(periodEnum).toContain('day');
-      expect(periodEnum).toContain('week');
-      expect(periodEnum).toContain('month');
-    });
-
-    test('record_frustration tool has required fields', () => {
-      const tool = {
-        name: 'record_frustration',
-        inputSchema: {
-          type: 'object' as const,
-          properties: {
-            frustration_level: {
-              type: 'string',
-              enum: ['low', 'moderate', 'high'],
-            },
-            frustration_score: {
-              type: 'number',
-              minimum: 0,
-              maximum: 10,
-            },
-            user_message: { type: 'string' },
-            detected_signals: {
-              type: 'array',
-              items: { type: 'string' },
-            },
-          },
-          required: [
-            'frustration_level',
-            'frustration_score',
-            'user_message',
-            'detected_signals',
-          ],
-        },
-      };
-
-      expect(tool.inputSchema.properties.frustration_level.enum).toContain(
-        'high'
-      );
-      expect(tool.inputSchema.required).toContain('user_message');
-    });
-  });
-
   describe('tool name formatting', () => {
-    test('formats plugin tool name correctly', () => {
-      const pluginName = 'jutsu-biome';
-      const hookName = 'lint';
-      const toolName = `${pluginName.replace(/-/g, '_')}_${hookName}`;
-      expect(toolName).toBe('jutsu_biome_lint');
+    test('formats exposed tool name with server prefix', () => {
+      const serverName = 'context7';
+      const toolName = 'resolve-library-id';
+      const prefixedName = `${serverName}_${toolName}`;
+      expect(prefixedName).toBe('context7_resolve-library-id');
     });
 
-    test('handles multiple dashes in plugin name', () => {
-      const pluginName = 'do-claude-plugin-development';
-      const hookName = 'claudelint';
-      const toolName = `${pluginName.replace(/-/g, '_')}_${hookName}`;
-      expect(toolName).toBe('do_claude_plugin_development_claudelint');
+    test('handles multiple tools from same server', () => {
+      const serverName = 'blueprints';
+      const tools = ['list_blueprints', 'read_blueprint', 'write_blueprint'];
+      const prefixed = tools.map((t) => `${serverName}_${t}`);
+
+      expect(prefixed).toEqual([
+        'blueprints_list_blueprints',
+        'blueprints_read_blueprint',
+        'blueprints_write_blueprint',
+      ]);
     });
   });
 
@@ -457,65 +297,21 @@ describe('mcp-server.ts helper functions', () => {
       expect(annotations.idempotentHint).toBe(true);
     });
 
-    test('learn tool has required fields', () => {
-      const tool = {
-        name: 'learn',
-        inputSchema: {
-          type: 'object' as const,
-          properties: {
-            content: {
-              type: 'string',
-              description: 'The learning content in markdown format',
-            },
-            domain: {
-              type: 'string',
-              description:
-                "Domain name for the rule file (e.g., 'api', 'testing')",
-            },
-            paths: {
-              type: 'array',
-              items: { type: 'string' },
-              description: 'Optional path patterns for path-specific rules',
-            },
-            scope: {
-              type: 'string',
-              enum: ['project', 'user'],
-              description: 'Where to store the rule',
-            },
-            append: {
-              type: 'boolean',
-              description: 'Whether to append to existing file',
-            },
-          },
-          required: ['content', 'domain'],
-        },
-      };
+    test('memory is the only memory tool', () => {
+      // After cleanup, only `memory` tool remains (no learn, no legacy tools)
+      const activeTools = ['memory'];
 
-      expect(tool.name).toBe('learn');
-      expect(tool.inputSchema.required).toContain('content');
-      expect(tool.inputSchema.required).toContain('domain');
-      expect(tool.inputSchema.properties.scope.enum).toContain('project');
-      expect(tool.inputSchema.properties.scope.enum).toContain('user');
-    });
+      expect(activeTools).toHaveLength(1);
+      expect(activeTools).toContain('memory');
 
-    test('memory tools are consolidated to memory and learn only', () => {
-      // These tools should NOT exist in the new consolidated design
+      // Verify removed tools are not present
       const removedTools = [
+        'learn',
         'team_query',
         'auto_learn',
         'memory_list',
         'memory_read',
       ];
-
-      // These are the only two memory tools that should exist
-      const activeTools = ['memory', 'learn'];
-
-      // Verify structure
-      expect(activeTools).toHaveLength(2);
-      expect(activeTools).toContain('memory');
-      expect(activeTools).toContain('learn');
-
-      // Verify removed tools are not in active set
       for (const removed of removedTools) {
         expect(activeTools).not.toContain(removed);
       }

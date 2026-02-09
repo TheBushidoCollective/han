@@ -142,6 +142,63 @@ html.dark .scrollbar-custom::-webkit-scrollbar-thumb:hover {
 	word-break: break-word;
 }
 
+/* Split-flap character tiles */
+.flip-char {
+	display: inline-block;
+	position: relative;
+	width: 0.62em;
+	height: 1.15em;
+	font-family: "Courier New", Courier, monospace;
+	font-weight: 700;
+	font-size: inherit;
+	vertical-align: baseline;
+	color: inherit;
+	-webkit-text-fill-color: transparent;
+	line-height: 1.15em;
+	perspective: 300px;
+	transform-style: preserve-3d;
+}
+
+.flip-char::before,
+.flip-char::after {
+	content: attr(data-char);
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #fff;
+	-webkit-text-fill-color: #fff;
+	background-color: #1f2937;
+	backface-visibility: hidden;
+}
+
+.flip-char::after {
+	border-radius: 0.08em;
+	animation: splitflap-flip-in 0.4s var(--flip-delay, 0s)
+		cubic-bezier(0.2, 0, 0.4, 1) both;
+}
+
+.flip-char::before {
+	border-radius: 0.08em;
+	transform: rotateX(-180deg);
+}
+
+@keyframes splitflap-flip-in {
+	0% {
+		transform: rotateX(90deg);
+		opacity: 0.3;
+	}
+	60% {
+		transform: rotateX(-5deg);
+		opacity: 1;
+	}
+	100% {
+		transform: rotateX(0deg);
+		opacity: 1;
+	}
+}
+
 /* Override highlight.js background to match code editor styling */
 pre.hljs,
 pre code.hljs,

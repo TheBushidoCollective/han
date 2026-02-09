@@ -4,6 +4,7 @@ description: |
   Specialized accessibility engineer with expertise in WCAG, ARIA, screen readers, and keyboard navigation. Use when implementing accessibility features or ensuring compliance with accessibility standards.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Accessibility Engineer

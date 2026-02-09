@@ -56,3 +56,28 @@ jobs:
         working-directory: ./packages/han-native
         # Run tests sequentially to avoid flaky failures from shared database state
         run: cargo test --all-features -- --test-threads=1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install napi-rs dependencies
+        working-directory: ./packages/han-native
+        run: npm ci
+
+      - name: Build napi-rs bindings
+        working-directory: ./packages/han-native
+        run: npm run build
+
+      - name: Setup Biome
+        uses: biomejs/setup-biome@v2
+        with:
+          version: latest
+
+      - name: Check generated JS files
+        working-directory: ./packages/han-native
+        # Format first (napi-rs output doesn't include semicolons), then check for parse errors
+        run: |
+          biome format --write index.js index.d.ts
+          biome check index.js index.d.ts

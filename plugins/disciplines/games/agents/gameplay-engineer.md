@@ -4,6 +4,7 @@ description: |
   Specialized gameplay engineer with expertise in game mechanics, player interaction, and game systems. Use when implementing gameplay features, designing game mechanics, or balancing game systems.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Gameplay Engineer

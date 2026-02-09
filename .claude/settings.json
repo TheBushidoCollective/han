@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook dispatch UserPromptSubmit",
+            "command": "han hook dispatch UserPromptSubmit",
             "timeout": 30
           }
         ]
@@ -16,56 +16,48 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook dispatch SessionStart",
+            "command": "han hook dispatch SessionStart",
             "timeout": 30
           }
         ]
       }
     ]
   },
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
   "enabledPlugins": {
-    "bushido@han": true,
-    "core@han": true,
     "accessibility@han": true,
-    "plugin-development@han": true,
-    "content@han": true,
-    "frontend@han": true,
-    "prompts@han": true,
-    "documentation@han": true,
-    "blueprints@han": true,
-    "github@han": true,
-    "reddit@han": true,
     "act@han": true,
-    "ai-dlc@han": true,
+    "ai-dlc@ai-dlc": true,
     "atomic-design@han": true,
     "biome@han": true,
+    "blueprints@han": true,
     "bun@han": true,
+    "bushido@han": true,
+    "claude-agent-sdk@han": true,
+    "content@han": true,
+    "core@han": true,
+    "documentation@han": true,
+    "frontend@han": true,
     "git-storytelling@han": true,
+    "github@han": true,
     "gluestack@han": true,
+    "han-plugins@han": true,
     "ink@han": true,
     "markdown@han": true,
+    "mise@han": true,
     "nextjs@han": true,
-    "playwright@han": true,
     "playwright-bdd@han": true,
+    "playwright@han": true,
+    "plugin-development@han": true,
+    "prompts@han": true,
     "react@han": true,
+    "reddit@han": true,
     "relay@han": true,
     "rust@han": true,
     "shellcheck@han": true,
-    "typescript@han": true,
-    "mise@han": true,
-    "cypress@han": true,
-    "effect@han": true,
-    "esbuild@han": true,
-    "eslint@han": true,
-    "graphql-inspector@han": true,
-    "jest@han": true,
-    "mocha@han": true,
-    "npm@han": true,
-    "prettier@han": true,
-    "rollup@han": true,
-    "vite@han": true,
-    "vitest@han": true,
-    "webpack@han": true
+    "typescript@han": true
   },
   "extraKnownMarketplaces": {
     "han": {

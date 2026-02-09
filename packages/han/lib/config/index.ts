@@ -4,25 +4,9 @@
  * Re-exports all configuration-related functionality for cleaner imports.
  *
  * @example
- * import { getMergedHanConfig, getMergedSettings, validate } from './config';
+ * import { getMergedHanConfig, getMergedSettings } from './config';
  */
 
-// Validation and hook execution
-export {
-  buildHookCommand,
-  buildMcpToolInstruction,
-  generateOutputFilename,
-  getAbsoluteEnvFilePath,
-  getCacheKeyForDirectory,
-  getHanTempDir,
-  isDebugMode,
-  type RunConfiguredHookOptions,
-  runConfiguredHook,
-  validate,
-  wrapCommandWithEnvFile,
-  writeDebugFile,
-  writeOutputFile,
-} from '../validation/index.ts';
 // Claude settings
 export {
   type ClaudeSettings,

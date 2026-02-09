@@ -4,6 +4,7 @@ description: |
   Specialized embedded engineer with expertise in embedded systems, real-time operating systems, and hardware interfaces. Use when developing embedded systems, implementing device drivers, or optimizing embedded performance.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Embedded Engineer

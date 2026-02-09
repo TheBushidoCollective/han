@@ -23,6 +23,7 @@ description: |
    complete, now need technical breakdown and planning.</commentary></example>
 model: inherit
 color: pink
+memory: project
 ---
 
 # Technical Coordinator

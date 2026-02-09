@@ -2,11 +2,33 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|NotebookEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run typescript typecheck-async --async"
+            "command": "han hook run typescript typecheck-async --async"
+          }
+        ],
+        "matcher": "Edit|Write|NotebookEdit",
+        "async": true
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run typescript typecheck --async"
+          }
+        ],
+        "async": true
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run typescript typecheck --async"
           }
         ],
         "async": true

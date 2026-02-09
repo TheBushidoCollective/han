@@ -1,7 +1,7 @@
 hooks:
-  # Full project hooks at Stop (checkpoint)
   format:
-    command: "go fmt ./..."
+    event: [Stop, PostToolUse:Edit|Write]
+    command: "gofmt -l ${HAN_FILES}"
     dirs_with:
       - "go.mod"
     if_changed:
@@ -9,7 +9,9 @@ hooks:
       - "**/*.tmpl"
       - "go.mod"
       - "go.sum"
+
   lint:
+    event: Stop
     command: "go vet ./..."
     dirs_with:
       - "go.mod"
@@ -18,7 +20,9 @@ hooks:
       - "**/*.tmpl"
       - "go.mod"
       - "go.sum"
+
   test:
+    event: Stop
     command: "go test ./..."
     dirs_with:
       - "go.mod"
@@ -27,26 +31,3 @@ hooks:
       - "**/*.tmpl"
       - "go.mod"
       - "go.sum"
-
-  # Async hooks on PostToolUse - immediate feedback on file changes
-  format-async:
-    event: PostToolUse
-    command: "gofmt -l ${HAN_FILES}"
-    dirs_with:
-      - "go.mod"
-    tool_filter:
-      - Edit
-      - Write
-    file_filter:
-      - "**/*.go"
-
-  lint-async:
-    event: PostToolUse
-    command: "go vet ./..."
-    dirs_with:
-      - "go.mod"
-    tool_filter:
-      - Edit
-      - Write
-    file_filter:
-      - "**/*.go"

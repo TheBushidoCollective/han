@@ -23,6 +23,7 @@ description: |
    agent.</commentary></example>
 color: yellow
 model: inherit
+memory: project
 ---
 
 # Backend Architect

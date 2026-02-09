@@ -1,0 +1,44 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run erlang build --async"
+          }
+        ],
+        "async": true
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run erlang test --async"
+          }
+        ],
+        "async": true
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run erlang build --async"
+          }
+        ],
+        "async": true
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run erlang test --async"
+          }
+        ],
+        "async": true
+      }
+    ]
+  }
+}

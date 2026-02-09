@@ -28,7 +28,7 @@ TaskUpdate({
 Check that native task events are being indexed:
 
 ```bash
-sqlite3 ~/.claude/han/han.db "SELECT COUNT(*) FROM native_tasks;"
+sqlite3 ~/.han/han.db "SELECT COUNT(*) FROM native_tasks;"
 ```
 
 ## Viewing Tasks

@@ -11,7 +11,7 @@
  * - All reads go through this interface (never direct file access)
  * - All writes go through this interface
  *
- * Storage location: ~/.claude/han/han.db
+ * Storage location: ~/.han/han.db
  *
  * Lazy Start Pattern:
  * - SQLite operations work directly without coordinator
@@ -23,7 +23,10 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 // Import directly from claude-settings to avoid circular dependency
 // (config/index.ts -> validation/index.ts -> db/index.ts)
-import { getClaudeConfigDir } from '../config/claude-settings.ts';
+import {
+  getClaudeConfigDir,
+  getHanDataDir,
+} from '../config/claude-settings.ts';
 import { getNativeModule } from '../native.ts';
 
 // ============================================================================
@@ -31,11 +34,16 @@ import { getNativeModule } from '../native.ts';
 // ============================================================================
 
 export type {
+  // Dashboard SQL Aggregation result types
+  ActivityAggregates,
   // Config dirs registry (multi-environment support)
   ConfigDir,
   ConfigDirInput,
   // Coordinator
   CoordinatorStatus,
+  DailyActivityRow,
+  DailyCostRow,
+  DashboardAggregates,
   // Frustration tracking
   FrustrationEvent,
   FrustrationEventInput,
@@ -46,7 +54,9 @@ export type {
   HookAttemptInfo,
   HookExecution,
   HookExecutionInput,
+  HookHealthRow,
   HookStats,
+  HourlyActivityRow,
   LockInfo,
   Message,
   MessageBatch,
@@ -59,6 +69,7 @@ export type {
   Repo,
   RepoInput,
   Session,
+  SessionCompactionRow,
   // Session file changes
   SessionFileChange,
   SessionFileChangeInput,
@@ -66,11 +77,14 @@ export type {
   SessionFileValidation,
   SessionFileValidationInput,
   SessionInput,
+  SessionSentimentRow,
+  SessionStatsRow,
   // Session timestamps
   SessionTimestamps,
   // Session todos
   SessionTodos,
   SessionTodosInput,
+  SubagentUsageRow,
   // Task/Metrics
   Task,
   TaskCompletion,
@@ -78,6 +92,7 @@ export type {
   TaskInput,
   TaskMetrics,
   TodoItem,
+  ToolUsageRow,
   VectorSearchResult,
 } from '../../../han-native';
 
@@ -102,19 +117,18 @@ export function _resetDbState(): void {
 
 /**
  * Get the SQLite database file path
- * Stored in CLAUDE_CONFIG_DIR/han/han.db
+ * Stored in ~/.han/han.db (provider-agnostic)
  */
 export function getDbPath(): string {
   if (_dbPath) return _dbPath;
 
-  const configDir = getClaudeConfigDir();
-  if (!configDir) {
+  const hanDir = getHanDataDir();
+  if (!hanDir) {
     throw new Error(
-      'Could not determine Claude config directory. Set CLAUDE_CONFIG_DIR or HOME environment variable.'
+      'Could not determine Han data directory. Set HAN_DATA_DIR or HOME environment variable.'
     );
   }
 
-  const hanDir = join(configDir, 'han');
   // Use try/catch for directory creation - mkdirSync with recursive is idempotent
   // but can still race with other processes
   try {
@@ -1671,6 +1685,34 @@ export const watcher = {
 };
 
 // ============================================================================
+// Dashboard SQL Aggregation (replaces per-session JS processing)
+// ============================================================================
+
+/**
+ * Query all dashboard analytics via SQL aggregation.
+ * Replaces ~850 DB round-trips with ~10 SQL queries in one native call.
+ */
+export async function queryDashboardAggregates(
+  cutoffDate: string
+): Promise<import('../../../han-native').DashboardAggregates> {
+  const dbPath = await ensureInitialized();
+  const native = getNativeModule();
+  return native.queryDashboardAggregates(dbPath, cutoffDate);
+}
+
+/**
+ * Query all activity data via SQL aggregation.
+ * Replaces ~425 DB round-trips with ~3 SQL queries in one native call.
+ */
+export async function queryActivityAggregates(
+  cutoffDate: string
+): Promise<import('../../../han-native').ActivityAggregates> {
+  const dbPath = await ensureInitialized();
+  const native = getNativeModule();
+  return native.queryActivityAggregates(dbPath, cutoffDate);
+}
+
+// ============================================================================
 // Legacy Function Exports (for backward compatibility)
 // These will be deprecated in favor of the namespaced API above
 // ============================================================================
@@ -1992,20 +2034,30 @@ export const indexer = {
    * Task association for sentiment events is loaded from SQLite automatically
    * COORDINATOR USE ONLY
    */
-  async indexSessionFile(filePath: string): Promise<IndexResult> {
+  async indexSessionFile(
+    filePath: string,
+    sourceConfigDir?: string
+  ): Promise<IndexResult> {
     const dbPath = await ensureInitialized();
     const native = getNativeModule();
-    return native.indexSessionFile(dbPath, filePath);
+    return native.indexSessionFile(dbPath, filePath, sourceConfigDir ?? null);
   },
 
   /**
    * Index all JSONL files in a project directory
    * COORDINATOR USE ONLY
    */
-  async indexProjectDirectory(projectDir: string): Promise<IndexResult[]> {
+  async indexProjectDirectory(
+    projectDir: string,
+    sourceConfigDir?: string
+  ): Promise<IndexResult[]> {
     const dbPath = await ensureInitialized();
     const native = getNativeModule();
-    return native.indexProjectDirectory(dbPath, projectDir);
+    return native.indexProjectDirectory(
+      dbPath,
+      projectDir,
+      sourceConfigDir ?? null
+    );
   },
 
   /**
@@ -2039,6 +2091,37 @@ export const indexer = {
     const dbPath = await ensureInitialized();
     const native = getNativeModule();
     return native.fullScanAndIndex(dbPath);
+  },
+
+  /**
+   * Check if database needs reindex (after schema upgrade or version change)
+   * Call this on coordinator startup and trigger fullScanAndIndex if true
+   * COORDINATOR USE ONLY
+   */
+  async needsReindex(): Promise<boolean> {
+    await ensureInitialized();
+    const native = getNativeModule();
+    return native.needsReindex();
+  },
+
+  /**
+   * Clear the needs_reindex flag after successful reindex
+   * COORDINATOR USE ONLY
+   */
+  async clearReindexFlag(): Promise<void> {
+    await ensureInitialized();
+    const native = getNativeModule();
+    native.clearReindexFlag();
+  },
+
+  /**
+   * Truncate derived tables to force full reindex
+   * COORDINATOR USE ONLY
+   */
+  async truncateDerivedTables(): Promise<void> {
+    const dbPath = await ensureInitialized();
+    const native = getNativeModule();
+    native.truncateDerivedTables(dbPath);
   },
 };
 

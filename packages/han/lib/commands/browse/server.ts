@@ -66,6 +66,8 @@ const yoga = createYoga({
   cors: {
     origin: '*',
     methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: false,
   },
 });
 

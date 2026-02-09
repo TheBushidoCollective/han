@@ -203,6 +203,8 @@ export function validatePluginConfig(config: unknown): ValidationResult {
       'mcp',
       'silent',
       'test_dir',
+      'file_test',
+      'sync',
     ];
     for (const key of Object.keys(hook)) {
       if (!validProperties.includes(key)) {

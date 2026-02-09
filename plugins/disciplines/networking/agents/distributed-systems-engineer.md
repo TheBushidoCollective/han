@@ -4,6 +4,7 @@ description: |
   Specialized distributed systems engineer with expertise in distributed algorithms, consensus protocols, and fault tolerance. Use when building distributed systems, implementing consensus mechanisms, or ensuring system reliability.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Distributed Systems Engineer

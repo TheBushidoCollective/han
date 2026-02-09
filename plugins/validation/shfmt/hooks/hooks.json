@@ -2,11 +2,33 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|NotebookEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run shfmt format-async --async"
+            "command": "han hook run shfmt format --async"
+          }
+        ],
+        "matcher": "Edit|Write",
+        "async": true
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run shfmt format --async"
+          }
+        ],
+        "async": true
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run shfmt format --async"
           }
         ],
         "async": true

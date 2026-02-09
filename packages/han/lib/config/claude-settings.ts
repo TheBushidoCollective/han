@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 /**
@@ -50,6 +50,86 @@ export function getClaudeConfigDir(): string {
     return '';
   }
   return join(homeDir, '.claude');
+}
+
+/** Cached result so migration only runs once per process */
+let _hanDataDir: string | null = null;
+
+/**
+ * Reset the cached Han data directory.
+ * Only needed in tests where env vars change between test cases.
+ */
+export function resetHanDataDir(): void {
+  _hanDataDir = null;
+}
+
+/**
+ * Get Han's own data directory (~/.han)
+ *
+ * Han stores its coordinator, database, memory, and logs here.
+ * This is provider-agnostic — shared across Claude Code, OpenCode,
+ * and any future provider integrations.
+ *
+ * On first call, auto-migrates ~/.claude/han → ~/.han if the old
+ * directory exists and the new one doesn't.
+ *
+ * Priority:
+ * 1. HAN_DATA_DIR environment variable (for testing/custom paths)
+ * 2. CLAUDE_CONFIG_DIR/han (when CLAUDE_CONFIG_DIR is explicitly set — testing/CI)
+ * 3. ~/.han (default, auto-migrated from ~/.claude/han)
+ */
+export function getHanDataDir(): string {
+  if (_hanDataDir) return _hanDataDir;
+
+  if (process.env.HAN_DATA_DIR) {
+    _hanDataDir = process.env.HAN_DATA_DIR;
+    return _hanDataDir;
+  }
+
+  // When CLAUDE_CONFIG_DIR is explicitly set (testing/CI), use it
+  // to preserve test isolation — tests set CLAUDE_CONFIG_DIR to a temp dir
+  if (process.env.CLAUDE_CONFIG_DIR) {
+    _hanDataDir = join(process.env.CLAUDE_CONFIG_DIR, 'han');
+    return _hanDataDir;
+  }
+
+  const homeDir = process.env.HOME || process.env.USERPROFILE;
+  if (!homeDir) {
+    return '';
+  }
+
+  const newDir = join(homeDir, '.han');
+  const oldDir = join(homeDir, '.claude', 'han');
+
+  // Already migrated or fresh install with data
+  if (existsSync(newDir)) {
+    _hanDataDir = newDir;
+    return _hanDataDir;
+  }
+
+  // Old directory exists — auto-migrate
+  if (existsSync(oldDir)) {
+    try {
+      mkdirSync(dirname(newDir), { recursive: true });
+      renameSync(oldDir, newDir);
+      console.error(`[han] Migrated data directory: ${oldDir} → ${newDir}`);
+      _hanDataDir = newDir;
+      return _hanDataDir;
+    } catch {
+      // Migration failed (permissions, cross-device, coordinator holding lock, etc.)
+      // Fall back to old path — next restart will retry
+      console.error(
+        `[han] Could not migrate ${oldDir} → ${newDir}, using old path. ` +
+          `Stop the coordinator and retry, or move manually.`
+      );
+      _hanDataDir = oldDir;
+      return _hanDataDir;
+    }
+  }
+
+  // Neither exists — fresh install
+  _hanDataDir = newDir;
+  return _hanDataDir;
 }
 
 /**

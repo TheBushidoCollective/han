@@ -24,6 +24,7 @@ description: |
    infrastructure and alerting systems.</commentary></example>
 color: yellow
 model: inherit
+memory: project
 ---
 
 # DevOps Engineer

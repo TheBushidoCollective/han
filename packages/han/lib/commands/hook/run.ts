@@ -1,8 +1,8 @@
 import { fstatSync, readFileSync } from 'node:fs';
 import type { Command } from 'commander';
 import { initEventLogger } from '../../events/logger.ts';
+import { runConfiguredHook, validate } from '../../hook-runner.ts';
 import { isDebugMode } from '../../shared.ts';
-import { runConfiguredHook, validate } from '../../validate.ts';
 
 /**
  * Check if stdin has data available.

@@ -2,11 +2,33 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|NotebookEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y @thebushidocollective/han hook run mocha test-async --async"
+            "command": "han hook run mocha test-changed --async"
+          }
+        ],
+        "matcher": "Edit|Write",
+        "async": true
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run mocha test --async"
+          }
+        ],
+        "async": true
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run mocha test --async"
           }
         ],
         "async": true

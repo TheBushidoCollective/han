@@ -4,6 +4,7 @@ description: |
   Specialized visualization engineer with expertise in data visualization, charting libraries, and interactive graphics. Use when creating data visualizations, implementing charts and graphs, or building interactive visual experiences.
 model: inherit
 color: purple
+memory: project
 ---
 
 # Visualization Engineer

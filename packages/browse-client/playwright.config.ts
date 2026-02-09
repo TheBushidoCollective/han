@@ -52,8 +52,9 @@ export default defineConfig({
 		// The coordinator provides the GraphQL backend on port 41957
 		// HAN_NO_DEV_WATCHERS=1 disables relay-compiler and file watchers to prevent
 		// premature shutdown during tests
+		// --local flag runs local HTTP server instead of opening remote dashboard
 		command:
-			"cd ../han && bun lib/main.ts coordinator ensure && HAN_NO_DEV_WATCHERS=1 bun lib/main.ts browse --no-open",
+			"cd ../han && bun lib/main.ts coordinator ensure && HAN_NO_DEV_WATCHERS=1 bun lib/main.ts browse --local",
 		url: "http://localhost:41956",
 		reuseExistingServer: !process.env.CI,
 		timeout: 120 * 1000,

@@ -1,0 +1,44 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run claude-agent-sdk typecheck --async"
+          }
+        ],
+        "async": true
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run claude-agent-sdk validate-structure --async"
+          }
+        ],
+        "async": true
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run claude-agent-sdk typecheck --async"
+          }
+        ],
+        "async": true
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run claude-agent-sdk validate-structure --async"
+          }
+        ],
+        "async": true
+      }
+    ]
+  }
+}

@@ -462,6 +462,7 @@ describe('plugin-aliases', () => {
       const original = 'jutsu-typescript';
       const newPath = getNewPluginPath(original);
       expect(newPath).toBeDefined();
+      // biome-ignore lint/style/noNonNullAssertion: newPath is asserted to be defined above
       const backToOld = getOldPluginName(newPath!);
       expect(backToOld).toBe(original);
     });

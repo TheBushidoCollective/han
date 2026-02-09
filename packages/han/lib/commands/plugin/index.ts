@@ -1,4 +1,5 @@
 import type { Command } from 'commander';
+import { registerPluginGenerateHooks } from './generate-hooks.ts';
 import { registerPluginInstall } from './install.ts';
 import { registerPluginList } from './list.ts';
 import { registerPluginMigrate } from './migrate.ts';
@@ -15,6 +16,7 @@ export function registerPluginCommands(program: Command): void {
     .command('plugin')
     .description('Manage Han plugins');
 
+  registerPluginGenerateHooks(pluginCommand);
   registerPluginInstall(pluginCommand);
   registerPluginList(pluginCommand);
   registerPluginMigrate(pluginCommand);

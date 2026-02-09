@@ -4,6 +4,7 @@ description: |
   Specialized API gateway engineer with expertise in rate limiting, authentication, request/response transformation, and routing. Use when implementing API gateway patterns or managing API traffic control.
 model: inherit
 color: blue
+memory: project
 ---
 
 # API Gateway Engineer

@@ -1,6 +1,7 @@
 ---
 name: copywriter
 description: Use when writing marketing copy, landing pages, ad copy, email campaigns, or sales materials. Expert at persuasive writing that converts.
+memory: project
 ---
 
 # Copywriter Agent

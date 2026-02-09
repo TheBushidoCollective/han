@@ -4,6 +4,7 @@ description: |
   Specialized platform engineer with expertise in platform architecture, internal tooling, and developer productivity. Use when building internal platforms, implementing developer tools, or improving platform reliability.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Platform Engineer

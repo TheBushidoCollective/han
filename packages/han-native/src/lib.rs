@@ -40,6 +40,8 @@ pub use schema::{
     // Generated session summaries (LLM-analyzed)
     GeneratedSessionSummary,
     GeneratedSessionSummaryInput,
+    // Hook attempt tracking (for deferred execution)
+    HookAttemptInfo,
     // Hook execution tracking
     HookExecution,
     HookExecutionInput,
@@ -51,8 +53,17 @@ pub use schema::{
     NativeTask,
     NativeTaskInput,
     NativeTaskUpdate,
+    // Orchestration (group hook executions by orchestrate run)
+    Orchestration,
+    OrchestrationInput,
+    OrchestrationUpdate,
+    // Pending hooks queue
+    PendingHookInput,
     Project,
     ProjectInput,
+    // Queued hooks (for --check mode)
+    QueuedHook,
+    QueuedHookInput,
     Repo,
     RepoInput,
     Session,
@@ -502,10 +513,23 @@ pub fn check_and_build_manifest(
 // ============================================================================
 
 /// Initialize or open a database at the given path
-/// Note: db_path is kept for API compatibility but the singleton uses ~/.claude/han/han.db
+/// Note: db_path is kept for API compatibility but the singleton uses ~/.han/han.db
 #[napi]
 pub fn db_init(db_path: String) -> napi::Result<bool> {
     db::init(&db_path)
+}
+
+/// Check if database needs reindex (after schema upgrade or version change)
+/// Call this on coordinator startup and trigger fullScanAndIndex if true
+#[napi]
+pub fn needs_reindex() -> napi::Result<bool> {
+    db::needs_reindex()
+}
+
+/// Clear the needs_reindex flag after successful reindex
+#[napi]
+pub fn clear_reindex_flag() -> napi::Result<()> {
+    db::clear_reindex_flag()
 }
 
 /// Index documents for FTS
@@ -918,6 +942,157 @@ pub fn query_hook_stats(_db_path: String, period: Option<String>) -> napi::Resul
 }
 
 // ============================================================================
+// Orchestration Operations (group hook executions by orchestrate run)
+// ============================================================================
+
+/// Create a new orchestration, cancelling any existing running orchestration for the same session
+#[napi]
+pub fn create_orchestration(input: OrchestrationInput) -> napi::Result<Orchestration> {
+    crud::create_orchestration(input)
+}
+
+/// Get an orchestration by ID
+#[napi]
+pub fn get_orchestration(id: String) -> napi::Result<Option<Orchestration>> {
+    crud::get_orchestration(id)
+}
+
+/// Update an orchestration's counters and status
+#[napi]
+pub fn update_orchestration(update: OrchestrationUpdate) -> napi::Result<()> {
+    crud::update_orchestration(update)
+}
+
+/// Cancel an orchestration and all its pending/running hooks
+#[napi]
+pub fn cancel_orchestration(id: String) -> napi::Result<()> {
+    crud::cancel_orchestration(id)
+}
+
+/// Get all hooks for an orchestration
+#[napi]
+pub fn get_orchestration_hooks(orchestration_id: String) -> napi::Result<Vec<HookExecution>> {
+    crud::get_orchestration_hooks(orchestration_id)
+}
+
+// ============================================================================
+// Pending Hooks Queue (for --check mode orchestrations)
+// ============================================================================
+
+/// Queue a hook for later execution during --wait
+#[napi]
+pub fn queue_hook(input: QueuedHookInput) -> napi::Result<String> {
+    crud::queue_hook(input)
+}
+
+/// Get all queued hooks for an orchestration
+#[napi]
+pub fn get_queued_hooks(orchestration_id: String) -> napi::Result<Vec<QueuedHook>> {
+    crud::get_queued_hooks(orchestration_id)
+}
+
+/// Delete queued hooks after they've been executed
+#[napi]
+pub fn delete_queued_hooks(orchestration_id: String) -> napi::Result<u32> {
+    crud::delete_queued_hooks(orchestration_id)
+}
+
+// ============================================================================
+// Deferred Hook Operations (for background execution)
+// ============================================================================
+
+/// Queue a pending hook for background execution
+#[napi]
+pub fn queue_pending_hook(input: PendingHookInput) -> napi::Result<String> {
+    crud::queue_pending_hook(input)
+}
+
+/// Get all pending hooks ready to run
+#[napi]
+pub fn get_pending_hooks() -> napi::Result<Vec<HookExecution>> {
+    crud::get_pending_hooks()
+}
+
+/// Get pending/running/failed hooks for a specific session
+#[napi]
+pub fn get_session_pending_hooks(session_id: String) -> napi::Result<Vec<HookExecution>> {
+    crud::get_session_pending_hooks(session_id)
+}
+
+/// Update hook execution status
+#[napi]
+pub fn update_hook_status(id: String, status: String) -> napi::Result<()> {
+    crud::update_hook_status(id, status)
+}
+
+/// Complete a hook execution
+#[napi]
+pub fn complete_hook_execution(
+    id: String,
+    success: bool,
+    output: Option<String>,
+    error: Option<String>,
+    duration_ms: i32,
+) -> napi::Result<()> {
+    crud::complete_hook_execution(id, success, output, error, duration_ms)
+}
+
+/// Mark a hook as failed with an error message
+#[napi]
+pub fn fail_hook_execution(id: String, error_message: String) -> napi::Result<()> {
+    crud::fail_hook_execution(id, error_message)
+}
+
+// ============================================================================
+// Hook Attempt Tracking (for deferred execution)
+// ============================================================================
+
+/// Get or create hook attempt info for tracking consecutive failures
+#[napi]
+pub fn get_or_create_hook_attempt(
+    session_id: String,
+    plugin: String,
+    hook_name: String,
+    directory: String,
+) -> napi::Result<HookAttemptInfo> {
+    crud::get_or_create_hook_attempt(session_id, plugin, hook_name, directory)
+}
+
+/// Increment consecutive_failures for a hook
+#[napi]
+pub fn increment_hook_failures(
+    session_id: String,
+    plugin: String,
+    hook_name: String,
+    directory: String,
+) -> napi::Result<HookAttemptInfo> {
+    crud::increment_hook_failures(session_id, plugin, hook_name, directory)
+}
+
+/// Reset consecutive_failures to 0 (on success)
+#[napi]
+pub fn reset_hook_failures(
+    session_id: String,
+    plugin: String,
+    hook_name: String,
+    directory: String,
+) -> napi::Result<()> {
+    crud::reset_hook_failures(session_id, plugin, hook_name, directory)
+}
+
+/// Increase max_attempts for a hook (user override via MCP tool)
+#[napi]
+pub fn increase_hook_max_attempts(
+    session_id: String,
+    plugin: String,
+    hook_name: String,
+    directory: String,
+    increase: i32,
+) -> napi::Result<()> {
+    crud::increase_hook_max_attempts(session_id, plugin, hook_name, directory, increase)
+}
+
+// ============================================================================
 // Frustration Event Operations
 // ============================================================================
 
@@ -1287,8 +1462,9 @@ pub use indexer::IndexResult;
 pub fn index_session_file(
     _db_path: String,
     file_path: String,
+    source_config_dir: Option<String>,
 ) -> napi::Result<indexer::IndexResult> {
-    indexer::index_session_file(file_path)
+    indexer::index_session_file(file_path, source_config_dir)
 }
 
 /// Index all JSONL files in a project directory
@@ -1296,8 +1472,9 @@ pub fn index_session_file(
 pub fn index_project_directory(
     _db_path: String,
     project_dir: String,
+    source_config_dir: Option<String>,
 ) -> napi::Result<Vec<indexer::IndexResult>> {
-    indexer::index_project_directory(project_dir)
+    indexer::index_project_directory(project_dir, source_config_dir)
 }
 
 /// Handle a file event from the watcher (coordinator use only)
@@ -1399,6 +1576,45 @@ pub fn complete_async_hook(
 #[napi]
 pub fn cancel_async_hook(db_path: String, id: String) -> napi::Result<()> {
     crud::cancel_async_hook(db_path, id)
+}
+
+/// Clear all async hooks for a session (used on SessionEnd to clean up)
+/// Returns the number of hooks that were cleared
+#[napi]
+pub fn clear_async_hook_queue_for_session(
+    db_path: String,
+    session_id: String,
+) -> napi::Result<u32> {
+    crud::clear_async_hook_queue_for_session(db_path, session_id)
+}
+
+// ============================================================================
+// Dashboard SQL Aggregation Functions
+// ============================================================================
+
+// Re-export aggregate result types
+pub use schema::{
+    ActivityAggregates, DailyActivityRow, DailyCostRow, DashboardAggregates, HookHealthRow,
+    HourlyActivityRow, SessionCompactionRow, SessionSentimentRow, SessionStatsRow,
+    SubagentUsageRow, ToolUsageRow,
+};
+
+/// Query all dashboard analytics via SQL aggregation (replaces ~850 DB round-trips)
+#[napi]
+pub fn query_dashboard_aggregates(
+    _db_path: String,
+    cutoff_date: String,
+) -> napi::Result<DashboardAggregates> {
+    crud::query_dashboard_aggregates(&cutoff_date)
+}
+
+/// Query all activity data via SQL aggregation (replaces ~425 DB round-trips)
+#[napi]
+pub fn query_activity_aggregates(
+    _db_path: String,
+    cutoff_date: String,
+) -> napi::Result<ActivityAggregates> {
+    crud::query_activity_aggregates(&cutoff_date)
 }
 
 // ============================================================================

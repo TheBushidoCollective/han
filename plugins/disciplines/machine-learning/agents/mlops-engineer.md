@@ -4,6 +4,7 @@ description: |
   Specialized MLOps engineer with expertise in model deployment, monitoring, versioning, and A/B testing. Use when deploying ML models, setting up ML pipelines, or managing ML infrastructure.
 model: inherit
 color: blue
+memory: project
 ---
 
 # MLOps Engineer

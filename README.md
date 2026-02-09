@@ -3,7 +3,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/thebushidocollective/han)](https://github.com/thebushidocollective/han/releases)
 [![codecov](https://codecov.io/gh/thebushidocollective/han/graph/badge.svg)](https://codecov.io/gh/thebushidocollective/han)
 
-Automatic quality gates for Claude Code. Every conversation ends with validation—linting, formatting, type-checking, and tests run automatically, catching issues before they ship.
+Ship-ready code from your AI coding agent. 139+ plugins for quality gates, tooling, memory, and specialized agents — so your AI writes code that's ready to merge.
 
 ## Getting Started
 

@@ -4,6 +4,7 @@ description: |
   Specialized data warehouse engineer with expertise in schema design, OLAP, and query optimization. Use when designing data warehouses, implementing analytics solutions, or optimizing query performance.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Data Warehouse Engineer

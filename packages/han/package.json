@@ -1,6 +1,6 @@
 {
 	"name": "@thebushidocollective/han",
-	"version": "3.7.3",
+	"version": "3.10.2",
 	"description": "CLI for installing and managing curated Claude Code plugins from the Han marketplace (v3.4)",
 	"main": "dist/lib/main.js",
 	"types": "dist/lib/main.d.ts",
@@ -59,7 +59,7 @@
 		"@thebushidocollective/han-win32-x64": "1.31.5"
 	},
 	"devDependencies": {
-		"@anthropic-ai/claude-agent-sdk": "0.1.50",
+		"@anthropic-ai/claude-agent-sdk": "0.2.32",
 		"@biomejs/biome": "2.3.7",
 		"@opentelemetry/api": "^1.9.0",
 		"@opentelemetry/exporter-logs-otlp-proto": "^0.208.0",

@@ -9,14 +9,14 @@
  *
  * All operations are READ-ONLY for memory safety.
  *
- * IMPORTANT: All data is stored in ~/.claude/han/han.db (single database).
+ * IMPORTANT: All data is stored in ~/.han/han.db (single database).
  * Transcript searches use the native module's searchMessages for FTS.
  * Other layers use the indexer functions which also target the same database.
  */
 
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
+import { getHanDataDir } from '../../config/claude-settings.ts';
 import {
   detectTemporalQuery,
   grepTranscripts,
@@ -145,7 +145,7 @@ function enrichResults(
 
 /**
  * Search transcripts using the native module
- * The native module stores indexed messages in ~/.claude/han/han.db
+ * The native module stores indexed messages in ~/.han/han.db
  *
  * @param query - Search query (will be expanded if expansion != "none")
  * @param limit - Maximum results to return
@@ -162,7 +162,7 @@ async function searchTranscriptsNative(
   }
 
   try {
-    const dbPath = join(homedir(), '.claude', 'han', 'han.db');
+    const dbPath = join(getHanDataDir(), 'han.db');
 
     // Expand query before search
     const { expanded } = expandQuery(query, { level: expansion });
@@ -205,7 +205,7 @@ async function searchSummariesNative(
   }
 
   try {
-    const dbPath = join(homedir(), '.claude', 'han', 'han.db');
+    const dbPath = join(getHanDataDir(), 'han.db');
     const summaries = nativeModule.searchGeneratedSummaries(
       dbPath,
       query,

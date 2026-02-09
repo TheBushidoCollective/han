@@ -1,4 +1,5 @@
 ---
+name: explain
 description: Explain code, concepts, or technical decisions in clear, understandable terms
 disable-model-invocation: false
 ---

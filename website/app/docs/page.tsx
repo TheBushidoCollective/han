@@ -8,7 +8,7 @@ import DocsNavigation from "../components/DocsNavigation";
 export const metadata: Metadata = {
 	title: "Documentation - Han",
 	description:
-		"Complete documentation for Han - automatic quality gates for Claude Code with linting, formatting, type-checking, and testing.",
+		"Complete documentation for Han - automatic quality gates for AI coding agents with linting, formatting, type-checking, and testing.",
 };
 
 export default function DocsPage() {

@@ -4,6 +4,7 @@ description: |
   Use PROACTIVELY when designing UI layouts, building responsive interfaces, implementing design systems, or improving visual user experience. Expert in visual design principles, interaction patterns, layout composition, and user experience optimization.
 model: inherit
 color: purple
+memory: project
 ---
 
 # Presentation Engineer

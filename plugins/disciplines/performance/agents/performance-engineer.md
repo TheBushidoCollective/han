@@ -4,6 +4,7 @@ description: |
   Specialized performance engineer with expertise in performance profiling, optimization techniques, and load testing. Use when optimizing application performance, conducting performance analysis, or implementing caching strategies.
 model: inherit
 color: yellow
+memory: project
 ---
 
 # Performance Engineer

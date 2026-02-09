@@ -12,6 +12,7 @@ import { basename, join } from 'node:path';
 import type { Command } from 'commander';
 import { parse as parseYaml } from 'yaml';
 import { validatePluginConfig } from '../../config/config-validator.ts';
+import { generateHooksForPlugin } from './generate-hooks.ts';
 
 interface ValidationIssue {
   type: 'error' | 'warning';
@@ -188,6 +189,24 @@ function validatePlugin(pluginPath: string): PluginValidationResult {
         path: hooksJsonPath,
         message: 'Invalid JSON',
       });
+    }
+  }
+
+  // Check if hooks.json is stale (generated vs actual)
+  if (existsSync(hanPluginYml)) {
+    const expectedJson = generateHooksForPlugin(pluginPath, false);
+    if (expectedJson) {
+      const actualJson = existsSync(hooksJsonPath)
+        ? readFileSync(hooksJsonPath, 'utf-8')
+        : '';
+      if (actualJson !== expectedJson) {
+        issues.push({
+          type: 'warning',
+          path: hooksJsonPath,
+          message:
+            "hooks.json is stale (doesn't match han-plugin.yml). Run 'han plugin generate-hooks' to update.",
+        });
+      }
     }
   }
 

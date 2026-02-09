@@ -121,6 +121,7 @@ describe('plugin alias integration', () => {
       for (const oldName of testCases) {
         const newPath = getNewPluginPath(oldName);
         expect(newPath).toBeDefined();
+        // biome-ignore lint/style/noNonNullAssertion: Value verified by expect above
         const backToOld = getOldPluginName(newPath!);
         expect(backToOld).toBe(oldName);
       }
@@ -137,6 +138,7 @@ describe('plugin alias integration', () => {
       for (const newPath of testCases) {
         const oldName = getOldPluginName(newPath);
         expect(oldName).toBeDefined();
+        // biome-ignore lint/style/noNonNullAssertion: Value verified by expect above
         const backToNew = getNewPluginPath(oldName!);
         expect(backToNew).toBe(newPath);
       }

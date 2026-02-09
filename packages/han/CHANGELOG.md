@@ -5,6 +5,564 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.10.2] - 2026-02-09
+
+### Added
+
+- add session summary to dashboard analytics ([eb6bf474](../../commit/eb6bf474))
+- add native task CRUD operations and refactor activity/analytics types ([01b76f7e](../../commit/01b76f7e))
+- add dashboard analytics enhancements with effectiveness scoring, subagent tracking, and cost analysis (#63) ([351e9960](../../commit/351e9960))
+- auto-generate hooks.json from han-plugin.yml with shorthand events ([f3a39941](../../commit/f3a39941))
+
+### Fixed
+
+- exclude test temp directories from biome and git ([11954724](../../commit/11954724))
+- coordinator crash on metrics query and remove coordinatorPort from dashboard URL ([9626ba11](../../commit/9626ba11))
+- resolve biome lint warnings in opencode bridge plugin ([f0d5def8](../../commit/f0d5def8))
+- inline small hook output instead of writing to file ([9adfef93](../../commit/9adfef93))
+- use output size to decide subagent vs direct fix in hook failures ([1e97aaf6](../../commit/1e97aaf6))
+- async Stop hooks, merge test/test-async, fix plugin name resolution ([ba6474e8](../../commit/ba6474e8))
+
+### Changed
+
+- update tagline from "quality gates" to "ship-ready code" ([6f9ed037](../../commit/6f9ed037))
+- remove file_filter, split test hooks into Stop + PostToolUse ([bd1b5e34](../../commit/bd1b5e34))
+
+### Other
+
+- normalize package.json indentation to spaces ([8523b7b0](../../commit/8523b7b0))
+- document fullScanAndIndex coordinator startup flow and analyze when it runs ([0b720f97](../../commit/0b720f97))
+- apply biome auto-formatting to recently added files ([e99aff5b](../../commit/e99aff5b))
+- Add OpenCode bridge plugin for Han hook ecosystem (#61) ([322d0324](../../commit/322d0324))
+- reformat package.json indentation ([ebab8d64](../../commit/ebab8d64))
+- document validate.ts duplication and dead code ([3939add5](../../commit/3939add5))
+
+## [3.10.1] - 2026-02-09
+
+### Added
+
+- add dashboard analytics enhancements with effectiveness scoring, subagent tracking, and cost analysis (#63) ([351e9960](../../commit/351e9960))
+- auto-generate hooks.json from han-plugin.yml with shorthand events ([f3a39941](../../commit/f3a39941))
+
+### Fixed
+
+- exclude test temp directories from biome and git ([11954724](../../commit/11954724))
+- coordinator crash on metrics query and remove coordinatorPort from dashboard URL ([9626ba11](../../commit/9626ba11))
+- resolve biome lint warnings in opencode bridge plugin ([f0d5def8](../../commit/f0d5def8))
+- inline small hook output instead of writing to file ([9adfef93](../../commit/9adfef93))
+- use output size to decide subagent vs direct fix in hook failures ([1e97aaf6](../../commit/1e97aaf6))
+- async Stop hooks, merge test/test-async, fix plugin name resolution ([ba6474e8](../../commit/ba6474e8))
+- skip opening browser in test environments during han browse ([febd1476](../../commit/febd1476))
+- migrate deprecated plugin names in YAML config files ([06882b3b](../../commit/06882b3b))
+- improve npm wrapper resolution, simplify migration, remove stale MCP entry ([b10b4868](../../commit/b10b4868))
+- use imported HAN_VERSION instead of process.env for health endpoint ([670532cd](../../commit/670532cd))
+
+### Changed
+
+- remove file_filter, split test hooks into Stop + PostToolUse ([bd1b5e34](../../commit/bd1b5e34))
+
+### Other
+
+- document fullScanAndIndex coordinator startup flow and analyze when it runs ([0b720f97](../../commit/0b720f97))
+- apply biome auto-formatting to recently added files ([e99aff5b](../../commit/e99aff5b))
+- Add OpenCode bridge plugin for Han hook ecosystem (#61) ([322d0324](../../commit/322d0324))
+- reformat package.json indentation ([ebab8d64](../../commit/ebab8d64))
+- document validate.ts duplication and dead code ([3939add5](../../commit/3939add5))
+
+## [3.10.0] - 2026-02-08
+
+### Added
+
+- add dashboard analytics enhancements with effectiveness scoring, subagent tracking, and cost analysis (#63) ([351e9960](../../commit/351e9960))
+- auto-generate hooks.json from han-plugin.yml with shorthand events ([f3a39941](../../commit/f3a39941))
+- use marketplace.json as source of truth and auto-run on session start ([93d75cd8](../../commit/93d75cd8))
+
+### Fixed
+
+- inline small hook output instead of writing to file ([9adfef93](../../commit/9adfef93))
+- use output size to decide subagent vs direct fix in hook failures ([1e97aaf6](../../commit/1e97aaf6))
+- async Stop hooks, merge test/test-async, fix plugin name resolution ([ba6474e8](../../commit/ba6474e8))
+- skip opening browser in test environments during han browse ([febd1476](../../commit/febd1476))
+- migrate deprecated plugin names in YAML config files ([06882b3b](../../commit/06882b3b))
+- improve npm wrapper resolution, simplify migration, remove stale MCP entry ([b10b4868](../../commit/b10b4868))
+- use imported HAN_VERSION instead of process.env for health endpoint ([670532cd](../../commit/670532cd))
+- fix marketplace source paths, stale alias, and missing SKILL.md names (#60) ([4774fca5](../../commit/4774fca5))
+- run plugin install from git root to prevent nested config writes ([c1d2e419](../../commit/c1d2e419))
+- replace npx with direct han binary, fix auto-detect plugin matching ([11c3edfa](../../commit/11c3edfa))
+- update plugin discovery to use marketplace.json ([d07a773d](../../commit/d07a773d))
+- fix CORS configuration and improve error logging ([1bab9383](../../commit/1bab9383))
+- add explicit CORS preflight handling ([74b65d3a](../../commit/74b65d3a))
+
+### Changed
+
+- remove file_filter, split test hooks into Stop + PostToolUse ([bd1b5e34](../../commit/bd1b5e34))
+
+### Other
+
+- Add OpenCode bridge plugin for Han hook ecosystem (#61) ([322d0324](../../commit/322d0324))
+- reformat package.json indentation ([ebab8d64](../../commit/ebab8d64))
+- document validate.ts duplication and dead code ([3939add5](../../commit/3939add5))
+
+## [3.9.3] - 2026-02-08
+
+### Added
+
+- auto-generate hooks.json from han-plugin.yml with shorthand events ([f3a39941](../../commit/f3a39941))
+- use marketplace.json as source of truth and auto-run on session start ([93d75cd8](../../commit/93d75cd8))
+
+### Fixed
+
+- inline small hook output instead of writing to file ([9adfef93](../../commit/9adfef93))
+- use output size to decide subagent vs direct fix in hook failures ([1e97aaf6](../../commit/1e97aaf6))
+- async Stop hooks, merge test/test-async, fix plugin name resolution ([ba6474e8](../../commit/ba6474e8))
+- skip opening browser in test environments during han browse ([febd1476](../../commit/febd1476))
+- migrate deprecated plugin names in YAML config files ([06882b3b](../../commit/06882b3b))
+- improve npm wrapper resolution, simplify migration, remove stale MCP entry ([b10b4868](../../commit/b10b4868))
+- use imported HAN_VERSION instead of process.env for health endpoint ([670532cd](../../commit/670532cd))
+- fix marketplace source paths, stale alias, and missing SKILL.md names (#60) ([4774fca5](../../commit/4774fca5))
+- run plugin install from git root to prevent nested config writes ([c1d2e419](../../commit/c1d2e419))
+- replace npx with direct han binary, fix auto-detect plugin matching ([11c3edfa](../../commit/11c3edfa))
+- update plugin discovery to use marketplace.json ([d07a773d](../../commit/d07a773d))
+- fix CORS configuration and improve error logging ([1bab9383](../../commit/1bab9383))
+- add explicit CORS preflight handling ([74b65d3a](../../commit/74b65d3a))
+- fix CORS and remove dev proxy ([76d28a9e](../../commit/76d28a9e))
+
+### Changed
+
+- remove file_filter, split test hooks into Stop + PostToolUse ([bd1b5e34](../../commit/bd1b5e34))
+
+### Other
+
+- Add OpenCode bridge plugin for Han hook ecosystem (#61) ([322d0324](../../commit/322d0324))
+- reformat package.json indentation ([ebab8d64](../../commit/ebab8d64))
+- document validate.ts duplication and dead code ([3939add5](../../commit/3939add5))
+
+## [3.9.2] - 2026-02-07
+
+### Added
+
+- auto-generate hooks.json from han-plugin.yml with shorthand events ([f3a39941](../../commit/f3a39941))
+- use marketplace.json as source of truth and auto-run on session start ([93d75cd8](../../commit/93d75cd8))
+
+### Fixed
+
+- inline small hook output instead of writing to file ([9adfef93](../../commit/9adfef93))
+- use output size to decide subagent vs direct fix in hook failures ([1e97aaf6](../../commit/1e97aaf6))
+- async Stop hooks, merge test/test-async, fix plugin name resolution ([ba6474e8](../../commit/ba6474e8))
+- skip opening browser in test environments during han browse ([febd1476](../../commit/febd1476))
+- migrate deprecated plugin names in YAML config files ([06882b3b](../../commit/06882b3b))
+- improve npm wrapper resolution, simplify migration, remove stale MCP entry ([b10b4868](../../commit/b10b4868))
+- use imported HAN_VERSION instead of process.env for health endpoint ([670532cd](../../commit/670532cd))
+- fix marketplace source paths, stale alias, and missing SKILL.md names (#60) ([4774fca5](../../commit/4774fca5))
+- run plugin install from git root to prevent nested config writes ([c1d2e419](../../commit/c1d2e419))
+- replace npx with direct han binary, fix auto-detect plugin matching ([11c3edfa](../../commit/11c3edfa))
+- update plugin discovery to use marketplace.json ([d07a773d](../../commit/d07a773d))
+- fix CORS configuration and improve error logging ([1bab9383](../../commit/1bab9383))
+- add explicit CORS preflight handling ([74b65d3a](../../commit/74b65d3a))
+- fix CORS and remove dev proxy ([76d28a9e](../../commit/76d28a9e))
+- fix CORS by reflecting request origin ([ef48da2f](../../commit/ef48da2f))
+
+### Changed
+
+- remove file_filter, split test hooks into Stop + PostToolUse ([bd1b5e34](../../commit/bd1b5e34))
+
+### Other
+
+- reformat package.json indentation ([ebab8d64](../../commit/ebab8d64))
+- document validate.ts duplication and dead code ([3939add5](../../commit/3939add5))
+
+## [3.9.1] - 2026-02-07
+
+### Added
+
+- auto-generate hooks.json from han-plugin.yml with shorthand events ([f3a39941](../../commit/f3a39941))
+- use marketplace.json as source of truth and auto-run on session start ([93d75cd8](../../commit/93d75cd8))
+- auto-detect reindex needs and coordinator version upgrades ([f34082f6](../../commit/f34082f6))
+- add wrap-subagent-context command and fix hook timeouts ([f8a87bc3](../../commit/f8a87bc3))
+- add async hook queue for PostToolUse non-blocking validation ([4a0436e8](../../commit/4a0436e8))
+
+### Fixed
+
+- async Stop hooks, merge test/test-async, fix plugin name resolution ([ba6474e8](../../commit/ba6474e8))
+- skip opening browser in test environments during han browse ([febd1476](../../commit/febd1476))
+- migrate deprecated plugin names in YAML config files ([06882b3b](../../commit/06882b3b))
+- improve npm wrapper resolution, simplify migration, remove stale MCP entry ([b10b4868](../../commit/b10b4868))
+- use imported HAN_VERSION instead of process.env for health endpoint ([670532cd](../../commit/670532cd))
+- fix marketplace source paths, stale alias, and missing SKILL.md names (#60) ([4774fca5](../../commit/4774fca5))
+- run plugin install from git root to prevent nested config writes ([c1d2e419](../../commit/c1d2e419))
+- replace npx with direct han binary, fix auto-detect plugin matching ([11c3edfa](../../commit/11c3edfa))
+- update plugin discovery to use marketplace.json ([d07a773d](../../commit/d07a773d))
+- fix CORS configuration and improve error logging ([1bab9383](../../commit/1bab9383))
+- add explicit CORS preflight handling ([74b65d3a](../../commit/74b65d3a))
+- fix CORS and remove dev proxy ([76d28a9e](../../commit/76d28a9e))
+- fix CORS by reflecting request origin ([ef48da2f](../../commit/ef48da2f))
+- filter deleted files from HAN_FILES in hooks ([c9d0e59e](../../commit/c9d0e59e))
+- pass --version through to hanBinary when configured ([a2941a85](../../commit/a2941a85))
+- remove unused async-hook-executor and async-hook-client ([d50a95d4](../../commit/d50a95d4))
+
+### Changed
+
+- remove file_filter, split test hooks into Stop + PostToolUse ([bd1b5e34](../../commit/bd1b5e34))
+- modernize hook system and consolidate plugin structure ([fffa4297](../../commit/fffa4297))
+
+### Other
+
+- Merge remote-tracking branch 'origin/main' ([64362994](../../commit/64362994))
+- Merge main into branch ([b6c53dce](../../commit/b6c53dce))
+
+## [3.9.0] - 2026-02-07
+
+### Added
+
+- auto-generate hooks.json from han-plugin.yml with shorthand events ([f3a39941](../../commit/f3a39941))
+- use marketplace.json as source of truth and auto-run on session start ([93d75cd8](../../commit/93d75cd8))
+- auto-detect reindex needs and coordinator version upgrades ([f34082f6](../../commit/f34082f6))
+- add wrap-subagent-context command and fix hook timeouts ([f8a87bc3](../../commit/f8a87bc3))
+- add async hook queue for PostToolUse non-blocking validation ([4a0436e8](../../commit/4a0436e8))
+
+### Fixed
+
+- skip opening browser in test environments during han browse ([febd1476](../../commit/febd1476))
+- migrate deprecated plugin names in YAML config files ([06882b3b](../../commit/06882b3b))
+- improve npm wrapper resolution, simplify migration, remove stale MCP entry ([b10b4868](../../commit/b10b4868))
+- use imported HAN_VERSION instead of process.env for health endpoint ([670532cd](../../commit/670532cd))
+- fix marketplace source paths, stale alias, and missing SKILL.md names (#60) ([4774fca5](../../commit/4774fca5))
+- run plugin install from git root to prevent nested config writes ([c1d2e419](../../commit/c1d2e419))
+- replace npx with direct han binary, fix auto-detect plugin matching ([11c3edfa](../../commit/11c3edfa))
+- update plugin discovery to use marketplace.json ([d07a773d](../../commit/d07a773d))
+- fix CORS configuration and improve error logging ([1bab9383](../../commit/1bab9383))
+- add explicit CORS preflight handling ([74b65d3a](../../commit/74b65d3a))
+- fix CORS and remove dev proxy ([76d28a9e](../../commit/76d28a9e))
+- fix CORS by reflecting request origin ([ef48da2f](../../commit/ef48da2f))
+- filter deleted files from HAN_FILES in hooks ([c9d0e59e](../../commit/c9d0e59e))
+- pass --version through to hanBinary when configured ([a2941a85](../../commit/a2941a85))
+- remove unused async-hook-executor and async-hook-client ([d50a95d4](../../commit/d50a95d4))
+
+### Changed
+
+- modernize hook system and consolidate plugin structure ([fffa4297](../../commit/fffa4297))
+
+### Other
+
+- Merge remote-tracking branch 'origin/main' ([64362994](../../commit/64362994))
+- updates ([186ef119](../../commit/186ef119))
+- Merge main into branch ([b6c53dce](../../commit/b6c53dce))
+
+## [3.8.2] - 2026-02-06
+
+### Added
+
+- use marketplace.json as source of truth and auto-run on session start ([93d75cd8](../../commit/93d75cd8))
+- auto-detect reindex needs and coordinator version upgrades ([f34082f6](../../commit/f34082f6))
+- add wrap-subagent-context command and fix hook timeouts ([f8a87bc3](../../commit/f8a87bc3))
+- reject deprecated naming and use short names ([c7b594cc](../../commit/c7b594cc))
+- add async hook queue for PostToolUse non-blocking validation ([4a0436e8](../../commit/4a0436e8))
+
+### Fixed
+
+- fix marketplace source paths, stale alias, and missing SKILL.md names (#60) ([4774fca5](../../commit/4774fca5))
+- run plugin install from git root to prevent nested config writes ([c1d2e419](../../commit/c1d2e419))
+- replace npx with direct han binary, fix auto-detect plugin matching ([11c3edfa](../../commit/11c3edfa))
+- update plugin discovery to use marketplace.json ([d07a773d](../../commit/d07a773d))
+- fix CORS configuration and improve error logging ([1bab9383](../../commit/1bab9383))
+- add explicit CORS preflight handling ([74b65d3a](../../commit/74b65d3a))
+- fix CORS and remove dev proxy ([76d28a9e](../../commit/76d28a9e))
+- fix CORS by reflecting request origin ([ef48da2f](../../commit/ef48da2f))
+- filter deleted files from HAN_FILES in hooks ([c9d0e59e](../../commit/c9d0e59e))
+- pass --version through to hanBinary when configured ([a2941a85](../../commit/a2941a85))
+- remove unused async-hook-executor and async-hook-client ([d50a95d4](../../commit/d50a95d4))
+- resolve CLAUDE_PLUGIN_ROOT for subdirectory workspaces ([7b002ce0](../../commit/7b002ce0))
+- update plugin tests to use new short naming ([cf28c711](../../commit/cf28c711))
+- update plugin install test for new naming convention ([53350595](../../commit/53350595))
+
+### Changed
+
+- modernize hook system - direct plugin hooks (no orchestration) (#57) ([b0ee1566](../../commit/b0ee1566))
+- modernize hook system and consolidate plugin structure ([fffa4297](../../commit/fffa4297))
+
+### Other
+
+- Merge remote-tracking branch 'origin/main' ([64362994](../../commit/64362994))
+- updates ([186ef119](../../commit/186ef119))
+- Merge main into branch ([b6c53dce](../../commit/b6c53dce))
+- format plugin-aliases.ts ([17181c1e](../../commit/17181c1e))
+
+## [3.8.1] - 2026-02-05
+
+### Added
+
+- use marketplace.json as source of truth and auto-run on session start ([93d75cd8](../../commit/93d75cd8))
+- auto-detect reindex needs and coordinator version upgrades ([f34082f6](../../commit/f34082f6))
+- add wrap-subagent-context command and fix hook timeouts ([f8a87bc3](../../commit/f8a87bc3))
+- reject deprecated naming and use short names ([c7b594cc](../../commit/c7b594cc))
+- add wildcard support to sessionMessageAdded subscription ([ee8c11d8](../../commit/ee8c11d8))
+- add async hook queue for PostToolUse non-blocking validation ([4a0436e8](../../commit/4a0436e8))
+
+### Fixed
+
+- run plugin install from git root to prevent nested config writes ([c1d2e419](../../commit/c1d2e419))
+- replace npx with direct han binary, fix auto-detect plugin matching ([11c3edfa](../../commit/11c3edfa))
+- update plugin discovery to use marketplace.json ([d07a773d](../../commit/d07a773d))
+- fix CORS configuration and improve error logging ([1bab9383](../../commit/1bab9383))
+- add explicit CORS preflight handling ([74b65d3a](../../commit/74b65d3a))
+- fix CORS and remove dev proxy ([76d28a9e](../../commit/76d28a9e))
+- fix CORS by reflecting request origin ([ef48da2f](../../commit/ef48da2f))
+- filter deleted files from HAN_FILES in hooks ([c9d0e59e](../../commit/c9d0e59e))
+- pass --version through to hanBinary when configured ([a2941a85](../../commit/a2941a85))
+- remove unused async-hook-executor and async-hook-client ([d50a95d4](../../commit/d50a95d4))
+- resolve CLAUDE_PLUGIN_ROOT for subdirectory workspaces ([7b002ce0](../../commit/7b002ce0))
+- update plugin tests to use new short naming ([cf28c711](../../commit/cf28c711))
+- update plugin install test for new naming convention ([53350595](../../commit/53350595))
+
+### Changed
+
+- modernize hook system - direct plugin hooks (no orchestration) (#57) ([b0ee1566](../../commit/b0ee1566))
+- modernize hook system and consolidate plugin structure ([fffa4297](../../commit/fffa4297))
+
+### Other
+
+- Merge remote-tracking branch 'origin/main' ([64362994](../../commit/64362994))
+- updates ([186ef119](../../commit/186ef119))
+- Merge main into branch ([b6c53dce](../../commit/b6c53dce))
+- format plugin-aliases.ts ([17181c1e](../../commit/17181c1e))
+
+## [3.8.0] - 2026-02-05
+
+### Added
+
+- use marketplace.json as source of truth and auto-run on session start ([93d75cd8](../../commit/93d75cd8))
+- auto-detect reindex needs and coordinator version upgrades ([f34082f6](../../commit/f34082f6))
+- add wrap-subagent-context command and fix hook timeouts ([f8a87bc3](../../commit/f8a87bc3))
+- reject deprecated naming and use short names ([c7b594cc](../../commit/c7b594cc))
+- add wildcard support to sessionMessageAdded subscription ([ee8c11d8](../../commit/ee8c11d8))
+- add async hook queue for PostToolUse non-blocking validation ([4a0436e8](../../commit/4a0436e8))
+
+### Fixed
+
+- fix CORS configuration and improve error logging ([1bab9383](../../commit/1bab9383))
+- add explicit CORS preflight handling ([74b65d3a](../../commit/74b65d3a))
+- fix CORS and remove dev proxy ([76d28a9e](../../commit/76d28a9e))
+- fix CORS by reflecting request origin ([ef48da2f](../../commit/ef48da2f))
+- filter deleted files from HAN_FILES in hooks ([c9d0e59e](../../commit/c9d0e59e))
+- pass --version through to hanBinary when configured ([a2941a85](../../commit/a2941a85))
+- remove unused async-hook-executor and async-hook-client ([d50a95d4](../../commit/d50a95d4))
+- resolve CLAUDE_PLUGIN_ROOT for subdirectory workspaces ([7b002ce0](../../commit/7b002ce0))
+- update plugin tests to use new short naming ([cf28c711](../../commit/cf28c711))
+- update plugin install test for new naming convention ([53350595](../../commit/53350595))
+
+### Changed
+
+- modernize hook system - direct plugin hooks (no orchestration) (#57) ([b0ee1566](../../commit/b0ee1566))
+- modernize hook system and consolidate plugin structure ([fffa4297](../../commit/fffa4297))
+
+### Other
+
+- Merge remote-tracking branch 'origin/main' ([64362994](../../commit/64362994))
+- updates ([186ef119](../../commit/186ef119))
+- Merge main into branch ([b6c53dce](../../commit/b6c53dce))
+- format plugin-aliases.ts ([17181c1e](../../commit/17181c1e))
+
+## [3.7.9] - 2026-02-05
+
+### Added
+
+- auto-detect reindex needs and coordinator version upgrades ([f34082f6](../../commit/f34082f6))
+- add wrap-subagent-context command and fix hook timeouts ([f8a87bc3](../../commit/f8a87bc3))
+- reject deprecated naming and use short names ([c7b594cc](../../commit/c7b594cc))
+- add wildcard support to sessionMessageAdded subscription ([ee8c11d8](../../commit/ee8c11d8))
+- add async hook queue for PostToolUse non-blocking validation ([4a0436e8](../../commit/4a0436e8))
+
+### Fixed
+
+- fix CORS configuration and improve error logging ([1bab9383](../../commit/1bab9383))
+- add explicit CORS preflight handling ([74b65d3a](../../commit/74b65d3a))
+- fix CORS and remove dev proxy ([76d28a9e](../../commit/76d28a9e))
+- fix CORS by reflecting request origin ([ef48da2f](../../commit/ef48da2f))
+- filter deleted files from HAN_FILES in hooks ([c9d0e59e](../../commit/c9d0e59e))
+- pass --version through to hanBinary when configured ([a2941a85](../../commit/a2941a85))
+- remove unused async-hook-executor and async-hook-client ([d50a95d4](../../commit/d50a95d4))
+- resolve CLAUDE_PLUGIN_ROOT for subdirectory workspaces ([7b002ce0](../../commit/7b002ce0))
+- update plugin tests to use new short naming ([cf28c711](../../commit/cf28c711))
+- update plugin install test for new naming convention ([53350595](../../commit/53350595))
+
+### Changed
+
+- modernize hook system - direct plugin hooks (no orchestration) (#57) ([b0ee1566](../../commit/b0ee1566))
+- modernize hook system and consolidate plugin structure ([fffa4297](../../commit/fffa4297))
+
+### Other
+
+- Merge remote-tracking branch 'origin/main' ([64362994](../../commit/64362994))
+- updates ([186ef119](../../commit/186ef119))
+- Merge main into branch ([b6c53dce](../../commit/b6c53dce))
+- format plugin-aliases.ts ([17181c1e](../../commit/17181c1e))
+- Add Han Learns: Automatic plugin detection and installation (#54) ([7edbf7bf](../../commit/7edbf7bf))
+
+## [3.7.8] - 2026-02-05
+
+### Added
+
+- auto-detect reindex needs and coordinator version upgrades ([f34082f6](../../commit/f34082f6))
+- add wrap-subagent-context command and fix hook timeouts ([f8a87bc3](../../commit/f8a87bc3))
+- reject deprecated naming and use short names ([c7b594cc](../../commit/c7b594cc))
+- add wildcard support to sessionMessageAdded subscription ([ee8c11d8](../../commit/ee8c11d8))
+- add async hook queue for PostToolUse non-blocking validation ([4a0436e8](../../commit/4a0436e8))
+
+### Fixed
+
+- fix CORS configuration and improve error logging ([1bab9383](../../commit/1bab9383))
+- add explicit CORS preflight handling ([74b65d3a](../../commit/74b65d3a))
+- fix CORS and remove dev proxy ([76d28a9e](../../commit/76d28a9e))
+- fix CORS by reflecting request origin ([ef48da2f](../../commit/ef48da2f))
+- filter deleted files from HAN_FILES in hooks ([c9d0e59e](../../commit/c9d0e59e))
+- pass --version through to hanBinary when configured ([a2941a85](../../commit/a2941a85))
+- remove unused async-hook-executor and async-hook-client ([d50a95d4](../../commit/d50a95d4))
+- resolve CLAUDE_PLUGIN_ROOT for subdirectory workspaces ([7b002ce0](../../commit/7b002ce0))
+- update plugin tests to use new short naming ([cf28c711](../../commit/cf28c711))
+- update plugin install test for new naming convention ([53350595](../../commit/53350595))
+
+### Changed
+
+- modernize hook system - direct plugin hooks (no orchestration) (#57) ([b0ee1566](../../commit/b0ee1566))
+- modernize hook system and consolidate plugin structure ([fffa4297](../../commit/fffa4297))
+
+### Other
+
+- Merge remote-tracking branch 'origin/main' ([64362994](../../commit/64362994))
+- updates ([186ef119](../../commit/186ef119))
+- Merge main into branch ([b6c53dce](../../commit/b6c53dce))
+- format plugin-aliases.ts ([17181c1e](../../commit/17181c1e))
+- Add Han Learns: Automatic plugin detection and installation (#54) ([7edbf7bf](../../commit/7edbf7bf))
+
+## [3.7.7] - 2026-02-05
+
+### Added
+
+- auto-detect reindex needs and coordinator version upgrades ([f34082f6](../../commit/f34082f6))
+- add wrap-subagent-context command and fix hook timeouts ([f8a87bc3](../../commit/f8a87bc3))
+- reject deprecated naming and use short names ([c7b594cc](../../commit/c7b594cc))
+- add wildcard support to sessionMessageAdded subscription ([ee8c11d8](../../commit/ee8c11d8))
+- add async hook queue for PostToolUse non-blocking validation ([4a0436e8](../../commit/4a0436e8))
+
+### Fixed
+
+- add explicit CORS preflight handling ([74b65d3a](../../commit/74b65d3a))
+- fix CORS and remove dev proxy ([76d28a9e](../../commit/76d28a9e))
+- fix CORS by reflecting request origin ([ef48da2f](../../commit/ef48da2f))
+- filter deleted files from HAN_FILES in hooks ([c9d0e59e](../../commit/c9d0e59e))
+- pass --version through to hanBinary when configured ([a2941a85](../../commit/a2941a85))
+- remove unused async-hook-executor and async-hook-client ([d50a95d4](../../commit/d50a95d4))
+- resolve CLAUDE_PLUGIN_ROOT for subdirectory workspaces ([7b002ce0](../../commit/7b002ce0))
+- update plugin tests to use new short naming ([cf28c711](../../commit/cf28c711))
+- update plugin install test for new naming convention ([53350595](../../commit/53350595))
+
+### Changed
+
+- modernize hook system - direct plugin hooks (no orchestration) (#57) ([b0ee1566](../../commit/b0ee1566))
+- modernize hook system and consolidate plugin structure ([fffa4297](../../commit/fffa4297))
+
+### Other
+
+- Merge remote-tracking branch 'origin/main' ([64362994](../../commit/64362994))
+- updates ([186ef119](../../commit/186ef119))
+- Merge main into branch ([b6c53dce](../../commit/b6c53dce))
+- format plugin-aliases.ts ([17181c1e](../../commit/17181c1e))
+- Add Han Learns: Automatic plugin detection and installation (#54) ([7edbf7bf](../../commit/7edbf7bf))
+
+## [3.7.6] - 2026-02-05
+
+### Added
+
+- auto-detect reindex needs and coordinator version upgrades ([f34082f6](../../commit/f34082f6))
+- add wrap-subagent-context command and fix hook timeouts ([f8a87bc3](../../commit/f8a87bc3))
+- reject deprecated naming and use short names ([c7b594cc](../../commit/c7b594cc))
+- add wildcard support to sessionMessageAdded subscription ([ee8c11d8](../../commit/ee8c11d8))
+- add async hook queue for PostToolUse non-blocking validation ([4a0436e8](../../commit/4a0436e8))
+
+### Fixed
+
+- fix CORS and remove dev proxy ([76d28a9e](../../commit/76d28a9e))
+- fix CORS by reflecting request origin ([ef48da2f](../../commit/ef48da2f))
+- filter deleted files from HAN_FILES in hooks ([c9d0e59e](../../commit/c9d0e59e))
+- pass --version through to hanBinary when configured ([a2941a85](../../commit/a2941a85))
+- remove unused async-hook-executor and async-hook-client ([d50a95d4](../../commit/d50a95d4))
+- resolve CLAUDE_PLUGIN_ROOT for subdirectory workspaces ([7b002ce0](../../commit/7b002ce0))
+- update plugin tests to use new short naming ([cf28c711](../../commit/cf28c711))
+- update plugin install test for new naming convention ([53350595](../../commit/53350595))
+
+### Changed
+
+- modernize hook system - direct plugin hooks (no orchestration) (#57) ([b0ee1566](../../commit/b0ee1566))
+- modernize hook system and consolidate plugin structure ([fffa4297](../../commit/fffa4297))
+
+### Other
+
+- Merge remote-tracking branch 'origin/main' ([64362994](../../commit/64362994))
+- updates ([186ef119](../../commit/186ef119))
+- Merge main into branch ([b6c53dce](../../commit/b6c53dce))
+- format plugin-aliases.ts ([17181c1e](../../commit/17181c1e))
+- Add Han Learns: Automatic plugin detection and installation (#54) ([7edbf7bf](../../commit/7edbf7bf))
+
+## [3.7.5] - 2026-02-05
+
+### Added
+
+- auto-detect reindex needs and coordinator version upgrades ([f34082f6](../../commit/f34082f6))
+- add wrap-subagent-context command and fix hook timeouts ([f8a87bc3](../../commit/f8a87bc3))
+- reject deprecated naming and use short names ([c7b594cc](../../commit/c7b594cc))
+- add wildcard support to sessionMessageAdded subscription ([ee8c11d8](../../commit/ee8c11d8))
+- add async hook queue for PostToolUse non-blocking validation ([4a0436e8](../../commit/4a0436e8))
+- multi-environment dashboard with central coordinator ([6246aec3](../../commit/6246aec3))
+
+### Fixed
+
+- fix CORS by reflecting request origin ([ef48da2f](../../commit/ef48da2f))
+- filter deleted files from HAN_FILES in hooks ([c9d0e59e](../../commit/c9d0e59e))
+- pass --version through to hanBinary when configured ([a2941a85](../../commit/a2941a85))
+- remove unused async-hook-executor and async-hook-client ([d50a95d4](../../commit/d50a95d4))
+- resolve CLAUDE_PLUGIN_ROOT for subdirectory workspaces ([7b002ce0](../../commit/7b002ce0))
+- update plugin tests to use new short naming ([cf28c711](../../commit/cf28c711))
+- update plugin install test for new naming convention ([53350595](../../commit/53350595))
+
+### Changed
+
+- modernize hook system - direct plugin hooks (no orchestration) (#57) ([b0ee1566](../../commit/b0ee1566))
+- modernize hook system and consolidate plugin structure ([fffa4297](../../commit/fffa4297))
+
+### Other
+
+- Merge remote-tracking branch 'origin/main' ([64362994](../../commit/64362994))
+- updates ([186ef119](../../commit/186ef119))
+- Merge main into branch ([b6c53dce](../../commit/b6c53dce))
+- format plugin-aliases.ts ([17181c1e](../../commit/17181c1e))
+- Add Han Learns: Automatic plugin detection and installation (#54) ([7edbf7bf](../../commit/7edbf7bf))
+
+## [3.7.4] - 2026-02-04
+
+### Added
+
+- reject deprecated naming and use short names ([c7b594cc](../../commit/c7b594cc))
+- add wildcard support to sessionMessageAdded subscription ([ee8c11d8](../../commit/ee8c11d8))
+- multi-environment dashboard with central coordinator ([6246aec3](../../commit/6246aec3))
+- add configurable VCS strategy with jj support (#49) ([4cba29e8](../../commit/4cba29e8))
+- add Codecov coverage reporting ([6381cbb3](../../commit/6381cbb3))
+- add ai-dlc-elaborate skill for Claude Code skill/command unification (#51) ([ca2efeb3](../../commit/ca2efeb3))
+
+### Fixed
+
+- resolve CLAUDE_PLUGIN_ROOT for subdirectory workspaces ([7b002ce0](../../commit/7b002ce0))
+- update plugin tests to use new short naming ([cf28c711](../../commit/cf28c711))
+- update plugin install test for new naming convention ([53350595](../../commit/53350595))
+
+### Changed
+
+- modernize hook system - direct plugin hooks (no orchestration) (#57) ([b0ee1566](../../commit/b0ee1566))
+
+### Other
+
+- format plugin-aliases.ts ([17181c1e](../../commit/17181c1e))
+- Add Han Learns: Automatic plugin detection and installation (#54) ([7edbf7bf](../../commit/7edbf7bf))
+
 ## [3.7.3] - 2026-02-04
 
 ### Added

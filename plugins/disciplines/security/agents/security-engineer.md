@@ -22,6 +22,7 @@ description: |
    security-engineer agent.</commentary></example>
 color: red
 model: inherit
+memory: project
 ---
 
 # Security Engineer

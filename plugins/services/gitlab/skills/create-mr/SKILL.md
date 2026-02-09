@@ -1,4 +1,5 @@
 ---
+name: create-mr
 description: Create a new merge request in a GitLab project
 ---
 

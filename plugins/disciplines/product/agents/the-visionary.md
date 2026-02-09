@@ -22,6 +22,7 @@ description: |
    turn complaints into actionable requirements.</commentary></example>
 model: inherit
 color: pink
+memory: project
 ---
 
 # Product Visionary

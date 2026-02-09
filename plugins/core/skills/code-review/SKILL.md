@@ -1,4 +1,5 @@
 ---
+name: code-review
 allowed-tools:
   - "Bash(gh issue view:*)"
   - "Bash(gh search:*)"

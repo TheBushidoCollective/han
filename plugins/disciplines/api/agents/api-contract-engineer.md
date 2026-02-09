@@ -4,6 +4,7 @@ description: |
   Specialized API contract engineer with expertise in OpenAPI, GraphQL schema design, and contract testing. Use when defining API contracts, implementing schema validation, or setting up contract testing.
 model: inherit
 color: blue
+memory: project
 ---
 
 # API Contract Engineer

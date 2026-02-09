@@ -4,6 +4,7 @@ description: |
   Specialized streaming engineer with expertise in Kafka, real-time data processing, and event-driven systems. Use when implementing real-time data pipelines or stream processing systems.
 model: inherit
 color: blue
+memory: project
 ---
 
 # Streaming Engineer

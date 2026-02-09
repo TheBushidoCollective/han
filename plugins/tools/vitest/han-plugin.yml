@@ -1,23 +1,20 @@
 hooks:
-  # Full test suite at Stop (checkpoint)
   test:
+    event: Stop
     command: |
-      if [ -f bun.lock ] || [ -f bun.lockb ]; then bun run test
-      elif [ -f pnpm-lock.yaml ]; then pnpm run test
-      elif [ -f yarn.lock ]; then yarn test
-      else npm run test; fi
+      if [ -f bun.lock ] || [ -f bun.lockb ]; then bun test
+      elif [ -f pnpm-lock.yaml ]; then pnpm exec vitest run
+      elif [ -f yarn.lock ]; then yarn vitest run
+      else npx vitest run; fi
     dirs_with:
       - "package.json"
     dir_test: "grep -qE '\"vitest\":' package.json"
     if_changed:
       - "**/*.{js,jsx,ts,tsx,mjs,cjs}"
-      - "**/*.test.{js,jsx,ts,tsx}"
-      - "**/*.spec.{js,jsx,ts,tsx}"
       - "vitest.config.*"
 
-  # Single test file async validation on PostToolUse
-  test-async:
-    event: PostToolUse
+  test-changed:
+    event: PostToolUse:Edit|Write|NotebookEdit
     command: |
       if [ -f bun.lock ] || [ -f bun.lockb ]; then bun test ${HAN_FILES}
       elif [ -f pnpm-lock.yaml ]; then pnpm exec vitest run ${HAN_FILES}
@@ -26,12 +23,7 @@ hooks:
     dirs_with:
       - "package.json"
     dir_test: "grep -qE '\"vitest\":' package.json"
-    tool_filter:
-      - Edit
-      - Write
-      - NotebookEdit
-    file_filter:
+    if_changed:
       - "**/*.test.{js,jsx,ts,tsx}"
       - "**/*.spec.{js,jsx,ts,tsx}"
-    # Only run if file contains test code (describe/it/test blocks)
     file_test: grep -qE "(describe|it|test)\s*\(" "${HAN_FILE}"

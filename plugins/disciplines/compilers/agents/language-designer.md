@@ -4,6 +4,7 @@ description: |
   Specialized language designer with expertise in type systems, syntax design, and language ergonomics. Use when designing programming languages, type systems, or language features.
 model: inherit
 color: purple
+memory: project
 ---
 
 # Language Designer

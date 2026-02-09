@@ -316,6 +316,15 @@ pub struct MessageInput {
     pub sentiment_level: Option<String>,
     pub frustration_score: Option<f64>,
     pub frustration_level: Option<String>,
+    // Token usage (extracted from raw_json during indexing)
+    pub input_tokens: Option<i64>,
+    pub output_tokens: Option<i64>,
+    pub cache_read_tokens: Option<i64>,
+    pub cache_creation_tokens: Option<i64>,
+    // Line change tracking (extracted from tool_use content blocks)
+    pub lines_added: Option<i32>,
+    pub lines_removed: Option<i32>,
+    pub files_changed: Option<i32>,
 }
 
 #[napi(object)]
@@ -737,4 +746,128 @@ pub struct ConfigDirInput {
     pub path: String,
     pub name: Option<String>,
     pub is_default: Option<bool>,
+}
+
+// ============================================================================
+// Dashboard Aggregate Result Types (for SQL-based analytics)
+// ============================================================================
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ToolUsageRow {
+    pub tool_name: String,
+    pub count: i64,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SubagentUsageRow {
+    pub subagent_type: String,
+    pub count: i64,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DailyCostRow {
+    pub date: String,
+    pub input_tokens: i64,
+    pub output_tokens: i64,
+    pub cache_read_tokens: i64,
+    pub session_count: i64,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SessionStatsRow {
+    pub session_id: String,
+    pub slug: Option<String>,
+    pub summary: Option<String>,
+    pub input_tokens: i64,
+    pub output_tokens: i64,
+    pub cache_read_tokens: i64,
+    pub turn_count: i64,
+    pub unique_tools: i64,
+    pub started_at: Option<String>,
+    pub message_count: i64,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SessionSentimentRow {
+    pub session_id: String,
+    pub avg_sentiment: f64,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct HookHealthRow {
+    pub hook_name: String,
+    pub total_runs: i64,
+    pub pass_count: i64,
+    pub fail_count: i64,
+    pub avg_duration_ms: f64,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SessionCompactionRow {
+    pub session_id: String,
+    pub compaction_count: i64,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DashboardAggregates {
+    pub tool_usage: Vec<ToolUsageRow>,
+    pub subagent_usage: Vec<SubagentUsageRow>,
+    pub total_input_tokens: i64,
+    pub total_output_tokens: i64,
+    pub total_cache_read_tokens: i64,
+    pub total_sessions: i64,
+    pub total_messages: i64,
+    pub daily_costs: Vec<DailyCostRow>,
+    pub session_stats: Vec<SessionStatsRow>,
+    pub total_compactions: i64,
+    pub total_compaction_sessions: i64,
+    pub session_compactions: Vec<SessionCompactionRow>,
+    pub session_sentiments: Vec<SessionSentimentRow>,
+    pub hook_health: Vec<HookHealthRow>,
+}
+
+// ============================================================================
+// Activity Aggregate Result Types
+// ============================================================================
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DailyActivityRow {
+    pub date: String,
+    pub message_count: i64,
+    pub session_count: i64,
+    pub input_tokens: i64,
+    pub output_tokens: i64,
+    pub cache_read_tokens: i64,
+    pub lines_added: i64,
+    pub lines_removed: i64,
+    pub files_changed: i64,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct HourlyActivityRow {
+    pub hour: i32,
+    pub message_count: i64,
+    pub session_count: i64,
+}
+
+#[napi(object)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ActivityAggregates {
+    pub daily_activity: Vec<DailyActivityRow>,
+    pub hourly_activity: Vec<HourlyActivityRow>,
+    pub total_input_tokens: i64,
+    pub total_output_tokens: i64,
+    pub total_cache_read_tokens: i64,
+    pub total_messages: i64,
+    pub total_sessions: i64,
 }

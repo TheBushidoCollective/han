@@ -1,4 +1,5 @@
 ---
+name: update-sop
 description: Update an existing SOP to reflect changes in tools, processes, or best practices
 ---
 

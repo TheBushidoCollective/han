@@ -1,7 +1,7 @@
 # Browse-client uses Vite, not bun build/test
-# Disable jutsu-bun hooks for this directory
+# Disable bun hooks for this directory
 plugins:
-  jutsu-bun:
+  bun:
     hooks:
       build:
         enabled: false

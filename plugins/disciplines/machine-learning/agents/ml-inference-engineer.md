@@ -4,6 +4,7 @@ description: |
   Specialized ML inference engineer with expertise in model serving, optimization, edge deployment, and quantization. Use when optimizing model inference, implementing prediction APIs, or reducing latency.
 model: inherit
 color: blue
+memory: project
 ---
 
 # ML Inference Engineer

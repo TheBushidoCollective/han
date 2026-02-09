@@ -2,7 +2,7 @@
 
 [![codecov](https://codecov.io/gh/thebushidocollective/han/graph/badge.svg?flag=han-cli)](https://codecov.io/gh/thebushidocollective/han)
 
-Automatic quality gates for Claude Code. Linting, formatting, type-checking, and tests run automatically at the end of every conversation.
+Ship-ready code from your AI coding agent. 139+ plugins for quality gates, tooling, memory, and specialized agents — so your AI writes code that's ready to merge.
 
 ## Installation
 

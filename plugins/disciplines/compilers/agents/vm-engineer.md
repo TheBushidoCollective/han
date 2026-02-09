@@ -4,6 +4,7 @@ description: |
   Specialized VM engineer with expertise in bytecode, virtual machines, JIT compilation, and garbage collection. Use when building VMs, implementing interpreters, or optimizing runtime performance.
 model: inherit
 color: blue
+memory: project
 ---
 
 # VM Engineer

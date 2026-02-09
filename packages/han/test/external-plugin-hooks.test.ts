@@ -447,6 +447,7 @@ hooks:
         join(externalPluginRoot, 'han-plugin.yml'),
         'utf-8'
       );
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing for shell variable placeholder in config
       expect(config).toContain('${CLAUDE_PLUGIN_ROOT}');
     });
   });
