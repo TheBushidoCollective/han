@@ -10,17 +10,17 @@
  */
 export interface GeminiHookInput {
   /** Tool name (for BeforeTool/AfterTool events) */
-  tool_name?: string
+  tool_name?: string;
   /** Tool input parameters */
-  tool_input?: Record<string, unknown>
+  tool_input?: Record<string, unknown>;
   /** LLM request context */
   llm_request?: {
-    messages: Array<{ role: string; content: string }>
-  }
+    messages: Array<{ role: string; content: string }>;
+  };
   /** LLM response (for AfterModel hooks) */
-  llm_response?: unknown
+  llm_response?: unknown;
   /** Final agent response (for AfterAgent hooks) */
-  prompt_response?: unknown
+  prompt_response?: unknown;
 }
 
 /**
@@ -29,13 +29,13 @@ export interface GeminiHookInput {
  */
 export interface GeminiHookOutput {
   /** Decision for tool/agent control */
-  decision?: "allow" | "deny" | "block"
+  decision?: 'allow' | 'deny' | 'block';
   /** Reason for decision (shown to agent) */
-  reason?: string
+  reason?: string;
   /** System message shown to user */
-  systemMessage?: string
+  systemMessage?: string;
   /** Event-specific output */
-  hookSpecificOutput?: Record<string, unknown>
+  hookSpecificOutput?: Record<string, unknown>;
 }
 
 // ─── Han Hook Types ──────────────────────────────────────────────────────────
@@ -45,25 +45,25 @@ export interface GeminiHookOutput {
  */
 export interface HookDefinition {
   /** Hook name (key in the hooks map, e.g. "lint-async") */
-  name: string
+  name: string;
   /** Plugin short name (e.g. "biome") */
-  pluginName: string
+  pluginName: string;
   /** Absolute path to the plugin directory */
-  pluginRoot: string
+  pluginRoot: string;
   /** The hook event type(s) */
-  event: string | string[]
+  event: string | string[];
   /** Shell command to execute (may contain ${HAN_FILES}) */
-  command: string
+  command: string;
   /** Which tools trigger this hook (e.g. ["Edit", "Write", "NotebookEdit"]) */
-  toolFilter?: string[]
+  toolFilter?: string[];
   /** File glob patterns that trigger this hook */
-  fileFilter?: string[]
+  fileFilter?: string[];
   /** Directories required to exist (e.g. ["biome.json"]) */
-  dirsWith?: string[]
+  dirsWith?: string[];
   /** Bash expression to test if hook applies to this directory */
-  dirTest?: string
+  dirTest?: string;
   /** Timeout in milliseconds */
-  timeout?: number
+  timeout?: number;
 }
 
 /**
@@ -71,17 +71,17 @@ export interface HookDefinition {
  */
 export interface HookResult {
   /** The hook that was executed */
-  hook: HookDefinition
+  hook: HookDefinition;
   /** Process exit code (0 = success) */
-  exitCode: number
+  exitCode: number;
   /** Combined stdout output */
-  stdout: string
+  stdout: string;
   /** Combined stderr output */
-  stderr: string
+  stderr: string;
   /** Execution duration in milliseconds */
-  durationMs: number
+  durationMs: number;
   /** Whether the hook was skipped (e.g. no matching files) */
-  skipped: boolean
+  skipped: boolean;
 }
 
 // ─── Provider ────────────────────────────────────────────────────────────────
@@ -89,13 +89,13 @@ export interface HookResult {
 /**
  * Han provider identifies which AI coding tool is running the session.
  */
-export type HanProvider = "gemini-cli" | "opencode" | "claude-code"
+export type HanProvider = 'gemini-cli' | 'opencode' | 'claude-code';
 
 export function getProvider(): HanProvider {
-  const env = process.env.HAN_PROVIDER
-  if (env === "gemini-cli") return "gemini-cli"
-  if (env === "opencode") return "opencode"
-  return "claude-code"
+  const env = process.env.HAN_PROVIDER;
+  if (env === 'gemini-cli') return 'gemini-cli';
+  if (env === 'opencode') return 'opencode';
+  return 'claude-code';
 }
 
 // ─── Gemini CLI → Claude Code Tool Name Mapping ─────────────────────────────
@@ -108,21 +108,21 @@ export function getProvider(): HanProvider {
  * See: https://geminicli.com/docs/tools/shell/
  */
 export const TOOL_NAME_MAP: Record<string, string> = {
-  write_file: "Write",
-  replace: "Edit",
-  run_shell_command: "Bash",
-  read_file: "Read",
-  list_directory: "Glob",
-  glob: "Glob",
-  search_file_content: "Grep",
-  google_web_search: "WebSearch",
-  web_fetch: "WebFetch",
-  save_memory: "Write",
-  write_todos: "TodoWrite",
-}
+  write_file: 'Write',
+  replace: 'Edit',
+  run_shell_command: 'Bash',
+  read_file: 'Read',
+  list_directory: 'Glob',
+  glob: 'Glob',
+  search_file_content: 'Grep',
+  google_web_search: 'WebSearch',
+  web_fetch: 'WebFetch',
+  save_memory: 'Write',
+  write_todos: 'TodoWrite',
+};
 
 export function mapToolName(geminiTool: string): string {
-  return TOOL_NAME_MAP[geminiTool.toLowerCase()] ?? geminiTool
+  return TOOL_NAME_MAP[geminiTool.toLowerCase()] ?? geminiTool;
 }
 
 /**
@@ -130,6 +130,6 @@ export function mapToolName(geminiTool: string): string {
  * Used to determine if PostToolUse validation should run.
  */
 export function isFileWriteTool(geminiTool: string): boolean {
-  const name = geminiTool.toLowerCase()
-  return name === "write_file" || name === "replace"
+  const name = geminiTool.toLowerCase();
+  return name === 'write_file' || name === 'replace';
 }

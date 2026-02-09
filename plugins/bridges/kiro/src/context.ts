@@ -9,8 +9,8 @@
  * userPromptSubmit context → stdout (per-prompt)
  */
 
-import { readFileSync, existsSync } from "node:fs"
-import { join } from "node:path"
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 /**
  * Core guidelines that are always injected into the system prompt.
@@ -58,7 +58,7 @@ Review available skills BEFORE starting work. Use han_skills to:
 2. Load skill content for specialized guidance
 3. Announce which skills you're applying and why
 
-</han-guidelines>`
+</han-guidelines>`;
 
 /**
  * Build the full system prompt context for a Kiro session.
@@ -66,19 +66,21 @@ Review available skills BEFORE starting work. Use han_skills to:
  */
 export function buildSessionContext(
   skillCount: number,
-  disciplineCount: number,
+  disciplineCount: number
 ): string {
-  const lines: string[] = [CORE_GUIDELINES]
+  const lines: string[] = [CORE_GUIDELINES];
 
   // Summary of available capabilities
-  lines.push(`<han-capabilities>`)
+  lines.push(`<han-capabilities>`);
   lines.push(
-    `Han bridge active with ${skillCount} skills and ${disciplineCount} disciplines available.`,
-  )
-  lines.push(`Tools: han_skills (browse/load skills), han_discipline (activate agent personas)`)
-  lines.push(`</han-capabilities>`)
+    `Han bridge active with ${skillCount} skills and ${disciplineCount} disciplines available.`
+  );
+  lines.push(
+    `Tools: han_skills (browse/load skills), han_discipline (activate agent personas)`
+  );
+  lines.push(`</han-capabilities>`);
 
-  return lines.join("\n")
+  return lines.join('\n');
 }
 
 /**
@@ -86,19 +88,19 @@ export function buildSessionContext(
  * Mirrors core plugin's UserPromptSubmit hook: current datetime.
  */
 export function buildPromptContext(): string {
-  const now = new Date()
-  const dateStr = now.toLocaleString("en-US", {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZoneName: "short",
-  })
+  const now = new Date();
+  const dateStr = now.toLocaleString('en-US', {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZoneName: 'short',
+  });
 
-  return `Current local time: ${dateStr}`
+  return `Current local time: ${dateStr}`;
 }
 
 /**
@@ -107,17 +109,17 @@ export function buildPromptContext(): string {
  */
 export function loadGuideline(
   pluginPaths: Map<string, string>,
-  fileName: string,
+  fileName: string
 ): string | null {
-  const corePath = pluginPaths.get("core")
-  if (!corePath) return null
+  const corePath = pluginPaths.get('core');
+  if (!corePath) return null;
 
-  const filePath = join(corePath, "hooks", fileName)
-  if (!existsSync(filePath)) return null
+  const filePath = join(corePath, 'hooks', fileName);
+  if (!existsSync(filePath)) return null;
 
   try {
-    return readFileSync(filePath, "utf-8")
+    return readFileSync(filePath, 'utf-8');
   } catch {
-    return null
+    return null;
   }
 }

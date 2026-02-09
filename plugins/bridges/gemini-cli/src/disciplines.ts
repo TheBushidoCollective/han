@@ -6,42 +6,42 @@
  * for counting and context injection purposes.
  */
 
-import { readFileSync, existsSync } from "node:fs"
-import { join } from "node:path"
-import type { SkillInfo } from "./skills"
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import type { SkillInfo } from './skills';
 
 /**
  * Discipline metadata parsed from a discipline plugin.
  */
 export interface DisciplineInfo {
   /** Discipline name (e.g. "frontend", "sre", "security") */
-  name: string
+  name: string;
   /** Description from plugin.json */
-  description: string
+  description: string;
   /** Plugin root directory */
-  pluginRoot: string
+  pluginRoot: string;
   /** Skills provided by this discipline */
-  skills: SkillInfo[]
+  skills: SkillInfo[];
 }
 
 /**
  * Parse plugin.json for discipline metadata.
  */
 function parsePluginJson(
-  pluginRoot: string,
+  pluginRoot: string
 ): { name: string; description: string } | null {
-  const pluginJsonPath = join(pluginRoot, ".claude-plugin", "plugin.json")
-  if (!existsSync(pluginJsonPath)) return null
+  const pluginJsonPath = join(pluginRoot, '.claude-plugin', 'plugin.json');
+  if (!existsSync(pluginJsonPath)) return null;
 
   try {
-    const content = readFileSync(pluginJsonPath, "utf-8")
-    const json = JSON.parse(content)
+    const content = readFileSync(pluginJsonPath, 'utf-8');
+    const json = JSON.parse(content);
     return {
-      name: json.name ?? "",
-      description: json.description ?? "",
-    }
+      name: json.name ?? '',
+      description: json.description ?? '',
+    };
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -50,7 +50,10 @@ function parsePluginJson(
  * Discipline plugins live in plugins/disciplines/.
  */
 function isDisciplinePlugin(pluginRoot: string): boolean {
-  return pluginRoot.includes("/disciplines/") || pluginRoot.includes("\\disciplines\\")
+  return (
+    pluginRoot.includes('/disciplines/') ||
+    pluginRoot.includes('\\disciplines\\')
+  );
 }
 
 /**
@@ -58,28 +61,28 @@ function isDisciplinePlugin(pluginRoot: string): boolean {
  */
 export function discoverDisciplines(
   resolvedPlugins: Map<string, string>,
-  allSkills: SkillInfo[],
+  allSkills: SkillInfo[]
 ): DisciplineInfo[] {
-  const disciplines: DisciplineInfo[] = []
+  const disciplines: DisciplineInfo[] = [];
 
   for (const [pluginName, pluginRoot] of resolvedPlugins) {
-    if (!isDisciplinePlugin(pluginRoot)) continue
+    if (!isDisciplinePlugin(pluginRoot)) continue;
 
-    const meta = parsePluginJson(pluginRoot)
-    if (!meta) continue
+    const meta = parsePluginJson(pluginRoot);
+    if (!meta) continue;
 
     // Find skills belonging to this discipline
     const disciplineSkills = allSkills.filter(
-      (s) => s.pluginName === pluginName,
-    )
+      (s) => s.pluginName === pluginName
+    );
 
     disciplines.push({
       name: pluginName,
       description: meta.description,
       pluginRoot,
       skills: disciplineSkills,
-    })
+    });
   }
 
-  return disciplines
+  return disciplines;
 }

@@ -13,11 +13,11 @@
  * See: https://kiro.dev/docs/cli/hooks/
  */
 export interface KiroHookPayload {
-  hook_event_name: string
-  cwd: string
-  tool_name?: string
-  tool_input?: Record<string, unknown>
-  tool_response?: Record<string, unknown>
+  hook_event_name: string;
+  cwd: string;
+  tool_name?: string;
+  tool_input?: Record<string, unknown>;
+  tool_response?: Record<string, unknown>;
 }
 
 // ─── Han Hook Types ──────────────────────────────────────────────────────────
@@ -27,25 +27,25 @@ export interface KiroHookPayload {
  */
 export interface HookDefinition {
   /** Hook name (key in the hooks map, e.g. "lint-async") */
-  name: string
+  name: string;
   /** Plugin short name (e.g. "biome") */
-  pluginName: string
+  pluginName: string;
   /** Absolute path to the plugin directory */
-  pluginRoot: string
+  pluginRoot: string;
   /** The hook event type(s) */
-  event: string | string[]
+  event: string | string[];
   /** Shell command to execute (may contain ${HAN_FILES}) */
-  command: string
+  command: string;
   /** Which tools trigger this hook (e.g. ["Edit", "Write", "NotebookEdit"]) */
-  toolFilter?: string[]
+  toolFilter?: string[];
   /** File glob patterns that trigger this hook */
-  fileFilter?: string[]
+  fileFilter?: string[];
   /** Directories required to exist (e.g. ["biome.json"]) */
-  dirsWith?: string[]
+  dirsWith?: string[];
   /** Bash expression to test if hook applies to this directory */
-  dirTest?: string
+  dirTest?: string;
   /** Timeout in milliseconds */
-  timeout?: number
+  timeout?: number;
 }
 
 /**
@@ -53,17 +53,17 @@ export interface HookDefinition {
  */
 export interface HookResult {
   /** The hook that was executed */
-  hook: HookDefinition
+  hook: HookDefinition;
   /** Process exit code (0 = success) */
-  exitCode: number
+  exitCode: number;
   /** Combined stdout output */
-  stdout: string
+  stdout: string;
   /** Combined stderr output */
-  stderr: string
+  stderr: string;
   /** Execution duration in milliseconds */
-  durationMs: number
+  durationMs: number;
   /** Whether the hook was skipped (e.g. no matching files) */
-  skipped: boolean
+  skipped: boolean;
 }
 
 // ─── Provider ────────────────────────────────────────────────────────────────
@@ -71,13 +71,13 @@ export interface HookResult {
 /**
  * Han provider identifies which AI coding tool is running the session.
  */
-export type HanProvider = "kiro" | "opencode" | "claude-code"
+export type HanProvider = 'kiro' | 'opencode' | 'claude-code';
 
 export function getProvider(): HanProvider {
-  const env = process.env.HAN_PROVIDER
-  if (env === "kiro") return "kiro"
-  if (env === "opencode") return "opencode"
-  return "claude-code"
+  const env = process.env.HAN_PROVIDER;
+  if (env === 'kiro') return 'kiro';
+  if (env === 'opencode') return 'opencode';
+  return 'claude-code';
 }
 
 // ─── Kiro → Claude Code Tool Name Mapping ────────────────────────────────────
@@ -89,17 +89,17 @@ export function getProvider(): HanProvider {
  * See: https://kiro.dev/docs/cli/reference/built-in-tools/
  */
 export const TOOL_NAME_MAP: Record<string, string> = {
-  fs_read: "Read",
-  fs_write: "Write",
-  execute_bash: "Bash",
-  glob: "Glob",
-  grep: "Grep",
-  notebook_edit: "NotebookEdit",
-  use_aws: "Bash",
-}
+  fs_read: 'Read',
+  fs_write: 'Write',
+  execute_bash: 'Bash',
+  glob: 'Glob',
+  grep: 'Grep',
+  notebook_edit: 'NotebookEdit',
+  use_aws: 'Bash',
+};
 
 export function mapToolName(kiroTool: string): string {
-  return TOOL_NAME_MAP[kiroTool.toLowerCase()] ?? kiroTool
+  return TOOL_NAME_MAP[kiroTool.toLowerCase()] ?? kiroTool;
 }
 
 /**
@@ -107,6 +107,6 @@ export function mapToolName(kiroTool: string): string {
  * Used to determine if PostToolUse validation should run.
  */
 export function isFileWriteTool(kiroTool: string): boolean {
-  const name = kiroTool.toLowerCase()
-  return name === "fs_write" || name === "notebook_edit"
+  const name = kiroTool.toLowerCase();
+  return name === 'fs_write' || name === 'notebook_edit';
 }
