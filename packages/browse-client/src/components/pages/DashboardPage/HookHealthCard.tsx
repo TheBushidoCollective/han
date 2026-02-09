@@ -7,11 +7,11 @@
 
 import type React from "react";
 import { useMemo } from "react";
+import { theme } from "@/components/atoms";
 import { Box } from "@/components/atoms/Box.tsx";
 import { HStack } from "@/components/atoms/HStack.tsx";
 import { Text } from "@/components/atoms/Text.tsx";
 import { VStack } from "@/components/atoms/VStack.tsx";
-import { theme } from "@/components/atoms";
 
 interface HookHealthStats {
 	readonly hookName: string;
@@ -101,10 +101,7 @@ export function HookHealthCard({
 						weight="semibold"
 						size="sm"
 						style={{
-							color:
-								summary.passing === summary.total
-									? "#10b981"
-									: "#f59e0b",
+							color: summary.passing === summary.total ? "#10b981" : "#f59e0b",
 						}}
 					>
 						{summary.passing}/{summary.total}
@@ -123,11 +120,7 @@ export function HookHealthCard({
 					const rateColor = getPassRateColor(hook.passRate);
 
 					return (
-						<VStack
-							key={hook.hookName}
-							gap="xs"
-							style={{ width: "100%" }}
-						>
+						<VStack key={hook.hookName} gap="xs" style={{ width: "100%" }}>
 							{/* Hook name and stats */}
 							<HStack
 								justify="space-between"

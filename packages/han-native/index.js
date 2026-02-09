@@ -480,6 +480,8 @@ const {
   completeAsyncHook,
   cancelAsyncHook,
   clearAsyncHookQueueForSession,
+  queryDashboardAggregates,
+  queryActivityAggregates,
   truncateDerivedTables,
 } = nativeBinding;
 
@@ -639,4 +641,6 @@ module.exports.cancelPendingAsyncHooks = cancelPendingAsyncHooks;
 module.exports.completeAsyncHook = completeAsyncHook;
 module.exports.cancelAsyncHook = cancelAsyncHook;
 module.exports.clearAsyncHookQueueForSession = clearAsyncHookQueueForSession;
+module.exports.queryDashboardAggregates = queryDashboardAggregates;
+module.exports.queryActivityAggregates = queryActivityAggregates;
 module.exports.truncateDerivedTables = truncateDerivedTables;

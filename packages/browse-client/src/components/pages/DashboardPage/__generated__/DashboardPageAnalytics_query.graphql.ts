@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<08380935712d72274382ea669264c99b>>
+ * @generated SignedSource<<31627fcb3967d2c0ac25bc999377bbd2>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -21,6 +21,7 @@ export type DashboardPageAnalytics_query$data = {
       readonly sessionId: string | null | undefined;
       readonly slug: string | null | undefined;
       readonly startedAt: string | null | undefined;
+      readonly summary: string | null | undefined;
       readonly taskCompletionRate: number | null | undefined;
       readonly turnCount: number | null | undefined;
     }> | null | undefined;
@@ -98,6 +99,7 @@ export type DashboardPageAnalytics_query$data = {
       readonly sessionId: string | null | undefined;
       readonly slug: string | null | undefined;
       readonly startedAt: string | null | undefined;
+      readonly summary: string | null | undefined;
       readonly taskCompletionRate: number | null | undefined;
       readonly turnCount: number | null | undefined;
     }> | null | undefined;
@@ -141,6 +143,13 @@ v3 = {
 v4 = [
   (v1/*: any*/),
   (v2/*: any*/),
+  {
+    "alias": null,
+    "args": null,
+    "kind": "ScalarField",
+    "name": "summary",
+    "storageKey": null
+  },
   {
     "alias": null,
     "args": null,
@@ -623,6 +632,6 @@ return {
 };
 })();
 
-(node as any).hash = "0454d928bbd8df598ee0ce1f97adfb53";
+(node as any).hash = "6fa761e962c838917966a480851339ff";
 
 export default node;

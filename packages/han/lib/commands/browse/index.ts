@@ -287,9 +287,9 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
     );
   }
 
-  // If not local mode, open remote dashboard with coordinator port and return
+  // If not local mode, open remote dashboard and return
   if (!local) {
-    const dashboardUrl = `https://dashboard.local.han.guru?coordinatorPort=${coordinatorPort}`;
+    const dashboardUrl = 'https://dashboard.local.han.guru';
     console.log(`[han] Opening remote dashboard at ${dashboardUrl}`);
     await openBrowser(dashboardUrl);
     return;

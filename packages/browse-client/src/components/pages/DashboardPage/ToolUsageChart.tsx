@@ -7,11 +7,11 @@
 
 import type React from "react";
 import { useMemo } from "react";
+import { theme } from "@/components/atoms";
 import { Box } from "@/components/atoms/Box.tsx";
 import { HStack } from "@/components/atoms/HStack.tsx";
 import { Text } from "@/components/atoms/Text.tsx";
 import { VStack } from "@/components/atoms/VStack.tsx";
-import { theme } from "@/components/atoms";
 
 interface ToolUsageStats {
 	readonly toolName: string;
@@ -126,9 +126,7 @@ export function ToolUsageChart({
 			<VStack gap="sm" style={{ width: "100%" }}>
 				{sorted.map((entry) => {
 					const barWidth =
-						maxCount > 0
-							? Math.max((entry.count / maxCount) * 100, 2)
-							: 0;
+						maxCount > 0 ? Math.max((entry.count / maxCount) * 100, 2) : 0;
 					const percentage =
 						total > 0 ? ((entry.count / total) * 100).toFixed(1) : "0";
 					const color = getToolColor(entry.toolName);

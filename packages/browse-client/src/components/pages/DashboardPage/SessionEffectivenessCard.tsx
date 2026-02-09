@@ -2,20 +2,21 @@
  * Session Effectiveness Card Component
  *
  * Shows top and bottom sessions ranked by effectiveness score.
- * Each row displays score badge, slug, and inline metrics.
+ * Each row displays score badge, summary (or slug fallback), date, and inline metrics.
  */
 
 import type React from "react";
+import { theme } from "@/components/atoms";
 import { Box } from "@/components/atoms/Box.tsx";
 import { HStack } from "@/components/atoms/HStack.tsx";
 import { Pressable } from "@/components/atoms/Pressable.tsx";
 import { Text } from "@/components/atoms/Text.tsx";
 import { VStack } from "@/components/atoms/VStack.tsx";
-import { theme } from "@/components/atoms";
 
 interface SessionEffectiveness {
 	readonly sessionId: string;
 	readonly slug: string | null;
+	readonly summary: string | null;
 	readonly score: number;
 	readonly sentimentTrend: string;
 	readonly avgSentimentScore: number;
@@ -67,15 +68,32 @@ function getTrendDisplay(trend: string): { arrow: string; color: string } {
 }
 
 /**
- * Truncate session ID for display
+ * Format date for display (relative or short date)
+ */
+function formatSessionDate(dateStr: string | null): string {
+	if (!dateStr) return "";
+	const d = new Date(dateStr);
+	const now = new Date();
+	const diffMs = now.getTime() - d.getTime();
+	const diffDays = Math.floor(diffMs / 86400000);
+
+	if (diffDays === 0) return "Today";
+	if (diffDays === 1) return "Yesterday";
+	if (diffDays < 7) return `${diffDays}d ago`;
+	return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+/**
+ * Get session display label - prefer summary over slug
  */
 function getSessionLabel(session: SessionEffectiveness): string {
+	if (session.summary) return session.summary;
 	if (session.slug) return session.slug;
 	return `${session.sessionId.slice(0, 12)}...`;
 }
 
 /**
- * A single session row
+ * A single session row with two-line layout
  */
 function SessionRow({
 	session,
@@ -87,6 +105,7 @@ function SessionRow({
 	const scoreColor = getScoreColor(session.score);
 	const scoreBg = getScoreBgColor(session.score);
 	const trend = getTrendDisplay(session.sentimentTrend);
+	const hasSummary = !!session.summary;
 
 	const content = (
 		<HStack
@@ -94,7 +113,7 @@ function SessionRow({
 			align="center"
 			style={{
 				width: "100%",
-				paddingVertical: theme.spacing.xs,
+				paddingVertical: theme.spacing.sm,
 				paddingHorizontal: theme.spacing.sm,
 				borderRadius: theme.radii.md,
 			}}
@@ -109,6 +128,7 @@ function SessionRow({
 					alignItems: "center",
 					justifyContent: "center",
 					display: "flex",
+					flexShrink: 0,
 				}}
 			>
 				<Text
@@ -120,20 +140,39 @@ function SessionRow({
 				</Text>
 			</Box>
 
-			{/* Session name */}
-			<Text
-				size="sm"
+			{/* Session info - summary/slug + date */}
+			<VStack
+				gap="xs"
 				style={{
 					flex: 1,
-					overflow: "hidden",
+					minWidth: 0,
 				}}
-				numberOfLines={1}
 			>
-				{getSessionLabel(session)}
-			</Text>
+				<Text
+					size="sm"
+					style={{
+						overflow: "hidden",
+					}}
+					numberOfLines={1}
+				>
+					{getSessionLabel(session)}
+				</Text>
+				<HStack gap="sm" align="center">
+					{session.startedAt && (
+						<Text color="muted" size="xs">
+							{formatSessionDate(session.startedAt)}
+						</Text>
+					)}
+					{hasSummary && session.slug && (
+						<Text color="muted" size="xs" numberOfLines={1}>
+							{session.slug}
+						</Text>
+					)}
+				</HStack>
+			</VStack>
 
 			{/* Inline metrics */}
-			<HStack gap="sm" align="center">
+			<HStack gap="sm" align="center" style={{ flexShrink: 0 }}>
 				{/* Turns */}
 				<Text color="muted" size="xs">
 					{session.turnCount}t
@@ -188,7 +227,7 @@ export function SessionEffectivenessCard({
 		<VStack gap="md" style={{ width: "100%" }}>
 			{/* Most Effective section */}
 			{topSessions.length > 0 && (
-				<VStack gap="sm" style={{ width: "100%" }}>
+				<VStack gap="xs" style={{ width: "100%" }}>
 					<HStack gap="xs" align="center">
 						<Box
 							style={{
@@ -202,7 +241,7 @@ export function SessionEffectivenessCard({
 							Most Effective
 						</Text>
 					</HStack>
-					<VStack gap="xs" style={{ width: "100%" }}>
+					<VStack style={{ width: "100%", gap: 2 }}>
 						{topSessions.map((session) => (
 							<SessionRow
 								key={session.sessionId}
@@ -231,7 +270,7 @@ export function SessionEffectivenessCard({
 
 			{/* Needs Improvement section */}
 			{bottomSessions.length > 0 && (
-				<VStack gap="sm" style={{ width: "100%" }}>
+				<VStack gap="xs" style={{ width: "100%" }}>
 					<HStack gap="xs" align="center">
 						<Box
 							style={{
@@ -245,7 +284,7 @@ export function SessionEffectivenessCard({
 							Needs Improvement
 						</Text>
 					</HStack>
-					<VStack gap="xs" style={{ width: "100%" }}>
+					<VStack style={{ width: "100%", gap: 2 }}>
 						{bottomSessions.map((session) => (
 							<SessionRow
 								key={session.sessionId}

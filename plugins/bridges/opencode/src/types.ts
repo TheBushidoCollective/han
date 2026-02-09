@@ -9,67 +9,67 @@
  * See: https://opencode.ai/docs/plugins/
  */
 export interface OpenCodePluginContext {
-  client: OpenCodeClient
-  project: unknown
-  directory: string
-  worktree: string
-  $: BunShell
+  client: OpenCodeClient;
+  project: unknown;
+  directory: string;
+  worktree: string;
+  $: BunShell;
 }
 
 export interface OpenCodeClient {
   session: {
     prompt(args: {
-      path: { id: string }
+      path: { id: string };
       body: {
-        noReply?: boolean
-        parts: Array<{ type: "text"; text: string }>
-      }
-    }): Promise<void>
-  }
+        noReply?: boolean;
+        parts: Array<{ type: 'text'; text: string }>;
+      };
+    }): Promise<void>;
+  };
 }
 
 export type BunShell = (
   strings: TemplateStringsArray,
   ...values: unknown[]
-) => Promise<{ exitCode: number; stdout: Buffer; stderr: Buffer }>
+) => Promise<{ exitCode: number; stdout: Buffer; stderr: Buffer }>;
 
 /**
  * OpenCode tool event shape from tool.execute.before.
  * Allows modifying args before execution.
  */
 export interface ToolBeforeInput {
-  tool: string
-  sessionID: string
-  callID: string
+  tool: string;
+  sessionID: string;
+  callID: string;
 }
 
 export interface ToolBeforeOutput {
-  args: Record<string, unknown>
+  args: Record<string, unknown>;
 }
 
 /**
  * OpenCode tool event shape from tool.execute.after.
  */
 export interface ToolEventInput {
-  tool: string
-  sessionID: string
-  callID: string
+  tool: string;
+  sessionID: string;
+  callID: string;
 }
 
 export interface ToolEventOutput {
-  title: string
-  output: string
-  metadata?: Record<string, unknown>
+  title: string;
+  output: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface OpenCodeEvent {
-  type: string
-  properties?: Record<string, unknown>
+  type: string;
+  properties?: Record<string, unknown>;
 }
 
 export interface StopResult {
-  continue: boolean
-  assistantMessage?: string
+  continue: boolean;
+  assistantMessage?: string;
 }
 
 // ─── Han Hook Types ──────────────────────────────────────────────────────────
@@ -79,25 +79,25 @@ export interface StopResult {
  */
 export interface HookDefinition {
   /** Hook name (key in the hooks map, e.g. "lint-async") */
-  name: string
+  name: string;
   /** Plugin short name (e.g. "biome") */
-  pluginName: string
+  pluginName: string;
   /** Absolute path to the plugin directory */
-  pluginRoot: string
+  pluginRoot: string;
   /** The hook event type(s) */
-  event: string | string[]
+  event: string | string[];
   /** Shell command to execute (may contain ${HAN_FILES}) */
-  command: string
+  command: string;
   /** Which tools trigger this hook (e.g. ["Edit", "Write", "NotebookEdit"]) */
-  toolFilter?: string[]
+  toolFilter?: string[];
   /** File glob patterns that trigger this hook */
-  fileFilter?: string[]
+  fileFilter?: string[];
   /** Directories required to exist (e.g. ["biome.json"]) */
-  dirsWith?: string[]
+  dirsWith?: string[];
   /** Bash expression to test if hook applies to this directory */
-  dirTest?: string
+  dirTest?: string;
   /** Timeout in milliseconds */
-  timeout?: number
+  timeout?: number;
 }
 
 /**
@@ -105,17 +105,17 @@ export interface HookDefinition {
  */
 export interface HookResult {
   /** The hook that was executed */
-  hook: HookDefinition
+  hook: HookDefinition;
   /** Process exit code (0 = success) */
-  exitCode: number
+  exitCode: number;
   /** Combined stdout output */
-  stdout: string
+  stdout: string;
   /** Combined stderr output */
-  stderr: string
+  stderr: string;
   /** Execution duration in milliseconds */
-  durationMs: number
+  durationMs: number;
   /** Whether the hook was skipped (e.g. no matching files) */
-  skipped: boolean
+  skipped: boolean;
 }
 
 // ─── Provider ────────────────────────────────────────────────────────────────
@@ -124,12 +124,12 @@ export interface HookResult {
  * Han provider identifies which AI coding tool is running the session.
  * Defaults to "claude-code" when HAN_PROVIDER is not set.
  */
-export type HanProvider = "opencode" | "claude-code"
+export type HanProvider = 'opencode' | 'claude-code';
 
 export function getProvider(): HanProvider {
-  const env = process.env.HAN_PROVIDER
-  if (env === "opencode") return "opencode"
-  return "claude-code"
+  const env = process.env.HAN_PROVIDER;
+  if (env === 'opencode') return 'opencode';
+  return 'claude-code';
 }
 
 // ─── OpenCode → Claude Code Tool Name Mapping ───────────────────────────────
@@ -139,15 +139,15 @@ export function getProvider(): HanProvider {
  * OpenCode uses lowercase; Claude Code uses PascalCase.
  */
 export const TOOL_NAME_MAP: Record<string, string> = {
-  edit: "Edit",
-  write: "Write",
-  bash: "Bash",
-  read: "Read",
-  glob: "Glob",
-  grep: "Grep",
-  notebook_edit: "NotebookEdit",
-}
+  edit: 'Edit',
+  write: 'Write',
+  bash: 'Bash',
+  read: 'Read',
+  glob: 'Glob',
+  grep: 'Grep',
+  notebook_edit: 'NotebookEdit',
+};
 
 export function mapToolName(openCodeTool: string): string {
-  return TOOL_NAME_MAP[openCodeTool.toLowerCase()] ?? openCodeTool
+  return TOOL_NAME_MAP[openCodeTool.toLowerCase()] ?? openCodeTool;
 }

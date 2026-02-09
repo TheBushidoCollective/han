@@ -9,9 +9,9 @@ const AUTHOR_EMAIL = "info@han.guru";
 
 // Create the RSS feed
 const feed = new Feed({
-	title: "Han Blog - Claude Code Plugin Marketplace",
+	title: "Han Blog - AI Coding Agent Plugin Marketplace",
 	description:
-		"News, tutorials, and insights about Han plugins for Claude Code built on Bushido principles",
+		"News, tutorials, and insights about Han plugins for AI coding agents built on Bushido principles",
 	id: SITE_URL,
 	link: SITE_URL,
 	language: "en",

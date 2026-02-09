@@ -15,8 +15,8 @@
  */
 
 import { join } from 'node:path';
-import { getHanDataDir } from '../../config/claude-settings.ts';
 import { createInterface } from 'node:readline';
+import { getHanDataDir } from '../../config/claude-settings.ts';
 import {
   detectTemporalQuery,
   grepTranscripts,

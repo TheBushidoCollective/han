@@ -9,7 +9,8 @@
     "outDir": "dist",
     "rootDir": "src",
     "declaration": true,
-    "types": ["bun-types"]
+    "typeRoots": ["../../../packages/han/node_modules/@types"],
+    "types": ["node"]
   },
   "include": ["src/**/*.ts"]
 }

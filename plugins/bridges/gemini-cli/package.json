@@ -1,0 +1,40 @@
+{
+  "name": "gemini-cli-extension-han",
+  "version": "0.1.0",
+  "description": "Han bridge for Gemini CLI - enables Han's validation hooks and plugin ecosystem in Gemini CLI sessions",
+  "main": "src/bridge.ts",
+  "type": "module",
+  "files": [
+    "src/",
+    "hooks/",
+    "gemini-extension.json",
+    "gemini-hooks.json",
+    "install.sh",
+    "GEMINI.md"
+  ],
+  "keywords": [
+    "gemini-cli",
+    "gemini",
+    "gemini-extension",
+    "han",
+    "claude-code",
+    "hooks",
+    "validation",
+    "linting",
+    "bridge"
+  ],
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thebushidocollective/han",
+    "directory": "plugins/bridges/gemini-cli"
+  },
+  "homepage": "https://github.com/thebushidocollective/han/tree/main/plugins/bridges/gemini-cli",
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}

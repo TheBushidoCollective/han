@@ -6,10 +6,12 @@
 hooks: {}
 
 # Learn patterns - regex patterns that trigger auto-installation when detected in user prompts
-# Matches Sentry URLs and DSN patterns
+# Matches Sentry URLs (cloud and self-hosted) and DSN patterns
 learn_patterns:
   - "https?://[^\\s]*\\.sentry\\.io/[^\\s]+"
   - "https?://[^\\s]*@[^\\s]*\\.ingest\\.sentry\\.io"
+  - "self-hosted sentry"
+  - "sentry.*self.hosted"
 
 # Memory provider for team memory extraction from Sentry
 # Convention: provider name = plugin name, script = memory-provider.ts

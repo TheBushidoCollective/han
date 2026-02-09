@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.36.5] - 2026-02-09
+
+### Added
+
+- add split-flap board hero component with animated character display ([00be1280](../../commit/00be1280))
+
+### Fixed
+
+- make website messaging provider-agnostic ([079e0bba](../../commit/079e0bba))
+- per-tile flip animation and add all supported providers ([c52fed9f](../../commit/c52fed9f))
+- use official Claude starburst logo and show all tile positions as letter boxes ([2fe100ab](../../commit/2fe100ab))
+
+### Changed
+
+- update tagline from "Ship-Ready" to "Releasable Code" ([ccbc736b](../../commit/ccbc736b))
+- update tagline from "quality gates" to "ship-ready code" ([6f9ed037](../../commit/6f9ed037))
+- replace split-flap tiles with Vengence UI CSS flip animation ([392f5791](../../commit/392f5791))
+- remove provider icons from split-flap board and add Antigravity ([798642d5](../../commit/798642d5))
+
+### Other
+
+- add quotes around "Ship-Ready" in hero tagline ([c7a281d0](../../commit/c7a281d0))
+- move split-flap board to its own line in hero heading ([50f2da86](../../commit/50f2da86))
+- Add OpenCode bridge plugin for Han hook ecosystem (#61) ([322d0324](../../commit/322d0324))
+
+## [1.36.4] - 2026-02-09
+
+### Added
+
+- add split-flap board hero component with animated character display ([00be1280](../../commit/00be1280))
+
+### Fixed
+
+- make website messaging provider-agnostic ([079e0bba](../../commit/079e0bba))
+- per-tile flip animation and add all supported providers ([c52fed9f](../../commit/c52fed9f))
+- use official Claude starburst logo and show all tile positions as letter boxes ([2fe100ab](../../commit/2fe100ab))
+
+### Changed
+
+- replace split-flap tiles with Vengence UI CSS flip animation ([392f5791](../../commit/392f5791))
+- remove provider icons from split-flap board and add Antigravity ([798642d5](../../commit/798642d5))
+
+### Other
+
+- move split-flap board to its own line in hero heading ([50f2da86](../../commit/50f2da86))
+- Add OpenCode bridge plugin for Han hook ecosystem (#61) ([322d0324](../../commit/322d0324))
+
 ## [1.36.3] - 2026-02-08
 
 ### Other
