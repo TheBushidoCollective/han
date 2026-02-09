@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.10.2] - 2026-02-09
+
+### Added
+
+- add session summary to dashboard analytics ([eb6bf474](../../commit/eb6bf474))
+- add native task CRUD operations and refactor activity/analytics types ([01b76f7e](../../commit/01b76f7e))
+- add dashboard analytics enhancements with effectiveness scoring, subagent tracking, and cost analysis (#63) ([351e9960](../../commit/351e9960))
+- auto-generate hooks.json from han-plugin.yml with shorthand events ([f3a39941](../../commit/f3a39941))
+
+### Fixed
+
+- exclude test temp directories from biome and git ([11954724](../../commit/11954724))
+- coordinator crash on metrics query and remove coordinatorPort from dashboard URL ([9626ba11](../../commit/9626ba11))
+- resolve biome lint warnings in opencode bridge plugin ([f0d5def8](../../commit/f0d5def8))
+- inline small hook output instead of writing to file ([9adfef93](../../commit/9adfef93))
+- use output size to decide subagent vs direct fix in hook failures ([1e97aaf6](../../commit/1e97aaf6))
+- async Stop hooks, merge test/test-async, fix plugin name resolution ([ba6474e8](../../commit/ba6474e8))
+
+### Changed
+
+- update tagline from "quality gates" to "ship-ready code" ([6f9ed037](../../commit/6f9ed037))
+- remove file_filter, split test hooks into Stop + PostToolUse ([bd1b5e34](../../commit/bd1b5e34))
+
+### Other
+
+- normalize package.json indentation to spaces ([8523b7b0](../../commit/8523b7b0))
+- document fullScanAndIndex coordinator startup flow and analyze when it runs ([0b720f97](../../commit/0b720f97))
+- apply biome auto-formatting to recently added files ([e99aff5b](../../commit/e99aff5b))
+- Add OpenCode bridge plugin for Han hook ecosystem (#61) ([322d0324](../../commit/322d0324))
+- reformat package.json indentation ([ebab8d64](../../commit/ebab8d64))
+- document validate.ts duplication and dead code ([3939add5](../../commit/3939add5))
+
 ## [3.10.1] - 2026-02-09
 
 ### Added
