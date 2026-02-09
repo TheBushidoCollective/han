@@ -981,6 +981,21 @@
       ]
     },
     {
+      "name": "kiro",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with Kiro CLI by translating Kiro hook events into Han hook executions.",
+      "source": "./plugins/bridges/kiro",
+      "category": "Integration",
+      "keywords": [
+        "kiro",
+        "kiro-cli",
+        "bridge",
+        "hooks",
+        "compatibility",
+        "claude-code",
+        "validation"
+      ]
+    },
+    {
       "name": "codex",
       "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with OpenAI Codex CLI by translating Codex events into Claude Code hook invocations.",
       "source": "./plugins/bridges/codex",
@@ -2536,6 +2551,21 @@
       "category": "Integration",
       "keywords": [
         "opencode",
+        "bridge",
+        "hooks",
+        "compatibility",
+        "claude-code",
+        "validation"
+      ]
+    },
+    {
+      "name": "hashi-kiro",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with Kiro CLI by translating Kiro hook events into Han hook executions.",
+      "source": "./plugins/bridges/kiro",
+      "category": "Integration",
+      "keywords": [
+        "kiro",
+        "kiro-cli",
         "bridge",
         "hooks",
         "compatibility",
