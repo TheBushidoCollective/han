@@ -44,20 +44,22 @@ curl -fsSL https://bun.sh/install | bash
 
 ### 3. Install the Gemini CLI extension
 
-Copy the extension to your Gemini CLI extensions directory:
+Use the install script to set up the extension:
 
 ```bash
-mkdir -p ~/.gemini/extensions
-cp -r "$(han plugin path gemini-cli)" ~/.gemini/extensions/han
+# If han is installed, find the plugin path
+bash "$(han plugin path gemini-cli)/install.sh"
 ```
 
 Or install directly from the Han repository:
 
 ```bash
 git clone --depth 1 https://github.com/TheBushidoCollective/han.git /tmp/han
-cp -r /tmp/han/plugins/bridges/gemini-cli ~/.gemini/extensions/han
+bash /tmp/han/plugins/bridges/gemini-cli/install.sh /tmp/han/plugins/bridges/gemini-cli
 rm -rf /tmp/han
 ```
+
+The install script copies the extension to `~/.gemini/extensions/han/` and configures the Gemini CLI hooks.
 
 Verify the extension is installed:
 

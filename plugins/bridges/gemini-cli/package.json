@@ -8,6 +8,8 @@
     "src/",
     "hooks/",
     "gemini-extension.json",
+    "gemini-hooks.json",
+    "install.sh",
     "GEMINI.md"
   ],
   "keywords": [

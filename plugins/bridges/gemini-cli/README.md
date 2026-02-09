@@ -80,18 +80,19 @@ han plugin install --auto
 
 ### Install the Extension
 
-Copy the extension to your Gemini CLI extensions directory:
+Use the install script to set up the Gemini CLI extension:
 
 ```bash
 # From the han repo
-cp -r plugins/bridges/gemini-cli ~/.gemini/extensions/han
+bash plugins/bridges/gemini-cli/install.sh
 
-# Or clone directly
-mkdir -p ~/.gemini/extensions
+# Or clone and install
 git clone --depth 1 https://github.com/TheBushidoCollective/han.git /tmp/han
-cp -r /tmp/han/plugins/bridges/gemini-cli ~/.gemini/extensions/han
+bash /tmp/han/plugins/bridges/gemini-cli/install.sh /tmp/han/plugins/bridges/gemini-cli
 rm -rf /tmp/han
 ```
+
+The install script copies the extension to `~/.gemini/extensions/han/` and sets up the correct hooks configuration for Gemini CLI.
 
 Verify installation:
 
@@ -99,6 +100,8 @@ Verify installation:
 gemini extensions list
 # Should show "han" extension
 ```
+
+**Note:** The source repository stores Gemini CLI hooks in `gemini-hooks.json` (not `hooks/hooks.json`) to avoid conflicts with Claude Code's plugin validation. The install script places them at the correct `hooks/hooks.json` path that Gemini CLI expects.
 
 ## Architecture
 
