@@ -119,12 +119,18 @@ function discoverPluginSkills(
             : [],
           filePath: skillMd,
         })
-      } catch {
-        // Skip unreadable skills
+      } catch (err) {
+        console.error(
+          `[han] Warning: could not read skill ${entry.name} in ${pluginName}:`,
+          err instanceof Error ? err.message : err,
+        )
       }
     }
-  } catch {
-    // Skills directory not readable
+  } catch (err) {
+    console.error(
+      `[han] Warning: could not read skills directory for ${pluginName}:`,
+      err instanceof Error ? err.message : err,
+    )
   }
 
   return skills

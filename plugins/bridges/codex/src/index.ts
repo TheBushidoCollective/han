@@ -87,11 +87,11 @@ function extractFilePaths(
   const paths: string[] = []
 
   // Check metadata for file path
-  if (output.metadata) {
-    const meta = output.metadata as Record<string, unknown>
-    if (typeof meta.path === "string") paths.push(meta.path)
-    if (typeof meta.file_path === "string") paths.push(meta.file_path)
-    if (typeof meta.filePath === "string") paths.push(meta.filePath)
+  if (output.metadata && typeof output.metadata === "object") {
+    const meta = output.metadata
+    if ("path" in meta && typeof meta.path === "string") paths.push(meta.path)
+    if ("file_path" in meta && typeof meta.file_path === "string") paths.push(meta.file_path)
+    if ("filePath" in meta && typeof meta.filePath === "string") paths.push(meta.filePath)
   }
 
   // Check title for file path (common pattern: "Edit: src/foo.ts")
@@ -408,9 +408,13 @@ async function hanBridgePlugin(ctx: CodexPluginContext) {
       const claudeToolName = mapToolName(input.tool)
 
       // Inject discipline context into task/agent tool prompts
-      if (activeDiscipline && output.args) {
-        const prompt = output.args.prompt as string | undefined
-        const message = output.args.message as string | undefined
+      if (activeDiscipline && output.args && typeof output.args === "object") {
+        const prompt = "prompt" in output.args && typeof output.args.prompt === "string"
+          ? output.args.prompt
+          : undefined
+        const message = "message" in output.args && typeof output.args.message === "string"
+          ? output.args.message
+          : undefined
         const target = prompt ?? message
 
         if (target && (claudeToolName === "Task" || input.tool === "agent")) {
@@ -536,7 +540,8 @@ async function hanBridgePlugin(ctx: CodexPluginContext) {
      */
     event: async ({ event }: { event: CodexEvent }) => {
       if (event.type === "session.idle") {
-        const eventSessionId = event.properties?.sessionID as string | undefined
+        const rawSessionId = event.properties?.sessionID
+        const eventSessionId = typeof rawSessionId === "string" ? rawSessionId : undefined
 
         // Wait for any pending PostToolUse validations to finish
         if (pendingValidations.size > 0) {

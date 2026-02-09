@@ -44,7 +44,11 @@ function parsePluginJson(
       name: json.name ?? "",
       description: json.description ?? "",
     }
-  } catch {
+  } catch (err) {
+    console.error(
+      `[han] Warning: could not parse plugin.json at ${pluginJsonPath}:`,
+      err instanceof Error ? err.message : err,
+    )
     return null
   }
 }

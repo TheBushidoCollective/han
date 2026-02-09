@@ -111,19 +111,31 @@ han plugin install --auto
 
 ### Install the Bridge
 
-**Option A: MCP Server** (recommended for immediate use)
+**Option A: Han Marketplace** (recommended)
 
-Add to your `~/.codex/config.toml`:
+Install via Han CLI, which makes the bridge available to Codex:
+
+```bash
+han plugin install codex-bridge@han
+```
+
+Then add to your `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.han]
-command = "npx"
-args = ["-y", "codex-plugin-han"]
+command = "bun"
+args = ["run", "~/.claude/plugins/cache/han/bridges/codex/src/index.ts"]
 ```
 
-**Option B: Local plugin**
+**Option B: From Source**
 
-Copy the `src/` directory to your project and reference it in your Codex configuration.
+Clone the Han repository and reference the bridge directly:
+
+```toml
+[mcp_servers.han]
+command = "bun"
+args = ["run", "/path/to/han/plugins/bridges/codex/src/index.ts"]
+```
 
 ### AGENTS.md Integration
 

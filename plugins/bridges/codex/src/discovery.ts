@@ -59,8 +59,11 @@ function getEnabledPlugins(projectDir: string): string[] {
           pluginNames.add(cleanName)
         }
       }
-    } catch {
-      // Skip unreadable settings files
+    } catch (err) {
+      console.error(
+        `[han] Warning: could not read settings file ${path}:`,
+        err instanceof Error ? err.message : err,
+      )
     }
   }
 
@@ -97,7 +100,11 @@ function findMarketplace(projectDir: string): Marketplace | null {
     try {
       const content = readFileSync(path, "utf-8")
       return JSON.parse(content) as Marketplace
-    } catch {
+    } catch (err) {
+      console.error(
+        `[han] Warning: could not parse marketplace file ${path}:`,
+        err instanceof Error ? err.message : err,
+      )
       continue
     }
   }
@@ -269,7 +276,11 @@ function parsePluginHooks(
     }
 
     return hooks
-  } catch {
+  } catch (err) {
+    console.error(
+      `[han] Warning: could not parse plugin config for ${pluginName}:`,
+      err instanceof Error ? err.message : err,
+    )
     return []
   }
 }
