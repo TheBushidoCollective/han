@@ -1,0 +1,24 @@
+{
+  "name": "han",
+  "description": "Han quality gates and plugin marketplace. Provides automated validation hooks, MCP server integrations, and quality guidelines.",
+  "mcpServers": {
+    "han": {
+      "command": "npx",
+      "args": ["-y", "@thebushidocollective/han", "mcp"]
+    }
+  },
+  "hooks": {
+    "agentSpawn": [
+      {
+        "command": "npx -y @thebushidocollective/han hook dispatch SessionStart",
+        "timeout_ms": 15000
+      }
+    ],
+    "stop": [
+      {
+        "command": "npx -y @thebushidocollective/han hook dispatch Stop",
+        "timeout_ms": 120000
+      }
+    ]
+  }
+}
