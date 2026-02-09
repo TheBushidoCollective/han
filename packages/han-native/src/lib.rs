@@ -1589,6 +1589,35 @@ pub fn clear_async_hook_queue_for_session(
 }
 
 // ============================================================================
+// Dashboard SQL Aggregation Functions
+// ============================================================================
+
+// Re-export aggregate result types
+pub use schema::{
+    ActivityAggregates, DailyActivityRow, DailyCostRow, DashboardAggregates, HookHealthRow,
+    HourlyActivityRow, SessionCompactionRow, SessionSentimentRow, SessionStatsRow,
+    SubagentUsageRow, ToolUsageRow,
+};
+
+/// Query all dashboard analytics via SQL aggregation (replaces ~850 DB round-trips)
+#[napi]
+pub fn query_dashboard_aggregates(
+    _db_path: String,
+    cutoff_date: String,
+) -> napi::Result<DashboardAggregates> {
+    crud::query_dashboard_aggregates(&cutoff_date)
+}
+
+/// Query all activity data via SQL aggregation (replaces ~425 DB round-trips)
+#[napi]
+pub fn query_activity_aggregates(
+    _db_path: String,
+    cutoff_date: String,
+) -> napi::Result<ActivityAggregates> {
+    crud::query_activity_aggregates(&cutoff_date)
+}
+
+// ============================================================================
 // Database Reset Functions
 // ============================================================================
 

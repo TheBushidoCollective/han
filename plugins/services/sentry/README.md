@@ -58,10 +58,12 @@ Once installed, Claude Code gains access to these tool categories:
 Install with npx (no installation required):
 
 ```bash
-han plugin install hashi-sentry
+han plugin install sentry
 ```
 
 ## Authentication
+
+### Sentry Cloud (Default)
 
 The Sentry MCP server uses OAuth for authentication:
 
@@ -73,13 +75,15 @@ The Sentry MCP server uses OAuth for authentication:
 
 **Note**: If you join new Sentry organizations, you'll need to re-authenticate to access those organizations.
 
-### Alternative: STDIO Mode with Auth Token
+### Self-Hosted Sentry
 
-For advanced users who prefer local STDIO mode:
+For self-hosted Sentry instances, set the `SENTRY_MCP_URL` environment variable:
 
-1. Generate a Sentry User Auth Token at: Settings → Auth Tokens
-2. Required scopes: `org:read`, `project:read`, `project:write`, `team:read`, `team:write`, `event:write`
-3. Configure manually (not recommended - use OAuth instead)
+```bash
+export SENTRY_MCP_URL=https://sentry.example.com/mcp
+```
+
+The plugin defaults to `https://mcp.sentry.dev/mcp` (Sentry cloud) when the variable is not set. OAuth authentication is handled by Claude Code automatically.
 
 ## Available Slash Commands
 
@@ -295,7 +299,7 @@ The hashi-sentry plugin supports the **Deploy & Maintain** phase:
 - **OAuth Security**: Uses Sentry's OAuth flow - no tokens stored locally
 - **Revoke Access**: Manage OAuth apps at Sentry Settings → Account → API → Authorized Applications
 - **Minimal Privileges**: Only requests permissions needed for operations
-- **Hosted Service**: Connects to Sentry's official hosted MCP server at `https://mcp.sentry.dev/mcp`
+- **HTTP Transport Only**: All connections use remote HTTP endpoints (cloud or self-hosted)
 
 ## Limitations
 

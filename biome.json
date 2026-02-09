@@ -18,6 +18,7 @@
       "!**/dist",
       "!**/.browse-out",
       "!**/__generated__",
+      "!**/.test-migrate-temp",
       "!**/build-info.generated.ts",
       "!**/tailwind-variants.css"
     ],

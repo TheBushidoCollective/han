@@ -7,11 +7,11 @@
 
 import type React from "react";
 import { useMemo } from "react";
+import { theme } from "@/components/atoms";
 import { Box } from "@/components/atoms/Box.tsx";
 import { HStack } from "@/components/atoms/HStack.tsx";
 import { Text } from "@/components/atoms/Text.tsx";
 import { VStack } from "@/components/atoms/VStack.tsx";
-import { theme } from "@/components/atoms";
 
 interface CompactionStats {
 	readonly totalCompactions: number;
@@ -136,11 +136,7 @@ export function CompactionHealthCard({
 						borderRadius: theme.radii.full,
 					}}
 				>
-					<Text
-						weight="semibold"
-						size="sm"
-						style={{ color: health.color }}
-					>
+					<Text weight="semibold" size="sm" style={{ color: health.color }}>
 						{health.label}
 					</Text>
 				</Box>
@@ -192,8 +188,8 @@ export function CompactionHealthCard({
 						{withoutPercent.toFixed(0)}%)
 					</Text>
 					<Text size="xs" style={{ color: "#f59e0b" }}>
-						{compactionStats.sessionsWithCompactions} (
-						{withPercent.toFixed(0)}%)
+						{compactionStats.sessionsWithCompactions} ({withPercent.toFixed(0)}
+						%)
 					</Text>
 				</HStack>
 			</VStack>
@@ -230,11 +226,7 @@ export function CompactionHealthCard({
 						align="center"
 						style={{ width: "100%" }}
 					>
-						<Text
-							size="xs"
-							color="muted"
-							style={{ width: 110, flexShrink: 0 }}
-						>
+						<Text size="xs" color="muted" style={{ width: 110, flexShrink: 0 }}>
 							{entry.label}
 						</Text>
 						<Box
@@ -277,8 +269,8 @@ export function CompactionHealthCard({
 				}}
 			>
 				<Text size="xs" color="muted">
-					Lower compaction rates indicate better use of subagents and
-					focused conversations
+					Lower compaction rates indicate better use of subagents and focused
+					conversations
 				</Text>
 			</Box>
 		</VStack>

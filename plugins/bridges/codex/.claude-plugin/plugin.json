@@ -1,0 +1,22 @@
+{
+  "name": "codex",
+  "version": "0.1.0",
+  "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with OpenAI Codex CLI by translating Codex events into Claude Code hook invocations.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "codex",
+    "openai",
+    "bridge",
+    "hooks",
+    "compatibility",
+    "claude-code",
+    "validation",
+    "linting"
+  ]
+}

@@ -7,13 +7,13 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
-  round,
   calculateCost,
-  parseTokensFromRawJson,
-  computeSentimentTrend,
   classifyCompactionType,
-  getWeekStart,
+  computeSentimentTrend,
   formatWeekLabel,
+  getWeekStart,
+  parseTokensFromRawJson,
+  round,
 } from '../lib/graphql/types/dashboard-analytics.ts';
 
 describe('round', () => {
@@ -213,7 +213,8 @@ describe('classifyCompactionType', () => {
   test('detects continuation from nested content', () => {
     const json = JSON.stringify({
       message: {
-        content: 'continued from a previous conversation that ran out of context',
+        content:
+          'continued from a previous conversation that ran out of context',
       },
     });
     expect(classifyCompactionType(json)).toBe('continuation');

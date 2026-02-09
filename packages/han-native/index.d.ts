@@ -515,6 +515,13 @@ export interface MessageInput {
   sentimentLevel?: string;
   frustrationScore?: number;
   frustrationLevel?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  cacheReadTokens?: number;
+  cacheCreationTokens?: number;
+  linesAdded?: number;
+  linesRemoved?: number;
+  filesChanged?: number;
 }
 export interface MessageBatch {
   sessionId: string;
@@ -808,6 +815,89 @@ export interface ConfigDirInput {
   name?: string;
   isDefault?: boolean;
 }
+export interface ToolUsageRow {
+  toolName: string;
+  count: number;
+}
+export interface SubagentUsageRow {
+  subagentType: string;
+  count: number;
+}
+export interface DailyCostRow {
+  date: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  sessionCount: number;
+}
+export interface SessionStatsRow {
+  sessionId: string;
+  slug?: string;
+  summary?: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  turnCount: number;
+  uniqueTools: number;
+  startedAt?: string;
+  messageCount: number;
+}
+export interface SessionSentimentRow {
+  sessionId: string;
+  avgSentiment: number;
+}
+export interface HookHealthRow {
+  hookName: string;
+  totalRuns: number;
+  passCount: number;
+  failCount: number;
+  avgDurationMs: number;
+}
+export interface SessionCompactionRow {
+  sessionId: string;
+  compactionCount: number;
+}
+export interface DashboardAggregates {
+  toolUsage: Array<ToolUsageRow>;
+  subagentUsage: Array<SubagentUsageRow>;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCacheReadTokens: number;
+  totalSessions: number;
+  totalMessages: number;
+  dailyCosts: Array<DailyCostRow>;
+  sessionStats: Array<SessionStatsRow>;
+  totalCompactions: number;
+  totalCompactionSessions: number;
+  sessionCompactions: Array<SessionCompactionRow>;
+  sessionSentiments: Array<SessionSentimentRow>;
+  hookHealth: Array<HookHealthRow>;
+}
+export interface DailyActivityRow {
+  date: string;
+  messageCount: number;
+  sessionCount: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  linesAdded: number;
+  linesRemoved: number;
+  filesChanged: number;
+}
+export interface HourlyActivityRow {
+  hour: number;
+  messageCount: number;
+  sessionCount: number;
+}
+export interface ActivityAggregates {
+  dailyActivity: Array<DailyActivityRow>;
+  hourlyActivity: Array<HourlyActivityRow>;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCacheReadTokens: number;
+  totalMessages: number;
+  totalSessions: number;
+}
 /** A file operation extracted from transcript content */
 export interface FileOperation {
   /** File path */
@@ -974,7 +1064,7 @@ export declare function checkAndBuildManifest(
 ): CheckResult;
 /**
  * Initialize or open a database at the given path
- * Note: db_path is kept for API compatibility but the singleton uses ~/.claude/han/han.db
+ * Note: db_path is kept for API compatibility but the singleton uses ~/.han/han.db
  */
 export declare function dbInit(dbPath: string): boolean;
 /**
@@ -1534,6 +1624,16 @@ export declare function clearAsyncHookQueueForSession(
   dbPath: string,
   sessionId: string
 ): number;
+/** Query all dashboard analytics via SQL aggregation (replaces ~850 DB round-trips) */
+export declare function queryDashboardAggregates(
+  dbPath: string,
+  cutoffDate: string
+): DashboardAggregates;
+/** Query all activity data via SQL aggregation (replaces ~425 DB round-trips) */
+export declare function queryActivityAggregates(
+  dbPath: string,
+  cutoffDate: string
+): ActivityAggregates;
 /**
  * Truncate all derived tables (those populated from JSONL logs).
  * This is used during reindex to rebuild the database from scratch.

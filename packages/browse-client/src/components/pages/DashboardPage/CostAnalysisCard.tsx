@@ -7,11 +7,11 @@
 
 import type React from "react";
 import { useMemo } from "react";
+import { theme } from "@/components/atoms";
 import { Box } from "@/components/atoms/Box.tsx";
 import { HStack } from "@/components/atoms/HStack.tsx";
 import { Text } from "@/components/atoms/Text.tsx";
 import { VStack } from "@/components/atoms/VStack.tsx";
-import { theme } from "@/components/atoms";
 
 interface DailyCost {
 	readonly date: string;
@@ -362,7 +362,11 @@ export function CostAnalysisCard({
 							Subscription vs API Credits
 						</Text>
 						<Text color="muted" size="xs">
-							est. {formatCost(costAnalysis.subscriptionComparisons[0]?.apiCreditCostUsd ?? 0)}/mo on API
+							est.{" "}
+							{formatCost(
+								costAnalysis.subscriptionComparisons[0]?.apiCreditCostUsd ?? 0,
+							)}
+							/mo on API
 						</Text>
 					</HStack>
 
@@ -386,7 +390,8 @@ export function CostAnalysisCard({
 						}}
 					>
 						<Text color="muted" size="xs">
-							Your plan breaks even at {formatCost(costAnalysis.breakEvenDailySpend)}/day in API credits
+							Your plan breaks even at{" "}
+							{formatCost(costAnalysis.breakEvenDailySpend)}/day in API credits
 						</Text>
 					</Box>
 				</VStack>
@@ -409,8 +414,7 @@ export function CostAnalysisCard({
 								height: 1,
 								backgroundColor: "#f59e0b",
 								opacity: 0.5,
-								bottom:
-									(dailyBudget / maxDailyCost) * sparklineHeight,
+								bottom: (dailyBudget / maxDailyCost) * sparklineHeight,
 							}}
 						/>
 
@@ -490,9 +494,10 @@ export function CostAnalysisCard({
 						{costAnalysis.weeklyCostTrend.map((week) => {
 							const weeklyBudget = costAnalysis.maxSubscriptionCostUsd / 4.33;
 							const overBudget = week.costUsd > weeklyBudget;
-							const barWidth = weeklyBudget > 0
-								? Math.min((week.costUsd / weeklyBudget) * 100, 100)
-								: 0;
+							const barWidth =
+								weeklyBudget > 0
+									? Math.min((week.costUsd / weeklyBudget) * 100, 100)
+									: 0;
 
 							return (
 								<VStack
@@ -513,7 +518,9 @@ export function CostAnalysisCard({
 												size="xs"
 												weight="semibold"
 												style={{
-													color: overBudget ? "#ef4444" : theme.colors.text.primary,
+													color: overBudget
+														? "#ef4444"
+														: theme.colors.text.primary,
 												}}
 											>
 												{formatCost(week.costUsd)}
@@ -570,7 +577,11 @@ export function CostAnalysisCard({
 								}}
 							>
 								<HStack justify="space-between" align="center">
-									<HStack gap="sm" align="center" style={{ flex: 1, minWidth: 0 }}>
+									<HStack
+										gap="sm"
+										align="center"
+										style={{ flex: 1, minWidth: 0 }}
+									>
 										<Text
 											color="muted"
 											size="xs"
@@ -579,11 +590,7 @@ export function CostAnalysisCard({
 											{idx + 1}.
 										</Text>
 										<VStack gap="xs" style={{ flex: 1, minWidth: 0 }}>
-											<Text
-												size="sm"
-												weight="medium"
-												numberOfLines={1}
-											>
+											<Text size="sm" weight="medium" numberOfLines={1}>
 												{session.slug || session.sessionId.slice(0, 8)}
 											</Text>
 											<HStack gap="sm">
@@ -591,7 +598,10 @@ export function CostAnalysisCard({
 													{session.messageCount} msgs
 												</Text>
 												<Text color="muted" size="xs">
-													{formatTokens(session.inputTokens + session.outputTokens)} tokens
+													{formatTokens(
+														session.inputTokens + session.outputTokens,
+													)}{" "}
+													tokens
 												</Text>
 											</HStack>
 										</VStack>

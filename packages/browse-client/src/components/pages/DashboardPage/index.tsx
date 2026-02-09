@@ -36,6 +36,7 @@ export const DashboardAnalyticsFragment = graphql`
       topSessions {
         sessionId
         slug
+        summary
         score
         sentimentTrend
         avgSentimentScore
@@ -48,6 +49,7 @@ export const DashboardAnalyticsFragment = graphql`
       bottomSessions {
         sessionId
         slug
+        summary
         score
         sentimentTrend
         avgSentimentScore
@@ -211,10 +213,12 @@ export const DashboardPageQuery = graphql`
       category
       count
     }
-    # Include activity data directly
+    # Include activity and analytics data directly
+    # Note: @defer is disabled due to a multipart streaming parser bug where the
+    # initial response isn't yielded until the next chunk's delimiter arrives.
+    # The 30s TTL cache on both queries makes subsequent loads instant.
     ...DashboardPageActivity_query
-    # Include analytics data (deferred for performance)
-    ...DashboardPageAnalytics_query @defer(label: "DashboardPageAnalytics")
+    ...DashboardPageAnalytics_query
   }
 `;
 

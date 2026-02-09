@@ -12,3 +12,6 @@ lib/build-info.generated.ts
 # Coverage reports
 coverage/
 test-results.xml
+
+# Test temp directories
+test/.test-migrate-temp/

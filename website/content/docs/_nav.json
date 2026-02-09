@@ -14,7 +14,11 @@
 				{ "title": "Installation Methods", "slug": "installation" },
 				{ "title": "Installing Plugins", "slug": "installation/plugins" },
 				{ "title": "Installation Scopes", "slug": "installation/scopes" },
-				{ "title": "Using Han with OpenCode", "slug": "installation/opencode" }
+				{ "title": "Using Han with OpenCode", "slug": "installation/opencode" },
+				{
+					"title": "Using Han with Gemini CLI",
+					"slug": "installation/gemini-cli"
+				}
 			]
 		},
 		{

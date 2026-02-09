@@ -37,16 +37,16 @@ import {
   type ToolResultAddedPayload,
 } from './pubsub.ts';
 import { ActivityDataType, queryActivityData } from './types/activity-data.ts';
-import {
-  DashboardAnalyticsType,
-  queryDashboardAnalytics,
-} from './types/dashboard-analytics.ts';
 import { CacheEntryType, getAllCacheEntries } from './types/cache-entry.ts';
 import { CacheStatsType, queryCacheStats } from './types/cache-stats.ts';
 import {
   ConfigDirMutationResultType,
   ConfigDirType,
 } from './types/config-dir.ts';
+import {
+  DashboardAnalyticsType,
+  queryDashboardAnalytics,
+} from './types/dashboard-analytics.ts';
 import { PluginScopeEnum } from './types/enums/plugin-scope.ts';
 import { HookExecutionType } from './types/hook-execution.ts';
 import { HookStatsType } from './types/hook-stats.ts';

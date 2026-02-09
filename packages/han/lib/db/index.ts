@@ -23,7 +23,10 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 // Import directly from claude-settings to avoid circular dependency
 // (config/index.ts -> validation/index.ts -> db/index.ts)
-import { getClaudeConfigDir, getHanDataDir } from '../config/claude-settings.ts';
+import {
+  getClaudeConfigDir,
+  getHanDataDir,
+} from '../config/claude-settings.ts';
 import { getNativeModule } from '../native.ts';
 
 // ============================================================================
@@ -31,11 +34,16 @@ import { getNativeModule } from '../native.ts';
 // ============================================================================
 
 export type {
+  // Dashboard SQL Aggregation result types
+  ActivityAggregates,
   // Config dirs registry (multi-environment support)
   ConfigDir,
   ConfigDirInput,
   // Coordinator
   CoordinatorStatus,
+  DailyActivityRow,
+  DailyCostRow,
+  DashboardAggregates,
   // Frustration tracking
   FrustrationEvent,
   FrustrationEventInput,
@@ -46,7 +54,9 @@ export type {
   HookAttemptInfo,
   HookExecution,
   HookExecutionInput,
+  HookHealthRow,
   HookStats,
+  HourlyActivityRow,
   LockInfo,
   Message,
   MessageBatch,
@@ -59,6 +69,7 @@ export type {
   Repo,
   RepoInput,
   Session,
+  SessionCompactionRow,
   // Session file changes
   SessionFileChange,
   SessionFileChangeInput,
@@ -66,11 +77,14 @@ export type {
   SessionFileValidation,
   SessionFileValidationInput,
   SessionInput,
+  SessionSentimentRow,
+  SessionStatsRow,
   // Session timestamps
   SessionTimestamps,
   // Session todos
   SessionTodos,
   SessionTodosInput,
+  SubagentUsageRow,
   // Task/Metrics
   Task,
   TaskCompletion,
@@ -78,6 +92,7 @@ export type {
   TaskInput,
   TaskMetrics,
   TodoItem,
+  ToolUsageRow,
   VectorSearchResult,
 } from '../../../han-native';
 
@@ -1589,6 +1604,34 @@ export const watcher = {
     return native.getWatchedPaths();
   },
 };
+
+// ============================================================================
+// Dashboard SQL Aggregation (replaces per-session JS processing)
+// ============================================================================
+
+/**
+ * Query all dashboard analytics via SQL aggregation.
+ * Replaces ~850 DB round-trips with ~10 SQL queries in one native call.
+ */
+export async function queryDashboardAggregates(
+  cutoffDate: string
+): Promise<import('../../../han-native').DashboardAggregates> {
+  const dbPath = await ensureInitialized();
+  const native = getNativeModule();
+  return native.queryDashboardAggregates(dbPath, cutoffDate);
+}
+
+/**
+ * Query all activity data via SQL aggregation.
+ * Replaces ~425 DB round-trips with ~3 SQL queries in one native call.
+ */
+export async function queryActivityAggregates(
+  cutoffDate: string
+): Promise<import('../../../han-native').ActivityAggregates> {
+  const dbPath = await ensureInitialized();
+  const native = getNativeModule();
+  return native.queryActivityAggregates(dbPath, cutoffDate);
+}
 
 // ============================================================================
 // Legacy Function Exports (for backward compatibility)
