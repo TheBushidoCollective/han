@@ -21,22 +21,22 @@ import {
 /**
  * User role for access control
  */
-export type UserRole = "ic" | "manager" | "admin";
+export type UserRole = 'ic' | 'manager' | 'admin';
 
 /**
  * User information extracted from request headers or auth
  */
 export interface UserContext {
-	/** User ID */
-	id: string;
-	/** User display name */
-	displayName?: string;
-	/** User role */
-	role: UserRole;
-	/** Organization ID the user belongs to */
-	orgId?: string;
-	/** Project IDs the user has access to */
-	projectIds?: string[];
+  /** User ID */
+  id: string;
+  /** User display name */
+  displayName?: string;
+  /** User role */
+  role: UserRole;
+  /** Organization ID the user belongs to */
+  orgId?: string;
+  /** Project IDs the user has access to */
+  projectIds?: string[];
 }
 
 /**

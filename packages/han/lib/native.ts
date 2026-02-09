@@ -328,35 +328,6 @@ export function gitCreateBranch(dir: string, branch: string): void {
 }
 
 /**
- * Create a new git branch
- */
-export function gitCreateBranch(repoPath: string, branchName: string): void {
-	getNativeModule().gitCreateBranch(repoPath, branchName);
-}
-
-/**
- * Add a git worktree
- */
-export function gitWorktreeAdd(
-	repoPath: string,
-	path: string,
-	branch: string,
-): void {
-	getNativeModule().gitWorktreeAdd(repoPath, path, branch);
-}
-
-/**
- * Remove a git worktree
- */
-export function gitWorktreeRemove(
-	repoPath: string,
-	path: string,
-	force?: boolean,
-): void {
-	getNativeModule().gitWorktreeRemove(repoPath, path, force ?? false);
-}
-
-/**
  * Get session file changes
  */
 export function getSessionFileChanges(

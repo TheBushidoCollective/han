@@ -18,61 +18,61 @@
  * ```
  */
 
-// Core types
-export type {
-	AccessLevel,
-	AuditLogEntry,
-	AuthenticatedUser,
-	CachedPermission,
-	GitProvider,
-	OrgRole,
-	OrgVisibilitySettings,
-	PermissionResult,
-	RepoOwnership,
-	SessionForPermission,
-} from "./types.ts";
-
-export { DEFAULT_ORG_VISIBILITY } from "./types.ts";
-
-// Permission service
-export {
-	createLocalPermissionService,
-	createPermissionService,
-	isLocalMode,
-	PermissionService,
-} from "./service.ts";
-
-// Cache
-export { permissionCache, PermissionCache, startCacheCleanup } from "./cache.ts";
-
-// Repo ownership utilities
-export {
-	buildRepoUrl,
-	getProviderFromUrl,
-	isLikelyPersonalRepo,
-	normalizeRepoId,
-	parseRemoteUrl,
-} from "./repo-ownership.ts";
-
-// Git provider interface
-export type {
-	GitProviderService,
-	OrgMembershipResult,
-	RepoAccessResult,
-	RepoOwnershipResult,
-} from "./git-provider.ts";
-
-export { getAllProviders, getProvider, registerProvider } from "./git-provider.ts";
-
 // Audit logging
 export {
-	auditLogger,
-	logPermissionCheckFailed,
-	logPermissionDenied,
-	logPermissionGranted,
-	writeAuditLog,
-} from "./audit.ts";
-
+  auditLogger,
+  logPermissionCheckFailed,
+  logPermissionDenied,
+  logPermissionGranted,
+  writeAuditLog,
+} from './audit.ts';
+// Cache
+export {
+  PermissionCache,
+  permissionCache,
+  startCacheCleanup,
+} from './cache.ts';
+// Git provider interface
+export type {
+  GitProviderService,
+  OrgMembershipResult,
+  RepoAccessResult,
+  RepoOwnershipResult,
+} from './git-provider.ts';
+export {
+  getAllProviders,
+  getProvider,
+  registerProvider,
+} from './git-provider.ts';
 // Provider implementations (importing registers them)
-export { githubProvider } from "./providers/github.ts";
-export { gitlabProvider } from "./providers/gitlab.ts";
+export { githubProvider } from './providers/github.ts';
+export { gitlabProvider } from './providers/gitlab.ts';
+// Repo ownership utilities
+export {
+  buildRepoUrl,
+  getProviderFromUrl,
+  isLikelyPersonalRepo,
+  normalizeRepoId,
+  parseRemoteUrl,
+} from './repo-ownership.ts';
+// Permission service
+export {
+  createLocalPermissionService,
+  createPermissionService,
+  isLocalMode,
+  PermissionService,
+} from './service.ts';
+// Core types
+export type {
+  AccessLevel,
+  AuditLogEntry,
+  AuthenticatedUser,
+  CachedPermission,
+  GitProvider,
+  OrgRole,
+  OrgVisibilitySettings,
+  PermissionResult,
+  RepoOwnership,
+  SessionForPermission,
+} from './types.ts';
+export { DEFAULT_ORG_VISIBILITY } from './types.ts';

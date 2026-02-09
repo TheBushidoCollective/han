@@ -11,24 +11,49 @@
  * - Indexed: Appropriate indexes for common queries
  */
 
-// Core organizational tables
-export { organizations, type Organization, type NewOrganization } from "./organizations.ts";
-export { teams, type Team, type NewTeam } from "./teams.ts";
-export { users, type User, type NewUser } from "./users.ts";
-export { memberships, type Membership, type NewMembership, type MembershipRole } from "./memberships.ts";
-
-// Project structure tables
-export { repositories, type Repository, type NewRepository } from "./repositories.ts";
-export { projects, type Project, type NewProject } from "./projects.ts";
-
-// Session and message tables
-export { sessions, type Session, type NewSession } from "./sessions.ts";
-export { messages, type Message, type NewMessage } from "./messages.ts";
-
+export {
+  type NewSessionFileChange,
+  type SessionFileChange,
+  sessionFileChanges,
+} from './file-changes.ts';
+export {
+  type NewSessionFileValidation,
+  type SessionFileValidation,
+  sessionFileValidations,
+} from './file-validations.ts';
 // Hook and validation tables
-export { hookExecutions, type HookExecution, type NewHookExecution } from "./hook-executions.ts";
-export { sessionFileChanges, type SessionFileChange, type NewSessionFileChange } from "./file-changes.ts";
-export { sessionFileValidations, type SessionFileValidation, type NewSessionFileValidation } from "./file-validations.ts";
-
+export {
+  type HookExecution,
+  hookExecutions,
+  type NewHookExecution,
+} from './hook-executions.ts';
+export {
+  type Membership,
+  type MembershipRole,
+  memberships,
+  type NewMembership,
+} from './memberships.ts';
+export { type Message, messages, type NewMessage } from './messages.ts';
 // Task tracking
-export { nativeTasks, type NativeTask, type NewNativeTask } from "./native-tasks.ts";
+export {
+  type NativeTask,
+  type NewNativeTask,
+  nativeTasks,
+} from './native-tasks.ts';
+// Core organizational tables
+export {
+  type NewOrganization,
+  type Organization,
+  organizations,
+} from './organizations.ts';
+export { type NewProject, type Project, projects } from './projects.ts';
+// Project structure tables
+export {
+  type NewRepository,
+  type Repository,
+  repositories,
+} from './repositories.ts';
+// Session and message tables
+export { type NewSession, type Session, sessions } from './sessions.ts';
+export { type NewTeam, type Team, teams } from './teams.ts';
+export { type NewUser, type User, users } from './users.ts';

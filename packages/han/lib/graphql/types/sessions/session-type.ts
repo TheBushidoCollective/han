@@ -18,7 +18,6 @@ import type {
 } from '../../../db/index.ts';
 import { sessionFileChanges } from '../../../db/index.ts';
 import { builder } from '../../builder.ts';
-import { type UserData, UserRef } from '../team/index.ts';
 import { registerNodeLoader } from '../../node-registry.ts';
 import {
   ImageBlockType,
@@ -81,6 +80,7 @@ import {
 import { applyConnectionArgs, type ConnectionArgs } from '../pagination.ts';
 import { ProjectRef } from '../project.ts';
 import { type SessionData, SessionRef } from '../session-connection.ts';
+import { type UserData, UserRef } from '../team/index.ts';
 import {
   extractTodosFromMessages,
   getActiveTodos,
@@ -481,7 +481,8 @@ export const SessionType = SessionRef.implement({
     orgId: t.string({
       nullable: true,
       description: 'Organization ID (only populated in hosted team mode)',
-      resolve: (s) => ('orgId' in s ? (s as { orgId?: string }).orgId : null) ?? null,
+      resolve: (s) =>
+        ('orgId' in s ? (s as { orgId?: string }).orgId : null) ?? null,
     }),
     owner: t.field({
       type: UserRef,

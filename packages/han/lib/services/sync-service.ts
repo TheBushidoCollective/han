@@ -21,15 +21,18 @@
  * use environment variables that aren't logged.
  */
 
-import { gzipSync } from "node:zlib";
-import { watch } from "node:fs";
-import { join } from "node:path";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { homedir } from "node:os";
-import { getValidAccessToken } from "./auth-service.ts";
 import {
-  getServerUrl,
-} from "./credentials.ts";
+  existsSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  watch,
+} from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
+import { getValidAccessToken } from './auth-service.ts';
+import { getServerUrl } from './credentials.ts';
 
 /**
  * Patterns for secret redaction (HIGH-3)
@@ -37,31 +40,53 @@ import {
  */
 const SECRET_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
   // API keys with common prefixes
-  { pattern: /\b(sk-[a-zA-Z0-9]{20,})/g, replacement: "sk-[REDACTED]" },
-  { pattern: /\b(pk-[a-zA-Z0-9]{20,})/g, replacement: "pk-[REDACTED]" },
-  { pattern: /\b(api[_-]?key['":\s]*)[a-zA-Z0-9]{16,}/gi, replacement: "$1[REDACTED]" },
-  { pattern: /\b(api[_-]?secret['":\s]*)[a-zA-Z0-9]{16,}/gi, replacement: "$1[REDACTED]" },
+  { pattern: /\b(sk-[a-zA-Z0-9]{20,})/g, replacement: 'sk-[REDACTED]' },
+  { pattern: /\b(pk-[a-zA-Z0-9]{20,})/g, replacement: 'pk-[REDACTED]' },
+  {
+    pattern: /\b(api[_-]?key['":\s]*)[a-zA-Z0-9]{16,}/gi,
+    replacement: '$1[REDACTED]',
+  },
+  {
+    pattern: /\b(api[_-]?secret['":\s]*)[a-zA-Z0-9]{16,}/gi,
+    replacement: '$1[REDACTED]',
+  },
 
   // AWS credentials
-  { pattern: /\b(AKIA[0-9A-Z]{16})/g, replacement: "AKIA[REDACTED]" },
-  { pattern: /\b(aws_secret_access_key['":\s]*)[a-zA-Z0-9/+=]{40}/gi, replacement: "$1[REDACTED]" },
+  { pattern: /\b(AKIA[0-9A-Z]{16})/g, replacement: 'AKIA[REDACTED]' },
+  {
+    pattern: /\b(aws_secret_access_key['":\s]*)[a-zA-Z0-9/+=]{40}/gi,
+    replacement: '$1[REDACTED]',
+  },
 
   // GitHub tokens
-  { pattern: /\b(ghp_[a-zA-Z0-9]{36})/g, replacement: "ghp_[REDACTED]" },
-  { pattern: /\b(gho_[a-zA-Z0-9]{36})/g, replacement: "gho_[REDACTED]" },
-  { pattern: /\b(ghu_[a-zA-Z0-9]{36})/g, replacement: "ghu_[REDACTED]" },
-  { pattern: /\b(ghs_[a-zA-Z0-9]{36})/g, replacement: "ghs_[REDACTED]" },
+  { pattern: /\b(ghp_[a-zA-Z0-9]{36})/g, replacement: 'ghp_[REDACTED]' },
+  { pattern: /\b(gho_[a-zA-Z0-9]{36})/g, replacement: 'gho_[REDACTED]' },
+  { pattern: /\b(ghu_[a-zA-Z0-9]{36})/g, replacement: 'ghu_[REDACTED]' },
+  { pattern: /\b(ghs_[a-zA-Z0-9]{36})/g, replacement: 'ghs_[REDACTED]' },
 
   // Generic tokens and secrets
-  { pattern: /\b(token['":\s]*)[a-zA-Z0-9_-]{32,}/gi, replacement: "$1[REDACTED]" },
-  { pattern: /\b(secret['":\s]*)[a-zA-Z0-9_-]{32,}/gi, replacement: "$1[REDACTED]" },
-  { pattern: /\b(password['":\s]*)[^\s'"]{8,}/gi, replacement: "$1[REDACTED]" },
+  {
+    pattern: /\b(token['":\s]*)[a-zA-Z0-9_-]{32,}/gi,
+    replacement: '$1[REDACTED]',
+  },
+  {
+    pattern: /\b(secret['":\s]*)[a-zA-Z0-9_-]{32,}/gi,
+    replacement: '$1[REDACTED]',
+  },
+  { pattern: /\b(password['":\s]*)[^\s'"]{8,}/gi, replacement: '$1[REDACTED]' },
 
   // Bearer tokens in headers
-  { pattern: /(Authorization['":\s]*Bearer\s+)[a-zA-Z0-9._-]+/gi, replacement: "$1[REDACTED]" },
+  {
+    pattern: /(Authorization['":\s]*Bearer\s+)[a-zA-Z0-9._-]+/gi,
+    replacement: '$1[REDACTED]',
+  },
 
   // Private keys
-  { pattern: /(-----BEGIN[A-Z ]*PRIVATE KEY-----)[\s\S]*?(-----END[A-Z ]*PRIVATE KEY-----)/g, replacement: "$1\n[REDACTED]\n$2" },
+  {
+    pattern:
+      /(-----BEGIN[A-Z ]*PRIVATE KEY-----)[\s\S]*?(-----END[A-Z ]*PRIVATE KEY-----)/g,
+    replacement: '$1\n[REDACTED]\n$2',
+  },
 ];
 
 /**
@@ -117,7 +142,7 @@ interface SessionToSync {
  * Sync response from server
  */
 interface SyncResponse {
-  status: "success" | "partial" | "error";
+  status: 'success' | 'partial' | 'error';
   processed: number;
   errors?: Array<{
     sessionId: string;
@@ -146,7 +171,7 @@ export interface WatchResult {
  * Get Claude sessions directory
  */
 function getSessionsDir(): string {
-  return join(homedir(), ".claude", "projects");
+  return join(homedir(), '.claude', 'projects');
 }
 
 /**
@@ -154,7 +179,7 @@ function getSessionsDir(): string {
  */
 function getTranscriptPath(sessionDir: string): string {
   // Transcripts are stored in session directories as transcript.jsonl
-  return join(sessionDir, "transcript.jsonl");
+  return join(sessionDir, 'transcript.jsonl');
 }
 
 /**
@@ -171,13 +196,15 @@ function listSessions(): SessionMetadata[] {
 
   try {
     // Each project directory contains session directories
-    const projectDirs = readdirSync(sessionsDir, { withFileTypes: true })
-      .filter((d) => d.isDirectory());
+    const projectDirs = readdirSync(sessionsDir, {
+      withFileTypes: true,
+    }).filter((d) => d.isDirectory());
 
     for (const projectDir of projectDirs) {
       const projectPath = join(sessionsDir, projectDir.name);
-      const sessionDirs = readdirSync(projectPath, { withFileTypes: true })
-        .filter((d) => d.isDirectory());
+      const sessionDirs = readdirSync(projectPath, {
+        withFileTypes: true,
+      }).filter((d) => d.isDirectory());
 
       for (const sessionDir of sessionDirs) {
         const sessionPath = join(projectPath, sessionDir.name);
@@ -189,8 +216,8 @@ function listSessions(): SessionMetadata[] {
 
         try {
           const stats = statSync(transcriptPath);
-          const content = readFileSync(transcriptPath, "utf-8");
-          const lines = content.trim().split("\n").filter(Boolean);
+          const content = readFileSync(transcriptPath, 'utf-8');
+          const lines = content.trim().split('\n').filter(Boolean);
           const messageCount = lines.length;
 
           // Parse first and last lines for timestamps
@@ -242,7 +269,9 @@ function getSessionById(sessionId: string): SessionMetadata | null {
 /**
  * Read, redact secrets, and compress session transcript (HIGH-3)
  */
-function readSessionTranscript(sessionId: string): { data: string; size: number } | null {
+function readSessionTranscript(
+  sessionId: string
+): { data: string; size: number } | null {
   const sessionsDir = getSessionsDir();
 
   if (!existsSync(sessionsDir)) {
@@ -250,8 +279,9 @@ function readSessionTranscript(sessionId: string): { data: string; size: number 
   }
 
   // Find the session across all project directories
-  const projectDirs = readdirSync(sessionsDir, { withFileTypes: true })
-    .filter((d) => d.isDirectory());
+  const projectDirs = readdirSync(sessionsDir, { withFileTypes: true }).filter(
+    (d) => d.isDirectory()
+  );
 
   for (const projectDir of projectDirs) {
     const sessionPath = join(sessionsDir, projectDir.name, sessionId);
@@ -259,12 +289,12 @@ function readSessionTranscript(sessionId: string): { data: string; size: number 
 
     if (existsSync(transcriptPath)) {
       try {
-        const content = readFileSync(transcriptPath, "utf-8");
+        const content = readFileSync(transcriptPath, 'utf-8');
         // Redact sensitive information before syncing (HIGH-3)
         const redactedContent = redactSecrets(content);
-        const compressed = gzipSync(Buffer.from(redactedContent, "utf-8"));
+        const compressed = gzipSync(Buffer.from(redactedContent, 'utf-8'));
         return {
-          data: compressed.toString("base64"),
+          data: compressed.toString('base64'),
           size: redactedContent.length,
         };
       } catch {
@@ -315,7 +345,7 @@ export async function syncSession(sessionId: string): Promise<SyncResult> {
 
   // Build payload
   const payload: SyncPayload = {
-    version: "1.0.0",
+    version: '1.0.0',
     timestamp: new Date().toISOString(),
     sessions: [
       {
@@ -336,9 +366,9 @@ export async function syncSession(sessionId: string): Promise<SyncResult> {
   const serverUrl = getServerUrl();
   try {
     const response = await fetch(`${serverUrl}/api/v1/sync`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(payload),
@@ -356,12 +386,13 @@ export async function syncSession(sessionId: string): Promise<SyncResult> {
     const result = (await response.json()) as SyncResponse;
 
     return {
-      success: result.status === "success",
+      success: result.status === 'success',
       sessionsProcessed: result.processed,
       details: result,
-      error: result.status === "error"
-        ? result.errors?.map((e) => e.message).join("; ")
-        : undefined,
+      error:
+        result.status === 'error'
+          ? result.errors?.map((e) => e.message).join('; ')
+          : undefined,
     };
   } catch (error) {
     return {
@@ -425,7 +456,7 @@ export async function syncAllSessions(): Promise<SyncResult> {
   }
 
   const payload: SyncPayload = {
-    version: "1.0.0",
+    version: '1.0.0',
     timestamp: new Date().toISOString(),
     sessions: sessionsToSync,
   };
@@ -434,9 +465,9 @@ export async function syncAllSessions(): Promise<SyncResult> {
   const serverUrl = getServerUrl();
   try {
     const response = await fetch(`${serverUrl}/api/v1/sync`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(payload),
@@ -454,12 +485,13 @@ export async function syncAllSessions(): Promise<SyncResult> {
     const result = (await response.json()) as SyncResponse;
 
     return {
-      success: result.status === "success",
+      success: result.status === 'success',
       sessionsProcessed: result.processed,
       details: result,
-      error: result.status === "error"
-        ? result.errors?.map((e) => e.message).join("; ")
-        : undefined,
+      error:
+        result.status === 'error'
+          ? result.errors?.map((e) => e.message).join('; ')
+          : undefined,
     };
   } catch (error) {
     return {
@@ -493,15 +525,19 @@ export function watchAndSync(
   let watcher: ReturnType<typeof watch> | null = null;
 
   if (existsSync(sessionsDir)) {
-    watcher = watch(sessionsDir, { recursive: true }, (_eventType, filename) => {
-      if (filename?.endsWith("transcript.jsonl")) {
-        // Extract session ID from path
-        const parts = filename.split("/");
-        if (parts.length >= 2) {
-          changedSessions.add(parts[parts.length - 2]);
+    watcher = watch(
+      sessionsDir,
+      { recursive: true },
+      (_eventType, filename) => {
+        if (filename?.endsWith('transcript.jsonl')) {
+          // Extract session ID from path
+          const parts = filename.split('/');
+          if (parts.length >= 2) {
+            changedSessions.add(parts[parts.length - 2]);
+          }
         }
       }
-    });
+    );
   }
 
   // Sync loop

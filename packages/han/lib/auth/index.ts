@@ -7,141 +7,131 @@
  * @module auth
  */
 
-// Types
-export type {
-	AuthConfig,
-	AuthContext,
-	AuthResult,
-	AuthUser,
-	DeviceInfo,
-	LinkResult,
-	MagicLinkResult,
-	MagicLinkToken,
-	OAuthCallbackResult,
-	OAuthConnection,
-	OAuthInitiateResult,
-	OAuthProvider,
-	TokenPair,
-	UserSession,
-	AccessTokenPayload,
-	RefreshTokenPayload,
-	JWTPayload,
-	AuthRateLimit,
-} from "./types.ts";
-
-export { getAuthConfig } from "./types.ts";
-
-// JWT utilities
-export {
-	createAccessToken,
-	createRefreshToken,
-	createTokenPair,
-	verifyAccessToken,
-	verifyRefreshToken,
-	decodeTokenUnsafe,
-	getTokenHash,
-	extractSessionId,
-	isTokenExpired,
-	generateJWTSecret,
-} from "./jwt.ts";
-
 // Encryption utilities
 export {
-	encrypt,
-	decrypt,
-	generateEncryptionKey,
-	hashSHA256,
-	generateSecureToken,
-} from "./encryption.ts";
-
-// OAuth providers
+  decrypt,
+  encrypt,
+  generateEncryptionKey,
+  generateSecureToken,
+  hashSHA256,
+} from './encryption.ts';
+// JWT utilities
 export {
-	initiateOAuth,
-	completeOAuth,
-	refreshOAuthToken,
-	revokeOAuthToken,
-	validateOAuthToken,
-	getProviderDisplayName,
-	isProviderConfigured,
-	getConfiguredProviders,
-	// PKCE utilities
-	generateCodeVerifier,
-	generateCodeChallenge,
-	generateState,
-	generatePKCEParams,
-	verifyCodeChallenge,
-	// Provider-specific exports
-	initiateGitHubOAuth,
-	completeGitHubOAuth,
-	refreshGitHubToken,
-	revokeGitHubToken,
-	validateGitHubToken,
-	initiateGitLabOAuth,
-	completeGitLabOAuth,
-	refreshGitLabToken,
-	revokeGitLabToken,
-	validateGitLabToken,
-} from "./oauth/index.ts";
-
+  createAccessToken,
+  createRefreshToken,
+  createTokenPair,
+  decodeTokenUnsafe,
+  extractSessionId,
+  generateJWTSecret,
+  getTokenHash,
+  isTokenExpired,
+  verifyAccessToken,
+  verifyRefreshToken,
+} from './jwt.ts';
+export type { EmailProvider } from './magic-link.ts';
 // Magic link
 export {
-	generateMagicLinkToken,
-	verifyMagicLinkToken,
-	consumeMagicLinkToken,
-	requestMagicLink,
-	cleanupExpiredTokens,
-	getTokenStoreSize,
-	getEmailProvider,
-	ConsoleEmailProvider,
-	ResendEmailProvider,
-} from "./magic-link.ts";
-
-export type { EmailProvider } from "./magic-link.ts";
-
-// Session management
-export {
-	createSession,
-	getSession,
-	getSessionByTokenHash,
-	getUserSessions,
-	isSessionValid,
-	refreshSession,
-	revokeSession,
-	revokeAllUserSessions,
-	revokeOtherUserSessions,
-	cleanupSessions,
-	getSessionStats,
-	parseDeviceInfo,
-} from "./session-manager.ts";
-
-// Rate limiting
-export {
-	checkRateLimit,
-	recordAttempt,
-	resetRateLimit,
-	clearBlock,
-	cleanupRateLimits,
-	getRateLimitStats,
-	createRateLimiter,
-	getClientIP,
-	RATE_LIMIT_CONFIGS,
-	RATE_LIMIT_KEYS,
-} from "./rate-limiter.ts";
-
-export type { RateLimitConfig } from "./rate-limiter.ts";
-
+  ConsoleEmailProvider,
+  cleanupExpiredTokens,
+  consumeMagicLinkToken,
+  generateMagicLinkToken,
+  getEmailProvider,
+  getTokenStoreSize,
+  ResendEmailProvider,
+  requestMagicLink,
+  verifyMagicLinkToken,
+} from './magic-link.ts';
 // Middleware
 export {
-	extractBearerToken,
-	createAuthContext,
-	createContextFactory,
-	isAuthenticated,
-	requireAuth,
-	checkMutationRateLimit,
-	getUser,
-	upsertUser,
-	getUserByEmail,
-	createUser,
-	updateUser,
-	getUserStats,
-} from "./middleware.ts";
+  checkMutationRateLimit,
+  createAuthContext,
+  createContextFactory,
+  createUser,
+  extractBearerToken,
+  getUser,
+  getUserByEmail,
+  getUserStats,
+  isAuthenticated,
+  requireAuth,
+  updateUser,
+  upsertUser,
+} from './middleware.ts';
+// OAuth providers
+export {
+  completeGitHubOAuth,
+  completeGitLabOAuth,
+  completeOAuth,
+  generateCodeChallenge,
+  // PKCE utilities
+  generateCodeVerifier,
+  generatePKCEParams,
+  generateState,
+  getConfiguredProviders,
+  getProviderDisplayName,
+  // Provider-specific exports
+  initiateGitHubOAuth,
+  initiateGitLabOAuth,
+  initiateOAuth,
+  isProviderConfigured,
+  refreshGitHubToken,
+  refreshGitLabToken,
+  refreshOAuthToken,
+  revokeGitHubToken,
+  revokeGitLabToken,
+  revokeOAuthToken,
+  validateGitHubToken,
+  validateGitLabToken,
+  validateOAuthToken,
+  verifyCodeChallenge,
+} from './oauth/index.ts';
+export type { RateLimitConfig } from './rate-limiter.ts';
+// Rate limiting
+export {
+  checkRateLimit,
+  cleanupRateLimits,
+  clearBlock,
+  createRateLimiter,
+  getClientIP,
+  getRateLimitStats,
+  RATE_LIMIT_CONFIGS,
+  RATE_LIMIT_KEYS,
+  recordAttempt,
+  resetRateLimit,
+} from './rate-limiter.ts';
+// Session management
+export {
+  cleanupSessions,
+  createSession,
+  getSession,
+  getSessionByTokenHash,
+  getSessionStats,
+  getUserSessions,
+  isSessionValid,
+  parseDeviceInfo,
+  refreshSession,
+  revokeAllUserSessions,
+  revokeOtherUserSessions,
+  revokeSession,
+} from './session-manager.ts';
+// Types
+export type {
+  AccessTokenPayload,
+  AuthConfig,
+  AuthContext,
+  AuthRateLimit,
+  AuthResult,
+  AuthUser,
+  DeviceInfo,
+  JWTPayload,
+  LinkResult,
+  MagicLinkResult,
+  MagicLinkToken,
+  OAuthCallbackResult,
+  OAuthConnection,
+  OAuthInitiateResult,
+  OAuthProvider,
+  RefreshTokenPayload,
+  TokenPair,
+  UserSession,
+} from './types.ts';
+export { getAuthConfig } from './types.ts';

@@ -4,38 +4,37 @@
  * Re-exports all service modules for easy importing.
  */
 
-// Credential storage
-export {
-  loadCredentials,
-  saveCredentials,
-  clearCredentials,
-  isTokenExpired,
-  getServerUrl,
-  setServerUrl,
-  getCredentialsDir,
-  getCredentialsPath,
-  DEFAULT_SERVER_URL,
-  type StoredCredentials,
-  type CredentialUser,
-} from "./credentials.ts";
-
 // Authentication service
 export {
-  login,
-  logout,
+  type AuthStatus,
   getAuthStatus,
   getValidAccessToken,
-  refreshAccessToken,
   type LoginResult,
-  type AuthStatus,
-} from "./auth-service.ts";
+  login,
+  logout,
+  refreshAccessToken,
+} from './auth-service.ts';
+// Credential storage
+export {
+  type CredentialUser,
+  clearCredentials,
+  DEFAULT_SERVER_URL,
+  getCredentialsDir,
+  getCredentialsPath,
+  getServerUrl,
+  isTokenExpired,
+  loadCredentials,
+  type StoredCredentials,
+  saveCredentials,
+  setServerUrl,
+} from './credentials.ts';
 
 // Sync service
 export {
-  syncSession,
-  syncAllSessions,
-  watchAndSync,
   getSyncableSessionCount,
   type SyncResult,
+  syncAllSessions,
+  syncSession,
   type WatchResult,
-} from "./sync-service.ts";
+  watchAndSync,
+} from './sync-service.ts';

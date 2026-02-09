@@ -11,127 +11,127 @@
  * - Org: Aggregated learnings only (no raw data exposed)
  */
 
-import type { Session } from "../db/index.ts";
+import type { Session } from '../db/index.ts';
 
 /**
  * Memory scope levels (from most restrictive to least)
  */
-export type MemoryScope = "personal" | "project" | "team" | "org";
+export type MemoryScope = 'personal' | 'project' | 'team' | 'org';
 
 /**
  * User permission context for memory queries
  */
 export interface UserPermissionContext {
-	/** User identifier */
-	userId: string;
-	/** Organization identifier (optional) */
-	orgId?: string;
-	/** User's email for matching against git authors */
-	email?: string;
-	/** Additional emails/aliases the user is known by */
-	aliases?: string[];
-	/** Project IDs the user has explicit access to */
-	accessibleProjects?: string[];
-	/** Repo IDs the user has read access to */
-	accessibleRepos?: string[];
+  /** User identifier */
+  userId: string;
+  /** Organization identifier (optional) */
+  orgId?: string;
+  /** User's email for matching against git authors */
+  email?: string;
+  /** Additional emails/aliases the user is known by */
+  aliases?: string[];
+  /** Project IDs the user has explicit access to */
+  accessibleProjects?: string[];
+  /** Repo IDs the user has read access to */
+  accessibleRepos?: string[];
 }
 
 /**
  * Result of permission check
  */
 export interface PermissionCheckResult {
-	/** Whether access is granted */
-	allowed: boolean;
-	/** Reason for decision (for audit logging) */
-	reason: string;
-	/** The scope that granted access (if allowed) */
-	grantedScope?: MemoryScope;
+  /** Whether access is granted */
+  allowed: boolean;
+  /** Reason for decision (for audit logging) */
+  reason: string;
+  /** The scope that granted access (if allowed) */
+  grantedScope?: MemoryScope;
 }
 
 /**
  * Filter result with permitted session IDs
  */
 export interface PermittedSessionsResult {
-	/** Session IDs the user can access */
-	sessionIds: string[];
-	/** Total sessions checked */
-	totalChecked: number;
-	/** Sessions filtered out due to permissions */
-	filteredOut: number;
-	/** Breakdown by scope */
-	byScope: {
-		personal: number;
-		project: number;
-		team: number;
-	};
+  /** Session IDs the user can access */
+  sessionIds: string[];
+  /** Total sessions checked */
+  totalChecked: number;
+  /** Sessions filtered out due to permissions */
+  filteredOut: number;
+  /** Breakdown by scope */
+  byScope: {
+    personal: number;
+    project: number;
+    team: number;
+  };
 }
 
 /**
  * Check if a session is owned by the user (personal scope)
  */
 export function isPersonalSession(
-	session: Session,
-	context: UserPermissionContext,
+  session: Session,
+  context: UserPermissionContext
 ): boolean {
-	// Match by user ID if available in session metadata
-	// For now, we consider sessions in the user's home directory as personal
-	// This will be enhanced when user tracking is added to sessions
+  // Match by user ID if available in session metadata
+  // For now, we consider sessions in the user's home directory as personal
+  // This will be enhanced when user tracking is added to sessions
 
-	// Match by email in transcript path or session metadata
-	if (context.email && session.transcriptPath) {
-		// Check if session was created by this user
-		// (In future: check session.createdBy field)
-		return true; // Permissive for now - will be tightened with auth
-	}
+  // Match by email in transcript path or session metadata
+  if (context.email && session.transcriptPath) {
+    // Check if session was created by this user
+    // (In future: check session.createdBy field)
+    return true; // Permissive for now - will be tightened with auth
+  }
 
-	return false;
+  return false;
 }
 
 /**
  * Check if user has project-level access to a session
  */
 export function hasProjectAccess(
-	session: Session,
-	context: UserPermissionContext,
+  session: Session,
+  context: UserPermissionContext
 ): boolean {
-	if (!context.accessibleProjects || context.accessibleProjects.length === 0) {
-		return false;
-	}
+  if (!context.accessibleProjects || context.accessibleProjects.length === 0) {
+    return false;
+  }
 
-	// Check if session's project is in user's accessible projects
-	if (session.projectId) {
-		return context.accessibleProjects.includes(session.projectId);
-	}
+  // Check if session's project is in user's accessible projects
+  if (session.projectId) {
+    return context.accessibleProjects.includes(session.projectId);
+  }
 
-	return false;
+  return false;
 }
 
 /**
  * Check if user has team/repo-level access to a session
  */
 export function hasTeamAccess(
-	session: Session,
-	context: UserPermissionContext,
+  session: Session,
+  context: UserPermissionContext
 ): boolean {
-	if (!context.accessibleRepos || context.accessibleRepos.length === 0) {
-		return false;
-	}
+  if (!context.accessibleRepos || context.accessibleRepos.length === 0) {
+    return false;
+  }
 
-	// Extract repo from transcript path or project info
-	// Session's project should have a repo association
-	// For now, check if session's transcript path matches accessible repos
+  // Extract repo from transcript path or project info
+  // Session's project should have a repo association
+  // For now, check if session's transcript path matches accessible repos
 
-	if (session.transcriptPath) {
-		// Extract project slug from path and match against repo patterns
-		// This is a simplified check - will be enhanced with proper repo tracking
-		for (const repoId of context.accessibleRepos) {
-			if (session.transcriptPath.includes(repoId)) {
-				return true;
-			}
-		}
-	}
+  if (session.transcriptPath) {
+    // Extract project slug from path and match against repo patterns
+    // This is a simplified check - will be enhanced with proper repo tracking
+    for (const repoId of context.accessibleRepos) {
+      if (session.transcriptPath.includes(repoId)) {
+        return true;
+      }
+    }
+  }
 
-	return false;
+  return false;
 }
 
 /**
@@ -140,66 +140,66 @@ export function hasTeamAccess(
  * Implements fail-closed: denies access if check fails
  */
 export function checkSessionPermission(
-	session: Session,
-	context: UserPermissionContext,
-	requestedScope: MemoryScope = "team",
+  session: Session,
+  context: UserPermissionContext,
+  requestedScope: MemoryScope = 'team'
 ): PermissionCheckResult {
-	try {
-		// Personal scope - always check first (most permissive for own data)
-		if (isPersonalSession(session, context)) {
-			return {
-				allowed: true,
-				reason: "Personal session owned by user",
-				grantedScope: "personal",
-			};
-		}
+  try {
+    // Personal scope - always check first (most permissive for own data)
+    if (isPersonalSession(session, context)) {
+      return {
+        allowed: true,
+        reason: 'Personal session owned by user',
+        grantedScope: 'personal',
+      };
+    }
 
-		// If only personal scope requested, deny here
-		if (requestedScope === "personal") {
-			return {
-				allowed: false,
-				reason: "Session not owned by user",
-			};
-		}
+    // If only personal scope requested, deny here
+    if (requestedScope === 'personal') {
+      return {
+        allowed: false,
+        reason: 'Session not owned by user',
+      };
+    }
 
-		// Project scope
-		if (hasProjectAccess(session, context)) {
-			return {
-				allowed: true,
-				reason: "User has project-level access",
-				grantedScope: "project",
-			};
-		}
+    // Project scope
+    if (hasProjectAccess(session, context)) {
+      return {
+        allowed: true,
+        reason: 'User has project-level access',
+        grantedScope: 'project',
+      };
+    }
 
-		// If only project scope requested, deny here
-		if (requestedScope === "project") {
-			return {
-				allowed: false,
-				reason: "User lacks project access",
-			};
-		}
+    // If only project scope requested, deny here
+    if (requestedScope === 'project') {
+      return {
+        allowed: false,
+        reason: 'User lacks project access',
+      };
+    }
 
-		// Team scope
-		if (hasTeamAccess(session, context)) {
-			return {
-				allowed: true,
-				reason: "User has team/repo-level access",
-				grantedScope: "team",
-			};
-		}
+    // Team scope
+    if (hasTeamAccess(session, context)) {
+      return {
+        allowed: true,
+        reason: 'User has team/repo-level access',
+        grantedScope: 'team',
+      };
+    }
 
-		// Deny by default (fail-closed)
-		return {
-			allowed: false,
-			reason: "User lacks required permissions",
-		};
-	} catch (error) {
-		// Fail-closed on any error
-		return {
-			allowed: false,
-			reason: `Permission check error: ${error instanceof Error ? error.message : "unknown"}`,
-		};
-	}
+    // Deny by default (fail-closed)
+    return {
+      allowed: false,
+      reason: 'User lacks required permissions',
+    };
+  } catch (error) {
+    // Fail-closed on any error
+    return {
+      allowed: false,
+      reason: `Permission check error: ${error instanceof Error ? error.message : 'unknown'}`,
+    };
+  }
 }
 
 /**
@@ -208,36 +208,36 @@ export function checkSessionPermission(
  * Returns only sessions the user is allowed to access
  */
 export function filterSessionsByPermission(
-	sessions: Session[],
-	context: UserPermissionContext,
-	requestedScope: MemoryScope = "team",
+  sessions: Session[],
+  context: UserPermissionContext,
+  requestedScope: MemoryScope = 'team'
 ): PermittedSessionsResult {
-	const permitted: string[] = [];
-	const byScope = {
-		personal: 0,
-		project: 0,
-		team: 0,
-	};
+  const permitted: string[] = [];
+  const byScope = {
+    personal: 0,
+    project: 0,
+    team: 0,
+  };
 
-	for (const session of sessions) {
-		const result = checkSessionPermission(session, context, requestedScope);
+  for (const session of sessions) {
+    const result = checkSessionPermission(session, context, requestedScope);
 
-		if (result.allowed && result.grantedScope) {
-			permitted.push(session.id);
+    if (result.allowed && result.grantedScope) {
+      permitted.push(session.id);
 
-			// Track which scope granted access
-			if (result.grantedScope in byScope) {
-				byScope[result.grantedScope as keyof typeof byScope]++;
-			}
-		}
-	}
+      // Track which scope granted access
+      if (result.grantedScope in byScope) {
+        byScope[result.grantedScope as keyof typeof byScope]++;
+      }
+    }
+  }
 
-	return {
-		sessionIds: permitted,
-		totalChecked: sessions.length,
-		filteredOut: sessions.length - permitted.length,
-		byScope,
-	};
+  return {
+    sessionIds: permitted,
+    totalChecked: sessions.length,
+    filteredOut: sessions.length - permitted.length,
+    byScope,
+  };
 }
 
 /**
@@ -247,18 +247,18 @@ export function filterSessionsByPermission(
  * This is more efficient than post-filtering results.
  */
 export function applySessionIdPreFilter(
-	sessionIds: string[],
-	maxSessionsPerQuery = 1000,
+  sessionIds: string[],
+  maxSessionsPerQuery = 1000
 ): string[] {
-	// Limit the number of sessions to prevent performance issues
-	if (sessionIds.length > maxSessionsPerQuery) {
-		console.warn(
-			`[PermissionFilter] Limiting search to ${maxSessionsPerQuery} sessions (requested ${sessionIds.length})`,
-		);
-		return sessionIds.slice(0, maxSessionsPerQuery);
-	}
+  // Limit the number of sessions to prevent performance issues
+  if (sessionIds.length > maxSessionsPerQuery) {
+    console.warn(
+      `[PermissionFilter] Limiting search to ${maxSessionsPerQuery} sessions (requested ${sessionIds.length})`
+    );
+    return sessionIds.slice(0, maxSessionsPerQuery);
+  }
 
-	return sessionIds;
+  return sessionIds;
 }
 
 /**
@@ -269,25 +269,25 @@ export function applySessionIdPreFilter(
  * but provides an extra safety layer.
  */
 export function validateSearchResults<T extends { sessionId?: string }>(
-	results: T[],
-	permittedSessionIds: Set<string>,
+  results: T[],
+  permittedSessionIds: Set<string>
 ): { validated: T[]; rejected: number } {
-	const validated: T[] = [];
-	let rejected = 0;
+  const validated: T[] = [];
+  let rejected = 0;
 
-	for (const result of results) {
-		if (result.sessionId && permittedSessionIds.has(result.sessionId)) {
-			validated.push(result);
-		} else if (!result.sessionId) {
-			// Results without session ID (e.g., rules) are allowed
-			validated.push(result);
-		} else {
-			rejected++;
-			console.warn(
-				`[PermissionFilter] Rejected result from unauthorized session: ${result.sessionId}`,
-			);
-		}
-	}
+  for (const result of results) {
+    if (result.sessionId && permittedSessionIds.has(result.sessionId)) {
+      validated.push(result);
+    } else if (!result.sessionId) {
+      // Results without session ID (e.g., rules) are allowed
+      validated.push(result);
+    } else {
+      rejected++;
+      console.warn(
+        `[PermissionFilter] Rejected result from unauthorized session: ${result.sessionId}`
+      );
+    }
+  }
 
-	return { validated, rejected };
+  return { validated, rejected };
 }

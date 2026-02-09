@@ -502,29 +502,29 @@ export function getHanBinary(): string {
  * Also requires valid endpoint and API key to be truly enabled.
  */
 export function isSyncEnabled(): boolean {
-	const config = getMergedHanConfig();
-	const syncConfig = config.sync;
+  const config = getMergedHanConfig();
+  const syncConfig = config.sync;
 
-	if (!syncConfig?.enabled) {
-		return false;
-	}
+  if (!syncConfig?.enabled) {
+    return false;
+  }
 
-	// Check env var override
-	if (process.env.HAN_SYNC_ENABLED === "false") {
-		return false;
-	}
-	if (process.env.HAN_SYNC_ENABLED === "true") {
-		// Still need endpoint and API key
-		const endpoint = process.env.HAN_SYNC_ENDPOINT || syncConfig.endpoint;
-		const apiKey = process.env.HAN_SYNC_API_KEY || syncConfig.apiKey;
-		return Boolean(endpoint && apiKey);
-	}
+  // Check env var override
+  if (process.env.HAN_SYNC_ENABLED === 'false') {
+    return false;
+  }
+  if (process.env.HAN_SYNC_ENABLED === 'true') {
+    // Still need endpoint and API key
+    const endpoint = process.env.HAN_SYNC_ENDPOINT || syncConfig.endpoint;
+    const apiKey = process.env.HAN_SYNC_API_KEY || syncConfig.apiKey;
+    return Boolean(endpoint && apiKey);
+  }
 
-	// Need both endpoint and API key to be enabled
-	const endpoint = process.env.HAN_SYNC_ENDPOINT || syncConfig.endpoint;
-	const apiKey = process.env.HAN_SYNC_API_KEY || syncConfig.apiKey;
+  // Need both endpoint and API key to be enabled
+  const endpoint = process.env.HAN_SYNC_ENDPOINT || syncConfig.endpoint;
+  const apiKey = process.env.HAN_SYNC_API_KEY || syncConfig.apiKey;
 
-	return Boolean(endpoint && apiKey);
+  return Boolean(endpoint && apiKey);
 }
 
 /**
@@ -532,26 +532,26 @@ export function isSyncEnabled(): boolean {
  * Environment variables take precedence over config file values.
  */
 export function getSyncConfig(): SyncConfig | null {
-	const config = getMergedHanConfig();
-	const syncConfig = config.sync;
+  const config = getMergedHanConfig();
+  const syncConfig = config.sync;
 
-	if (!syncConfig) {
-		return null;
-	}
+  if (!syncConfig) {
+    return null;
+  }
 
-	return {
-		enabled:
-			process.env.HAN_SYNC_ENABLED !== undefined
-				? process.env.HAN_SYNC_ENABLED === "true"
-				: syncConfig.enabled,
-		endpoint: process.env.HAN_SYNC_ENDPOINT || syncConfig.endpoint,
-		apiKey: process.env.HAN_SYNC_API_KEY || syncConfig.apiKey,
-		interval: syncConfig.interval,
-		batchSize: syncConfig.batchSize,
-		includePersonal: syncConfig.includePersonal,
-		forceInclude: syncConfig.forceInclude,
-		forceExclude: syncConfig.forceExclude,
-		includeContent: syncConfig.includeContent,
-		compression: syncConfig.compression,
-	};
+  return {
+    enabled:
+      process.env.HAN_SYNC_ENABLED !== undefined
+        ? process.env.HAN_SYNC_ENABLED === 'true'
+        : syncConfig.enabled,
+    endpoint: process.env.HAN_SYNC_ENDPOINT || syncConfig.endpoint,
+    apiKey: process.env.HAN_SYNC_API_KEY || syncConfig.apiKey,
+    interval: syncConfig.interval,
+    batchSize: syncConfig.batchSize,
+    includePersonal: syncConfig.includePersonal,
+    forceInclude: syncConfig.forceInclude,
+    forceExclude: syncConfig.forceExclude,
+    includeContent: syncConfig.includeContent,
+    compression: syncConfig.compression,
+  };
 }

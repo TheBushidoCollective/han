@@ -19,62 +19,59 @@
  * console.log(`Synced ${result.messagesProcessed} messages`);
  */
 
-// Types
-export type {
-	SyncConfig,
-	SyncCursor,
-	SyncDelta,
-	SyncEligibility,
-	SyncError,
-	SyncMessage,
-	SyncPayload,
-	SyncQueueItem,
-	SyncResponse,
-	SyncResult,
-	SyncSession,
-	SyncState,
-	SyncTask,
-} from "./types.ts";
-
-export { SYNC_PROTOCOL_VERSION, DEFAULT_SYNC_CONFIG } from "./types.ts";
+// Client operations
+export {
+  buildSyncPayload,
+  compressPayload,
+  decompressResponse,
+  enqueuePendingSessions,
+  enqueueSyncSession,
+  getStatus,
+  processQueue,
+  sync,
+} from './client.ts';
+// Delta calculation
+export {
+  calculateDelta,
+  calculateSessionOnlyDelta,
+  getSyncStatus,
+  hashContent,
+  messageToSyncFormat,
+} from './delta.ts';
 
 // Privacy filtering
 export {
-	checkSyncEligibility,
-	checkBatchEligibility,
-	getEligibilitySummary,
-	isPersonalRepo,
-	matchesPattern,
-	parseGitRemote,
-} from "./privacy-filter.ts";
+  checkBatchEligibility,
+  checkSyncEligibility,
+  getEligibilitySummary,
+  isPersonalRepo,
+  matchesPattern,
+  parseGitRemote,
+} from './privacy-filter.ts';
 
 // Queue management
 export {
-	calculateBackoff,
-	getQueueManager,
-	getSyncStatePath,
-	loadSyncState,
-	saveSyncState,
-	SyncQueueManager,
-} from "./queue.ts";
-
-// Delta calculation
-export {
-	calculateDelta,
-	calculateSessionOnlyDelta,
-	getSyncStatus,
-	hashContent,
-	messageToSyncFormat,
-} from "./delta.ts";
-
-// Client operations
-export {
-	buildSyncPayload,
-	compressPayload,
-	decompressResponse,
-	enqueuePendingSessions,
-	enqueueSyncSession,
-	getStatus,
-	processQueue,
-	sync,
-} from "./client.ts";
+  calculateBackoff,
+  getQueueManager,
+  getSyncStatePath,
+  loadSyncState,
+  SyncQueueManager,
+  saveSyncState,
+} from './queue.ts';
+// Types
+export type {
+  SyncConfig,
+  SyncCursor,
+  SyncDelta,
+  SyncEligibility,
+  SyncError,
+  SyncMessage,
+  SyncPayload,
+  SyncQueueItem,
+  SyncResponse,
+  SyncResult,
+  SyncSession,
+  SyncState,
+  SyncTask,
+} from './types.ts';
+export { DEFAULT_SYNC_CONFIG, SYNC_PROTOCOL_VERSION } from './types.ts';

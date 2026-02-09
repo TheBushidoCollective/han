@@ -17,7 +17,7 @@ import { registerWrapSubagentContext } from './wrap-subagent-context.ts';
  * ink can hang during import in non-TTY environments (CI, piped processes, etc.)
  */
 function isTTY(): boolean {
-	return Boolean(process.stdout.isTTY);
+  return Boolean(process.stdout.isTTY);
 }
 
 /**

@@ -5,7 +5,7 @@
  * Uses S256 challenge method (SHA-256 hash of code verifier).
  */
 
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes } from 'node:crypto';
 
 /**
  * Generate a cryptographically random code verifier
@@ -14,12 +14,12 @@ import { createHash, randomBytes } from "node:crypto";
  * @returns URL-safe base64 encoded verifier
  */
 export function generateCodeVerifier(): string {
-	// 48 bytes = 64 base64 characters
-	return randomBytes(48)
-		.toString("base64")
-		.replace(/\+/g, "-")
-		.replace(/\//g, "_")
-		.replace(/=+$/, "");
+  // 48 bytes = 64 base64 characters
+  return randomBytes(48)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 }
 
 /**
@@ -30,12 +30,12 @@ export function generateCodeVerifier(): string {
  * @returns URL-safe base64 encoded challenge
  */
 export function generateCodeChallenge(verifier: string): string {
-	return createHash("sha256")
-		.update(verifier)
-		.digest("base64")
-		.replace(/\+/g, "-")
-		.replace(/\//g, "_")
-		.replace(/=+$/, "");
+  return createHash('sha256')
+    .update(verifier)
+    .digest('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 }
 
 /**
@@ -44,11 +44,11 @@ export function generateCodeChallenge(verifier: string): string {
  * @returns URL-safe base64 encoded state
  */
 export function generateState(): string {
-	return randomBytes(32)
-		.toString("base64")
-		.replace(/\+/g, "-")
-		.replace(/\//g, "_")
-		.replace(/=+$/, "");
+  return randomBytes(32)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 }
 
 /**
@@ -60,21 +60,21 @@ export function generateState(): string {
  * @returns true if they match
  */
 export function verifyCodeChallenge(
-	verifier: string,
-	challenge: string,
+  verifier: string,
+  challenge: string
 ): boolean {
-	const computed = generateCodeChallenge(verifier);
-	return computed === challenge;
+  const computed = generateCodeChallenge(verifier);
+  return computed === challenge;
 }
 
 /**
  * PKCE parameters for an OAuth authorization request
  */
 export interface PKCEParams {
-	codeVerifier: string;
-	codeChallenge: string;
-	codeChallengeMethod: "S256";
-	state: string;
+  codeVerifier: string;
+  codeChallenge: string;
+  codeChallengeMethod: 'S256';
+  state: string;
 }
 
 /**
@@ -83,13 +83,13 @@ export interface PKCEParams {
  * @returns Complete PKCE parameters
  */
 export function generatePKCEParams(): PKCEParams {
-	const codeVerifier = generateCodeVerifier();
-	const codeChallenge = generateCodeChallenge(codeVerifier);
+  const codeVerifier = generateCodeVerifier();
+  const codeChallenge = generateCodeChallenge(codeVerifier);
 
-	return {
-		codeVerifier,
-		codeChallenge,
-		codeChallengeMethod: "S256",
-		state: generateState(),
-	};
+  return {
+    codeVerifier,
+    codeChallenge,
+    codeChallengeMethod: 'S256',
+    state: generateState(),
+  };
 }

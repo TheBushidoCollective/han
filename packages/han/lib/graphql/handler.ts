@@ -20,35 +20,33 @@ import { schema } from './schema.ts';
  * In production, this would validate JWT tokens or session cookies
  */
 function extractUserContext(request: Request): UserContext | undefined {
-	// Check for user ID header (set by auth middleware in production)
-	const userId = request.headers.get("x-user-id");
-	if (!userId) {
-		return undefined;
-	}
+  // Check for user ID header (set by auth middleware in production)
+  const userId = request.headers.get('x-user-id');
+  if (!userId) {
+    return undefined;
+  }
 
-	// Extract role from header, default to 'ic'
-	const roleHeader = request.headers.get("x-user-role");
-	const role: UserRole =
-		roleHeader === "manager" || roleHeader === "admin"
-			? roleHeader
-			: "ic";
+  // Extract role from header, default to 'ic'
+  const roleHeader = request.headers.get('x-user-role');
+  const role: UserRole =
+    roleHeader === 'manager' || roleHeader === 'admin' ? roleHeader : 'ic';
 
-	// Extract organization ID
-	const orgId = request.headers.get("x-org-id") || undefined;
+  // Extract organization ID
+  const orgId = request.headers.get('x-org-id') || undefined;
 
-	// Extract project access list (comma-separated)
-	const projectIdsHeader = request.headers.get("x-project-ids");
-	const projectIds = projectIdsHeader
-		? projectIdsHeader.split(",").map((id) => id.trim())
-		: undefined;
+  // Extract project access list (comma-separated)
+  const projectIdsHeader = request.headers.get('x-project-ids');
+  const projectIds = projectIdsHeader
+    ? projectIdsHeader.split(',').map((id) => id.trim())
+    : undefined;
 
-	return {
-		id: userId,
-		displayName: request.headers.get("x-user-name") || undefined,
-		role,
-		orgId,
-		projectIds,
-	};
+  return {
+    id: userId,
+    displayName: request.headers.get('x-user-name') || undefined,
+    role,
+    orgId,
+    projectIds,
+  };
 }
 
 export { schema };

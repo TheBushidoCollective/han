@@ -10,18 +10,22 @@
  * 6. Store credentials securely
  */
 
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { execFile } from "node:child_process";
-import { randomBytes, createHash } from "node:crypto";
+import { execFile } from 'node:child_process';
+import { createHash, randomBytes } from 'node:crypto';
 import {
-  loadCredentials,
-  saveCredentials,
-  clearCredentials,
-  isTokenExpired,
-  getServerUrl,
-  type StoredCredentials,
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from 'node:http';
+import {
   type CredentialUser,
-} from "./credentials.ts";
+  clearCredentials,
+  getServerUrl,
+  isTokenExpired,
+  loadCredentials,
+  type StoredCredentials,
+  saveCredentials,
+} from './credentials.ts';
 
 /**
  * PKCE (Proof Key for Code Exchange) utilities
@@ -29,24 +33,22 @@ import {
  */
 function generateCodeVerifier(): string {
   // Generate a random 32-byte value and encode as URL-safe base64
-  return randomBytes(32)
-    .toString("base64url")
-    .replace(/=/g, "");
+  return randomBytes(32).toString('base64url').replace(/=/g, '');
 }
 
 function generateCodeChallenge(verifier: string): string {
   // SHA-256 hash of the verifier, encoded as URL-safe base64
-  return createHash("sha256")
+  return createHash('sha256')
     .update(verifier)
-    .digest("base64url")
-    .replace(/=/g, "");
+    .digest('base64url')
+    .replace(/=/g, '');
 }
 
 /**
  * Generate a random state token for CSRF protection
  */
 function generateState(): string {
-  return randomBytes(32).toString("base64url").replace(/=/g, "");
+  return randomBytes(32).toString('base64url').replace(/=/g, '');
 }
 
 /**
@@ -60,7 +62,7 @@ let tokenRefreshPromise: Promise<TokenResponse> | null = null;
 interface TokenResponse {
   access_token: string;
   refresh_token: string;
-  token_type: "Bearer";
+  token_type: 'Bearer';
   expires_in: number;
 }
 
@@ -113,17 +115,17 @@ function openBrowser(url: string): Promise<void> {
     let args: string[];
 
     switch (process.platform) {
-      case "darwin":
-        command = "open";
+      case 'darwin':
+        command = 'open';
         args = [url];
         break;
-      case "win32":
-        command = "cmd";
-        args = ["/c", "start", "", url];
+      case 'win32':
+        command = 'cmd';
+        args = ['/c', 'start', '', url];
         break;
       default:
         // Linux and others
-        command = "xdg-open";
+        command = 'xdg-open';
         args = [url];
     }
 
@@ -143,16 +145,16 @@ function openBrowser(url: string): Promise<void> {
 function findAvailablePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const server = createServer();
-    server.listen(0, "127.0.0.1", () => {
+    server.listen(0, '127.0.0.1', () => {
       const address = server.address();
-      if (address && typeof address === "object") {
+      if (address && typeof address === 'object') {
         const port = address.port;
         server.close(() => resolve(port));
       } else {
-        server.close(() => reject(new Error("Could not determine port")));
+        server.close(() => reject(new Error('Could not determine port')));
       }
     });
-    server.on("error", reject);
+    server.on('error', reject);
   });
 }
 
@@ -166,9 +168,9 @@ async function exchangeCodeForTokens(
   codeVerifier: string
 ): Promise<TokenResponse> {
   const response = await fetch(`${serverUrl}/auth/cli/exchange`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       code,
@@ -212,9 +214,9 @@ export async function refreshAccessToken(
   refreshToken: string
 ): Promise<TokenResponse> {
   const response = await fetch(`${serverUrl}/api/v1/auth/refresh`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify({ refresh_token: refreshToken }),
   });
@@ -281,23 +283,24 @@ export async function login(
         cleanup();
         resolve({
           success: false,
-          error: "Login timed out. Please try again.",
+          error: 'Login timed out. Please try again.',
         });
       }
     }, timeout);
 
-    httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
-      const url = new URL(req.url || "/", `http://localhost:${port}`);
+    httpServer = createServer(
+      async (req: IncomingMessage, res: ServerResponse) => {
+        const url = new URL(req.url || '/', `http://localhost:${port}`);
 
-      if (url.pathname === "/callback") {
-        const code = url.searchParams.get("code");
-        const error = url.searchParams.get("error");
-        const returnedState = url.searchParams.get("state");
+        if (url.pathname === '/callback') {
+          const code = url.searchParams.get('code');
+          const error = url.searchParams.get('error');
+          const returnedState = url.searchParams.get('state');
 
-        // Verify state parameter to prevent CSRF (HIGH-1)
-        if (returnedState !== expectedState) {
-          res.writeHead(400, { "Content-Type": "text/html" });
-          res.end(`
+          // Verify state parameter to prevent CSRF (HIGH-1)
+          if (returnedState !== expectedState) {
+            res.writeHead(400, { 'Content-Type': 'text/html' });
+            res.end(`
             <!DOCTYPE html>
             <html>
               <head><title>Han CLI Login Error</title></head>
@@ -309,21 +312,21 @@ export async function login(
             </html>
           `);
 
-          if (!resolved) {
-            resolved = true;
-            clearTimeout(timeoutId);
-            cleanup();
-            resolve({
-              success: false,
-              error: "Invalid state parameter - possible CSRF attack",
-            });
+            if (!resolved) {
+              resolved = true;
+              clearTimeout(timeoutId);
+              cleanup();
+              resolve({
+                success: false,
+                error: 'Invalid state parameter - possible CSRF attack',
+              });
+            }
+            return;
           }
-          return;
-        }
 
-        if (error) {
-          res.writeHead(200, { "Content-Type": "text/html" });
-          res.end(`
+          if (error) {
+            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.end(`
             <!DOCTYPE html>
             <html>
               <head><title>Han CLI Login Failed</title></head>
@@ -335,21 +338,21 @@ export async function login(
             </html>
           `);
 
-          if (!resolved) {
-            resolved = true;
-            clearTimeout(timeoutId);
-            cleanup();
-            resolve({
-              success: false,
-              error: error,
-            });
+            if (!resolved) {
+              resolved = true;
+              clearTimeout(timeoutId);
+              cleanup();
+              resolve({
+                success: false,
+                error: error,
+              });
+            }
+            return;
           }
-          return;
-        }
 
-        if (!code) {
-          res.writeHead(400, { "Content-Type": "text/html" });
-          res.end(`
+          if (!code) {
+            res.writeHead(400, { 'Content-Type': 'text/html' });
+            res.end(`
             <!DOCTYPE html>
             <html>
               <head><title>Han CLI Login Error</title></head>
@@ -361,102 +364,110 @@ export async function login(
             </html>
           `);
 
-          if (!resolved) {
-            resolved = true;
-            clearTimeout(timeoutId);
-            cleanup();
-            resolve({
-              success: false,
-              error: "No authorization code received from server",
-            });
+            if (!resolved) {
+              resolved = true;
+              clearTimeout(timeoutId);
+              cleanup();
+              resolve({
+                success: false,
+                error: 'No authorization code received from server',
+              });
+            }
+            return;
           }
-          return;
-        }
 
-        // Exchange code for tokens with PKCE code_verifier (HIGH-2)
-        try {
-          const tokens = await exchangeCodeForTokens(server, code, codeVerifier);
+          // Exchange code for tokens with PKCE code_verifier (HIGH-2)
+          try {
+            const tokens = await exchangeCodeForTokens(
+              server,
+              code,
+              codeVerifier
+            );
 
-          // Fetch user info
-          const userInfo = await fetchUserInfo(server, tokens.access_token);
+            // Fetch user info
+            const userInfo = await fetchUserInfo(server, tokens.access_token);
 
-          // Calculate expiration
-          const expiresAt = new Date(
-            Date.now() + tokens.expires_in * 1000
-          ).toISOString();
+            // Calculate expiration
+            const expiresAt = new Date(
+              Date.now() + tokens.expires_in * 1000
+            ).toISOString();
 
-          // Store credentials
-          const credentials: StoredCredentials = {
-            server_url: server,
-            access_token: tokens.access_token,
-            refresh_token: tokens.refresh_token,
-            user: {
-              id: userInfo.id,
-              email: userInfo.email,
-              github_username: userInfo.github_username,
-              name: userInfo.name,
-              avatar_url: userInfo.avatar_url,
-            },
-            expires_at: expiresAt,
-          };
+            // Store credentials
+            const credentials: StoredCredentials = {
+              server_url: server,
+              access_token: tokens.access_token,
+              refresh_token: tokens.refresh_token,
+              user: {
+                id: userInfo.id,
+                email: userInfo.email,
+                github_username: userInfo.github_username,
+                name: userInfo.name,
+                avatar_url: userInfo.avatar_url,
+              },
+              expires_at: expiresAt,
+            };
 
-          saveCredentials(credentials);
+            saveCredentials(credentials);
 
-          // Send success response
-          res.writeHead(200, { "Content-Type": "text/html" });
-          res.end(`
+            // Send success response
+            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.end(`
             <!DOCTYPE html>
             <html>
               <head><title>Han CLI Login Success</title></head>
               <body style="font-family: system-ui; padding: 40px; text-align: center;">
                 <h1 style="color: #16a34a;">Login Successful!</h1>
-                <p>Welcome, ${userInfo.name || userInfo.github_username || userInfo.email || "user"}!</p>
+                <p>Welcome, ${userInfo.name || userInfo.github_username || userInfo.email || 'user'}!</p>
                 <p>You can close this window and return to the terminal.</p>
               </body>
             </html>
           `);
 
-          if (!resolved) {
-            resolved = true;
-            clearTimeout(timeoutId);
-            cleanup();
-            resolve({
-              success: true,
-              user: credentials.user,
-            });
-          }
-        } catch (exchangeError) {
-          res.writeHead(500, { "Content-Type": "text/html" });
-          res.end(`
+            if (!resolved) {
+              resolved = true;
+              clearTimeout(timeoutId);
+              cleanup();
+              resolve({
+                success: true,
+                user: credentials.user,
+              });
+            }
+          } catch (exchangeError) {
+            res.writeHead(500, { 'Content-Type': 'text/html' });
+            res.end(`
             <!DOCTYPE html>
             <html>
               <head><title>Han CLI Login Error</title></head>
               <body style="font-family: system-ui; padding: 40px; text-align: center;">
                 <h1 style="color: #dc2626;">Login Error</h1>
-                <p>${exchangeError instanceof Error ? exchangeError.message : "Unknown error"}</p>
+                <p>${exchangeError instanceof Error ? exchangeError.message : 'Unknown error'}</p>
                 <p>You can close this window.</p>
               </body>
             </html>
           `);
 
-          if (!resolved) {
-            resolved = true;
-            clearTimeout(timeoutId);
-            cleanup();
-            resolve({
-              success: false,
-              error: exchangeError instanceof Error ? exchangeError.message : "Unknown error",
-            });
+            if (!resolved) {
+              resolved = true;
+              clearTimeout(timeoutId);
+              cleanup();
+              resolve({
+                success: false,
+                error:
+                  exchangeError instanceof Error
+                    ? exchangeError.message
+                    : 'Unknown error',
+              });
+            }
           }
+        } else {
+          // Unknown path
+          res.writeHead(404);
+          res.end('Not found');
         }
-      } else {
-        // Unknown path
-        res.writeHead(404);
-        res.end("Not found");
       }
-    });
+    );
 
-    httpServer.listen(port, "127.0.0.1", async () => {
+    httpServer.listen(port, '127.0.0.1', async () => {
       console.log(`Opening browser for authentication...`);
 
       // Include PKCE code_challenge and state in auth URL (HIGH-1, HIGH-2)
@@ -465,14 +476,14 @@ export async function login(
       try {
         await openBrowser(authUrl);
         console.log(`\nIf the browser doesn't open, visit:\n${authUrl}\n`);
-        console.log("Waiting for authentication...");
+        console.log('Waiting for authentication...');
       } catch {
         console.log(`\nPlease open this URL in your browser:\n${authUrl}\n`);
-        console.log("Waiting for authentication...");
+        console.log('Waiting for authentication...');
       }
     });
 
-    httpServer.on("error", (error) => {
+    httpServer.on('error', (error) => {
       if (!resolved) {
         resolved = true;
         clearTimeout(timeoutId);

@@ -7,22 +7,23 @@
  * - han config list               - List all configuration
  */
 
-import type { Command } from "commander";
+import { existsSync } from 'node:fs';
+import type { Command } from 'commander';
 import {
-  getServerUrl,
-  setServerUrl,
   DEFAULT_SERVER_URL,
-  loadCredentials,
   getCredentialsPath,
-} from "../../services/credentials.ts";
-import { existsSync } from "node:fs";
+  getServerUrl,
+  loadCredentials,
+  setServerUrl,
+} from '../../services/credentials.ts';
 
 /**
  * Supported configuration keys
  */
 const CONFIG_KEYS = {
-  "server-url": {
-    description: "Team server URL for sync and auth (HTTPS required unless --insecure)",
+  'server-url': {
+    description:
+      'Team server URL for sync and auth (HTTPS required unless --insecure)',
     get: () => getServerUrl(),
     set: (value: string, allowInsecure = false) => {
       // Validate URL format
@@ -40,23 +41,23 @@ const CONFIG_KEYS = {
 
 export function registerConfigCommands(program: Command): void {
   const configCommand = program
-    .command("config")
-    .description("Manage Han CLI configuration");
+    .command('config')
+    .description('Manage Han CLI configuration');
 
   // han config set <key> <value>
   configCommand
-    .command("set <key> <value>")
-    .description("Set a configuration value")
+    .command('set <key> <value>')
+    .description('Set a configuration value')
     .option(
-      "--insecure",
-      "Allow insecure HTTP connections (WARNING: credentials transmitted in plain text)"
+      '--insecure',
+      'Allow insecure HTTP connections (WARNING: credentials transmitted in plain text)'
     )
     .action((key: string, value: string, options: { insecure?: boolean }) => {
       const configDef = CONFIG_KEYS[key as keyof typeof CONFIG_KEYS];
 
       if (!configDef) {
         console.error(`\x1b[31mUnknown configuration key: ${key}\x1b[0m`);
-        console.log("\nAvailable keys:");
+        console.log('\nAvailable keys:');
         for (const [k, v] of Object.entries(CONFIG_KEYS)) {
           console.log(`  ${k} - ${v.description}`);
         }
@@ -68,7 +69,9 @@ export function registerConfigCommands(program: Command): void {
         configDef.set(value, options.insecure);
         console.log(`\x1b[32mSet ${key} = ${value}\x1b[0m`);
         if (options.insecure) {
-          console.log(`\x1b[33mWARNING: Using insecure HTTP connection. Credentials may be transmitted in plain text.\x1b[0m`);
+          console.log(
+            `\x1b[33mWARNING: Using insecure HTTP connection. Credentials may be transmitted in plain text.\x1b[0m`
+          );
         }
       } catch (error) {
         console.error(
@@ -81,14 +84,14 @@ export function registerConfigCommands(program: Command): void {
 
   // han config get <key>
   configCommand
-    .command("get <key>")
-    .description("Get a configuration value")
+    .command('get <key>')
+    .description('Get a configuration value')
     .action((key: string) => {
       const configDef = CONFIG_KEYS[key as keyof typeof CONFIG_KEYS];
 
       if (!configDef) {
         console.error(`\x1b[31mUnknown configuration key: ${key}\x1b[0m`);
-        console.log("\nAvailable keys:");
+        console.log('\nAvailable keys:');
         for (const [k, v] of Object.entries(CONFIG_KEYS)) {
           console.log(`  ${k} - ${v.description}`);
         }
@@ -101,9 +104,9 @@ export function registerConfigCommands(program: Command): void {
 
   // han config list
   configCommand
-    .command("list")
-    .description("List all configuration values")
-    .option("-j, --json", "Output as JSON")
+    .command('list')
+    .description('List all configuration values')
+    .option('-j, --json', 'Output as JSON')
     .action((options: { json?: boolean }) => {
       const config: Record<string, string | null> = {};
 
@@ -116,29 +119,31 @@ export function registerConfigCommands(program: Command): void {
         return;
       }
 
-      console.log("\n=== Han Configuration ===\n");
+      console.log('\n=== Han Configuration ===\n');
 
       for (const [key, value] of Object.entries(config)) {
         const def = CONFIG_KEYS[key as keyof typeof CONFIG_KEYS];
-        const isDefault = key === "server-url" && value === DEFAULT_SERVER_URL;
+        const isDefault = key === 'server-url' && value === DEFAULT_SERVER_URL;
 
         console.log(`${key}:`);
-        console.log(`  Value: ${value}${isDefault ? " (default)" : ""}`);
+        console.log(`  Value: ${value}${isDefault ? ' (default)' : ''}`);
         console.log(`  Description: ${def.description}`);
-        console.log("");
+        console.log('');
       }
 
       // Show credentials path
       const credPath = getCredentialsPath();
-      console.log("Credentials:");
+      console.log('Credentials:');
       console.log(`  Path: ${credPath}`);
-      console.log(`  Exists: ${existsSync(credPath) ? "yes" : "no"}`);
+      console.log(`  Exists: ${existsSync(credPath) ? 'yes' : 'no'}`);
 
       const creds = loadCredentials();
       if (creds?.user) {
-        console.log(`  User: ${creds.user.github_username || creds.user.email || creds.user.id}`);
+        console.log(
+          `  User: ${creds.user.github_username || creds.user.email || creds.user.id}`
+        );
       }
 
-      console.log("");
+      console.log('');
     });
 }

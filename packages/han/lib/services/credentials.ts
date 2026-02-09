@@ -9,16 +9,25 @@
  * - HTTPS enforcement for server URLs (MEDIUM-3)
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync, statSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 
 /**
  * Whether to allow insecure HTTP connections (MEDIUM-3)
  * Can be enabled via HAN_INSECURE=1 environment variable
  */
 export function isInsecureAllowed(): boolean {
-  return process.env.HAN_INSECURE === "1" || process.env.HAN_INSECURE === "true";
+  return (
+    process.env.HAN_INSECURE === '1' || process.env.HAN_INSECURE === 'true'
+  );
 }
 
 /**
@@ -29,18 +38,22 @@ export function isInsecureAllowed(): boolean {
  * @param allowInsecure - Allow HTTP scheme (default: false)
  * @throws Error if URL uses HTTP and insecure not allowed
  */
-export function validateServerUrlScheme(url: string, allowInsecure = false): void {
+export function validateServerUrlScheme(
+  url: string,
+  allowInsecure = false
+): void {
   const parsed = new URL(url);
 
   // localhost is always allowed for development
-  const isLocalhost = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+  const isLocalhost =
+    parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
 
-  if (parsed.protocol === "http:" && !isLocalhost) {
+  if (parsed.protocol === 'http:' && !isLocalhost) {
     if (!allowInsecure && !isInsecureAllowed()) {
       throw new Error(
         `Insecure HTTP connection not allowed for server URL: ${url}\n` +
-        `Use HTTPS or set HAN_INSECURE=1 to allow insecure connections.\n` +
-        `WARNING: HTTP connections transmit credentials in plain text.`
+          `Use HTTPS or set HAN_INSECURE=1 to allow insecure connections.\n` +
+          `WARNING: HTTP connections transmit credentials in plain text.`
       );
     }
   }
@@ -78,20 +91,20 @@ export interface StoredCredentials {
 /**
  * Default server URL
  */
-export const DEFAULT_SERVER_URL = "https://api.han.guru";
+export const DEFAULT_SERVER_URL = 'https://api.han.guru';
 
 /**
  * Get the credentials directory path
  */
 export function getCredentialsDir(): string {
-  return join(homedir(), ".config", "han");
+  return join(homedir(), '.config', 'han');
 }
 
 /**
  * Get the credentials file path
  */
 export function getCredentialsPath(): string {
-  return join(getCredentialsDir(), "credentials.json");
+  return join(getCredentialsDir(), 'credentials.json');
 }
 
 /**
@@ -118,19 +131,19 @@ export function loadCredentials(): StoredCredentials | null {
 
   try {
     // Check file permissions on Unix systems
-    if (process.platform !== "win32") {
+    if (process.platform !== 'win32') {
       const stats = statSync(path);
       const mode = stats.mode & 0o777;
       // Warn if file permissions are too permissive
       if (mode !== 0o600) {
         console.error(
           `Warning: Credentials file has insecure permissions ${mode.toString(8)}. ` +
-          `Run: chmod 600 ${path}`
+            `Run: chmod 600 ${path}`
         );
       }
     }
 
-    const content = readFileSync(path, "utf-8");
+    const content = readFileSync(path, 'utf-8');
     const credentials = JSON.parse(content) as StoredCredentials;
 
     // Validate required fields
@@ -162,7 +175,7 @@ export function saveCredentials(credentials: StoredCredentials): void {
   writeFileSync(path, content, { mode: 0o600 });
 
   // Explicitly set permissions (in case umask interfered)
-  if (process.platform !== "win32") {
+  if (process.platform !== 'win32') {
     chmodSync(path, 0o600);
   }
 }
@@ -181,9 +194,9 @@ export function clearCredentials(): boolean {
 
   try {
     // Overwrite with empty object before deleting (security best practice)
-    writeFileSync(path, "{}", { mode: 0o600 });
+    writeFileSync(path, '{}', { mode: 0o600 });
     // Use unlink to delete
-    const { unlinkSync } = require("node:fs");
+    const { unlinkSync } = require('node:fs');
     unlinkSync(path);
     return true;
   } catch {
@@ -246,7 +259,10 @@ export function getServerUrl(): string {
  * @returns true if updated, false if no credentials exist
  * @throws Error if URL uses HTTP and insecure not allowed
  */
-export function setServerUrl(serverUrl: string, allowInsecure = false): boolean {
+export function setServerUrl(
+  serverUrl: string,
+  allowInsecure = false
+): boolean {
   // Validate HTTPS scheme (MEDIUM-3)
   validateServerUrlScheme(serverUrl, allowInsecure);
 

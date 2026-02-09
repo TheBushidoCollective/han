@@ -5,10 +5,10 @@
  * Configuration is loaded from environment variables.
  */
 
-import { AsyncLocalStorage } from "node:async_hooks";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-import * as schema from "./schema/index.ts";
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import * as schema from './schema/index.ts';
 
 // =============================================================================
 // Configuration
@@ -18,13 +18,13 @@ import * as schema from "./schema/index.ts";
  * PostgreSQL connection configuration from environment variables
  */
 export interface PostgresConfig {
-	host: string;
-	port: number;
-	database: string;
-	user: string;
-	password: string;
-	ssl?: boolean | "require" | "prefer";
-	maxConnections?: number;
+  host: string;
+  port: number;
+  database: string;
+  user: string;
+  password: string;
+  ssl?: boolean | 'require' | 'prefer';
+  maxConnections?: number;
 }
 
 /**
@@ -42,38 +42,38 @@ export interface PostgresConfig {
  * - POSTGRES_MAX_CONNECTIONS (default: 10)
  */
 export function getPostgresConfig(): PostgresConfig {
-	const host = process.env.POSTGRES_HOST;
-	const database = process.env.POSTGRES_DB;
-	const user = process.env.POSTGRES_USER;
-	const password = process.env.POSTGRES_PASSWORD;
+  const host = process.env.POSTGRES_HOST;
+  const database = process.env.POSTGRES_DB;
+  const user = process.env.POSTGRES_USER;
+  const password = process.env.POSTGRES_PASSWORD;
 
-	if (!host || !database || !user || !password) {
-		throw new Error(
-			"Missing required PostgreSQL environment variables: POSTGRES_HOST, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD",
-		);
-	}
+  if (!host || !database || !user || !password) {
+    throw new Error(
+      'Missing required PostgreSQL environment variables: POSTGRES_HOST, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD'
+    );
+  }
 
-	const port = process.env.POSTGRES_PORT
-		? Number.parseInt(process.env.POSTGRES_PORT, 10)
-		: 5432;
+  const port = process.env.POSTGRES_PORT
+    ? Number.parseInt(process.env.POSTGRES_PORT, 10)
+    : 5432;
 
-	const ssl = process.env.POSTGRES_SSL
-		? process.env.POSTGRES_SSL === "true" || process.env.POSTGRES_SSL
-		: false;
+  const ssl = process.env.POSTGRES_SSL
+    ? process.env.POSTGRES_SSL === 'true' || process.env.POSTGRES_SSL
+    : false;
 
-	const maxConnections = process.env.POSTGRES_MAX_CONNECTIONS
-		? Number.parseInt(process.env.POSTGRES_MAX_CONNECTIONS, 10)
-		: 10;
+  const maxConnections = process.env.POSTGRES_MAX_CONNECTIONS
+    ? Number.parseInt(process.env.POSTGRES_MAX_CONNECTIONS, 10)
+    : 10;
 
-	return {
-		host,
-		port,
-		database,
-		user,
-		password,
-		ssl: ssl as PostgresConfig["ssl"],
-		maxConnections,
-	};
+  return {
+    host,
+    port,
+    database,
+    user,
+    password,
+    ssl: ssl as PostgresConfig['ssl'],
+    maxConnections,
+  };
 }
 
 // =============================================================================
@@ -99,41 +99,40 @@ let _db: DrizzleDb | null = null;
  * Uses singleton pattern to reuse connections
  */
 export function getPostgresClient(): PostgresClient {
-	if (!_sql) {
-		const config = getPostgresConfig();
-		// SSL configuration - always validate certificates in production
-		// POSTGRES_SSL_REJECT_UNAUTHORIZED=false is ONLY allowed in non-production environments
-		const isProduction = process.env.NODE_ENV === "production";
-		const disableValidation =
-			!isProduction &&
-			process.env.POSTGRES_SSL_REJECT_UNAUTHORIZED === "false";
+  if (!_sql) {
+    const config = getPostgresConfig();
+    // SSL configuration - always validate certificates in production
+    // POSTGRES_SSL_REJECT_UNAUTHORIZED=false is ONLY allowed in non-production environments
+    const isProduction = process.env.NODE_ENV === 'production';
+    const disableValidation =
+      !isProduction && process.env.POSTGRES_SSL_REJECT_UNAUTHORIZED === 'false';
 
-		if (disableValidation) {
-			console.warn(
-				"[postgres] WARNING: SSL certificate validation disabled. " +
-					"This is acceptable for development with self-signed certificates, " +
-					"but should NEVER be used in production.",
-			);
-		}
+    if (disableValidation) {
+      console.warn(
+        '[postgres] WARNING: SSL certificate validation disabled. ' +
+          'This is acceptable for development with self-signed certificates, ' +
+          'but should NEVER be used in production.'
+      );
+    }
 
-		const sslConfig = config.ssl
-			? {
-					// In production, ALWAYS validate certificates regardless of env var
-					rejectUnauthorized: isProduction ? true : !disableValidation,
-				}
-			: false;
+    const sslConfig = config.ssl
+      ? {
+          // In production, ALWAYS validate certificates regardless of env var
+          rejectUnauthorized: isProduction ? true : !disableValidation,
+        }
+      : false;
 
-		_sql = postgres({
-			host: config.host,
-			port: config.port,
-			database: config.database,
-			username: config.user,
-			password: config.password,
-			ssl: sslConfig,
-			max: config.maxConnections,
-		});
-	}
-	return _sql;
+    _sql = postgres({
+      host: config.host,
+      port: config.port,
+      database: config.database,
+      username: config.user,
+      password: config.password,
+      ssl: sslConfig,
+      max: config.maxConnections,
+    });
+  }
+  return _sql;
 }
 
 /**
@@ -141,11 +140,11 @@ export function getPostgresClient(): PostgresClient {
  * Uses singleton pattern for connection reuse
  */
 export function getDb(): DrizzleDb {
-	if (!_db) {
-		const sql = getPostgresClient();
-		_db = drizzle(sql, { schema });
-	}
-	return _db;
+  if (!_db) {
+    const sql = getPostgresClient();
+    _db = drizzle(sql, { schema });
+  }
+  return _db;
 }
 
 /**
@@ -153,11 +152,11 @@ export function getDb(): DrizzleDb {
  * Call this on application shutdown
  */
 export async function closeDb(): Promise<void> {
-	if (_sql) {
-		await _sql.end();
-		_sql = null;
-		_db = null;
-	}
+  if (_sql) {
+    await _sql.end();
+    _sql = null;
+    _db = null;
+  }
 }
 
 /**
@@ -165,8 +164,8 @@ export async function closeDb(): Promise<void> {
  * @internal
  */
 export function _resetDb(): void {
-	_sql = null;
-	_db = null;
+  _sql = null;
+  _db = null;
 }
 
 // =============================================================================
@@ -178,9 +177,9 @@ export function _resetDb(): void {
  * This should be set from the authenticated user's session
  */
 export interface TenantContext {
-	organizationId: string;
-	userId?: string;
-	teamId?: string;
+  organizationId: string;
+  userId?: string;
+  teamId?: string;
 }
 
 /**
@@ -197,11 +196,11 @@ const tenantStorage = new AsyncLocalStorage<TenantContext>();
  * This method now throws an error to prevent accidental misuse.
  */
 export function setTenantContext(_context: TenantContext): void {
-	throw new Error(
-		"setTenantContext() is deprecated and has been removed. " +
-			"Use withTenantContext(context, async () => { ... }) instead to ensure " +
-			"proper tenant isolation in concurrent request scenarios.",
-	);
+  throw new Error(
+    'setTenantContext() is deprecated and has been removed. ' +
+      'Use withTenantContext(context, async () => { ... }) instead to ensure ' +
+      'proper tenant isolation in concurrent request scenarios.'
+  );
 }
 
 /**
@@ -209,13 +208,13 @@ export function setTenantContext(_context: TenantContext): void {
  * Throws if no tenant context is set
  */
 export function getTenantContext(): TenantContext {
-	const context = tenantStorage.getStore();
-	if (!context) {
-		throw new Error(
-			"No tenant context set. Wrap your request handler with withTenantContext().",
-		);
-	}
-	return context;
+  const context = tenantStorage.getStore();
+  if (!context) {
+    throw new Error(
+      'No tenant context set. Wrap your request handler with withTenantContext().'
+    );
+  }
+  return context;
 }
 
 /**
@@ -226,11 +225,11 @@ export function getTenantContext(): TenantContext {
  * This method now throws an error to prevent accidental misuse.
  */
 export function clearTenantContext(): void {
-	throw new Error(
-		"clearTenantContext() is deprecated and has been removed. " +
-			"Use withTenantContext(context, async () => { ... }) instead. " +
-			"The context is automatically cleaned up when the async scope exits.",
-	);
+  throw new Error(
+    'clearTenantContext() is deprecated and has been removed. ' +
+      'Use withTenantContext(context, async () => { ... }) instead. ' +
+      'The context is automatically cleaned up when the async scope exits.'
+  );
 }
 
 /**
@@ -254,8 +253,8 @@ export function clearTenantContext(): void {
  * ```
  */
 export async function withTenantContext<T>(
-	context: TenantContext,
-	fn: () => Promise<T>,
+  context: TenantContext,
+  fn: () => Promise<T>
 ): Promise<T> {
-	return tenantStorage.run(context, fn);
+  return tenantStorage.run(context, fn);
 }
