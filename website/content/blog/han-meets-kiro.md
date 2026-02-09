@@ -54,6 +54,7 @@ The Kiro bridge is different. It's a CLI tool that Kiro hooks call:
 ```
 
 Each hook invocation:
+
 1. Starts the bridge process
 2. Reads JSON from stdin (Kiro's hook payload)
 3. Maps Kiro tool names to Claude Code names (`fs_write` → `Write`)

@@ -190,6 +190,7 @@ The bridge provides a Kiro agent configuration (`kiro-agent.json`) that defines 
 ```
 
 You can customize this by:
+
 - Adding more matchers to `postToolUse` (e.g., `notebook_edit`)
 - Adjusting timeouts
 - Merging hooks into your own custom agent
