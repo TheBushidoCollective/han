@@ -215,10 +215,19 @@ export function SessionListItem({
 		>
 			<HStack justify="space-between" align="center">
 				<VStack gap="xs" style={{ flex: 1, minWidth: 0 }}>
+					{/* Primary line: summary (or slug fallback) + project */}
 					<HStack gap="sm" align="center">
 						<Text size="md" weight="medium" truncate>
-							{session.name}
+							{session.summary || session.name}
 						</Text>
+					</HStack>
+					{/* Secondary line: slug (when summary is shown) + project info */}
+					<HStack gap="sm" align="center">
+						{session.summary && (
+							<Text size="xs" color="muted" truncate>
+								{session.name}
+							</Text>
+						)}
 						<Text size="sm" color="secondary" truncate>
 							{session.projectName}
 						</Text>
@@ -248,12 +257,6 @@ export function SessionListItem({
 								{session.currentTodo?.activeForm ?? "Working"}
 							</Badge>
 						</HStack>
-					)}
-					{/* Show summary if no active task or todo */}
-					{session.summary && !hasActiveTasks && !hasActiveTodo && (
-						<Text size="sm" color="secondary" truncate>
-							{session.summary}
-						</Text>
 					)}
 					<HStack gap="sm" align="center">
 						<Badge variant="default">{session.messageCount} msgs</Badge>

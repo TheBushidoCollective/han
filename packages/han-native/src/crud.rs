@@ -4461,7 +4461,7 @@ pub fn query_dashboard_aggregates(cutoff_date: &str) -> napi::Result<DashboardAg
     };
 
     // 5. Per-session stats (costs + effectiveness)
-    let session_stats = {
+    let mut session_stats = {
         let mut stmt = conn
             .prepare(
                 "SELECT m.session_id,
@@ -4499,6 +4499,35 @@ pub fn query_dashboard_aggregates(cutoff_date: &str) -> napi::Result<DashboardAg
             .map_err(|e| napi::Error::from_reason(format!("session_stats query: {}", e)))?;
         rows.filter_map(|r| r.ok()).collect::<Vec<_>>()
     };
+
+    // 5b. Fill in summaries from first user message for sessions without generated summaries
+    {
+        let mut first_msg_stmt = conn
+            .prepare(
+                "SELECT session_id, SUBSTR(content, 1, 200)
+                 FROM messages
+                 WHERE message_type IN ('human', 'user')
+                   AND content IS NOT NULL AND content != ''
+                   AND timestamp > ?1
+                 GROUP BY session_id
+                 HAVING timestamp = MIN(timestamp)",
+            )
+            .map_err(|e| napi::Error::from_reason(format!("first_msg prepare: {}", e)))?;
+        let msg_rows = first_msg_stmt
+            .query_map(params![cutoff_date], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|e| napi::Error::from_reason(format!("first_msg query: {}", e)))?;
+        let first_msgs: std::collections::HashMap<String, String> =
+            msg_rows.filter_map(|r| r.ok()).collect();
+        for s in session_stats.iter_mut() {
+            if s.summary.is_none() {
+                if let Some(msg) = first_msgs.get(&s.session_id) {
+                    s.summary = Some(msg.clone());
+                }
+            }
+        }
+    }
 
     // 6. Compaction totals
     let (total_compactions, total_compaction_sessions) = conn
