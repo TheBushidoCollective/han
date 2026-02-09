@@ -311,6 +311,18 @@ function calculateStreak(dailyActivity: DailyActivity[]): number {
 }
 
 // =============================================================================
+// In-memory TTL Cache
+// =============================================================================
+
+interface CacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+
+const activityCache = new Map<string, CacheEntry<ActivityData>>();
+const ACTIVITY_CACHE_TTL_MS = 30_000; // 30 seconds
+
+// =============================================================================
 // Query Function
 // =============================================================================
 
@@ -318,6 +330,11 @@ function calculateStreak(dailyActivity: DailyActivity[]): number {
  * Query activity data from the database
  */
 export async function queryActivityData(days = 365): Promise<ActivityData> {
+  const cacheKey = `${days}`;
+  const cached = activityCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - days);
   const cutoffStr = cutoffDate.toISOString();
@@ -472,7 +489,7 @@ export async function queryActivityData(days = 365): Promise<ActivityData> {
       }))
     : [];
 
-  return {
+  const result: ActivityData = {
     dailyActivity,
     hourlyActivity,
     tokenUsage,
@@ -484,4 +501,11 @@ export async function queryActivityData(days = 365): Promise<ActivityData> {
     totalMessages: statsCache?.totalMessages ?? messageCount,
     firstSessionDate: statsCache?.firstSessionDate ?? null,
   };
+
+  activityCache.set(cacheKey, {
+    data: result,
+    expiresAt: Date.now() + ACTIVITY_CACHE_TTL_MS,
+  });
+
+  return result;
 }

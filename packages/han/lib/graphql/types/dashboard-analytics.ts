@@ -737,6 +737,18 @@ export function classifyCompactionType(rawJson: string | null): string {
 }
 
 // =============================================================================
+// In-memory TTL Cache
+// =============================================================================
+
+interface CacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+
+const analyticsCache = new Map<string, CacheEntry<DashboardAnalytics>>();
+const ANALYTICS_CACHE_TTL_MS = 30_000; // 30 seconds
+
+// =============================================================================
 // Query Function
 // =============================================================================
 
@@ -750,6 +762,11 @@ export async function queryDashboardAnalytics(
   days = 30,
   subscriptionTier = 200
 ): Promise<DashboardAnalytics> {
+  const cacheKey = `${days}:${subscriptionTier}`;
+  const cached = analyticsCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - days);
   const cutoffStr = cutoffDate.toISOString();
@@ -834,7 +851,7 @@ export async function queryDashboardAnalytics(
       for (const msg of allMessages) {
         if (msg.timestamp < cutoffStr) continue;
 
-        // Assistant messages: token tracking + sentiment
+        // Assistant messages: token tracking + sentiment + tool_use extraction
         if (msg.messageType === 'assistant') {
           const tokens = parseTokensFromRawJson(msg.rawJson ?? null);
           sessionInputTokens += tokens.inputTokens;
@@ -845,6 +862,51 @@ export async function queryDashboardAnalytics(
 
           if (msg.sentimentScore != null) {
             sentimentScores.push(msg.sentimentScore);
+          }
+
+          // Extract tool_use blocks from assistant message content
+          // Tool calls are embedded as content blocks in raw_json, not separate messages
+          if (msg.rawJson) {
+            try {
+              const parsed = JSON.parse(msg.rawJson);
+              const content = parsed.message?.content || parsed.content;
+              if (Array.isArray(content)) {
+                for (const block of content) {
+                  if (block.type === 'tool_use' && block.name) {
+                    toolCounts.set(
+                      block.name,
+                      (toolCounts.get(block.name) || 0) + 1
+                    );
+                    sessionToolNames.add(block.name);
+
+                    // Extract subagent type from Task tool calls
+                    if (block.name === 'Task' && block.input) {
+                      const subagentType =
+                        block.input.subagent_type ||
+                        block.input.subagentType ||
+                        'general-purpose';
+                      subagentCounts.set(
+                        subagentType,
+                        (subagentCounts.get(subagentType) || 0) + 1
+                      );
+                    }
+
+                    // Track task creation and completion
+                    if (block.name === 'TaskCreate') {
+                      taskTotal++;
+                    }
+                    if (block.name === 'TaskUpdate' && block.input) {
+                      if (block.input.status === 'completed') {
+                        taskCompleted++;
+                        totalCompletedTasks++;
+                      }
+                    }
+                  }
+                }
+              }
+            } catch {
+              // Ignore parse errors
+            }
           }
         }
 
@@ -1256,7 +1318,7 @@ export async function queryDashboardAnalytics(
     breakEvenDailySpend,
   };
 
-  return {
+  const result: DashboardAnalytics = {
     subagentUsage,
     compactionStats,
     topSessions,
@@ -1265,4 +1327,11 @@ export async function queryDashboardAnalytics(
     hookHealth,
     costAnalysis,
   };
+
+  analyticsCache.set(cacheKey, {
+    data: result,
+    expiresAt: Date.now() + ANALYTICS_CACHE_TTL_MS,
+  });
+
+  return result;
 }

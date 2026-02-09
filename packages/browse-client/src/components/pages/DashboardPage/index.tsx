@@ -211,8 +211,8 @@ export const DashboardPageQuery = graphql`
       category
       count
     }
-    # Include activity data directly
-    ...DashboardPageActivity_query
+    # Include activity data (deferred for performance)
+    ...DashboardPageActivity_query @defer(label: "DashboardPageActivity")
     # Include analytics data (deferred for performance)
     ...DashboardPageAnalytics_query @defer(label: "DashboardPageAnalytics")
   }
