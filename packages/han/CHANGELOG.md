@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.10.1] - 2026-02-09
+
+### Added
+
+- add dashboard analytics enhancements with effectiveness scoring, subagent tracking, and cost analysis (#63) ([351e9960](../../commit/351e9960))
+- auto-generate hooks.json from han-plugin.yml with shorthand events ([f3a39941](../../commit/f3a39941))
+
+### Fixed
+
+- exclude test temp directories from biome and git ([11954724](../../commit/11954724))
+- coordinator crash on metrics query and remove coordinatorPort from dashboard URL ([9626ba11](../../commit/9626ba11))
+- resolve biome lint warnings in opencode bridge plugin ([f0d5def8](../../commit/f0d5def8))
+- inline small hook output instead of writing to file ([9adfef93](../../commit/9adfef93))
+- use output size to decide subagent vs direct fix in hook failures ([1e97aaf6](../../commit/1e97aaf6))
+- async Stop hooks, merge test/test-async, fix plugin name resolution ([ba6474e8](../../commit/ba6474e8))
+- skip opening browser in test environments during han browse ([febd1476](../../commit/febd1476))
+- migrate deprecated plugin names in YAML config files ([06882b3b](../../commit/06882b3b))
+- improve npm wrapper resolution, simplify migration, remove stale MCP entry ([b10b4868](../../commit/b10b4868))
+- use imported HAN_VERSION instead of process.env for health endpoint ([670532cd](../../commit/670532cd))
+
+### Changed
+
+- remove file_filter, split test hooks into Stop + PostToolUse ([bd1b5e34](../../commit/bd1b5e34))
+
+### Other
+
+- document fullScanAndIndex coordinator startup flow and analyze when it runs ([0b720f97](../../commit/0b720f97))
+- apply biome auto-formatting to recently added files ([e99aff5b](../../commit/e99aff5b))
+- Add OpenCode bridge plugin for Han hook ecosystem (#61) ([322d0324](../../commit/322d0324))
+- reformat package.json indentation ([ebab8d64](../../commit/ebab8d64))
+- document validate.ts duplication and dead code ([3939add5](../../commit/3939add5))
+
 ## [3.10.0] - 2026-02-08
 
 ### Added
