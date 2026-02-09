@@ -142,6 +142,37 @@ html.dark .scrollbar-custom::-webkit-scrollbar-thumb:hover {
 	word-break: break-word;
 }
 
+/* Split-flap board animations */
+@keyframes splitflap-fold-top {
+	0% {
+		transform: rotateX(0deg);
+	}
+	100% {
+		transform: rotateX(-90deg);
+	}
+}
+
+@keyframes splitflap-fold-bottom {
+	0% {
+		transform: rotateX(90deg);
+	}
+	80% {
+		transform: rotateX(-5deg);
+	}
+	100% {
+		transform: rotateX(0deg);
+	}
+}
+
+@keyframes splitflap-fade {
+	0% {
+		opacity: 0;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+
 /* Override highlight.js background to match code editor styling */
 pre.hljs,
 pre code.hljs,
