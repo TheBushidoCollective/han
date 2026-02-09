@@ -78,8 +78,11 @@ export function recordSuccess(
  * before hooks run, ensuring stale cache doesn't skip validation).
  */
 export function invalidateFile(filePath: string): void {
+  // Use resolve() to normalize the path before matching, and compare
+  // against the exact third segment of the cache key (plugin:hook:path)
   for (const [key] of hashCache) {
-    if (key.endsWith(`:${filePath}`)) {
+    const keyPath = key.slice(key.indexOf(":", key.indexOf(":") + 1) + 1)
+    if (keyPath === filePath) {
       hashCache.delete(key)
     }
   }

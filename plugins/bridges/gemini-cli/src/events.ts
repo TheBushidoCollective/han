@@ -74,6 +74,7 @@ export class BridgeEventLogger {
   private logPath: string
   private buffer: string[] = []
   private flushTimer: ReturnType<typeof setTimeout> | null = null
+  private isFlushing = false
   private readonly sessionId: string
   private readonly provider: HanProvider = "gemini-cli"
   private readonly cwd: string
@@ -133,8 +134,9 @@ export class BridgeEventLogger {
       clearTimeout(this.flushTimer)
       this.flushTimer = null
     }
-    if (this.buffer.length === 0) return
+    if (this.buffer.length === 0 || this.isFlushing) return
 
+    this.isFlushing = true
     try {
       appendFileSync(this.logPath, this.buffer.join(""))
       this.buffer = []
@@ -143,6 +145,8 @@ export class BridgeEventLogger {
         `[han] Failed to write events:`,
         err instanceof Error ? err.message : err,
       )
+    } finally {
+      this.isFlushing = false
     }
   }
 

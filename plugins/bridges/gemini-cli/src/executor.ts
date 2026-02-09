@@ -77,22 +77,39 @@ export function executeHook(
   return new Promise((resolve) => {
     const timeout = hook.timeout ?? options.timeout ?? DEFAULT_TIMEOUT
 
-    const child = spawn(command, {
-      cwd: options.cwd,
-      shell: "/bin/bash",
-      stdio: ["ignore", "pipe", "pipe"],
-      env: {
-        ...process.env,
-        CLAUDE_PLUGIN_ROOT: hook.pluginRoot,
-        CLAUDE_PROJECT_DIR: options.cwd,
-        GEMINI_PROJECT_DIR: options.cwd,
-        HAN_SESSION_ID: options.sessionId,
-        HAN_PROVIDER: "gemini-cli",
-        HAN_FILES: filesArg,
-        HAN_FILE: filePaths[0] ?? "",
-      },
-      timeout,
-    })
+    let child: ReturnType<typeof spawn>
+    try {
+      child = spawn(command, {
+        cwd: options.cwd,
+        shell: "/bin/bash",
+        stdio: ["ignore", "pipe", "pipe"],
+        env: {
+          ...process.env,
+          CLAUDE_PLUGIN_ROOT: hook.pluginRoot,
+          CLAUDE_PROJECT_DIR: options.cwd,
+          GEMINI_PROJECT_DIR: options.cwd,
+          HAN_SESSION_ID: options.sessionId,
+          HAN_PROVIDER: "gemini-cli",
+          HAN_FILES: filesArg,
+          HAN_FILE: filePaths[0] ?? "",
+        },
+        timeout,
+      })
+    } catch (err) {
+      const result: HookResult = {
+        hook,
+        exitCode: 127,
+        stdout: "",
+        stderr: `Failed to spawn: ${err instanceof Error ? err.message : String(err)}`,
+        durationMs: Date.now() - startTime,
+        skipped: false,
+      }
+      if (options.eventLogger && hookRunId) {
+        options.eventLogger.logHookResult(result, options.hookType ?? "PostToolUse", hookRunId)
+      }
+      resolve(result)
+      return
+    }
 
     let stdout = ""
     let stderr = ""
