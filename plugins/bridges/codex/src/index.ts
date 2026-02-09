@@ -37,6 +37,7 @@
  * as structured messages the agent can act on.
  */
 
+import { resolve, isAbsolute } from "node:path"
 import { discoverHooks, resolvePluginPaths, getHooksByEvent } from "./discovery"
 import { matchPostToolUseHooks, matchStopHooks } from "./matcher"
 import { executeHooksParallel } from "./executor"
@@ -83,6 +84,7 @@ const PREFIX = "[han]"
 function extractFilePaths(
   input: ToolEventInput,
   output: ToolEventOutput,
+  cwd: string,
 ): string[] {
   const paths: string[] = []
 
@@ -104,7 +106,16 @@ function extractFilePaths(
     }
   }
 
+  // Normalize and validate paths - reject traversal attempts
   return paths
+    .map((p) => (isAbsolute(p) ? resolve(p) : resolve(cwd, p)))
+    .filter((p) => {
+      if (!p.startsWith(cwd)) {
+        console.error(`[han] Rejected path outside project: ${p}`)
+        return false
+      }
+      return true
+    })
 }
 
 /**
@@ -126,6 +137,7 @@ function startCoordinator(watchDir: string): void {
         env: {
           ...process.env,
           HAN_PROVIDER: "codex",
+          HAN_SESSION_ID: process.env.HAN_SESSION_ID ?? "",
         },
       },
     )
@@ -463,7 +475,7 @@ async function hanBridgePlugin(ctx: CodexPluginContext) {
       output: ToolEventOutput,
     ) => {
       const claudeToolName = mapToolName(input.tool)
-      const filePaths = extractFilePaths(input, output)
+      const filePaths = extractFilePaths(input, output, directory)
 
       if (filePaths.length === 0) return
 
