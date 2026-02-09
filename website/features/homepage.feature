@@ -6,7 +6,7 @@ Feature: Website Homepage
   Scenario: Homepage loads with correct content
     Given I am on the "/" page
     Then the page title should contain "Han"
-    And the main heading should contain "Ship-Ready"
+    And the main heading should contain "Releasable Code"
 
   Scenario: Homepage navigation links are visible
     Given I am on the "/" page
