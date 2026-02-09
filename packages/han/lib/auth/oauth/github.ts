@@ -15,7 +15,6 @@ import {
 /**
  * GitHub OAuth configuration
  */
-const _GITHUB_ISSUER = "https://github.com";
 const GITHUB_AUTH_ENDPOINT = "https://github.com/login/oauth/authorize";
 const GITHUB_TOKEN_ENDPOINT = "https://github.com/login/oauth/access_token";
 const GITHUB_API_BASE = "https://api.github.com";

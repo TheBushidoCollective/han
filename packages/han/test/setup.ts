@@ -1,8 +1,9 @@
 // Test setup - runs before all tests
 import { afterAll, beforeAll } from 'bun:test';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { resetHanDataDir } from '../lib/config/claude-settings.ts';
 
 // Store the original value to restore after tests

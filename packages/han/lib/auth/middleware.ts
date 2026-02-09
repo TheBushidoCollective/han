@@ -6,7 +6,7 @@
  */
 
 import type { GraphQLContext } from "../graphql/builder.ts";
-import { verifyAccessToken, } from "./jwt.ts";
+import { verifyAccessToken } from "./jwt.ts";
 import {
 	getSession,
 	isSessionValid,
@@ -110,7 +110,7 @@ export async function createAuthContext(
  */
 export function createContextFactory(config: AuthConfig) {
 	return async (request: Request): Promise<Partial<GraphQLContext>> => {
-		const _auth = await createAuthContext(request, config);
+		await createAuthContext(request, config);
 
 		return {
 			request,

@@ -176,7 +176,7 @@ export async function processSyncPayload(
 			}
 
 			// Upsert session
-			const _sessionResult = await store.upsertSession(
+			await store.upsertSession(
 				payload.userId,
 				teamId,
 				session,

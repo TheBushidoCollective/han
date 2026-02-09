@@ -1154,7 +1154,7 @@ describe("Teams API - Security: Role-Based Access Control", () => {
       },
     ];
 
-    for (const { name, mutation, expectedError } of adminOnlyMutations) {
+    for (const { mutation, expectedError } of adminOnlyMutations) {
       const result = await executeQuery(
         mutation,
         createAuthContext({ id: "user-123", teamIds: ["team-123"] })
