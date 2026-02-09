@@ -2914,6 +2914,9 @@ type SessionEffectiveness {
   """Session start timestamp"""
   startedAt: String
 
+  """Generated session summary text"""
+  summary: String
+
   """Task completion rate (0 to 1)"""
   taskCompletionRate: Float
 

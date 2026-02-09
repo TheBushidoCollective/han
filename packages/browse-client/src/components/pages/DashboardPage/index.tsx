@@ -36,6 +36,7 @@ export const DashboardAnalyticsFragment = graphql`
       topSessions {
         sessionId
         slug
+        summary
         score
         sentimentTrend
         avgSentimentScore
@@ -48,6 +49,7 @@ export const DashboardAnalyticsFragment = graphql`
       bottomSessions {
         sessionId
         slug
+        summary
         score
         sentimentTrend
         avgSentimentScore

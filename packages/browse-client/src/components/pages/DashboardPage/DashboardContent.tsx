@@ -243,6 +243,7 @@ export function DashboardContent({
 		topSessions: (rawAnalytics?.topSessions ?? []).map((s) => ({
 			sessionId: s?.sessionId ?? "",
 			slug: s?.slug ?? null,
+			summary: s?.summary ?? null,
 			score: s?.score ?? 0,
 			sentimentTrend: s?.sentimentTrend ?? "neutral",
 			avgSentimentScore: s?.avgSentimentScore ?? 0,
@@ -255,6 +256,7 @@ export function DashboardContent({
 		bottomSessions: (rawAnalytics?.bottomSessions ?? []).map((s) => ({
 			sessionId: s?.sessionId ?? "",
 			slug: s?.slug ?? null,
+			summary: s?.summary ?? null,
 			score: s?.score ?? 0,
 			sentimentTrend: s?.sentimentTrend ?? "neutral",
 			avgSentimentScore: s?.avgSentimentScore ?? 0,

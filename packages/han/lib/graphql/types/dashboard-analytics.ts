@@ -43,6 +43,7 @@ export interface CompactionStats {
 export interface SessionEffectiveness {
   sessionId: string;
   slug: string | null;
+  summary: string | null;
   score: number;
   sentimentTrend: string;
   avgSentimentScore: number;
@@ -213,6 +214,10 @@ export const SessionEffectivenessType = SessionEffectivenessRef.implement({
     slug: t.exposeString('slug', {
       nullable: true,
       description: 'Human-readable session slug',
+    }),
+    summary: t.exposeString('summary', {
+      nullable: true,
+      description: 'Generated session summary text',
     }),
     score: t.exposeFloat('score', {
       description: 'Composite score (0-100)',
@@ -874,6 +879,7 @@ export async function queryDashboardAnalytics(
     return {
       sessionId: s.sessionId,
       slug: s.slug ?? null,
+      summary: s.summary ?? null,
       score: round(Math.max(0, Math.min(100, score)), 2),
       sentimentTrend:
         avgSentiment > 0.5

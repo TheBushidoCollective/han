@@ -4466,6 +4466,7 @@ pub fn query_dashboard_aggregates(cutoff_date: &str) -> napi::Result<DashboardAg
             .prepare(
                 "SELECT m.session_id,
                         s.slug,
+                        gss.summary_text,
                         COALESCE(SUM(m.input_tokens), 0),
                         COALESCE(SUM(m.output_tokens), 0),
                         COALESCE(SUM(m.cache_read_tokens), 0),
@@ -4475,6 +4476,7 @@ pub fn query_dashboard_aggregates(cutoff_date: &str) -> napi::Result<DashboardAg
                         COUNT(*)
                  FROM messages m
                  JOIN sessions s ON s.id = m.session_id
+                 LEFT JOIN generated_session_summaries gss ON gss.session_id = m.session_id
                  WHERE m.timestamp > ?1
                  GROUP BY m.session_id",
             )
@@ -4484,13 +4486,14 @@ pub fn query_dashboard_aggregates(cutoff_date: &str) -> napi::Result<DashboardAg
                 Ok(SessionStatsRow {
                     session_id: row.get(0)?,
                     slug: row.get(1)?,
-                    input_tokens: row.get(2)?,
-                    output_tokens: row.get(3)?,
-                    cache_read_tokens: row.get(4)?,
-                    turn_count: row.get(5)?,
-                    unique_tools: row.get(6)?,
-                    started_at: row.get(7)?,
-                    message_count: row.get(8)?,
+                    summary: row.get(2)?,
+                    input_tokens: row.get(3)?,
+                    output_tokens: row.get(4)?,
+                    cache_read_tokens: row.get(5)?,
+                    turn_count: row.get(6)?,
+                    unique_tools: row.get(7)?,
+                    started_at: row.get(8)?,
+                    message_count: row.get(9)?,
                 })
             })
             .map_err(|e| napi::Error::from_reason(format!("session_stats query: {}", e)))?;

@@ -781,6 +781,7 @@ pub struct DailyCostRow {
 pub struct SessionStatsRow {
     pub session_id: String,
     pub slug: Option<String>,
+    pub summary: Option<String>,
     pub input_tokens: i64,
     pub output_tokens: i64,
     pub cache_read_tokens: i64,

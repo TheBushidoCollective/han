@@ -833,6 +833,7 @@ export interface DailyCostRow {
 export interface SessionStatsRow {
   sessionId: string;
   slug?: string;
+  summary?: string;
   inputTokens: number;
   outputTokens: number;
   cacheReadTokens: number;
