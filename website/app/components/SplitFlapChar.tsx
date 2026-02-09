@@ -22,21 +22,10 @@ export default function SplitFlapChar({
 	flipping,
 	duration = 300,
 }: SplitFlapCharProps) {
-	const displayChar = flipping ? to : from;
-	const bothSpace = from.trim() === "" && to.trim() === "";
-
-	// When both characters are spaces, render as transparent gap
-	if (bothSpace) {
-		return (
-			<span
-				style={{
-					display: "inline-block",
-					width: "0.35em",
-				}}
-				aria-hidden="true"
-			/>
-		);
-	}
+	// Use non-breaking space for space chars so tile doesn't collapse
+	const fromChar = from.trim() === "" ? "\u00A0" : from;
+	const toChar = to.trim() === "" ? "\u00A0" : to;
+	const displayChar = flipping ? toChar : fromChar;
 
 	const tileStyle: React.CSSProperties = {
 		display: "inline-block",
@@ -121,7 +110,7 @@ export default function SplitFlapChar({
 					borderRadius: "0.08em 0.08em 0 0",
 				}}
 			>
-				{to}
+				{toChar}
 			</span>
 
 			{/* Static bottom: OLD character */}
@@ -134,7 +123,7 @@ export default function SplitFlapChar({
 					borderRadius: "0 0 0.08em 0.08em",
 				}}
 			>
-				{from}
+				{fromChar}
 			</span>
 
 			{/* Animated top flap: OLD character, folds down */}
@@ -151,7 +140,7 @@ export default function SplitFlapChar({
 					zIndex: 3,
 				}}
 			>
-				{from}
+				{fromChar}
 			</span>
 
 			{/* Animated bottom flap: NEW character, lands into place */}
@@ -169,7 +158,7 @@ export default function SplitFlapChar({
 					zIndex: 3,
 				}}
 			>
-				{to}
+				{toChar}
 			</span>
 
 			{/* Center crease */}
