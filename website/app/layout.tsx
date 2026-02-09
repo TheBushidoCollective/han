@@ -5,17 +5,19 @@ import Footer from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 
 export const metadata: Metadata = {
-	title: "Han - Sophisticated Claude Code Plugins with Superior Accuracy",
+	title: "Han - Automatic Quality Gates for AI Coding Agents",
 	description:
-		"Sophisticated Claude Code plugins with superior accuracy, built on the foundation of the seven Bushido virtues.",
+		"Automatic quality gates for AI coding agents. Linting, formatting, type-checking, and tests run automatically, catching issues before they ship.",
 	keywords: [
-		"claude",
+		"ai-coding-agents",
 		"claude-code",
+		"opencode",
+		"gemini-cli",
+		"codex-cli",
 		"plugins",
 		"marketplace",
-		"bushido",
+		"quality-gates",
 		"development",
-		"quality",
 	],
 	alternates: {
 		types: {

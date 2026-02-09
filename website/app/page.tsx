@@ -63,7 +63,7 @@ export default function Home() {
 						<StepCard
 							number={2}
 							title="Code"
-							description="Claude writes code as usual. No workflow changes needed."
+							description="Your AI agent writes code as usual. No workflow changes needed."
 						/>
 						<StepCard
 							number={3}
@@ -208,7 +208,7 @@ export default function Home() {
 						Get Started
 					</h2>
 					<p className="text-center text-gray-600 dark:text-gray-300 mb-12 max-w-2xl mx-auto">
-						Install directly in Claude Code with a few simple commands.
+						Install with a few simple commands.
 					</p>
 
 					<div className="max-w-3xl mx-auto">
@@ -321,7 +321,7 @@ export default function Home() {
 
 						<div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
 							<p className="text-sm text-blue-800 dark:text-blue-200">
-								<strong>That&apos;s it.</strong> Next time you use Claude Code,
+								<strong>That&apos;s it.</strong> Next time you start a session,
 								validation hooks will run automatically when you finish a
 								conversation.
 							</p>
