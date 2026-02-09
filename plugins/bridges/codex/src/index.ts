@@ -37,42 +37,46 @@
  * as structured messages the agent can act on.
  */
 
-import { resolve, isAbsolute } from "node:path"
-import { discoverHooks, resolvePluginPaths, getHooksByEvent } from "./discovery"
-import { matchPostToolUseHooks, matchStopHooks } from "./matcher"
-import { executeHooksParallel } from "./executor"
-import { invalidateFile } from "./cache"
+import { isAbsolute, resolve } from 'node:path';
+import { invalidateFile } from './cache';
+import { buildPromptContext, buildSessionContext } from './context';
+import {
+  buildDisciplineContext,
+  type DisciplineInfo,
+  discoverDisciplines,
+  formatDisciplineList,
+} from './disciplines';
+import {
+  discoverHooks,
+  getHooksByEvent,
+  resolvePluginPaths,
+} from './discovery';
+import { BridgeEventLogger } from './events';
+import { executeHooksParallel } from './executor';
 import {
   formatInlineResults,
   formatNotificationResults,
   formatStopResults,
-} from "./formatter"
-import {
-  mapToolName,
-  type CodexPluginContext,
-  type ToolEventInput,
-  type ToolEventOutput,
-  type ToolBeforeInput,
-  type ToolBeforeOutput,
-  type CodexEvent,
-  type StopResult,
-} from "./types"
-import { BridgeEventLogger } from "./events"
+} from './formatter';
+import { matchPostToolUseHooks, matchStopHooks } from './matcher';
 import {
   discoverAllSkills,
-  loadSkillContent,
   formatSkillList,
+  loadSkillContent,
   type SkillInfo,
-} from "./skills"
+} from './skills';
 import {
-  discoverDisciplines,
-  formatDisciplineList,
-  buildDisciplineContext,
-  type DisciplineInfo,
-} from "./disciplines"
-import { buildSessionContext, buildPromptContext } from "./context"
+  type CodexEvent,
+  type CodexPluginContext,
+  mapToolName,
+  type StopResult,
+  type ToolBeforeInput,
+  type ToolBeforeOutput,
+  type ToolEventInput,
+  type ToolEventOutput,
+} from './types';
 
-const PREFIX = "[han]"
+const PREFIX = '[han]';
 
 /**
  * Extract file path(s) from a Codex tool event.
@@ -82,27 +86,29 @@ const PREFIX = "[han]"
  * or can be inferred from the tool output.
  */
 function extractFilePaths(
-  input: ToolEventInput,
+  _input: ToolEventInput,
   output: ToolEventOutput,
-  cwd: string,
+  cwd: string
 ): string[] {
-  const paths: string[] = []
+  const paths: string[] = [];
 
   // Check metadata for file path
-  if (output.metadata && typeof output.metadata === "object") {
-    const meta = output.metadata
-    if ("path" in meta && typeof meta.path === "string") paths.push(meta.path)
-    if ("file_path" in meta && typeof meta.file_path === "string") paths.push(meta.file_path)
-    if ("filePath" in meta && typeof meta.filePath === "string") paths.push(meta.filePath)
+  if (output.metadata && typeof output.metadata === 'object') {
+    const meta = output.metadata;
+    if ('path' in meta && typeof meta.path === 'string') paths.push(meta.path);
+    if ('file_path' in meta && typeof meta.file_path === 'string')
+      paths.push(meta.file_path);
+    if ('filePath' in meta && typeof meta.filePath === 'string')
+      paths.push(meta.filePath);
   }
 
   // Check title for file path (common pattern: "Edit: src/foo.ts")
   if (paths.length === 0 && output.title) {
     const titleMatch = output.title.match(
-      /(?:edit|write|create|modify):\s*(.+)/i,
-    )
+      /(?:edit|write|create|modify):\s*(.+)/i
+    );
     if (titleMatch) {
-      paths.push(titleMatch[1].trim())
+      paths.push(titleMatch[1].trim());
     }
   }
 
@@ -111,11 +117,11 @@ function extractFilePaths(
     .map((p) => (isAbsolute(p) ? resolve(p) : resolve(cwd, p)))
     .filter((p) => {
       if (!p.startsWith(cwd)) {
-        console.error(`[han] Rejected path outside project: ${p}`)
-        return false
+        console.error(`[han] Rejected path outside project: ${p}`);
+        return false;
       }
-      return true
-    })
+      return true;
+    });
 }
 
 /**
@@ -125,34 +131,35 @@ function extractFilePaths(
  */
 function startCoordinator(watchDir: string): void {
   try {
-    const { spawn } = require("node:child_process") as typeof import("node:child_process")
+    const { spawn } =
+      require('node:child_process') as typeof import('node:child_process');
 
     // Start coordinator if not already running
     const child = spawn(
-      "han",
-      ["coordinator", "ensure", "--background", "--watch-path", watchDir],
+      'han',
+      ['coordinator', 'ensure', '--background', '--watch-path', watchDir],
       {
-        stdio: "ignore",
+        stdio: 'ignore',
         detached: true,
         env: {
           ...process.env,
-          HAN_PROVIDER: "codex",
-          HAN_SESSION_ID: process.env.HAN_SESSION_ID ?? "",
+          HAN_PROVIDER: 'codex',
+          HAN_SESSION_ID: process.env.HAN_SESSION_ID ?? '',
         },
-      },
-    )
+      }
+    );
 
     // Unref so the coordinator doesn't prevent Codex from exiting
-    child.unref()
+    child.unref();
 
-    console.error(`${PREFIX} Coordinator ensure started (watch: ${watchDir})`)
+    console.error(`${PREFIX} Coordinator ensure started (watch: ${watchDir})`);
   } catch {
     // han CLI not installed - coordinator won't index our events
     // but validation still works fine without it
     console.error(
       `${PREFIX} Could not start coordinator (han CLI not found). ` +
-        `Browse UI won't show Codex sessions.`,
-    )
+        `Browse UI won't show Codex sessions.`
+    );
   }
 }
 
@@ -167,48 +174,48 @@ function startCoordinator(watchDir: string): void {
  * - System prompt context is injected via AGENTS.md or config hooks
  */
 async function hanBridgePlugin(ctx: CodexPluginContext) {
-  const { client, directory } = ctx
+  const { client, directory } = ctx;
 
   // ─── Plugin Discovery ───────────────────────────────────────────────────
   // Resolve all installed plugins to their filesystem paths.
   // This is shared by hooks, skills, and disciplines.
-  const resolvedPlugins = resolvePluginPaths(directory)
+  const resolvedPlugins = resolvePluginPaths(directory);
 
   // ─── Hook Discovery ──────────────────────────────────────────────────────
-  const allHooks = discoverHooks(directory)
-  const postToolUseHooks = getHooksByEvent(allHooks, "PostToolUse")
-  const preToolUseHooks = getHooksByEvent(allHooks, "PreToolUse")
-  const stopHooks = getHooksByEvent(allHooks, "Stop")
+  const allHooks = discoverHooks(directory);
+  const postToolUseHooks = getHooksByEvent(allHooks, 'PostToolUse');
+  const preToolUseHooks = getHooksByEvent(allHooks, 'PreToolUse');
+  const stopHooks = getHooksByEvent(allHooks, 'Stop');
 
   // ─── Skill Discovery ──────────────────────────────────────────────────────
-  const allSkills = discoverAllSkills(resolvedPlugins)
-  const skillsByName = new Map<string, SkillInfo>()
+  const allSkills = discoverAllSkills(resolvedPlugins);
+  const skillsByName = new Map<string, SkillInfo>();
   for (const skill of allSkills) {
-    skillsByName.set(skill.name, skill)
+    skillsByName.set(skill.name, skill);
   }
 
   // ─── Discipline Discovery ──────────────────────────────────────────────────
-  const allDisciplines = discoverDisciplines(resolvedPlugins, allSkills)
-  const disciplinesByName = new Map<string, DisciplineInfo>()
+  const allDisciplines = discoverDisciplines(resolvedPlugins, allSkills);
+  const disciplinesByName = new Map<string, DisciplineInfo>();
   for (const d of allDisciplines) {
-    disciplinesByName.set(d.name, d)
+    disciplinesByName.set(d.name, d);
   }
 
   // Active discipline for system prompt injection
-  let activeDiscipline: DisciplineInfo | null = null
+  let activeDiscipline: DisciplineInfo | null = null;
 
   // ─── Logging ──────────────────────────────────────────────────────────────
 
-  const pluginCount = resolvedPlugins.size
-  const skillCount = allSkills.length
-  const disciplineCount = allDisciplines.length
+  const pluginCount = resolvedPlugins.size;
+  const skillCount = allSkills.length;
+  const disciplineCount = allDisciplines.length;
 
   if (pluginCount === 0) {
     console.error(
       `${PREFIX} No Han plugins found. ` +
-        `Install plugins: han plugin install --auto`,
-    )
-    return {}
+        `Install plugins: han plugin install --auto`
+    );
+    return {};
   }
 
   console.error(
@@ -217,22 +224,22 @@ async function hanBridgePlugin(ctx: CodexPluginContext) {
       `${postToolUseHooks.length} PostToolUse, ` +
       `${stopHooks.length} Stop hooks, ` +
       `${skillCount} skills, ` +
-      `${disciplineCount} disciplines`,
-  )
+      `${disciplineCount} disciplines`
+  );
 
   // ─── Session State ───────────────────────────────────────────────────────
-  const sessionId = crypto.randomUUID()
-  const pendingValidations = new Map<string, Promise<void>>()
+  const sessionId = crypto.randomUUID();
+  const pendingValidations = new Map<string, Promise<void>>();
 
   // ─── Event Logger ──────────────────────────────────────────────────────
-  const eventLogger = new BridgeEventLogger(sessionId, directory)
+  const eventLogger = new BridgeEventLogger(sessionId, directory);
 
   // Set HAN_PROVIDER for child processes (hook commands)
-  process.env.HAN_PROVIDER = "codex"
-  process.env.HAN_SESSION_ID = sessionId
+  process.env.HAN_PROVIDER = 'codex';
+  process.env.HAN_SESSION_ID = sessionId;
 
   // ─── Coordinator ───────────────────────────────────────────────────────
-  startCoordinator(eventLogger.getWatchDir())
+  startCoordinator(eventLogger.getWatchDir());
 
   // ─── Plugin Return ─────────────────────────────────────────────────────
 
@@ -249,59 +256,69 @@ async function hanBridgePlugin(ctx: CodexPluginContext) {
        */
       han_skills: {
         description:
-          "Browse and load Han skills (400+ specialized coding skills). " +
+          'Browse and load Han skills (400+ specialized coding skills). ' +
           'Use action="list" to search available skills, ' +
           'action="load" with skill name to get full skill content.',
         parameters: {
-          type: "object" as const,
+          type: 'object' as const,
           properties: {
             action: {
-              type: "string" as const,
-              enum: ["list", "load"],
-              description: 'Action to perform: "list" to search skills, "load" to get skill content',
+              type: 'string' as const,
+              enum: ['list', 'load'],
+              description:
+                'Action to perform: "list" to search skills, "load" to get skill content',
             },
             skill: {
-              type: "string" as const,
-              description: "Skill name to load (required for action=load)",
+              type: 'string' as const,
+              description: 'Skill name to load (required for action=load)',
             },
             filter: {
-              type: "string" as const,
-              description: "Search filter for skill names/descriptions (optional for action=list)",
+              type: 'string' as const,
+              description:
+                'Search filter for skill names/descriptions (optional for action=list)',
             },
           },
-          required: ["action"],
+          required: ['action'],
         },
-        async execute(args: { action: string; skill?: string; filter?: string }) {
-          if (args.action === "load") {
+        async execute(args: {
+          action: string;
+          skill?: string;
+          filter?: string;
+        }) {
+          if (args.action === 'load') {
             if (!args.skill) {
-              return { output: "Error: skill parameter required for action=load" }
+              return {
+                output: 'Error: skill parameter required for action=load',
+              };
             }
 
-            const skill = skillsByName.get(args.skill)
+            const skill = skillsByName.get(args.skill);
             if (!skill) {
               // Try partial match
               const matches = allSkills.filter((s) =>
-                s.name.toLowerCase().includes(args.skill!.toLowerCase()),
-              )
+                s.name.toLowerCase().includes(args.skill?.toLowerCase())
+              );
               if (matches.length === 1) {
-                return { output: loadSkillContent(matches[0]) }
+                return { output: loadSkillContent(matches[0]) };
               }
               if (matches.length > 1) {
                 return {
                   output:
                     `Multiple skills match "${args.skill}":\n` +
-                    matches.map((s) => `- ${s.name}`).join("\n") +
-                    "\n\nBe more specific.",
-                }
+                    matches.map((s) => `- ${s.name}`).join('\n') +
+                    '\n\nBe more specific.',
+                };
               }
-              return { output: `Skill "${args.skill}" not found. Use action="list" to see available skills.` }
+              return {
+                output: `Skill "${args.skill}" not found. Use action="list" to see available skills.`,
+              };
             }
 
-            return { output: loadSkillContent(skill) }
+            return { output: loadSkillContent(skill) };
           }
 
           // Default: list
-          return { output: formatSkillList(allSkills, args.filter) }
+          return { output: formatSkillList(allSkills, args.filter) };
         },
       },
 
@@ -313,40 +330,42 @@ async function hanBridgePlugin(ctx: CodexPluginContext) {
        */
       han_discipline: {
         description:
-          "Activate a Han discipline (specialized agent persona). " +
+          'Activate a Han discipline (specialized agent persona). ' +
           'Use action="list" to see available disciplines, ' +
           'action="activate" to switch, action="deactivate" to clear.',
         parameters: {
-          type: "object" as const,
+          type: 'object' as const,
           properties: {
             action: {
-              type: "string" as const,
-              enum: ["list", "activate", "deactivate"],
+              type: 'string' as const,
+              enum: ['list', 'activate', 'deactivate'],
               description: 'Action: "list", "activate", or "deactivate"',
             },
             discipline: {
-              type: "string" as const,
-              description: "Discipline name (required for activate)",
+              type: 'string' as const,
+              description: 'Discipline name (required for activate)',
             },
           },
-          required: ["action"],
+          required: ['action'],
         },
         async execute(args: { action: string; discipline?: string }) {
-          if (args.action === "activate") {
+          if (args.action === 'activate') {
             if (!args.discipline) {
-              return { output: "Error: discipline parameter required for activate" }
+              return {
+                output: 'Error: discipline parameter required for activate',
+              };
             }
 
-            const d = disciplinesByName.get(args.discipline)
+            const d = disciplinesByName.get(args.discipline);
             if (!d) {
               return {
                 output:
                   `Discipline "${args.discipline}" not found.\n\n` +
                   formatDisciplineList(allDisciplines),
-              }
+              };
             }
 
-            activeDiscipline = d
+            activeDiscipline = d;
             return {
               output:
                 `Activated discipline: **${d.name}**\n\n` +
@@ -354,22 +373,22 @@ async function hanBridgePlugin(ctx: CodexPluginContext) {
                 (d.skills.length > 0
                   ? `${d.skills.length} specialized skills available. ` +
                     `Use han_skills to load any of them.`
-                  : ""),
-            }
+                  : ''),
+            };
           }
 
-          if (args.action === "deactivate") {
-            const prev = activeDiscipline?.name
-            activeDiscipline = null
+          if (args.action === 'deactivate') {
+            const prev = activeDiscipline?.name;
+            activeDiscipline = null;
             return {
               output: prev
                 ? `Deactivated discipline: ${prev}`
-                : "No discipline was active.",
-            }
+                : 'No discipline was active.',
+            };
           }
 
           // Default: list
-          return { output: formatDisciplineList(allDisciplines) }
+          return { output: formatDisciplineList(allDisciplines) };
         },
       },
     },
@@ -379,28 +398,28 @@ async function hanBridgePlugin(ctx: CodexPluginContext) {
     // Codex uses config.toml developer_instructions or AGENTS.md for this.
     // When running as a plugin, we use the system.transform hook if available.
 
-    "experimental.chat.system.transform": async (
+    'experimental.chat.system.transform': async (
       _input: Record<string, never>,
-      output: { system: string[] },
+      output: { system: string[] }
     ) => {
       // Core guidelines (professional honesty, no time estimates, etc.)
-      output.system.push(buildSessionContext(skillCount, disciplineCount))
+      output.system.push(buildSessionContext(skillCount, disciplineCount));
 
       // Active discipline context
       if (activeDiscipline) {
-        output.system.push(buildDisciplineContext(activeDiscipline))
+        output.system.push(buildDisciplineContext(activeDiscipline));
       }
     },
 
     // ─── Chat Message Hook ──────────────────────────────────────────────
     // Inject datetime on each user message so the LLM knows the current time.
 
-    "chat.message": async (
+    'chat.message': async (
       _input: Record<string, unknown>,
-      output: { message: string; parts: unknown[] },
+      output: { message: string; parts: unknown[] }
     ) => {
-      const timeContext = buildPromptContext()
-      output.parts.push({ type: "text", text: `\n\n${timeContext}` })
+      const timeContext = buildPromptContext();
+      output.parts.push({ type: 'text', text: `\n\n${timeContext}` });
     },
 
     // ─── Hook Handlers ───────────────────────────────────────────────────
@@ -413,51 +432,59 @@ async function hanBridgePlugin(ctx: CodexPluginContext) {
      * - Input modification (add context to prompts)
      * - Subagent context injection (discipline context for task tools)
      */
-    "tool.execute.before": async (
+    'tool.execute.before': async (
       input: ToolBeforeInput,
-      output: ToolBeforeOutput,
+      output: ToolBeforeOutput
     ) => {
-      const claudeToolName = mapToolName(input.tool)
+      const claudeToolName = mapToolName(input.tool);
 
       // Inject discipline context into task/agent tool prompts
-      if (activeDiscipline && output.args && typeof output.args === "object") {
-        const prompt = "prompt" in output.args && typeof output.args.prompt === "string"
-          ? output.args.prompt
-          : undefined
-        const message = "message" in output.args && typeof output.args.message === "string"
-          ? output.args.message
-          : undefined
-        const target = prompt ?? message
+      if (activeDiscipline && output.args && typeof output.args === 'object') {
+        const prompt =
+          'prompt' in output.args && typeof output.args.prompt === 'string'
+            ? output.args.prompt
+            : undefined;
+        const message =
+          'message' in output.args && typeof output.args.message === 'string'
+            ? output.args.message
+            : undefined;
+        const target = prompt ?? message;
 
-        if (target && (claudeToolName === "Task" || input.tool === "agent")) {
-          const context = buildDisciplineContext(activeDiscipline)
-          const key = prompt ? "prompt" : "message"
-          output.args[key] = `<subagent-context>\n${context}\n</subagent-context>\n\n${target}`
+        if (target && (claudeToolName === 'Task' || input.tool === 'agent')) {
+          const context = buildDisciplineContext(activeDiscipline);
+          const key = prompt ? 'prompt' : 'message';
+          output.args[key] =
+            `<subagent-context>\n${context}\n</subagent-context>\n\n${target}`;
         }
       }
 
       // Run PreToolUse hooks (e.g., pre-commit validation)
       if (preToolUseHooks.length > 0) {
         const matching = preToolUseHooks.filter((h) => {
-          if (!h.toolFilter) return true
-          return h.toolFilter.includes(claudeToolName)
-        })
+          if (!h.toolFilter) return true;
+          return h.toolFilter.includes(claudeToolName);
+        });
 
         if (matching.length > 0) {
           const results = await executeHooksParallel(matching, [], {
             cwd: directory,
             sessionId,
             eventLogger,
-            hookType: "PreToolUse",
-          })
+            hookType: 'PreToolUse',
+          });
 
           // If any PreToolUse hook fails, log it as a warning in output
-          const failures = results.filter((r) => !r.skipped && r.exitCode !== 0)
+          const failures = results.filter(
+            (r) => !r.skipped && r.exitCode !== 0
+          );
           if (failures.length > 0) {
             const warnings = failures
-              .map((r) => `[${r.hook.pluginName}/${r.hook.name}]: ${r.stdout || r.stderr}`)
-              .join("\n")
-            console.error(`${PREFIX} PreToolUse warnings:\n${warnings}`)
+              .map(
+                (r) =>
+                  `[${r.hook.pluginName}/${r.hook.name}]: ${r.stdout || r.stderr}`
+              )
+              .join('\n');
+            console.error(`${PREFIX} PreToolUse warnings:\n${warnings}`);
           }
         }
       }
@@ -470,19 +497,19 @@ async function hanBridgePlugin(ctx: CodexPluginContext) {
      * we run matching validation hooks (biome, eslint, tsc, etc.) as
      * parallel promises and deliver results as notifications.
      */
-    "tool.execute.after": async (
+    'tool.execute.after': async (
       input: ToolEventInput,
-      output: ToolEventOutput,
+      output: ToolEventOutput
     ) => {
-      const claudeToolName = mapToolName(input.tool)
-      const filePaths = extractFilePaths(input, output, directory)
+      const claudeToolName = mapToolName(input.tool);
+      const filePaths = extractFilePaths(input, output, directory);
 
-      if (filePaths.length === 0) return
+      if (filePaths.length === 0) return;
 
       // Log file changes and invalidate cache
       for (const fp of filePaths) {
-        eventLogger.logFileChange(claudeToolName, fp)
-        invalidateFile(fp)
+        eventLogger.logFileChange(claudeToolName, fp);
+        invalidateFile(fp);
       }
 
       // Find hooks matching this tool + file
@@ -490,13 +517,13 @@ async function hanBridgePlugin(ctx: CodexPluginContext) {
         postToolUseHooks,
         claudeToolName,
         filePaths[0],
-        directory,
-      )
+        directory
+      );
 
-      if (matching.length === 0) return
+      if (matching.length === 0) return;
 
       // Run all matching hooks as parallel promises
-      const validationKey = `${input.callID}-${filePaths.join(",")}`
+      const validationKey = `${input.callID}-${filePaths.join(',')}`;
 
       const validationPromise = (async () => {
         try {
@@ -504,45 +531,45 @@ async function hanBridgePlugin(ctx: CodexPluginContext) {
             cwd: directory,
             sessionId,
             eventLogger,
-            hookType: "PostToolUse",
-          })
+            hookType: 'PostToolUse',
+          });
 
           // Inline feedback: append failures directly to tool output
-          const inline = formatInlineResults(results)
+          const inline = formatInlineResults(results);
           if (inline) {
-            output.output += inline
+            output.output += inline;
           }
 
           // Async notification: send detailed results as a message
-          const notification = formatNotificationResults(results, filePaths)
+          const notification = formatNotificationResults(results, filePaths);
           if (notification) {
             try {
               await client.session.prompt({
                 path: { id: input.sessionID },
                 body: {
                   noReply: true,
-                  parts: [{ type: "text", text: notification }],
+                  parts: [{ type: 'text', text: notification }],
                 },
-              })
+              });
             } catch (err) {
               // Session may be busy; inline feedback is the fallback
               console.error(
                 `${PREFIX} Could not send notification:`,
-                err instanceof Error ? err.message : err,
-              )
+                err instanceof Error ? err.message : err
+              );
             }
           }
         } catch (err) {
           console.error(
             `${PREFIX} PostToolUse hook error:`,
-            err instanceof Error ? err.message : err,
-          )
+            err instanceof Error ? err.message : err
+          );
         } finally {
-          pendingValidations.delete(validationKey)
+          pendingValidations.delete(validationKey);
         }
-      })()
+      })();
 
-      pendingValidations.set(validationKey, validationPromise)
+      pendingValidations.set(validationKey, validationPromise);
     },
 
     /**
@@ -551,18 +578,19 @@ async function hanBridgePlugin(ctx: CodexPluginContext) {
      * session.idle → Stop hooks (broader project validation)
      */
     event: async ({ event }: { event: CodexEvent }) => {
-      if (event.type === "session.idle") {
-        const rawSessionId = event.properties?.sessionID
-        const eventSessionId = typeof rawSessionId === "string" ? rawSessionId : undefined
+      if (event.type === 'session.idle') {
+        const rawSessionId = event.properties?.sessionID;
+        const eventSessionId =
+          typeof rawSessionId === 'string' ? rawSessionId : undefined;
 
         // Wait for any pending PostToolUse validations to finish
         if (pendingValidations.size > 0) {
-          await Promise.allSettled(pendingValidations.values())
+          await Promise.allSettled(pendingValidations.values());
         }
 
         // Run Stop hooks for full project validation
-        const matching = matchStopHooks(stopHooks, directory)
-        if (matching.length === 0) return
+        const matching = matchStopHooks(stopHooks, directory);
+        if (matching.length === 0) return;
 
         try {
           const results = await executeHooksParallel(matching, [], {
@@ -570,23 +598,23 @@ async function hanBridgePlugin(ctx: CodexPluginContext) {
             sessionId,
             timeout: 120_000, // Stop hooks get more time
             eventLogger,
-            hookType: "Stop",
-          })
+            hookType: 'Stop',
+          });
 
-          const message = formatStopResults(results)
+          const message = formatStopResults(results);
           if (message && eventSessionId) {
             await client.session.prompt({
               path: { id: eventSessionId },
               body: {
-                parts: [{ type: "text", text: message }],
+                parts: [{ type: 'text', text: message }],
               },
-            })
+            });
           }
         } catch (err) {
           console.error(
             `${PREFIX} Stop hook error:`,
-            err instanceof Error ? err.message : err,
-          )
+            err instanceof Error ? err.message : err
+          );
         }
       }
     },
@@ -598,8 +626,8 @@ async function hanBridgePlugin(ctx: CodexPluginContext) {
      * If Stop hooks find issues, forces the agent to continue.
      */
     stop: async (): Promise<StopResult | undefined> => {
-      const matching = matchStopHooks(stopHooks, directory)
-      if (matching.length === 0) return undefined
+      const matching = matchStopHooks(stopHooks, directory);
+      if (matching.length === 0) return undefined;
 
       try {
         const results = await executeHooksParallel(matching, [], {
@@ -607,28 +635,28 @@ async function hanBridgePlugin(ctx: CodexPluginContext) {
           sessionId,
           timeout: 120_000,
           eventLogger,
-          hookType: "Stop",
-        })
+          hookType: 'Stop',
+        });
 
-        const message = formatStopResults(results)
+        const message = formatStopResults(results);
         if (message) {
           // Flush events before returning so coordinator has latest data
-          eventLogger.flush()
+          eventLogger.flush();
           return {
             continue: true,
             assistantMessage: message,
-          }
+          };
         }
       } catch (err) {
         console.error(
           `${PREFIX} Stop validation error:`,
-          err instanceof Error ? err.message : err,
-        )
+          err instanceof Error ? err.message : err
+        );
       }
 
-      return undefined
+      return undefined;
     },
-  }
+  };
 }
 
-export default hanBridgePlugin
+export default hanBridgePlugin;

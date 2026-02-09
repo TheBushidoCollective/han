@@ -32,55 +32,49 @@
  *     -> stdout/stderr output + exit code
  */
 
-import { resolve, isAbsolute } from "node:path"
-import { discoverHooks, resolvePluginPaths, getHooksByEvent } from "./discovery"
-import { matchPostToolUseHooks, matchStopHooks } from "./matcher"
-import { executeHooksParallel } from "./executor"
-import { invalidateFile } from "./cache"
+import { isAbsolute, resolve } from 'node:path';
+import { invalidateFile } from './cache';
+import { buildPromptContext, buildSessionContext } from './context';
+import { discoverDisciplines } from './disciplines';
+import {
+  discoverHooks,
+  getHooksByEvent,
+  resolvePluginPaths,
+} from './discovery';
+import { BridgeEventLogger } from './events';
+import { executeHooksParallel } from './executor';
 import {
   formatPostToolResults,
   formatPreToolResults,
   formatStopResults,
-} from "./formatter"
-import {
-  mapToolName,
-  isFileWriteTool,
-  type KiroHookPayload,
-} from "./types"
-import { BridgeEventLogger } from "./events"
-import {
-  discoverAllSkills,
-  formatSkillList,
-} from "./skills"
-import {
-  discoverDisciplines,
-  formatDisciplineList,
-} from "./disciplines"
-import { buildSessionContext, buildPromptContext } from "./context"
+} from './formatter';
+import { matchPostToolUseHooks, matchStopHooks } from './matcher';
+import { discoverAllSkills } from './skills';
+import { type KiroHookPayload, mapToolName } from './types';
 
-const PREFIX = "[han]"
+const PREFIX = '[han]';
 
 /**
  * Read JSON payload from stdin.
  * Kiro passes hook context as JSON via stdin.
  */
 async function readStdin(): Promise<KiroHookPayload> {
-  const chunks: Buffer[] = []
+  const chunks: Buffer[] = [];
 
   for await (const chunk of process.stdin) {
-    chunks.push(chunk as Buffer)
+    chunks.push(chunk as Buffer);
   }
 
-  const raw = Buffer.concat(chunks).toString("utf-8").trim()
+  const raw = Buffer.concat(chunks).toString('utf-8').trim();
   if (!raw) {
-    return { hook_event_name: "", cwd: process.cwd() }
+    return { hook_event_name: '', cwd: process.cwd() };
   }
 
   try {
-    return JSON.parse(raw) as KiroHookPayload
+    return JSON.parse(raw) as KiroHookPayload;
   } catch {
-    console.error(`${PREFIX} Failed to parse stdin JSON`)
-    return { hook_event_name: "", cwd: process.cwd() }
+    console.error(`${PREFIX} Failed to parse stdin JSON`);
+    return { hook_event_name: '', cwd: process.cwd() };
   }
 }
 
@@ -90,20 +84,20 @@ async function readStdin(): Promise<KiroHookPayload> {
  * Kiro's fs_write tool passes file_path in tool_input.
  */
 function extractFilePaths(payload: KiroHookPayload): string[] {
-  const paths: string[] = []
-  const cwd = payload.cwd || process.cwd()
+  const paths: string[] = [];
+  const cwd = payload.cwd || process.cwd();
 
   if (payload.tool_input) {
-    const input = payload.tool_input
-    if (typeof input.file_path === "string") paths.push(input.file_path)
-    if (typeof input.filePath === "string") paths.push(input.filePath)
-    if (typeof input.path === "string") paths.push(input.path)
+    const input = payload.tool_input;
+    if (typeof input.file_path === 'string') paths.push(input.file_path);
+    if (typeof input.filePath === 'string') paths.push(input.filePath);
+    if (typeof input.path === 'string') paths.push(input.path);
   }
 
   if (payload.tool_response) {
-    const resp = payload.tool_response
-    if (typeof resp.file_path === "string" && !paths.includes(resp.file_path)) {
-      paths.push(resp.file_path)
+    const resp = payload.tool_response;
+    if (typeof resp.file_path === 'string' && !paths.includes(resp.file_path)) {
+      paths.push(resp.file_path);
     }
   }
 
@@ -113,11 +107,11 @@ function extractFilePaths(payload: KiroHookPayload): string[] {
     .filter((p) => {
       // Must be under the project directory
       if (!p.startsWith(cwd)) {
-        console.error(`${PREFIX} Rejected path outside project: ${p}`)
-        return false
+        console.error(`${PREFIX} Rejected path outside project: ${p}`);
+        return false;
       }
-      return true
-    })
+      return true;
+    });
 }
 
 /**
@@ -125,29 +119,30 @@ function extractFilePaths(payload: KiroHookPayload): string[] {
  */
 function startCoordinator(watchDir: string): void {
   try {
-    const { spawn } = require("node:child_process") as typeof import("node:child_process")
+    const { spawn } =
+      require('node:child_process') as typeof import('node:child_process');
 
     const child = spawn(
-      "han",
-      ["coordinator", "ensure", "--background", "--watch-path", watchDir],
+      'han',
+      ['coordinator', 'ensure', '--background', '--watch-path', watchDir],
       {
-        stdio: "ignore",
+        stdio: 'ignore',
         detached: true,
         env: {
           ...process.env,
-          HAN_PROVIDER: "kiro",
-          HAN_SESSION_ID: process.env.HAN_SESSION_ID ?? "",
+          HAN_PROVIDER: 'kiro',
+          HAN_SESSION_ID: process.env.HAN_SESSION_ID ?? '',
         },
-      },
-    )
+      }
+    );
 
-    child.unref()
-    console.error(`${PREFIX} Coordinator ensure started (watch: ${watchDir})`)
+    child.unref();
+    console.error(`${PREFIX} Coordinator ensure started (watch: ${watchDir})`);
   } catch {
     console.error(
       `${PREFIX} Could not start coordinator (han CLI not found). ` +
-        `Browse UI won't show Kiro sessions.`,
-    )
+        `Browse UI won't show Kiro sessions.`
+    );
   }
 }
 
@@ -158,22 +153,24 @@ function startCoordinator(watchDir: string): void {
  * Outputs core guidelines and capability context to stdout.
  */
 async function handleAgentSpawn(payload: KiroHookPayload): Promise<void> {
-  const directory = payload.cwd || process.cwd()
-  const resolvedPlugins = resolvePluginPaths(directory)
-  const allSkills = discoverAllSkills(resolvedPlugins)
-  const allDisciplines = discoverDisciplines(resolvedPlugins, allSkills)
+  const directory = payload.cwd || process.cwd();
+  const resolvedPlugins = resolvePluginPaths(directory);
+  const allSkills = discoverAllSkills(resolvedPlugins);
+  const allDisciplines = discoverDisciplines(resolvedPlugins, allSkills);
 
-  const context = buildSessionContext(allSkills.length, allDisciplines.length)
-  process.stdout.write(context)
+  const context = buildSessionContext(allSkills.length, allDisciplines.length);
+  process.stdout.write(context);
 }
 
 /**
  * Handle userPromptSubmit event.
  * Outputs current datetime to stdout.
  */
-async function handleUserPromptSubmit(_payload: KiroHookPayload): Promise<void> {
-  const context = buildPromptContext()
-  process.stdout.write(context)
+async function handleUserPromptSubmit(
+  _payload: KiroHookPayload
+): Promise<void> {
+  const context = buildPromptContext();
+  process.stdout.write(context);
 }
 
 /**
@@ -185,39 +182,39 @@ async function handleUserPromptSubmit(_payload: KiroHookPayload): Promise<void> 
  * - Other: Show stderr warning, allow execution
  */
 async function handlePreToolUse(payload: KiroHookPayload): Promise<void> {
-  const directory = payload.cwd || process.cwd()
-  const kiroToolName = payload.tool_name ?? ""
-  const claudeToolName = mapToolName(kiroToolName)
+  const directory = payload.cwd || process.cwd();
+  const kiroToolName = payload.tool_name ?? '';
+  const claudeToolName = mapToolName(kiroToolName);
 
-  const sessionId = process.env.HAN_SESSION_ID ?? crypto.randomUUID()
-  const eventLogger = new BridgeEventLogger(sessionId, directory)
+  const sessionId = process.env.HAN_SESSION_ID ?? crypto.randomUUID();
+  const eventLogger = new BridgeEventLogger(sessionId, directory);
 
-  const allHooks = discoverHooks(directory)
-  const preToolUseHooks = getHooksByEvent(allHooks, "PreToolUse")
+  const allHooks = discoverHooks(directory);
+  const preToolUseHooks = getHooksByEvent(allHooks, 'PreToolUse');
 
-  if (preToolUseHooks.length === 0) return
+  if (preToolUseHooks.length === 0) return;
 
   const matching = preToolUseHooks.filter((h) => {
-    if (!h.toolFilter) return true
-    return h.toolFilter.includes(claudeToolName)
-  })
+    if (!h.toolFilter) return true;
+    return h.toolFilter.includes(claudeToolName);
+  });
 
-  if (matching.length === 0) return
+  if (matching.length === 0) return;
 
   const results = await executeHooksParallel(matching, [], {
     cwd: directory,
     sessionId,
     eventLogger,
-    hookType: "PreToolUse",
-  })
+    hookType: 'PreToolUse',
+  });
 
-  eventLogger.flush()
+  eventLogger.flush();
 
   // Check for failures - use exit code 2 to block execution
-  const message = formatPreToolResults(results)
+  const message = formatPreToolResults(results);
   if (message) {
-    process.stderr.write(message)
-    process.exit(2)
+    process.stderr.write(message);
+    process.exit(2);
   }
 }
 
@@ -228,47 +225,47 @@ async function handlePreToolUse(payload: KiroHookPayload): Promise<void> {
  * Results go to stdout for the agent to see.
  */
 async function handlePostToolUse(payload: KiroHookPayload): Promise<void> {
-  const directory = payload.cwd || process.cwd()
-  const kiroToolName = payload.tool_name ?? ""
-  const claudeToolName = mapToolName(kiroToolName)
-  const filePaths = extractFilePaths(payload)
+  const directory = payload.cwd || process.cwd();
+  const kiroToolName = payload.tool_name ?? '';
+  const claudeToolName = mapToolName(kiroToolName);
+  const filePaths = extractFilePaths(payload);
 
-  if (filePaths.length === 0) return
+  if (filePaths.length === 0) return;
 
-  const sessionId = process.env.HAN_SESSION_ID ?? crypto.randomUUID()
-  const eventLogger = new BridgeEventLogger(sessionId, directory)
+  const sessionId = process.env.HAN_SESSION_ID ?? crypto.randomUUID();
+  const eventLogger = new BridgeEventLogger(sessionId, directory);
 
   // Log file changes and invalidate cache
   for (const fp of filePaths) {
-    eventLogger.logFileChange(claudeToolName, fp)
-    invalidateFile(fp)
+    eventLogger.logFileChange(claudeToolName, fp);
+    invalidateFile(fp);
   }
 
-  const allHooks = discoverHooks(directory)
-  const postToolUseHooks = getHooksByEvent(allHooks, "PostToolUse")
+  const allHooks = discoverHooks(directory);
+  const postToolUseHooks = getHooksByEvent(allHooks, 'PostToolUse');
 
   // Find hooks matching this tool + file
   const matching = matchPostToolUseHooks(
     postToolUseHooks,
     claudeToolName,
     filePaths[0],
-    directory,
-  )
+    directory
+  );
 
-  if (matching.length === 0) return
+  if (matching.length === 0) return;
 
   const results = await executeHooksParallel(matching, filePaths, {
     cwd: directory,
     sessionId,
     eventLogger,
-    hookType: "PostToolUse",
-  })
+    hookType: 'PostToolUse',
+  });
 
-  eventLogger.flush()
+  eventLogger.flush();
 
-  const message = formatPostToolResults(results)
+  const message = formatPostToolResults(results);
   if (message) {
-    process.stdout.write(message)
+    process.stdout.write(message);
   }
 }
 
@@ -279,89 +276,91 @@ async function handlePostToolUse(payload: KiroHookPayload): Promise<void> {
  * Non-zero exit code tells Kiro the agent should continue fixing.
  */
 async function handleStop(payload: KiroHookPayload): Promise<void> {
-  const directory = payload.cwd || process.cwd()
-  const sessionId = process.env.HAN_SESSION_ID ?? crypto.randomUUID()
-  const eventLogger = new BridgeEventLogger(sessionId, directory)
+  const directory = payload.cwd || process.cwd();
+  const sessionId = process.env.HAN_SESSION_ID ?? crypto.randomUUID();
+  const eventLogger = new BridgeEventLogger(sessionId, directory);
 
-  const allHooks = discoverHooks(directory)
-  const stopHooks = getHooksByEvent(allHooks, "Stop")
-  const matching = matchStopHooks(stopHooks, directory)
+  const allHooks = discoverHooks(directory);
+  const stopHooks = getHooksByEvent(allHooks, 'Stop');
+  const matching = matchStopHooks(stopHooks, directory);
 
-  if (matching.length === 0) return
+  if (matching.length === 0) return;
 
   const results = await executeHooksParallel(matching, [], {
     cwd: directory,
     sessionId,
     timeout: 120_000,
     eventLogger,
-    hookType: "Stop",
-  })
+    hookType: 'Stop',
+  });
 
-  eventLogger.flush()
+  eventLogger.flush();
 
-  const message = formatStopResults(results)
+  const message = formatStopResults(results);
   if (message) {
-    process.stdout.write(message)
-    process.exit(1)
+    process.stdout.write(message);
+    process.exit(1);
   }
 }
 
 // ─── Main ───────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  const event = process.argv[2]
+  const event = process.argv[2];
 
   if (!event) {
-    console.error(`${PREFIX} Usage: kiro-plugin-han <event>`)
-    console.error(`${PREFIX} Events: agent-spawn, user-prompt-submit, pre-tool-use, post-tool-use, stop`)
-    process.exit(1)
+    console.error(`${PREFIX} Usage: kiro-plugin-han <event>`);
+    console.error(
+      `${PREFIX} Events: agent-spawn, user-prompt-submit, pre-tool-use, post-tool-use, stop`
+    );
+    process.exit(1);
   }
 
   // Set provider env for child processes
-  process.env.HAN_PROVIDER = "kiro"
+  process.env.HAN_PROVIDER = 'kiro';
 
   // Generate a session ID if not already set
   if (!process.env.HAN_SESSION_ID) {
-    process.env.HAN_SESSION_ID = crypto.randomUUID()
+    process.env.HAN_SESSION_ID = crypto.randomUUID();
   }
 
   // Start coordinator on first invocation (agent-spawn)
-  if (event === "agent-spawn") {
-    const cwd = process.cwd()
-    const eventLogger = new BridgeEventLogger(process.env.HAN_SESSION_ID, cwd)
-    startCoordinator(eventLogger.getWatchDir())
+  if (event === 'agent-spawn') {
+    const cwd = process.cwd();
+    const eventLogger = new BridgeEventLogger(process.env.HAN_SESSION_ID, cwd);
+    startCoordinator(eventLogger.getWatchDir());
   }
 
-  const payload = await readStdin()
+  const payload = await readStdin();
 
   try {
     switch (event) {
-      case "agent-spawn":
-        await handleAgentSpawn(payload)
-        break
-      case "user-prompt-submit":
-        await handleUserPromptSubmit(payload)
-        break
-      case "pre-tool-use":
-        await handlePreToolUse(payload)
-        break
-      case "post-tool-use":
-        await handlePostToolUse(payload)
-        break
-      case "stop":
-        await handleStop(payload)
-        break
+      case 'agent-spawn':
+        await handleAgentSpawn(payload);
+        break;
+      case 'user-prompt-submit':
+        await handleUserPromptSubmit(payload);
+        break;
+      case 'pre-tool-use':
+        await handlePreToolUse(payload);
+        break;
+      case 'post-tool-use':
+        await handlePostToolUse(payload);
+        break;
+      case 'stop':
+        await handleStop(payload);
+        break;
       default:
-        console.error(`${PREFIX} Unknown event: ${event}`)
-        process.exit(1)
+        console.error(`${PREFIX} Unknown event: ${event}`);
+        process.exit(1);
     }
   } catch (err) {
     console.error(
       `${PREFIX} Error handling ${event}:`,
-      err instanceof Error ? err.message : err,
-    )
-    process.exit(1)
+      err instanceof Error ? err.message : err
+    );
+    process.exit(1);
   }
 }
 
-main()
+main();
