@@ -308,12 +308,11 @@ fn finalize_parsed_message(
         };
 
     // Extract line changes from assistant messages with tool_use content blocks
-    let (lines_added, lines_removed, files_changed) =
-        if message_type == MessageType::Assistant {
-            extract_line_changes(json)
-        } else {
-            (None, None, None)
-        };
+    let (lines_added, lines_removed, files_changed) = if message_type == MessageType::Assistant {
+        extract_line_changes(json)
+    } else {
+        (None, None, None)
+    };
 
     Some(ParsedMessage {
         message_type,
@@ -534,10 +533,7 @@ fn extract_line_changes(json: &Value) -> (Option<i32>, Option<i32>, Option<i32>)
                     files.insert(fp.to_string());
                     found_any = true;
 
-                    let content_str = input
-                        .get("content")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("");
+                    let content_str = input.get("content").and_then(|v| v.as_str()).unwrap_or("");
                     lines_added += content_str.split('\n').count() as i32;
                 }
             }

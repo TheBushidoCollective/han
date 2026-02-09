@@ -7,7 +7,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { listSessions, messages } from '../../db/index.ts';
+import { queryActivityAggregates } from '../../db/index.ts';
 import { builder } from '../builder.ts';
 import { type DailyActivity, DailyActivityType } from './daily-activity.ts';
 import {
@@ -196,32 +196,6 @@ function readStatsCache(): StatsCache | null {
 }
 
 /**
- * Parse token usage from raw JSONL message
- */
-function parseTokensFromRawJson(rawJson: string | null): {
-  inputTokens: number;
-  outputTokens: number;
-  cachedTokens: number;
-} {
-  if (!rawJson) return { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
-
-  try {
-    const parsed = JSON.parse(rawJson);
-    const usage = parsed.message?.usage || parsed.usage;
-    if (!usage) return { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
-
-    return {
-      inputTokens: usage.input_tokens || 0,
-      outputTokens: usage.output_tokens || 0,
-      cachedTokens:
-        usage.cache_read_input_tokens || usage.cache_creation_input_tokens || 0,
-    };
-  } catch {
-    return { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
-  }
-}
-
-/**
  * Calculate estimated cost based on Claude pricing
  */
 function calculateCost(
@@ -233,59 +207,6 @@ function calculateCost(
   const outputCost = (outputTokens / 1_000_000) * 15.0;
   const cacheCost = (cachedTokens / 1_000_000) * 0.3;
   return inputCost + outputCost + cacheCost;
-}
-
-/**
- * Parse line changes from raw JSON message content
- */
-function parseLineChangesFromRawJson(rawJson: string | null): {
-  linesAdded: number;
-  linesRemoved: number;
-  filesChanged: Set<string>;
-} {
-  const result = {
-    linesAdded: 0,
-    linesRemoved: 0,
-    filesChanged: new Set<string>(),
-  };
-  if (!rawJson) return result;
-
-  try {
-    const parsed = JSON.parse(rawJson);
-    const content = parsed.message?.content || parsed.content || [];
-
-    if (!Array.isArray(content)) return result;
-
-    for (const block of content) {
-      if (block.type === 'tool_use') {
-        const toolName = block.name?.toLowerCase() || '';
-        const input = block.input || {};
-
-        if (toolName === 'edit' && input.file_path) {
-          result.filesChanged.add(input.file_path);
-          const oldLines = (input.old_string || '').split('\n').length;
-          const newLines = (input.new_string || '').split('\n').length;
-          if (newLines > oldLines) {
-            result.linesAdded += newLines - oldLines;
-          } else if (oldLines > newLines) {
-            result.linesRemoved += oldLines - newLines;
-          }
-          if (input.old_string !== input.new_string) {
-            result.linesAdded += Math.max(0, newLines);
-            result.linesRemoved += Math.max(0, oldLines);
-          }
-        } else if (toolName === 'write' && input.file_path) {
-          result.filesChanged.add(input.file_path);
-          const contentLines = (input.content || '').split('\n').length;
-          result.linesAdded += contentLines;
-        }
-      }
-    }
-  } catch {
-    // Ignore parse errors
-  }
-
-  return result;
 }
 
 /**
@@ -327,7 +248,8 @@ const ACTIVITY_CACHE_TTL_MS = 30_000; // 30 seconds
 // =============================================================================
 
 /**
- * Query activity data from the database
+ * Query activity data from the database.
+ * Uses SQL aggregation via han-native for performance (~3 SQL queries instead of ~425 DB round-trips).
  */
 export async function queryActivityData(days = 365): Promise<ActivityData> {
   const cacheKey = `${days}`;
@@ -335,105 +257,37 @@ export async function queryActivityData(days = 365): Promise<ActivityData> {
   if (cached && cached.expiresAt > Date.now()) {
     return cached.data;
   }
+
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - days);
   const cutoffStr = cutoffDate.toISOString();
 
+  // Single native call replaces ~425 DB round-trips
+  const agg = await queryActivityAggregates(cutoffStr);
+
+  // Build daily activity map from SQL results
   const dailyMap = new Map<string, DailyActivity>();
-  const hourlyMap = new Map<number, HourlyActivity>();
-  const sessionSet = new Set<string>();
-
-  let totalInputTokens = 0;
-  let totalOutputTokens = 0;
-  let totalCachedTokens = 0;
-  let messageCount = 0;
-
-  for (let h = 0; h < 24; h++) {
-    hourlyMap.set(h, { hour: h, sessionCount: 0, messageCount: 0 });
+  for (const row of agg.dailyActivity) {
+    dailyMap.set(row.date, {
+      date: row.date,
+      sessionCount: row.sessionCount,
+      messageCount: row.messageCount,
+      inputTokens: row.inputTokens,
+      outputTokens: row.outputTokens,
+      cachedTokens: row.cacheReadTokens,
+      linesAdded: row.linesAdded,
+      linesRemoved: row.linesRemoved,
+      filesChanged: row.filesChanged,
+    });
   }
 
-  try {
-    const allSessions = await listSessions({ limit: 1000 });
-
-    for (const session of allSessions) {
-      const sessionMessages = await messages.list({
-        sessionId: session.id,
-        messageType: 'assistant',
-        limit: 10000,
-      });
-
-      for (const msg of sessionMessages) {
-        if (msg.timestamp < cutoffStr) continue;
-
-        const date = msg.timestamp.split('T')[0];
-        const hour = new Date(msg.timestamp).getHours();
-
-        const daily = dailyMap.get(date) || {
-          date,
-          sessionCount: 0,
-          messageCount: 0,
-          inputTokens: 0,
-          outputTokens: 0,
-          cachedTokens: 0,
-          linesAdded: 0,
-          linesRemoved: 0,
-          filesChanged: 0,
-        };
-
-        const tokens = parseTokensFromRawJson(msg.rawJson ?? null);
-        const lineChanges = parseLineChangesFromRawJson(msg.rawJson ?? null);
-        daily.messageCount++;
-        daily.inputTokens += tokens.inputTokens;
-        daily.outputTokens += tokens.outputTokens;
-        daily.cachedTokens += tokens.cachedTokens;
-        daily.linesAdded += lineChanges.linesAdded;
-        daily.linesRemoved += lineChanges.linesRemoved;
-        const existingFiles =
-          (daily as { _filesSet?: Set<string> })._filesSet || new Set<string>();
-        for (const file of lineChanges.filesChanged) {
-          existingFiles.add(file);
-        }
-        (daily as { _filesSet?: Set<string> })._filesSet = existingFiles;
-        daily.filesChanged = existingFiles.size;
-        dailyMap.set(date, daily);
-
-        const hourly = hourlyMap.get(hour);
-        if (hourly) hourly.messageCount++;
-
-        totalInputTokens += tokens.inputTokens;
-        totalOutputTokens += tokens.outputTokens;
-        totalCachedTokens += tokens.cachedTokens;
-        messageCount++;
-
-        sessionSet.add(session.id);
-      }
-
-      if (sessionMessages.length > 0) {
-        const firstMsg = sessionMessages[0];
-        if (firstMsg.timestamp >= cutoffStr) {
-          const date = firstMsg.timestamp.split('T')[0];
-          const hour = new Date(firstMsg.timestamp).getHours();
-
-          const daily = dailyMap.get(date);
-          if (daily) daily.sessionCount++;
-
-          const hourly = hourlyMap.get(hour);
-          if (hourly) hourly.sessionCount++;
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error querying activity data:', error);
-  }
-
+  // Fill in all days in the range
   const dailyActivity: DailyActivity[] = [];
   const today = new Date();
-
   for (let i = 0; i < days; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().split('T')[0];
-
     dailyActivity.push(
       dailyMap.get(dateStr) || {
         date: dateStr,
@@ -450,22 +304,34 @@ export async function queryActivityData(days = 365): Promise<ActivityData> {
   }
   dailyActivity.reverse();
 
+  // Build hourly activity from SQL results (fill all 24 hours)
+  const hourlyMap = new Map<number, HourlyActivity>();
+  for (let h = 0; h < 24; h++) {
+    hourlyMap.set(h, { hour: h, sessionCount: 0, messageCount: 0 });
+  }
+  for (const row of agg.hourlyActivity) {
+    hourlyMap.set(row.hour, {
+      hour: row.hour,
+      sessionCount: row.sessionCount,
+      messageCount: row.messageCount,
+    });
+  }
   const hourlyActivity = Array.from(hourlyMap.values()).sort(
     (a, b) => a.hour - b.hour
   );
 
   const tokenUsage: TokenUsageStats = {
-    totalInputTokens,
-    totalOutputTokens,
-    totalCachedTokens,
-    totalTokens: totalInputTokens + totalOutputTokens,
+    totalInputTokens: agg.totalInputTokens,
+    totalOutputTokens: agg.totalOutputTokens,
+    totalCachedTokens: agg.totalCacheReadTokens,
+    totalTokens: agg.totalInputTokens + agg.totalOutputTokens,
     estimatedCostUsd: calculateCost(
-      totalInputTokens,
-      totalOutputTokens,
-      totalCachedTokens
+      agg.totalInputTokens,
+      agg.totalOutputTokens,
+      agg.totalCacheReadTokens
     ),
-    messageCount,
-    sessionCount: sessionSet.size,
+    messageCount: agg.totalMessages,
+    sessionCount: agg.totalSessions,
   };
 
   const streakDays = calculateStreak(dailyActivity);
@@ -473,6 +339,7 @@ export async function queryActivityData(days = 365): Promise<ActivityData> {
     (d) => d.messageCount > 0
   ).length;
 
+  // Read stats-cache.json for model usage data (survives session cleanup)
   const statsCache = readStatsCache();
 
   const dailyModelTokens: DailyModelTokens[] =
@@ -497,8 +364,8 @@ export async function queryActivityData(days = 365): Promise<ActivityData> {
     totalActiveDays,
     dailyModelTokens,
     modelUsage,
-    totalSessions: statsCache?.totalSessions ?? sessionSet.size,
-    totalMessages: statsCache?.totalMessages ?? messageCount,
+    totalSessions: statsCache?.totalSessions ?? agg.totalSessions,
+    totalMessages: statsCache?.totalMessages ?? agg.totalMessages,
     firstSessionDate: statsCache?.firstSessionDate ?? null,
   };
 

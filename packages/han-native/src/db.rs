@@ -470,6 +470,21 @@ fn run_migrations(conn: &Connection) -> Result<(), rusqlite::Error> {
         }
     }
 
+    // Migration: Add lines_added, lines_removed, files_changed columns to messages
+    let has_lines_added: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM pragma_table_info('messages') WHERE name = 'lines_added'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    if !has_lines_added {
+        conn.execute("ALTER TABLE messages ADD COLUMN lines_added INTEGER", [])?;
+        conn.execute("ALTER TABLE messages ADD COLUMN lines_removed INTEGER", [])?;
+        conn.execute("ALTER TABLE messages ADD COLUMN files_changed INTEGER", [])?;
+    }
+
     // Version tracking - check and update data version at end of migrations
     // This allows triggering reindex when new features require backfill
     check_and_update_data_version(conn)?;

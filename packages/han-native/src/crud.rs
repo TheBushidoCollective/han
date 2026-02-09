@@ -4342,6 +4342,371 @@ pub fn clear_async_hook_queue_for_session(
 }
 
 // ============================================================================
+// Dashboard SQL Aggregation Functions
+// ============================================================================
+
+/// Query all dashboard analytics data using SQL aggregation.
+/// Replaces ~850 DB round-trips with ~10 SQL queries in one function call.
+pub fn query_dashboard_aggregates(cutoff_date: &str) -> napi::Result<DashboardAggregates> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    // 1. Tool usage (top 20)
+    let tool_usage = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT tool_name, COUNT(*) as cnt
+                 FROM messages
+                 WHERE tool_name IS NOT NULL AND timestamp > ?1
+                 GROUP BY tool_name
+                 ORDER BY cnt DESC
+                 LIMIT 20",
+            )
+            .map_err(|e| napi::Error::from_reason(format!("tool_usage prepare: {}", e)))?;
+        let rows = stmt
+            .query_map(params![cutoff_date], |row| {
+                Ok(ToolUsageRow {
+                    tool_name: row.get(0)?,
+                    count: row.get(1)?,
+                })
+            })
+            .map_err(|e| napi::Error::from_reason(format!("tool_usage query: {}", e)))?;
+        rows.filter_map(|r| r.ok()).collect::<Vec<_>>()
+    };
+
+    // 2. Subagent usage (from Task tool calls)
+    let subagent_usage = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT COALESCE(
+                    json_extract(tool_input, '$.subagent_type'),
+                    json_extract(tool_input, '$.subagentType'),
+                    'general-purpose'
+                 ) as stype, COUNT(*) as cnt
+                 FROM messages
+                 WHERE tool_name = 'Task' AND timestamp > ?1
+                 GROUP BY stype
+                 ORDER BY cnt DESC",
+            )
+            .map_err(|e| napi::Error::from_reason(format!("subagent_usage prepare: {}", e)))?;
+        let rows = stmt
+            .query_map(params![cutoff_date], |row| {
+                Ok(SubagentUsageRow {
+                    subagent_type: row.get(0)?,
+                    count: row.get(1)?,
+                })
+            })
+            .map_err(|e| napi::Error::from_reason(format!("subagent_usage query: {}", e)))?;
+        rows.filter_map(|r| r.ok()).collect::<Vec<_>>()
+    };
+
+    // 3. Token totals
+    let (
+        total_input_tokens,
+        total_output_tokens,
+        total_cache_read_tokens,
+        total_sessions,
+        total_messages,
+    ) = conn
+        .query_row(
+            "SELECT COALESCE(SUM(input_tokens), 0),
+                    COALESCE(SUM(output_tokens), 0),
+                    COALESCE(SUM(cache_read_tokens), 0),
+                    COUNT(DISTINCT session_id),
+                    COUNT(*)
+             FROM messages
+             WHERE message_type = 'assistant' AND timestamp > ?1",
+            params![cutoff_date],
+            |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, i64>(2)?,
+                    row.get::<_, i64>(3)?,
+                    row.get::<_, i64>(4)?,
+                ))
+            },
+        )
+        .map_err(|e| napi::Error::from_reason(format!("token totals: {}", e)))?;
+
+    // 4. Daily costs
+    let daily_costs = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT date(timestamp) as d,
+                        COALESCE(SUM(input_tokens), 0),
+                        COALESCE(SUM(output_tokens), 0),
+                        COALESCE(SUM(cache_read_tokens), 0),
+                        COUNT(DISTINCT session_id)
+                 FROM messages
+                 WHERE message_type = 'assistant' AND timestamp > ?1
+                 GROUP BY d
+                 ORDER BY d",
+            )
+            .map_err(|e| napi::Error::from_reason(format!("daily_costs prepare: {}", e)))?;
+        let rows = stmt
+            .query_map(params![cutoff_date], |row| {
+                Ok(DailyCostRow {
+                    date: row.get(0)?,
+                    input_tokens: row.get(1)?,
+                    output_tokens: row.get(2)?,
+                    cache_read_tokens: row.get(3)?,
+                    session_count: row.get(4)?,
+                })
+            })
+            .map_err(|e| napi::Error::from_reason(format!("daily_costs query: {}", e)))?;
+        rows.filter_map(|r| r.ok()).collect::<Vec<_>>()
+    };
+
+    // 5. Per-session stats (costs + effectiveness)
+    let session_stats = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT m.session_id,
+                        s.slug,
+                        COALESCE(SUM(m.input_tokens), 0),
+                        COALESCE(SUM(m.output_tokens), 0),
+                        COALESCE(SUM(m.cache_read_tokens), 0),
+                        COUNT(CASE WHEN m.message_type IN ('human', 'user') THEN 1 END),
+                        COUNT(DISTINCT m.tool_name),
+                        MIN(m.timestamp),
+                        COUNT(*)
+                 FROM messages m
+                 JOIN sessions s ON s.id = m.session_id
+                 WHERE m.timestamp > ?1
+                 GROUP BY m.session_id",
+            )
+            .map_err(|e| napi::Error::from_reason(format!("session_stats prepare: {}", e)))?;
+        let rows = stmt
+            .query_map(params![cutoff_date], |row| {
+                Ok(SessionStatsRow {
+                    session_id: row.get(0)?,
+                    slug: row.get(1)?,
+                    input_tokens: row.get(2)?,
+                    output_tokens: row.get(3)?,
+                    cache_read_tokens: row.get(4)?,
+                    turn_count: row.get(5)?,
+                    unique_tools: row.get(6)?,
+                    started_at: row.get(7)?,
+                    message_count: row.get(8)?,
+                })
+            })
+            .map_err(|e| napi::Error::from_reason(format!("session_stats query: {}", e)))?;
+        rows.filter_map(|r| r.ok()).collect::<Vec<_>>()
+    };
+
+    // 6. Compaction totals
+    let (total_compactions, total_compaction_sessions) = conn
+        .query_row(
+            "SELECT COUNT(*), COUNT(DISTINCT session_id)
+             FROM messages
+             WHERE message_type = 'summary' AND timestamp > ?1",
+            params![cutoff_date],
+            |row| Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?)),
+        )
+        .map_err(|e| napi::Error::from_reason(format!("compaction totals: {}", e)))?;
+
+    // 7. Per-session compaction counts
+    let session_compactions = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT session_id, COUNT(*) as cnt
+                 FROM messages
+                 WHERE message_type = 'summary' AND timestamp > ?1
+                 GROUP BY session_id",
+            )
+            .map_err(|e| napi::Error::from_reason(format!("session_compactions prepare: {}", e)))?;
+        let rows = stmt
+            .query_map(params![cutoff_date], |row| {
+                Ok(SessionCompactionRow {
+                    session_id: row.get(0)?,
+                    compaction_count: row.get(1)?,
+                })
+            })
+            .map_err(|e| napi::Error::from_reason(format!("session_compactions query: {}", e)))?;
+        rows.filter_map(|r| r.ok()).collect::<Vec<_>>()
+    };
+
+    // 8. Per-session sentiment
+    let session_sentiments = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT session_id, AVG(sentiment_score) as avg_s
+                 FROM messages
+                 WHERE sentiment_score IS NOT NULL AND timestamp > ?1
+                 GROUP BY session_id",
+            )
+            .map_err(|e| napi::Error::from_reason(format!("session_sentiments prepare: {}", e)))?;
+        let rows = stmt
+            .query_map(params![cutoff_date], |row| {
+                Ok(SessionSentimentRow {
+                    session_id: row.get(0)?,
+                    avg_sentiment: row.get(1)?,
+                })
+            })
+            .map_err(|e| napi::Error::from_reason(format!("session_sentiments query: {}", e)))?;
+        rows.filter_map(|r| r.ok()).collect::<Vec<_>>()
+    };
+
+    // 9. Hook health
+    let hook_health = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT hook_name,
+                        COUNT(*) as total_runs,
+                        SUM(CASE WHEN passed = 1 THEN 1 ELSE 0 END) as pass_count,
+                        SUM(CASE WHEN passed = 0 THEN 1 ELSE 0 END) as fail_count,
+                        AVG(duration_ms) as avg_dur
+                 FROM hook_executions
+                 WHERE executed_at > ?1
+                 GROUP BY hook_name",
+            )
+            .map_err(|e| napi::Error::from_reason(format!("hook_health prepare: {}", e)))?;
+        let rows = stmt
+            .query_map(params![cutoff_date], |row| {
+                Ok(HookHealthRow {
+                    hook_name: row.get(0)?,
+                    total_runs: row.get(1)?,
+                    pass_count: row.get(2)?,
+                    fail_count: row.get(3)?,
+                    avg_duration_ms: row.get::<_, f64>(4).unwrap_or(0.0),
+                })
+            })
+            .map_err(|e| napi::Error::from_reason(format!("hook_health query: {}", e)))?;
+        rows.filter_map(|r| r.ok()).collect::<Vec<_>>()
+    };
+
+    Ok(DashboardAggregates {
+        tool_usage,
+        subagent_usage,
+        total_input_tokens,
+        total_output_tokens,
+        total_cache_read_tokens,
+        total_sessions,
+        total_messages,
+        daily_costs,
+        session_stats,
+        total_compactions,
+        total_compaction_sessions,
+        session_compactions,
+        session_sentiments,
+        hook_health,
+    })
+}
+
+/// Query all activity data using SQL aggregation.
+/// Replaces ~425 DB round-trips with ~3 SQL queries in one function call.
+pub fn query_activity_aggregates(cutoff_date: &str) -> napi::Result<ActivityAggregates> {
+    let db = db::get_db()?;
+    let conn = db
+        .lock()
+        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+    // 1. Daily activity (with line changes)
+    let daily_activity = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT date(timestamp) as d,
+                        COUNT(*) as msg_count,
+                        COUNT(DISTINCT session_id) as sess_count,
+                        COALESCE(SUM(input_tokens), 0),
+                        COALESCE(SUM(output_tokens), 0),
+                        COALESCE(SUM(cache_read_tokens), 0),
+                        COALESCE(SUM(COALESCE(lines_added, 0)), 0),
+                        COALESCE(SUM(COALESCE(lines_removed, 0)), 0),
+                        COALESCE(SUM(COALESCE(files_changed, 0)), 0)
+                 FROM messages
+                 WHERE message_type = 'assistant' AND timestamp > ?1
+                 GROUP BY d
+                 ORDER BY d",
+            )
+            .map_err(|e| napi::Error::from_reason(format!("daily_activity prepare: {}", e)))?;
+        let rows = stmt
+            .query_map(params![cutoff_date], |row| {
+                Ok(DailyActivityRow {
+                    date: row.get(0)?,
+                    message_count: row.get(1)?,
+                    session_count: row.get(2)?,
+                    input_tokens: row.get(3)?,
+                    output_tokens: row.get(4)?,
+                    cache_read_tokens: row.get(5)?,
+                    lines_added: row.get(6)?,
+                    lines_removed: row.get(7)?,
+                    files_changed: row.get(8)?,
+                })
+            })
+            .map_err(|e| napi::Error::from_reason(format!("daily_activity query: {}", e)))?;
+        rows.filter_map(|r| r.ok()).collect::<Vec<_>>()
+    };
+
+    // 2. Hourly activity
+    let hourly_activity = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT CAST(strftime('%H', timestamp) AS INTEGER) as hr,
+                        COUNT(*) as msg_count,
+                        COUNT(DISTINCT session_id) as sess_count
+                 FROM messages
+                 WHERE message_type = 'assistant' AND timestamp > ?1
+                 GROUP BY hr
+                 ORDER BY hr",
+            )
+            .map_err(|e| napi::Error::from_reason(format!("hourly_activity prepare: {}", e)))?;
+        let rows = stmt
+            .query_map(params![cutoff_date], |row| {
+                Ok(HourlyActivityRow {
+                    hour: row.get(0)?,
+                    message_count: row.get(1)?,
+                    session_count: row.get(2)?,
+                })
+            })
+            .map_err(|e| napi::Error::from_reason(format!("hourly_activity query: {}", e)))?;
+        rows.filter_map(|r| r.ok()).collect::<Vec<_>>()
+    };
+
+    // 3. Token totals
+    let (
+        total_input_tokens,
+        total_output_tokens,
+        total_cache_read_tokens,
+        total_messages,
+        total_sessions,
+    ) = conn
+        .query_row(
+            "SELECT COALESCE(SUM(input_tokens), 0),
+                    COALESCE(SUM(output_tokens), 0),
+                    COALESCE(SUM(cache_read_tokens), 0),
+                    COUNT(*),
+                    COUNT(DISTINCT session_id)
+             FROM messages
+             WHERE message_type = 'assistant' AND timestamp > ?1",
+            params![cutoff_date],
+            |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, i64>(2)?,
+                    row.get::<_, i64>(3)?,
+                    row.get::<_, i64>(4)?,
+                ))
+            },
+        )
+        .map_err(|e| napi::Error::from_reason(format!("activity token totals: {}", e)))?;
+
+    Ok(ActivityAggregates {
+        daily_activity,
+        hourly_activity,
+        total_input_tokens,
+        total_output_tokens,
+        total_cache_read_tokens,
+        total_messages,
+        total_sessions,
+    })
+}
+
+// ============================================================================
 // Test Module
 // ============================================================================
 
@@ -5169,6 +5534,13 @@ mod tests {
                 sentiment_level: None,
                 frustration_score: None,
                 frustration_level: None,
+                input_tokens: None,
+                output_tokens: None,
+                cache_read_tokens: None,
+                cache_creation_tokens: None,
+                lines_added: None,
+                lines_removed: None,
+                files_changed: None,
             },
             MessageInput {
                 id: "msg-batch-002".to_string(),
@@ -5190,6 +5562,13 @@ mod tests {
                 sentiment_level: None,
                 frustration_score: None,
                 frustration_level: None,
+                input_tokens: None,
+                output_tokens: None,
+                cache_read_tokens: None,
+                cache_creation_tokens: None,
+                lines_added: None,
+                lines_removed: None,
+                files_changed: None,
             },
         ];
 
@@ -5233,6 +5612,13 @@ mod tests {
             sentiment_level: None,
             frustration_score: None,
             frustration_level: None,
+            input_tokens: None,
+            output_tokens: None,
+            cache_read_tokens: None,
+            cache_creation_tokens: None,
+            lines_added: None,
+            lines_removed: None,
+            files_changed: None,
         }];
         insert_messages_batch("get-message-session", messages).expect("Failed to insert");
 
@@ -5285,6 +5671,13 @@ mod tests {
                 sentiment_level: None,
                 frustration_score: None,
                 frustration_level: None,
+                input_tokens: None,
+                output_tokens: None,
+                cache_read_tokens: None,
+                cache_creation_tokens: None,
+                lines_added: None,
+                lines_removed: None,
+                files_changed: None,
             },
             MessageInput {
                 id: "list-msg-002".to_string(),
@@ -5306,6 +5699,13 @@ mod tests {
                 sentiment_level: None,
                 frustration_score: None,
                 frustration_level: None,
+                input_tokens: None,
+                output_tokens: None,
+                cache_read_tokens: None,
+                cache_creation_tokens: None,
+                lines_added: None,
+                lines_removed: None,
+                files_changed: None,
             },
         ];
         insert_messages_batch("list-messages-session", messages).expect("Failed to insert");
@@ -5351,6 +5751,13 @@ mod tests {
                 sentiment_level: None,
                 frustration_score: None,
                 frustration_level: None,
+                input_tokens: None,
+                output_tokens: None,
+                cache_read_tokens: None,
+                cache_creation_tokens: None,
+                lines_added: None,
+                lines_removed: None,
+                files_changed: None,
             },
             MessageInput {
                 id: "filter-msg-002".to_string(),
@@ -5372,6 +5779,13 @@ mod tests {
                 sentiment_level: None,
                 frustration_score: None,
                 frustration_level: None,
+                input_tokens: None,
+                output_tokens: None,
+                cache_read_tokens: None,
+                cache_creation_tokens: None,
+                lines_added: None,
+                lines_removed: None,
+                files_changed: None,
             },
         ];
         insert_messages_batch("filter-messages-session", messages).expect("Failed to insert");
@@ -5424,6 +5838,13 @@ mod tests {
                 sentiment_level: None,
                 frustration_score: None,
                 frustration_level: None,
+                input_tokens: None,
+                output_tokens: None,
+                cache_read_tokens: None,
+                cache_creation_tokens: None,
+                lines_added: None,
+                lines_removed: None,
+                files_changed: None,
             },
             MessageInput {
                 id: "count-msg-002".to_string(),
@@ -5445,6 +5866,13 @@ mod tests {
                 sentiment_level: None,
                 frustration_score: None,
                 frustration_level: None,
+                input_tokens: None,
+                output_tokens: None,
+                cache_read_tokens: None,
+                cache_creation_tokens: None,
+                lines_added: None,
+                lines_removed: None,
+                files_changed: None,
             },
             MessageInput {
                 id: "count-msg-003".to_string(),
@@ -5466,6 +5894,13 @@ mod tests {
                 sentiment_level: None,
                 frustration_score: None,
                 frustration_level: None,
+                input_tokens: None,
+                output_tokens: None,
+                cache_read_tokens: None,
+                cache_creation_tokens: None,
+                lines_added: None,
+                lines_removed: None,
+                files_changed: None,
             },
         ];
         insert_messages_batch("count-messages-session", messages).expect("Failed to insert");
@@ -5511,6 +5946,13 @@ mod tests {
                 sentiment_level: None,
                 frustration_score: None,
                 frustration_level: None,
+                input_tokens: None,
+                output_tokens: None,
+                cache_read_tokens: None,
+                cache_creation_tokens: None,
+                lines_added: None,
+                lines_removed: None,
+                files_changed: None,
             }];
             insert_messages_batch(&format!("batch-count-session-{}", i), messages)
                 .expect("Failed to insert");
@@ -5585,6 +6027,13 @@ mod tests {
                 sentiment_level: None,
                 frustration_score: None,
                 frustration_level: None,
+                input_tokens: None,
+                output_tokens: None,
+                cache_read_tokens: None,
+                cache_creation_tokens: None,
+                lines_added: None,
+                lines_removed: None,
+                files_changed: None,
             },
             MessageInput {
                 id: "ts-msg-002".to_string(),
@@ -5606,6 +6055,13 @@ mod tests {
                 sentiment_level: None,
                 frustration_score: None,
                 frustration_level: None,
+                input_tokens: None,
+                output_tokens: None,
+                cache_read_tokens: None,
+                cache_creation_tokens: None,
+                lines_added: None,
+                lines_removed: None,
+                files_changed: None,
             },
         ];
         insert_messages_batch("timestamps-session", messages).expect("Failed to insert");
@@ -6502,6 +6958,13 @@ mod tests {
             sentiment_level: None,
             frustration_score: None,
             frustration_level: None,
+            input_tokens: None,
+            output_tokens: None,
+            cache_read_tokens: None,
+            cache_creation_tokens: None,
+            lines_added: None,
+            lines_removed: None,
+            files_changed: None,
         }];
         insert_messages_batch("truncate-session", messages).expect("Failed to insert");
 
