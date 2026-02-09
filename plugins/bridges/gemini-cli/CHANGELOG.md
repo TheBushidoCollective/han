@@ -15,6 +15,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - resolve biome lint errors in bridge plugins and gitignore dist ([e80d2d3e](../../commit/e80d2d3e))
 
+### Other
+
+- apply biome formatting to bridge plugin sources ([f792a13e](../../commit/f792a13e))
+
+## [0.1.0] - 2026-02-09
+
+### Added
+
+- add Gemini CLI bridge plugin for Han hook ecosystem (#66) ([b24c623e](../../commit/b24c623e))
+
+### Fixed
+
+- resolve biome lint errors in bridge plugins and gitignore dist ([e80d2d3e](../../commit/e80d2d3e))
+
 ## [0.1.0] - 2026-02-08
 
 ### Added
