@@ -4406,17 +4406,24 @@ pub fn query_dashboard_aggregates(cutoff_date: &str) -> napi::Result<DashboardAg
         rows.filter_map(|r| r.ok()).collect::<Vec<_>>()
     };
 
-    // 2. Subagent usage (from Task tool calls)
+    // 2. Subagent usage (from Task tool_use blocks in assistant message content)
+    // Tool_use blocks are embedded in raw_json -> message.content as a JSON array,
+    // not stored as separate rows with tool_name.
     let subagent_usage = {
         let mut stmt = conn
             .prepare(
                 "SELECT COALESCE(
-                    json_extract(tool_input, '$.subagent_type'),
-                    json_extract(tool_input, '$.subagentType'),
+                    json_extract(j.value, '$.input.subagent_type'),
+                    json_extract(j.value, '$.input.subagentType'),
                     'general-purpose'
                  ) as stype, COUNT(*) as cnt
-                 FROM messages
-                 WHERE tool_name = 'Task' AND timestamp > ?1
+                 FROM messages m, json_each(json_extract(m.raw_json, '$.message.content')) j
+                 WHERE m.message_type = 'assistant'
+                   AND m.raw_json IS NOT NULL
+                   AND json_valid(m.raw_json)
+                   AND json_extract(j.value, '$.type') = 'tool_use'
+                   AND json_extract(j.value, '$.name') = 'Task'
+                   AND m.timestamp > ?1
                  GROUP BY stype
                  ORDER BY cnt DESC",
             )
