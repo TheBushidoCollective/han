@@ -6569,9 +6569,8 @@ mod tests {
             record_file_change(input).expect("Failed to record file change");
         }
 
-        let changes =
-            get_session_file_changes("list-file-changes-session", None)
-                .expect("Query should succeed");
+        let changes = get_session_file_changes("list-file-changes-session", None)
+            .expect("Query should succeed");
         assert_eq!(changes.len(), 3);
     }
 
@@ -6665,9 +6664,8 @@ mod tests {
         record_file_change(input).expect("Failed to record agent-2 change");
 
         // Query all changes (no agent filter) - should return 3
-        let all_changes =
-            get_session_file_changes("agent-file-changes-session", None)
-                .expect("Query should succeed");
+        let all_changes = get_session_file_changes("agent-file-changes-session", None)
+            .expect("Query should succeed");
         assert_eq!(all_changes.len(), 3);
 
         // Query agent-1 changes only - should return 1
@@ -6686,9 +6684,8 @@ mod tests {
         assert_eq!(agent2_changes[0].file_path, "/path/to/agent2-file.rs");
 
         // Query non-existent agent - should return 0
-        let no_changes =
-            get_session_file_changes("agent-file-changes-session", Some("agent-99"))
-                .expect("Query should succeed");
+        let no_changes = get_session_file_changes("agent-file-changes-session", Some("agent-99"))
+            .expect("Query should succeed");
         assert_eq!(no_changes.len(), 0);
 
         // has_session_changes with agent filter
