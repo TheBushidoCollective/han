@@ -10,8 +10,6 @@ use_file_shell_for_executable_tasks = true
 [tools]
 markdownlint-cli2 = "latest"
 "uv" = "latest"
-bun = "latest"
-rust = "stable"
 biome = "2.3.6"
 node = "lts"
 act = "latest"
