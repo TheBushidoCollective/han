@@ -255,29 +255,21 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
     const coordinatorStatus = await ensureCoordinator(coordinatorPort);
     coordinatorRunning = coordinatorStatus.running;
     if (coordinatorRunning) {
-      // In local mode, always use HTTP (for offline scenarios like planes)
-      // Otherwise, detect HTTPS for remote dashboard
-      if (local) {
+      // Detect if coordinator is using HTTPS (TLS via coordinator.local.han.guru)
+      const { checkHealthHttps } = await import('../coordinator/health.ts');
+      const healthCheck = await checkHealthHttps(coordinatorStatus.port);
+      if (healthCheck) {
+        coordinatorProtocol = healthCheck.protocol;
+        coordinatorHost = healthCheck.host;
+        const tlsNote =
+          healthCheck.protocol === 'https' ? ' (TLS enabled)' : '';
+        console.log(
+          `[han] Coordinator ready at ${coordinatorProtocol}://${coordinatorHost}:${coordinatorStatus.port}/graphql${tlsNote}`
+        );
+      } else {
         console.log(
           `[han] Coordinator ready at http://127.0.0.1:${coordinatorStatus.port}/graphql`
         );
-      } else {
-        // Detect if coordinator is using HTTPS
-        const { checkHealthHttps } = await import('../coordinator/health.ts');
-        const healthCheck = await checkHealthHttps(coordinatorStatus.port);
-        if (healthCheck) {
-          coordinatorProtocol = healthCheck.protocol;
-          coordinatorHost = healthCheck.host;
-          const tlsNote =
-            healthCheck.protocol === 'https' ? ' (TLS enabled)' : '';
-          console.log(
-            `[han] Coordinator ready at ${coordinatorProtocol}://${coordinatorHost}:${coordinatorStatus.port}/graphql${tlsNote}`
-          );
-        } else {
-          console.log(
-            `[han] Coordinator ready at http://127.0.0.1:${coordinatorStatus.port}/graphql`
-          );
-        }
       }
     }
   } catch (error) {
