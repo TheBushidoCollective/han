@@ -128,7 +128,7 @@ export function ActivityHeatmap({
 				</VStack>
 			</HStack>
 
-			{/* Year and month labels - shown above grid, right-aligned */}
+			{/* Year and month labels */}
 			<HStack gap="sm" align="flex-start" style={{ width: "100%" }}>
 				<Box style={{ width: "28px", flexShrink: 0 }} />
 				<Box
@@ -139,7 +139,6 @@ export function ActivityHeatmap({
 						overflow: "hidden",
 						flex: 1,
 						minWidth: 0,
-						justifyContent: "flex-end",
 					}}
 				>
 					{weeks.map((week, weekIdx) => {
@@ -162,13 +161,15 @@ export function ActivityHeatmap({
 							!prevFirstDay ||
 							new Date(prevFirstDay.date).getMonth() !== date.getMonth();
 
+						const hasLabel = isNewYear || isNewMonth;
 						return (
 							<Box
 								key={`label-${week[0]?.date ?? weekIdx}`}
 								style={{
-									width: cellSize,
+									width: hasLabel ? "auto" : cellSize,
+									minWidth: cellSize,
 									flexShrink: 0,
-									overflow: "visible",
+									paddingRight: hasLabel ? 4 : 0,
 								}}
 							>
 								{isNewYear ? (
@@ -255,7 +256,7 @@ export function ActivityHeatmap({
 					</Text>
 				</VStack>
 
-				{/* Grid of weeks - most recent on right, no scrollbar */}
+				{/* Grid of weeks */}
 				<Box
 					style={{
 						display: "flex",
@@ -265,7 +266,6 @@ export function ActivityHeatmap({
 						paddingBottom: 4,
 						flex: 1,
 						minWidth: 0,
-						justifyContent: "flex-end",
 					}}
 				>
 					{weeks.map((week) => (
