@@ -73,6 +73,9 @@ export const DashboardAnalyticsFragment = graphql`
       }
       costAnalysis {
         estimatedCostUsd
+        isEstimated
+        billingType
+        cacheSavingsUsd
         maxSubscriptionCostUsd
         costUtilizationPercent
         dailyCostTrend {
@@ -164,6 +167,7 @@ export const DashboardActivityFragment = graphql`
         cacheReadTokens
         cacheCreationTokens
         totalTokens
+        costUsd
       }
       totalSessions
       totalMessages

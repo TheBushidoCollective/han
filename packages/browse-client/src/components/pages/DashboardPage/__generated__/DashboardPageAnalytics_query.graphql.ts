@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<31627fcb3967d2c0ac25bc999377bbd2>>
+ * @generated SignedSource<<3d51e954af923522aeafd528678e89c8>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -35,8 +35,10 @@ export type DashboardPageAnalytics_query$data = {
       readonly totalCompactions: number | null | undefined;
     } | null | undefined;
     readonly costAnalysis: {
+      readonly billingType: string | null | undefined;
       readonly breakEvenDailySpend: number | null | undefined;
       readonly cacheHitRate: number | null | undefined;
+      readonly cacheSavingsUsd: number | null | undefined;
       readonly costPerCompletedTask: number | null | undefined;
       readonly costPerSession: number | null | undefined;
       readonly costUtilizationPercent: number | null | undefined;
@@ -46,6 +48,7 @@ export type DashboardPageAnalytics_query$data = {
         readonly sessionCount: number | null | undefined;
       }> | null | undefined;
       readonly estimatedCostUsd: number | null | undefined;
+      readonly isEstimated: boolean | null | undefined;
       readonly maxSubscriptionCostUsd: number | null | undefined;
       readonly potentialSavingsUsd: number | null | undefined;
       readonly subscriptionComparisons: ReadonlyArray<{
@@ -425,6 +428,27 @@ return {
               "alias": null,
               "args": null,
               "kind": "ScalarField",
+              "name": "isEstimated",
+              "storageKey": null
+            },
+            {
+              "alias": null,
+              "args": null,
+              "kind": "ScalarField",
+              "name": "billingType",
+              "storageKey": null
+            },
+            {
+              "alias": null,
+              "args": null,
+              "kind": "ScalarField",
+              "name": "cacheSavingsUsd",
+              "storageKey": null
+            },
+            {
+              "alias": null,
+              "args": null,
+              "kind": "ScalarField",
               "name": "maxSubscriptionCostUsd",
               "storageKey": null
             },
@@ -632,6 +656,6 @@ return {
 };
 })();
 
-(node as any).hash = "6fa761e962c838917966a480851339ff";
+(node as any).hash = "9054acaaccc83867b21fef0c91719aa2";
 
 export default node;

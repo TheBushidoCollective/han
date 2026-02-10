@@ -5,6 +5,10 @@
  */
 
 import { queryActivityAggregates } from '../../db/index.ts';
+import {
+  calculateDefaultCost,
+  calculateModelCost,
+} from '../../pricing/model-pricing.ts';
 import { getAggregatedStats } from '../../pricing/stats-reader.ts';
 import { builder } from '../builder.ts';
 import { type DailyActivity, DailyActivityType } from './daily-activity.ts';
@@ -134,23 +138,6 @@ export const ActivityDataType = ActivityDataRef.implement({
 // Helper Functions
 // =============================================================================
 
-// StatsCache reading now handled by getAggregatedStats() from stats-reader.ts
-// which merges stats-cache.json from ALL registered config dirs.
-
-/**
- * Calculate estimated cost based on Claude pricing
- */
-function calculateCost(
-  inputTokens: number,
-  outputTokens: number,
-  cachedTokens: number
-): number {
-  const inputCost = (inputTokens / 1_000_000) * 3.0;
-  const outputCost = (outputTokens / 1_000_000) * 15.0;
-  const cacheCost = (cachedTokens / 1_000_000) * 0.3;
-  return inputCost + outputCost + cacheCost;
-}
-
 /**
  * Calculate streak days (consecutive days with activity)
  */
@@ -267,7 +254,7 @@ export async function queryActivityData(days = 365): Promise<ActivityData> {
     totalOutputTokens: agg.totalOutputTokens,
     totalCachedTokens: agg.totalCacheReadTokens,
     totalTokens: agg.totalInputTokens + agg.totalOutputTokens,
-    estimatedCostUsd: calculateCost(
+    estimatedCostUsd: calculateDefaultCost(
       agg.totalInputTokens,
       agg.totalOutputTokens,
       agg.totalCacheReadTokens
@@ -295,6 +282,13 @@ export async function queryActivityData(days = 365): Promise<ActivityData> {
     cacheReadTokens: usage.cacheReadInputTokens,
     cacheCreationTokens: usage.cacheCreationInputTokens,
     totalTokens: usage.inputTokens + usage.outputTokens,
+    costUsd: calculateModelCost(
+      model,
+      usage.inputTokens,
+      usage.outputTokens,
+      usage.cacheReadInputTokens,
+      usage.cacheCreationInputTokens
+    ),
   }));
 
   const result: ActivityData = {

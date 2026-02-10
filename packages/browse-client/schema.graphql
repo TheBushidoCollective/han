@@ -2015,6 +2015,9 @@ type ModelUsageStats {
   """Total cache read tokens"""
   cacheReadTokens: BigInt
 
+  """Estimated cost in USD using per-model pricing"""
+  costUsd: Float
+
   """Human-readable model name"""
   displayName: String
 

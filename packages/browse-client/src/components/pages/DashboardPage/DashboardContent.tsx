@@ -210,6 +210,7 @@ export function DashboardContent({
 			cacheReadTokens: Number(m?.cacheReadTokens ?? 0),
 			cacheCreationTokens: Number(m?.cacheCreationTokens ?? 0),
 			totalTokens: Number(m?.totalTokens ?? 0),
+			costUsd: m?.costUsd ?? 0,
 		})),
 		totalSessions: rawActivity?.totalSessions ?? 0,
 		totalMessages: rawActivity?.totalMessages ?? 0,
@@ -279,6 +280,9 @@ export function DashboardContent({
 		})),
 		costAnalysis: {
 			estimatedCostUsd: rawAnalytics?.costAnalysis?.estimatedCostUsd ?? 0,
+			isEstimated: rawAnalytics?.costAnalysis?.isEstimated ?? true,
+			billingType: rawAnalytics?.costAnalysis?.billingType ?? null,
+			cacheSavingsUsd: rawAnalytics?.costAnalysis?.cacheSavingsUsd ?? 0,
 			maxSubscriptionCostUsd:
 				rawAnalytics?.costAnalysis?.maxSubscriptionCostUsd ?? 200,
 			costUtilizationPercent:
@@ -578,7 +582,10 @@ export function DashboardContent({
 						</SectionCard>
 						<SectionCard title="Token Usage (30 days)" style={{ flex: 1 }}>
 							{activityLoaded ? (
-								<TokenUsageCard tokenUsage={activity.tokenUsage} />
+								<TokenUsageCard
+									tokenUsage={activity.tokenUsage}
+									cacheSavingsUsd={analytics.costAnalysis.cacheSavingsUsd}
+								/>
 							) : (
 								<Box
 									style={{

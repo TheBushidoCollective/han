@@ -32,6 +32,7 @@ interface ModelUsageStats {
 	readonly cacheReadTokens: number;
 	readonly cacheCreationTokens: number;
 	readonly totalTokens: number;
+	readonly costUsd: number;
 }
 
 interface ModelUsageChartProps {
@@ -193,11 +194,14 @@ export function ModelUsageChart({
 		return max;
 	}, [weeks]);
 
-	// Calculate totals per model
+	// Calculate totals and costs per model
 	const totalsByModel = useMemo(() => {
-		const totals = new Map<string, number>();
+		const totals = new Map<string, { tokens: number; costUsd: number }>();
 		for (const m of modelUsage) {
-			totals.set(m.displayName, m.totalTokens);
+			totals.set(m.displayName, {
+				tokens: m.totalTokens,
+				costUsd: m.costUsd,
+			});
 		}
 		return totals;
 	}, [modelUsage]);
@@ -243,8 +247,13 @@ export function ModelUsageChart({
 							</Text>
 						</HStack>
 						<Text weight="semibold" size="sm">
-							{formatNumber(totalsByModel.get(modelName) || 0)}
+							{formatNumber(totalsByModel.get(modelName)?.tokens || 0)}
 						</Text>
+						{(totalsByModel.get(modelName)?.costUsd ?? 0) > 0 && (
+							<Text color="muted" size="xs">
+								${(totalsByModel.get(modelName)?.costUsd ?? 0).toFixed(2)}
+							</Text>
+						)}
 					</VStack>
 				))}
 			</HStack>

@@ -50,6 +50,9 @@ interface SessionCost {
 
 interface CostAnalysis {
 	readonly estimatedCostUsd: number;
+	readonly isEstimated: boolean;
+	readonly billingType: string | null;
+	readonly cacheSavingsUsd: number;
 	readonly maxSubscriptionCostUsd: number;
 	readonly costUtilizationPercent: number;
 	readonly dailyCostTrend: readonly DailyCost[];
@@ -266,6 +269,54 @@ export function CostAnalysisCard({
 
 	return (
 		<VStack gap="md" style={{ width: "100%" }}>
+			{/* Cost accuracy and billing info */}
+			<HStack gap="sm" align="center" wrap>
+				{costAnalysis.isEstimated && (
+					<Box
+						style={{
+							paddingHorizontal: theme.spacing.sm,
+							paddingVertical: 2,
+							backgroundColor: "rgba(245, 158, 11, 0.15)",
+							borderRadius: theme.radii.full,
+						}}
+					>
+						<Text size="xs" weight="semibold" style={{ color: "#f59e0b" }}>
+							Estimated (Sonnet rates)
+						</Text>
+					</Box>
+				)}
+				{!costAnalysis.isEstimated && (
+					<Box
+						style={{
+							paddingHorizontal: theme.spacing.sm,
+							paddingVertical: 2,
+							backgroundColor: "rgba(16, 185, 129, 0.15)",
+							borderRadius: theme.radii.full,
+						}}
+					>
+						<Text size="xs" weight="semibold" style={{ color: "#10b981" }}>
+							Per-model pricing
+						</Text>
+					</Box>
+				)}
+				{costAnalysis.billingType && (
+					<Box
+						style={{
+							paddingHorizontal: theme.spacing.sm,
+							paddingVertical: 2,
+							backgroundColor: "rgba(99, 102, 241, 0.12)",
+							borderRadius: theme.radii.full,
+						}}
+					>
+						<Text size="xs" weight="semibold" style={{ color: "#6366f1" }}>
+							{costAnalysis.billingType === "stripe_subscription"
+								? "Max Plan"
+								: costAnalysis.billingType}
+						</Text>
+					</Box>
+				)}
+			</HStack>
+
 			{/* Subscription utilization gauge */}
 			<VStack gap="sm" style={{ width: "100%" }}>
 				<HStack justify="space-between" align="center">
@@ -337,6 +388,11 @@ export function CostAnalysisCard({
 					<CostMetric
 						label="Cache Hit Rate"
 						value={formatPercent(costAnalysis.cacheHitRate * 100)}
+						subValue={
+							costAnalysis.cacheSavingsUsd > 0
+								? `${formatCost(costAnalysis.cacheSavingsUsd)} saved`
+								: undefined
+						}
 					/>
 					<CostMetric
 						label="Potential Savings"
