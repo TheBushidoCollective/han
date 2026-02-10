@@ -100,8 +100,8 @@ function getModelColor(displayName: string): string {
 	const versionMatch = displayName.match(/(\d+)(?:\.(\d+))?/);
 	const minor = versionMatch?.[2] ? Number.parseInt(versionMatch[2], 10) : 0;
 
-	// Higher minor = darker: lightness goes from 65% (minor 0) down to 35% (minor 6+)
-	const lightness = Math.max(35, 65 - minor * 5);
+	// Higher minor = darker: lightness goes from 70% (minor 0) down to 30% (minor 8)
+	const lightness = Math.max(30, 70 - minor * 8);
 	return `hsl(${hue}, 70%, ${lightness}%)`;
 }
 
