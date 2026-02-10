@@ -220,6 +220,32 @@ export function LineChangesChart({
 				</HStack>
 			</VStack>
 
+			{/* Date labels */}
+			<HStack style={{ width: "100%" }}>
+				{weeks.map((w, idx) => {
+					const date = new Date(w.startDate);
+					const prevWeek = weeks[idx - 1];
+					const isNewMonth =
+						!prevWeek ||
+						new Date(prevWeek.startDate).getMonth() !== date.getMonth();
+					return (
+						<Box
+							key={`date-${w.startDate}`}
+							style={{ flex: 1, overflow: "visible" }}
+						>
+							{isNewMonth ? (
+								<Text color="muted" size="xs" style={{ whiteSpace: "nowrap" }}>
+									{date.toLocaleDateString("en-US", {
+										month: "short",
+										day: "numeric",
+									})}
+								</Text>
+							) : null}
+						</Box>
+					);
+				})}
+			</HStack>
+
 			{/* Legend */}
 			<HStack gap="md" align="center">
 				<HStack gap="xs" align="center">

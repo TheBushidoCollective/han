@@ -10,9 +10,17 @@
  */
 
 import { type ChildProcess, spawn } from 'node:child_process';
-import { existsSync, readFileSync, watch, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  watch,
+  writeFileSync,
+} from 'node:fs';
 import { createServer } from 'node:http';
-import { platform } from 'node:os';
+import { platform, tmpdir } from 'node:os';
 import { dirname, extname, join } from 'node:path';
 import { fileURLToPath, parse } from 'node:url';
 import { isDevMode } from '../../shared.ts';
@@ -332,15 +340,25 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
         join(clientDir, 'build', 'rnw-compat-plugin.ts')
       );
 
+      // Build to a temp dir first, then swap on success.
+      // This prevents Bun's intermittent hash-collision build failures
+      // from corrupting the output dir and causing blank pages.
+      const tmpOut = mkdtempSync(join(tmpdir(), 'han-browse-'));
+
       const result = await Bun.build({
         entrypoints: [join(clientDir, 'index.html')],
-        outdir: outDir,
+        outdir: tmpOut,
         root: clientDir, // Resolve modules from browse-client directory
         target: 'browser',
         splitting: true,
         minify: !devMode,
         sourcemap: devMode ? 'inline' : 'none',
         publicPath: '/',
+        naming: {
+          chunk: 'chunk-[name]-[hash].[ext]',
+          entry: '[dir]/[name].[ext]',
+          asset: '[name]-[hash].[ext]',
+        },
         plugins: [
           rnwCompatPlugin(),
           relayPlugin({ devMode }),
@@ -388,8 +406,17 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
             );
           }
         }
+        // Clean up temp dir on failure, keep existing outDir intact
+        rmSync(tmpOut, { recursive: true, force: true });
         return false;
       }
+
+      // Atomic swap: replace outDir with successful build
+      if (existsSync(outDir)) {
+        rmSync(outDir, { recursive: true, force: true });
+      }
+      cpSync(tmpOut, outDir, { recursive: true });
+      rmSync(tmpOut, { recursive: true, force: true });
       return true;
     } catch (error) {
       console.error('[bun] Build exception:', error);

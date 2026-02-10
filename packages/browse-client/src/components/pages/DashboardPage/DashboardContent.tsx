@@ -439,9 +439,9 @@ export function DashboardContent({
 			</Box>
 
 			{/* Activity Heatmap and Code Changes - side by side */}
-			<HStack gap="lg" style={{ alignItems: "flex-start" }}>
+			<HStack gap="lg" style={{ alignItems: "stretch" }}>
 				<Box style={{ flex: 1 }}>
-					<SectionCard title="Activity">
+					<SectionCard title="Activity" style={{ height: "100%" }}>
 						{activityLoaded ? (
 							<ActivityHeatmap
 								dailyActivity={activity.dailyActivity}
@@ -464,7 +464,7 @@ export function DashboardContent({
 					</SectionCard>
 				</Box>
 				<Box style={{ flex: 1 }}>
-					<SectionCard title="Code Changes">
+					<SectionCard title="Code Changes" style={{ height: "100%" }}>
 						{activityLoaded ? (
 							<LineChangesChart
 								dailyActivity={activity.dailyActivity}
