@@ -175,10 +175,42 @@ export interface PaginatedResponse<T> {
 }
 
 /**
- * Get the Claude Code projects directory
+ * Get the default Claude Code projects directory
  */
 function getClaudeProjectsPath(): string {
   return join(homedir(), '.claude', 'projects');
+}
+
+/**
+ * Get all Claude Code projects directories (multi-environment support).
+ * Reads registered config dirs from the database, falls back to default only.
+ */
+function getAllProjectsPaths(): string[] {
+  const paths = new Set<string>();
+  // Always include default
+  paths.add(getClaudeProjectsPath());
+
+  // Read registered config dirs from the database (sync via native module)
+  try {
+    // Lazy import to avoid circular deps and handle case where DB isn't initialized
+    const { getNativeModule } =
+      require('../native.ts') as typeof import('../native.ts');
+    const { getDbPath } =
+      require('../db/index.ts') as typeof import('../db/index.ts');
+    const native = getNativeModule();
+    const dbPath = getDbPath();
+    const configDirs = native.listConfigDirs(dbPath);
+    for (const dir of configDirs) {
+      const projectsPath = join(dir.path, 'projects');
+      if (existsSync(projectsPath)) {
+        paths.add(projectsPath);
+      }
+    }
+  } catch {
+    // DB not initialized yet — fall back to default only
+  }
+
+  return Array.from(paths);
 }
 
 /**
@@ -876,77 +908,76 @@ function getAllSessionFilesLight(): SessionFileInfoLight[] {
     return lightSessionFilesCache.files;
   }
 
-  const projectsPath = getClaudeProjectsPath();
-
-  if (!existsSync(projectsPath)) {
-    return [];
-  }
-
   const files: SessionFileInfoLight[] = [];
 
-  // List all project directories
-  let projectDirs: string[];
-  try {
-    projectDirs = readdirSync(projectsPath);
-  } catch {
-    return [];
-  }
+  // Scan all registered config dirs (multi-environment support)
+  for (const projectsPath of getAllProjectsPaths()) {
+    if (!existsSync(projectsPath)) {
+      continue;
+    }
 
-  for (const projectDir of projectDirs) {
-    const projectDirPath = join(projectsPath, projectDir);
-
-    // Quick check if it's a directory
+    // List all project directories
+    let projectDirs: string[];
     try {
-      const dirStat = statSync(projectDirPath);
-      if (!dirStat.isDirectory()) continue;
+      projectDirs = readdirSync(projectsPath);
     } catch {
       continue;
     }
 
-    const projectPath = decodeProjectPath(projectDir);
+    for (const projectDir of projectDirs) {
+      const projectDirPath = join(projectsPath, projectDir);
 
-    // Skip temp folder paths (test directories)
-    if (isTempFolderPath(projectPath)) {
-      continue;
-    }
-
-    // Skip projects where the source directory no longer exists
-    // This filters out stale session data from deleted repositories
-    if (!existsSync(projectPath)) {
-      continue;
-    }
-
-    const projectName = getProjectName(projectPath);
-
-    // List all JSONL files in this project (exclude agent-* files)
-    let sessionFiles: string[];
-    try {
-      sessionFiles = readdirSync(projectDirPath).filter(
-        (f) => f.endsWith('.jsonl') && !f.startsWith('agent-')
-      );
-    } catch {
-      continue;
-    }
-
-    for (const sessionFile of sessionFiles) {
-      const sessionId = sessionFile.replace('.jsonl', '');
-      const filePath = join(projectDirPath, sessionFile);
-
+      // Quick check if it's a directory
       try {
-        const stats = statSync(filePath);
-        // Use file mtime as the last updated time
-        // The database has more accurate timestamps but this is for discovery
-        files.push({
-          sessionId,
-          filePath,
-          projectDir,
-          projectPath,
-          projectName,
-          mtime: stats.mtime,
-          lastUpdatedAt: stats.mtime.toISOString(),
-        });
+        const dirStat = statSync(projectDirPath);
+        if (!dirStat.isDirectory()) continue;
       } catch {
-        // Skip files we can't stat
+        continue;
+      }
+
+      const projectPath = decodeProjectPath(projectDir);
+
+      // Skip temp folder paths (test directories)
+      if (isTempFolderPath(projectPath)) {
+        continue;
+      }
+
+      // Skip projects where the source directory no longer exists
+      // This filters out stale session data from deleted repositories
+      if (!existsSync(projectPath)) {
+        continue;
+      }
+
+      const projectName = getProjectName(projectPath);
+
+      // List all JSONL files in this project (exclude agent-* files)
+      let sessionFiles: string[];
+      try {
+        sessionFiles = readdirSync(projectDirPath).filter(
+          (f) => f.endsWith('.jsonl') && !f.startsWith('agent-')
+        );
+      } catch {
+        continue;
+      }
+
+      for (const sessionFile of sessionFiles) {
+        const sessionId = sessionFile.replace('.jsonl', '');
+        const filePath = join(projectDirPath, sessionFile);
+
+        try {
+          const stats = statSync(filePath);
+          files.push({
+            sessionId,
+            filePath,
+            projectDir,
+            projectPath,
+            projectName,
+            mtime: stats.mtime,
+            lastUpdatedAt: stats.mtime.toISOString(),
+          });
+        } catch {
+          // Skip files we can't stat
+        }
       }
     }
   }
@@ -968,70 +999,74 @@ function getAllSessionFilesLight(): SessionFileInfoLight[] {
  * Get all session files across all projects
  */
 function getAllSessionFiles(): SessionFileInfo[] {
-  const projectsPath = getClaudeProjectsPath();
-
-  if (!existsSync(projectsPath)) {
-    return [];
-  }
-
   const files: SessionFileInfo[] = [];
 
-  // List all project directories
-  const projectDirs = readdirSync(projectsPath).filter((d) => {
-    const fullPath = join(projectsPath, d);
-    return statSync(fullPath).isDirectory();
-  });
-
-  for (const projectDir of projectDirs) {
-    const projectDirPath = join(projectsPath, projectDir);
-    const projectPath = decodeProjectPath(projectDir);
-
-    // Skip temp folder paths (test directories)
-    if (isTempFolderPath(projectPath)) {
+  // Scan all registered config dirs (multi-environment support)
+  for (const projectsPath of getAllProjectsPaths()) {
+    if (!existsSync(projectsPath)) {
       continue;
     }
 
-    // Skip projects where the source directory no longer exists
-    // This filters out stale session data from deleted repositories
-    if (!existsSync(projectPath)) {
+    // List all project directories
+    let projectDirs: string[];
+    try {
+      projectDirs = readdirSync(projectsPath).filter((d) => {
+        const fullPath = join(projectsPath, d);
+        return statSync(fullPath).isDirectory();
+      });
+    } catch {
       continue;
     }
 
-    const projectName = getProjectName(projectPath);
-    const projectId = getProjectId(projectPath);
-    const worktreeInfo = getWorktreeInfo(projectPath);
-    const worktreeName =
-      worktreeInfo?.type !== 'main' ? worktreeInfo?.name : undefined;
+    for (const projectDir of projectDirs) {
+      const projectDirPath = join(projectsPath, projectDir);
+      const projectPath = decodeProjectPath(projectDir);
 
-    // List all JSONL files in this project
-    const sessionFiles = readdirSync(projectDirPath).filter((f) =>
-      f.endsWith('.jsonl')
-    );
+      // Skip temp folder paths (test directories)
+      if (isTempFolderPath(projectPath)) {
+        continue;
+      }
 
-    for (const sessionFile of sessionFiles) {
-      const sessionId = sessionFile.replace('.jsonl', '');
-      const filePath = join(projectDirPath, sessionFile);
+      // Skip projects where the source directory no longer exists
+      // This filters out stale session data from deleted repositories
+      if (!existsSync(projectPath)) {
+        continue;
+      }
 
-      try {
-        const stats = statSync(filePath);
-        // Use file mtime as the last updated time
-        // More accurate timestamps come from the database
-        files.push({
-          sessionId,
-          filePath,
-          projectDir,
-          projectPath,
-          projectName,
-          projectId,
-          worktreeName,
-          locationType: worktreeInfo?.type,
-          parentWorktreePath: worktreeInfo?.parentWorktreePath,
-          subdirRelativePath: worktreeInfo?.relativePath,
-          mtime: stats.mtime,
-          lastUpdatedAt: stats.mtime.toISOString(),
-        });
-      } catch {
-        // Skip files we can't stat
+      const projectName = getProjectName(projectPath);
+      const projectId = getProjectId(projectPath);
+      const worktreeInfo = getWorktreeInfo(projectPath);
+      const worktreeName =
+        worktreeInfo?.type !== 'main' ? worktreeInfo?.name : undefined;
+
+      // List all JSONL files in this project
+      const sessionFiles = readdirSync(projectDirPath).filter((f) =>
+        f.endsWith('.jsonl')
+      );
+
+      for (const sessionFile of sessionFiles) {
+        const sessionId = sessionFile.replace('.jsonl', '');
+        const filePath = join(projectDirPath, sessionFile);
+
+        try {
+          const stats = statSync(filePath);
+          files.push({
+            sessionId,
+            filePath,
+            projectDir,
+            projectPath,
+            projectName,
+            projectId,
+            worktreeName,
+            locationType: worktreeInfo?.type,
+            parentWorktreePath: worktreeInfo?.parentWorktreePath,
+            subdirRelativePath: worktreeInfo?.relativePath,
+            mtime: stats.mtime,
+            lastUpdatedAt: stats.mtime.toISOString(),
+          });
+        } catch {
+          // Skip files we can't stat
+        }
       }
     }
   }
