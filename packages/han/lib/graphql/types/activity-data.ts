@@ -50,6 +50,7 @@ const ActivityDataRef = builder.objectRef<ActivityData>('ActivityData');
  * Convert model ID to human-readable display name
  */
 function getModelDisplayName(modelId: string): string {
+  if (modelId.includes('opus-4-6')) return 'Opus 4.6';
   if (modelId.includes('opus-4-5')) return 'Opus 4.5';
   if (modelId.includes('opus-4-1')) return 'Opus 4.1';
   if (modelId.includes('opus-4-')) return 'Opus 4';
