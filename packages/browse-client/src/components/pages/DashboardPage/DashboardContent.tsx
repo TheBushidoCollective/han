@@ -486,26 +486,51 @@ export function DashboardContent({
 				</Box>
 			</HStack>
 
-			{/* Model Usage Chart - full width */}
-			<SectionCard title="Model Usage (from Claude Code stats)">
-				{activityLoaded ? (
-					<ModelUsageChart
-						dailyModelTokens={activity.dailyModelTokens}
-						modelUsage={activity.modelUsage}
-					/>
-				) : (
-					<Box
-						style={{
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							minHeight: "200px",
-						}}
+			{/* Model Usage and Time of Day - side by side */}
+			<HStack gap="lg" style={{ alignItems: "stretch" }}>
+				<Box style={{ flex: 1 }}>
+					<SectionCard
+						title="Model Usage (from Claude Code stats)"
+						style={{ height: "100%" }}
 					>
-						<Text color="muted">Loading chart data...</Text>
-					</Box>
-				)}
-			</SectionCard>
+						{activityLoaded ? (
+							<ModelUsageChart
+								dailyModelTokens={activity.dailyModelTokens}
+								modelUsage={activity.modelUsage}
+							/>
+						) : (
+							<Box
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									minHeight: "200px",
+								}}
+							>
+								<Text color="muted">Loading chart data...</Text>
+							</Box>
+						)}
+					</SectionCard>
+				</Box>
+				<Box style={{ flex: 1 }}>
+					<SectionCard title="Time of Day" style={{ height: "100%" }}>
+						{activityLoaded ? (
+							<TimeOfDayChart hourlyActivity={activity.hourlyActivity} />
+						) : (
+							<Box
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									minHeight: "200px",
+								}}
+							>
+								<Text color="muted">Loading chart data...</Text>
+							</Box>
+						)}
+					</SectionCard>
+				</Box>
+			</HStack>
 
 			{/* Cost Analysis (flex:3) with stacked cards on right (flex:2) */}
 			<HStack gap="lg" style={{ alignItems: "stretch" }}>
@@ -627,10 +652,10 @@ export function DashboardContent({
 				)}
 			</SectionCard>
 
-			{/* Subagent Usage and Tool Usage - side by side */}
-			<HStack gap="lg" style={{ alignItems: "flex-start" }}>
+			{/* Subagent Usage and Tool Usage - matched height */}
+			<HStack gap="lg" style={{ alignItems: "stretch" }}>
 				<Box style={{ flex: 1 }}>
-					<SectionCard title="Subagent Usage">
+					<SectionCard title="Subagent Usage" style={{ height: "100%" }}>
 						{analyticsLoaded ? (
 							<SubagentUsageChart subagentUsage={analytics.subagentUsage} />
 						) : (
@@ -648,7 +673,7 @@ export function DashboardContent({
 					</SectionCard>
 				</Box>
 				<Box style={{ flex: 1 }}>
-					<SectionCard title="Tool Usage">
+					<SectionCard title="Tool Usage" style={{ height: "100%" }}>
 						{analyticsLoaded ? (
 							<ToolUsageChart toolUsage={analytics.toolUsage} />
 						) : (
@@ -667,45 +692,23 @@ export function DashboardContent({
 				</Box>
 			</HStack>
 
-			{/* Time of Day and Hook Health - side by side */}
-			<HStack gap="lg" style={{ alignItems: "flex-start" }}>
-				<Box style={{ flex: 1 }}>
-					<SectionCard title="Time of Day">
-						{activityLoaded ? (
-							<TimeOfDayChart hourlyActivity={activity.hourlyActivity} />
-						) : (
-							<Box
-								style={{
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "center",
-									minHeight: "200px",
-								}}
-							>
-								<Text color="muted">Loading chart data...</Text>
-							</Box>
-						)}
-					</SectionCard>
-				</Box>
-				<Box style={{ flex: 1 }}>
-					<SectionCard title="Hook Health">
-						{analyticsLoaded ? (
-							<HookHealthCard hookHealth={analytics.hookHealth} />
-						) : (
-							<Box
-								style={{
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "center",
-									minHeight: "120px",
-								}}
-							>
-								<Text color="muted">Loading hook data...</Text>
-							</Box>
-						)}
-					</SectionCard>
-				</Box>
-			</HStack>
+			{/* Hook Health - full width */}
+			<SectionCard title="Hook Health">
+				{analyticsLoaded ? (
+					<HookHealthCard hookHealth={analytics.hookHealth} />
+				) : (
+					<Box
+						style={{
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							minHeight: "120px",
+						}}
+					>
+						<Text color="muted">Loading hook data...</Text>
+					</Box>
+				)}
+			</SectionCard>
 
 			{/* Recent Sessions - full width */}
 			<SectionCard
