@@ -6,10 +6,14 @@
  * tool usage, hook health, and cost analysis.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import { queryDashboardAggregates } from '../../db/index.ts';
+import {
+  calculateCacheSavings,
+  calculateDefaultCost,
+  calculateTotalCostFromModelUsage,
+  DEFAULT_PRICING,
+} from '../../pricing/model-pricing.ts';
+import { getAggregatedStats } from '../../pricing/stats-reader.ts';
 import { builder } from '../builder.ts';
 
 // =============================================================================
@@ -544,12 +548,6 @@ const COMPACTION_PENALTY_MAX = 5;
 const COMPACTION_PENALTY_PER = 100 / COMPACTION_PENALTY_MAX;
 
 /** Theoretical optimal cache rate target for savings estimate */
-const PRICING = {
-  inputPerMTok: 3.0,
-  outputPerMTok: 15.0,
-  cacheReadPerMTok: 0.3,
-};
-
 const OPTIMAL_CACHE_RATE = 0.8;
 
 /**
@@ -570,21 +568,6 @@ const SUBSCRIPTION_TIERS = [
 export function round(value: number, decimals: number): number {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
-}
-
-/**
- * Calculate estimated cost based on Claude pricing.
- * Uses Sonnet-class pricing as a baseline estimate.
- */
-export function calculateCost(
-  inputTokens: number,
-  outputTokens: number,
-  cachedTokens: number
-): number {
-  const inputCost = (inputTokens / 1_000_000) * PRICING.inputPerMTok;
-  const outputCost = (outputTokens / 1_000_000) * PRICING.outputPerMTok;
-  const cacheCost = (cachedTokens / 1_000_000) * PRICING.cacheReadPerMTok;
-  return inputCost + outputCost + cacheCost;
 }
 
 /**
@@ -620,36 +603,6 @@ export function parseTokensFromRawJson(rawJson: string | null): {
     };
   } catch {
     return zero;
-  }
-}
-
-/**
- * Read stats-cache.json from ~/.claude/ for model usage data.
- * Returns null if unavailable (logs warning on parse failure).
- */
-function readStatsCache(): {
-  modelUsage?: Record<
-    string,
-    {
-      inputTokens: number;
-      outputTokens: number;
-      cacheReadInputTokens: number;
-      cacheCreationInputTokens: number;
-      costUSD: number;
-    }
-  >;
-} | null {
-  try {
-    const statsPath = join(homedir(), '.claude', 'stats-cache.json');
-    if (!existsSync(statsPath)) return null;
-    const content = readFileSync(statsPath, 'utf-8');
-    return JSON.parse(content);
-  } catch (err) {
-    console.warn(
-      'Failed to read stats-cache.json, using estimated costs:',
-      err
-    );
-    return null;
   }
 }
 
@@ -924,38 +877,51 @@ export async function queryDashboardAnalytics(
   }));
 
   // ==========================================================================
-  // Build cost analysis
+  // Build cost analysis (per-model pricing from aggregated stats-cache)
   // ==========================================================================
   const totalInputTokens = agg.totalInputTokens;
   const totalOutputTokens = agg.totalOutputTokens;
   const totalCacheReadTokens = agg.totalCacheReadTokens;
   const totalSessions = agg.totalSessions;
 
-  const estimatedCostUsd = calculateCost(
-    totalInputTokens,
-    totalOutputTokens,
-    totalCacheReadTokens
-  );
+  // Get aggregated stats from all config dirs for per-model pricing
+  const aggregatedStats = await getAggregatedStats();
+  const hasModelUsage =
+    aggregatedStats.hasStatsCacheData &&
+    Object.keys(aggregatedStats.modelUsage).length > 0;
 
-  // Check stats-cache for more accurate cost data (survives session cleanup)
-  const statsCache = readStatsCache();
-  let statsCacheCost = 0;
-  if (statsCache?.modelUsage) {
-    for (const usage of Object.values(statsCache.modelUsage)) {
-      statsCacheCost += usage.costUSD || 0;
-    }
+  // Use per-model pricing when available, fall back to default Sonnet-class rates
+  let finalCostUsd: number;
+  let isEstimated: boolean;
+  let cacheSavingsUsd: number;
+
+  if (hasModelUsage) {
+    finalCostUsd = calculateTotalCostFromModelUsage(aggregatedStats.modelUsage);
+    isEstimated = false;
+    cacheSavingsUsd = calculateCacheSavings(aggregatedStats.modelUsage);
+  } else {
+    finalCostUsd = calculateDefaultCost(
+      totalInputTokens,
+      totalOutputTokens,
+      totalCacheReadTokens
+    );
+    isEstimated = true;
+    // Fallback: savings based on default pricing (input - cacheRead rate)
+    const savedPerMTok =
+      DEFAULT_PRICING.inputPerMTok - DEFAULT_PRICING.cacheReadPerMTok;
+    cacheSavingsUsd = (totalCacheReadTokens / 1_000_000) * savedPerMTok;
   }
 
-  const finalCostUsd = statsCacheCost > 0 ? statsCacheCost : estimatedCostUsd;
+  const billingType = aggregatedStats.billingInfo.billingType;
 
-  // Build daily cost trend from SQL aggregation
+  // Build daily cost trend from SQL aggregation (uses default pricing — no per-model breakdown per day)
   const dailyCostMap = new Map<
     string,
     { costUsd: number; sessionCount: number }
   >();
   for (const dc of agg.dailyCosts) {
     dailyCostMap.set(dc.date, {
-      costUsd: calculateCost(
+      costUsd: calculateDefaultCost(
         dc.inputTokens,
         dc.outputTokens,
         dc.cacheReadTokens
@@ -1009,10 +975,10 @@ export async function queryDashboardAnalytics(
     }))
     .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
 
-  // Top 10 most expensive sessions
+  // Top 10 most expensive sessions (uses default pricing — no per-model breakdown per session)
   const topSessionsByCost: SessionCost[] = agg.sessionStats
     .map((s) => {
-      const cost = calculateCost(
+      const cost = calculateDefaultCost(
         s.inputTokens,
         s.outputTokens,
         s.cacheReadTokens
@@ -1042,7 +1008,7 @@ export async function queryDashboardAnalytics(
   // Potential savings if cache hit rate reached optimal target
   const currentNonCachedInputCost =
     ((totalInputTokens - totalCacheReadTokens) / 1_000_000) *
-    PRICING.inputPerMTok;
+    DEFAULT_PRICING.inputPerMTok;
   const savingsIfOptimal =
     cacheHitRate < OPTIMAL_CACHE_RATE
       ? currentNonCachedInputCost * (OPTIMAL_CACHE_RATE - cacheHitRate)
@@ -1078,19 +1044,11 @@ export async function queryDashboardAnalytics(
 
   const breakEvenDailySpend = round(subscriptionTier / 30, 2);
 
-  // Determine if cost is estimated (no stats-cache) and calculate cache savings
-  const isEstimated = statsCacheCost <= 0;
-  const cacheSavingsUsd = round(
-    (totalCacheReadTokens / 1_000_000) *
-      (PRICING.inputPerMTok - PRICING.cacheReadPerMTok),
-    2
-  );
-
   const costAnalysis: CostAnalysis = {
     estimatedCostUsd: round(finalCostUsd, 2),
     isEstimated,
-    billingType: isEstimated ? null : 'api',
-    cacheSavingsUsd,
+    billingType,
+    cacheSavingsUsd: round(cacheSavingsUsd, 2),
     maxSubscriptionCostUsd: subscriptionTier,
     costUtilizationPercent: round((finalCostUsd / subscriptionTier) * 100, 2),
     dailyCostTrend,

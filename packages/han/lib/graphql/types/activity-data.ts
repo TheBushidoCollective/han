@@ -4,10 +4,8 @@
  * Complete activity data for dashboard visualizations.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import { queryActivityAggregates } from '../../db/index.ts';
+import { getAggregatedStats } from '../../pricing/stats-reader.ts';
 import { builder } from '../builder.ts';
 import { type DailyActivity, DailyActivityType } from './daily-activity.ts';
 import {
@@ -136,62 +134,8 @@ export const ActivityDataType = ActivityDataRef.implement({
 // Helper Functions
 // =============================================================================
 
-/**
- * Stats cache data structure from ~/.claude/stats-cache.json
- */
-interface StatsCache {
-  version: number;
-  lastComputedDate: string;
-  dailyActivity: Array<{
-    date: string;
-    messageCount: number;
-    sessionCount: number;
-    toolCallCount: number;
-  }>;
-  dailyModelTokens: Array<{
-    date: string;
-    tokensByModel: Record<string, number>;
-  }>;
-  modelUsage: Record<
-    string,
-    {
-      inputTokens: number;
-      outputTokens: number;
-      cacheReadInputTokens: number;
-      cacheCreationInputTokens: number;
-      webSearchRequests: number;
-      costUSD: number;
-      contextWindow: number;
-    }
-  >;
-  totalSessions: number;
-  totalMessages: number;
-  longestSession?: {
-    sessionId: string;
-    duration: number;
-    messageCount: number;
-    timestamp: string;
-  };
-  firstSessionDate?: string;
-  hourCounts?: Record<string, number>;
-}
-
-/**
- * Read and parse stats-cache.json from ~/.claude/
- */
-function readStatsCache(): StatsCache | null {
-  try {
-    const statsPath = join(homedir(), '.claude', 'stats-cache.json');
-    if (!existsSync(statsPath)) {
-      return null;
-    }
-    const content = readFileSync(statsPath, 'utf-8');
-    return JSON.parse(content) as StatsCache;
-  } catch (error) {
-    console.error('Error reading stats-cache.json:', error);
-    return null;
-  }
-}
+// StatsCache reading now handled by getAggregatedStats() from stats-reader.ts
+// which merges stats-cache.json from ALL registered config dirs.
 
 /**
  * Calculate estimated cost based on Claude pricing
@@ -337,22 +281,21 @@ export async function queryActivityData(days = 365): Promise<ActivityData> {
     (d) => d.messageCount > 0
   ).length;
 
-  // Read stats-cache.json for model usage data (survives session cleanup)
-  const statsCache = readStatsCache();
+  // Read stats-cache.json from ALL registered config dirs (multi-environment)
+  const aggregatedStats = await getAggregatedStats();
 
-  const dailyModelTokens: DailyModelTokens[] =
-    statsCache?.dailyModelTokens ?? [];
-  const modelUsage: ModelUsageStats[] = statsCache?.modelUsage
-    ? Object.entries(statsCache.modelUsage).map(([model, usage]) => ({
-        model,
-        displayName: getModelDisplayName(model),
-        inputTokens: usage.inputTokens,
-        outputTokens: usage.outputTokens,
-        cacheReadTokens: usage.cacheReadInputTokens,
-        cacheCreationTokens: usage.cacheCreationInputTokens,
-        totalTokens: usage.inputTokens + usage.outputTokens,
-      }))
-    : [];
+  const dailyModelTokens: DailyModelTokens[] = aggregatedStats.dailyModelTokens;
+  const modelUsage: ModelUsageStats[] = Object.entries(
+    aggregatedStats.modelUsage
+  ).map(([model, usage]) => ({
+    model,
+    displayName: getModelDisplayName(model),
+    inputTokens: usage.inputTokens,
+    outputTokens: usage.outputTokens,
+    cacheReadTokens: usage.cacheReadInputTokens,
+    cacheCreationTokens: usage.cacheCreationInputTokens,
+    totalTokens: usage.inputTokens + usage.outputTokens,
+  }));
 
   const result: ActivityData = {
     dailyActivity,
@@ -362,9 +305,13 @@ export async function queryActivityData(days = 365): Promise<ActivityData> {
     totalActiveDays,
     dailyModelTokens,
     modelUsage,
-    totalSessions: statsCache?.totalSessions ?? agg.totalSessions,
-    totalMessages: statsCache?.totalMessages ?? agg.totalMessages,
-    firstSessionDate: statsCache?.firstSessionDate ?? null,
+    totalSessions: aggregatedStats.hasStatsCacheData
+      ? aggregatedStats.totalSessions
+      : agg.totalSessions,
+    totalMessages: aggregatedStats.hasStatsCacheData
+      ? aggregatedStats.totalMessages
+      : agg.totalMessages,
+    firstSessionDate: aggregatedStats.firstSessionDate,
   };
 
   activityCache.set(cacheKey, {
