@@ -96,13 +96,12 @@ function getModelColor(displayName: string): string {
 	const hue = FAMILY_HUES[family];
 	if (hue === undefined) return DEFAULT_COLOR;
 
-	// Parse full version: "Opus 4.6" -> 4.6, "Opus 3" -> 3.0
-	const versionMatch = displayName.match(/(\d+(?:\.\d+)?)/);
-	const version = versionMatch ? Number.parseFloat(versionMatch[1]) : 3;
-
-	// Map version range [3..5] to lightness [70%..30%], darker = higher version
-	const lightness = Math.round(70 - ((version - 3) / 2) * 40);
-	return `hsl(${hue}, 70%, ${lightness}%)`;
+	// Shift hue and saturation by minor version for distinct colors
+	const versionMatch = displayName.match(/\d+(?:\.(\d+))?/);
+	const minor = versionMatch?.[1] ? Number.parseInt(versionMatch[1], 10) : 0;
+	const shiftedHue = (hue + minor * 15) % 360;
+	const saturation = 60 + minor * 4;
+	return `hsl(${shiftedHue}, ${Math.min(saturation, 90)}%, 55%)`;
 }
 
 /**
