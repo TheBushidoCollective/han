@@ -438,45 +438,53 @@ export function DashboardContent({
 				/>
 			</Box>
 
-			{/* Activity Heatmap - full width */}
-			<SectionCard title="Activity">
-				{activityLoaded ? (
-					<ActivityHeatmap
-						dailyActivity={activity.dailyActivity}
-						streakDays={activity.streakDays}
-						totalActiveDays={activity.totalActiveDays}
-					/>
-				) : (
-					<Box
-						style={{
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							minHeight: "200px",
-						}}
-					>
-						<Text color="muted">Loading activity data...</Text>
-					</Box>
-				)}
-			</SectionCard>
-
-			{/* Line Changes Chart - full width */}
-			<SectionCard title="Code Changes">
-				{activityLoaded ? (
-					<LineChangesChart dailyActivity={activity.dailyActivity} />
-				) : (
-					<Box
-						style={{
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							minHeight: "200px",
-						}}
-					>
-						<Text color="muted">Loading chart data...</Text>
-					</Box>
-				)}
-			</SectionCard>
+			{/* Activity Heatmap and Code Changes - side by side */}
+			<HStack gap="lg" style={{ alignItems: "flex-start" }}>
+				<Box style={{ flex: 1 }}>
+					<SectionCard title="Activity">
+						{activityLoaded ? (
+							<ActivityHeatmap
+								dailyActivity={activity.dailyActivity}
+								firstSessionDate={activity.firstSessionDate}
+								streakDays={activity.streakDays}
+								totalActiveDays={activity.totalActiveDays}
+							/>
+						) : (
+							<Box
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									minHeight: "200px",
+								}}
+							>
+								<Text color="muted">Loading activity data...</Text>
+							</Box>
+						)}
+					</SectionCard>
+				</Box>
+				<Box style={{ flex: 1 }}>
+					<SectionCard title="Code Changes">
+						{activityLoaded ? (
+							<LineChangesChart
+								dailyActivity={activity.dailyActivity}
+								firstSessionDate={activity.firstSessionDate}
+							/>
+						) : (
+							<Box
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									minHeight: "200px",
+								}}
+							>
+								<Text color="muted">Loading chart data...</Text>
+							</Box>
+						)}
+					</SectionCard>
+				</Box>
+			</HStack>
 
 			{/* Model Usage Chart - full width */}
 			<SectionCard title="Model Usage (from Claude Code stats)">

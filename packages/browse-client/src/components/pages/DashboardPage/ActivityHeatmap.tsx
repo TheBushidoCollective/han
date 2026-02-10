@@ -23,6 +23,7 @@ interface DailyActivity {
 
 interface ActivityHeatmapProps {
 	dailyActivity: ReadonlyArray<DailyActivity>;
+	firstSessionDate?: string | null;
 	streakDays: number;
 	totalActiveDays: number;
 }
@@ -80,18 +81,25 @@ function organizeIntoWeeks(
 
 export function ActivityHeatmap({
 	dailyActivity,
+	firstSessionDate,
 	streakDays,
 	totalActiveDays,
 }: ActivityHeatmapProps): React.ReactElement {
+	// Trim activity to start from the first session date
+	const trimmedActivity = useMemo(() => {
+		if (!firstSessionDate) return dailyActivity;
+		return dailyActivity.filter((d) => d.date >= firstSessionDate);
+	}, [dailyActivity, firstSessionDate]);
+
 	// Calculate max messages for color scaling
 	const maxMessages = useMemo(() => {
-		return Math.max(...dailyActivity.map((d) => d.messageCount), 1);
-	}, [dailyActivity]);
+		return Math.max(...trimmedActivity.map((d) => d.messageCount), 1);
+	}, [trimmedActivity]);
 
 	// Organize into weeks (columns)
 	const weeks = useMemo(
-		() => organizeIntoWeeks(dailyActivity),
-		[dailyActivity],
+		() => organizeIntoWeeks(trimmedActivity),
+		[trimmedActivity],
 	);
 
 	// Cell size for activity grid - balance between visibility and fitting data
