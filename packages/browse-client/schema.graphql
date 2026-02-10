@@ -2026,7 +2026,7 @@ type Mutation {
   """
   acquireSlot(hookName: String!, pid: Int!, pluginName: String, sessionId: String!): SlotAcquireResult
 
-  """Trigger full indexing of all Claude Code sessions from JSONL files"""
+  """Trigger full indexing of all Claude Code sessions (non-blocking)"""
   indexSessions: IndexingResult
 
   """Register a config directory for multi-environment session indexing"""

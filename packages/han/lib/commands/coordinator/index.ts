@@ -285,9 +285,7 @@ export function registerCoordinatorCommands(program: Command): void {
     .option('--name <name>', 'Human-friendly name for this environment')
     .action(async (options: { configDir?: string; name?: string }) => {
       try {
-        const { registerConfigDir, getConfigDirByPath } = await import(
-          '../../db/index.ts'
-        );
+        const { registerConfigDir } = await import('../../db/index.ts');
 
         // Determine config dir to register
         const configDir =
@@ -295,45 +293,46 @@ export function registerCoordinatorCommands(program: Command): void {
           process.env.CLAUDE_CONFIG_DIR ||
           `${process.env.HOME}/.claude`;
 
-        // Get the default config dir
         const defaultConfigDir = `${process.env.HOME}/.claude`;
+        const isDefault = configDir === defaultConfigDir;
 
-        // Check if this is the default config dir (no need to register)
-        if (configDir === defaultConfigDir) {
-          console.log(
-            'Default config directory detected - no registration needed'
-          );
-          return;
-        }
-
-        // Check if already registered
-        const existing = await getConfigDirByPath(configDir);
-        if (existing) {
-          console.log(
-            `Config directory already registered: ${configDir}${existing.name ? ` (${existing.name})` : ''}`
-          );
-          return;
-        }
-
-        // Register the config directory
+        // Always register (idempotent upsert)
         const result = await registerConfigDir({
           path: configDir,
           name: options.name,
-          isDefault: false,
+          isDefault,
         });
 
         console.log(
           `Registered config directory: ${result.path}${result.name ? ` (${result.name})` : ''}`
         );
 
-        // If watcher is running, add the watch path
-        const { watcher } = await import('../../db/index.ts');
-        if (watcher.isRunning()) {
-          const projectsPath = `${configDir}/projects`;
-          const added = watcher.addWatchPath(configDir, projectsPath);
-          if (added) {
-            console.log(`Added watch path: ${projectsPath}`);
-          }
+        // Tell the running coordinator to re-scan (non-blocking via GraphQL)
+        try {
+          const port = getCoordinatorPort();
+          const url = `https://coordinator.local.han.guru:${port}/graphql`;
+          const init = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: 'mutation { indexSessions { success sessionsIndexed } }',
+            }),
+          };
+          Object.assign(init, { tls: { rejectUnauthorized: false } });
+          const resp = await fetch(url, init);
+          const data = (await resp.json()) as {
+            data?: {
+              indexSessions?: { sessionsIndexed?: number };
+            };
+          };
+          const indexed = data?.data?.indexSessions?.sessionsIndexed ?? 0;
+          console.log(
+            `Triggered coordinator scan (${indexed} sessions queued)`
+          );
+        } catch {
+          console.log(
+            'Coordinator not reachable — sessions will be indexed on next startup'
+          );
         }
       } catch (error: unknown) {
         console.error(

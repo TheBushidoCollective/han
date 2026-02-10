@@ -1414,31 +1414,22 @@ builder.mutationType({
     indexSessions: t.field({
       type: IndexingResultType,
       description:
-        'Trigger full indexing of all Claude Code sessions from JSONL files',
-      resolve: async () => {
-        try {
-          const results = await indexer.fullScanAndIndex();
-          const errors = results
-            .filter((r) => r.error)
-            .map((r) => `${r.sessionId}: ${r.error}`);
-          const totalMessages = results.reduce(
-            (sum, r) => sum + r.messagesIndexed,
-            0
-          );
-          return {
-            success: errors.length === 0,
-            sessionsIndexed: results.length,
-            totalMessages,
-            errors,
-          };
-        } catch (error) {
-          return {
-            success: false,
-            sessionsIndexed: 0,
-            totalMessages: 0,
-            errors: [error instanceof Error ? error.message : String(error)],
-          };
-        }
+        'Trigger full indexing of all Claude Code sessions (non-blocking)',
+      resolve: () => {
+        // Defer the sync Rust napi call so it doesn't block the GraphQL response
+        setTimeout(() => {
+          try {
+            indexer.fullScanAndIndex();
+          } catch (e) {
+            console.error('[indexSessions] scan failed:', e);
+          }
+        }, 0);
+        return {
+          success: true,
+          sessionsIndexed: 0,
+          totalMessages: 0,
+          errors: [],
+        };
       },
     }),
     startMemoryQuery: t.field({
