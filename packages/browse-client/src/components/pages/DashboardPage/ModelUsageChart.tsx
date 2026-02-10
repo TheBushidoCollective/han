@@ -96,12 +96,12 @@ function getModelColor(displayName: string): string {
 	const hue = FAMILY_HUES[family];
 	if (hue === undefined) return DEFAULT_COLOR;
 
-	// Shift hue and saturation by minor version for distinct colors
+	// Fixed hue per family, vary saturation + lightness by version
 	const versionMatch = displayName.match(/\d+(?:\.(\d+))?/);
 	const minor = versionMatch?.[1] ? Number.parseInt(versionMatch[1], 10) : 0;
-	const shiftedHue = (hue + minor * 15) % 360;
-	const saturation = 60 + minor * 4;
-	return `hsl(${shiftedHue}, ${Math.min(saturation, 90)}%, 55%)`;
+	const saturation = Math.min(40 + minor * 8, 90);
+	const lightness = Math.max(80 - minor * 8, 28);
+	return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
 
 /**
