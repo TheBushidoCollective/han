@@ -507,32 +507,10 @@ export function DashboardContent({
 				)}
 			</SectionCard>
 
-			{/* Session Effectiveness - full width */}
-			<SectionCard title="Session Effectiveness (30 days)">
-				{analyticsLoaded ? (
-					<SessionEffectivenessCard
-						topSessions={analytics.topSessions}
-						bottomSessions={analytics.bottomSessions}
-						onSessionClick={(sessionId) => navigate(`/sessions/${sessionId}`)}
-					/>
-				) : (
-					<Box
-						style={{
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							minHeight: "120px",
-						}}
-					>
-						<Text color="muted">Loading analytics...</Text>
-					</Box>
-				)}
-			</SectionCard>
-
-			{/* Cost Analysis and Compaction Health - side by side */}
-			<HStack gap="lg" style={{ alignItems: "flex-start" }}>
-				<Box style={{ flex: 1 }}>
-					<SectionCard title="Cost Analysis">
+			{/* Cost Analysis (flex:3) with stacked cards on right (flex:2) */}
+			<HStack gap="lg" style={{ alignItems: "stretch" }}>
+				<Box style={{ flex: 3 }}>
+					<SectionCard title="Cost Analysis" style={{ height: "100%" }}>
 						{analyticsLoaded ? (
 							<CostAnalysisCard
 								costAnalysis={analytics.costAnalysis}
@@ -554,27 +532,100 @@ export function DashboardContent({
 						)}
 					</SectionCard>
 				</Box>
-				<Box style={{ flex: 1 }}>
-					<SectionCard title="Compaction Health">
-						{analyticsLoaded ? (
-							<CompactionHealthCard
-								compactionStats={analytics.compactionStats}
-							/>
-						) : (
-							<Box
-								style={{
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "center",
-									minHeight: "200px",
-								}}
-							>
-								<Text color="muted">Loading compaction data...</Text>
-							</Box>
-						)}
-					</SectionCard>
+				<Box style={{ flex: 2 }}>
+					<VStack gap="lg" style={{ height: "100%" }}>
+						<SectionCard title="Compaction Health" style={{ flex: 1 }}>
+							{analyticsLoaded ? (
+								<CompactionHealthCard
+									compactionStats={analytics.compactionStats}
+								/>
+							) : (
+								<Box
+									style={{
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										minHeight: "120px",
+									}}
+								>
+									<Text color="muted">Loading compaction data...</Text>
+								</Box>
+							)}
+						</SectionCard>
+						<SectionCard title="Token Usage (30 days)" style={{ flex: 1 }}>
+							{activityLoaded ? (
+								<TokenUsageCard tokenUsage={activity.tokenUsage} />
+							) : (
+								<Box
+									style={{
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										minHeight: "120px",
+									}}
+								>
+									<Text color="muted">Loading token data...</Text>
+								</Box>
+							)}
+						</SectionCard>
+						<SectionCard title="Agent Health" style={{ flex: 1 }}>
+							<VStack gap="md">
+								<VStack gap="xs">
+									<Text color="secondary" size="xs">
+										Frustration Level
+									</Text>
+									<HStack gap="sm" align="center">
+										<Badge variant={getFrustrationVariant(frustrationRate)}>
+											{getFrustrationLabel(frustrationRate)}
+										</Badge>
+										{(metrics.significantFrustrations ?? 0) > 0 && (
+											<Text color="muted" size="xs">
+												{metrics.significantFrustrations} events
+											</Text>
+										)}
+									</HStack>
+								</VStack>
+								<VStack gap="sm">
+									<StatusItem
+										label="Total Tasks"
+										value={metrics.totalTasks ?? 0}
+									/>
+									<StatusItem
+										label="Success Rate"
+										value={`${Math.round((metrics.successRate ?? 0) * 100)}%`}
+									/>
+									<StatusItem
+										label="Avg Confidence"
+										value={`${Math.round((metrics.averageConfidence ?? 0) * 100)}%`}
+									/>
+								</VStack>
+							</VStack>
+						</SectionCard>
+					</VStack>
 				</Box>
 			</HStack>
+
+			{/* Session Effectiveness - full width */}
+			<SectionCard title="Session Effectiveness (30 days)">
+				{analyticsLoaded ? (
+					<SessionEffectivenessCard
+						topSessions={analytics.topSessions}
+						bottomSessions={analytics.bottomSessions}
+						onSessionClick={(sessionId) => navigate(`/sessions/${sessionId}`)}
+					/>
+				) : (
+					<Box
+						style={{
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							minHeight: "120px",
+						}}
+					>
+						<Text color="muted">Loading analytics...</Text>
+					</Box>
+				)}
+			</SectionCard>
 
 			{/* Subagent Usage and Tool Usage - side by side */}
 			<HStack gap="lg" style={{ alignItems: "flex-start" }}>
@@ -616,26 +667,8 @@ export function DashboardContent({
 				</Box>
 			</HStack>
 
-			{/* Token Usage and Time of Day - side by side */}
+			{/* Time of Day and Hook Health - side by side */}
 			<HStack gap="lg" style={{ alignItems: "flex-start" }}>
-				<Box style={{ flex: 1 }}>
-					<SectionCard title="Token Usage (30 days)">
-						{activityLoaded ? (
-							<TokenUsageCard tokenUsage={activity.tokenUsage} />
-						) : (
-							<Box
-								style={{
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "center",
-									minHeight: "200px",
-								}}
-							>
-								<Text color="muted">Loading token data...</Text>
-							</Box>
-						)}
-					</SectionCard>
-				</Box>
 				<Box style={{ flex: 1 }}>
 					<SectionCard title="Time of Day">
 						{activityLoaded ? (
@@ -650,6 +683,24 @@ export function DashboardContent({
 								}}
 							>
 								<Text color="muted">Loading chart data...</Text>
+							</Box>
+						)}
+					</SectionCard>
+				</Box>
+				<Box style={{ flex: 1 }}>
+					<SectionCard title="Hook Health">
+						{analyticsLoaded ? (
+							<HookHealthCard hookHealth={analytics.hookHealth} />
+						) : (
+							<Box
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									minHeight: "120px",
+								}}
+							>
+								<Text color="muted">Loading hook data...</Text>
 							</Box>
 						)}
 					</SectionCard>
@@ -680,90 +731,30 @@ export function DashboardContent({
 				)}
 			</SectionCard>
 
-			{/* Hook Health - full width */}
-			<SectionCard title="Hook Health">
-				{analyticsLoaded ? (
-					<HookHealthCard hookHealth={analytics.hookHealth} />
+			{/* Plugin Categories - full width */}
+			<SectionCard
+				title="Plugin Categories"
+				onViewAll={() =>
+					navigate(isProjectView ? `/repos/${repoId}/plugins` : "/plugins")
+				}
+			>
+				{pluginCategories.length > 0 ? (
+					<VStack gap="sm">
+						{pluginCategories.map((cat) => (
+							<HStack key={cat.category} justify="space-between">
+								<Text color="secondary" size="sm">
+									{cat.category}
+								</Text>
+								<Badge>{cat.count}</Badge>
+							</HStack>
+						))}
+					</VStack>
 				) : (
-					<Box
-						style={{
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							minHeight: "120px",
-						}}
-					>
-						<Text color="muted">Loading hook data...</Text>
-					</Box>
+					<Text color="muted" size="sm">
+						No plugins installed
+					</Text>
 				)}
 			</SectionCard>
-
-			{/* Bottom row - Agent Health and Plugin Categories side by side */}
-			<HStack gap="lg" style={{ alignItems: "flex-start" }}>
-				{/* Agent Health */}
-				<Box style={{ flex: 1 }}>
-					<SectionCard title="Agent Health">
-						<VStack gap="md">
-							<VStack gap="xs">
-								<Text color="secondary" size="xs">
-									Frustration Level
-								</Text>
-								<HStack gap="sm" align="center">
-									<Badge variant={getFrustrationVariant(frustrationRate)}>
-										{getFrustrationLabel(frustrationRate)}
-									</Badge>
-									{(metrics.significantFrustrations ?? 0) > 0 && (
-										<Text color="muted" size="xs">
-											{metrics.significantFrustrations} events
-										</Text>
-									)}
-								</HStack>
-							</VStack>
-							<VStack gap="sm">
-								<StatusItem
-									label="Total Tasks"
-									value={metrics.totalTasks ?? 0}
-								/>
-								<StatusItem
-									label="Success Rate"
-									value={`${Math.round((metrics.successRate ?? 0) * 100)}%`}
-								/>
-								<StatusItem
-									label="Avg Confidence"
-									value={`${Math.round((metrics.averageConfidence ?? 0) * 100)}%`}
-								/>
-							</VStack>
-						</VStack>
-					</SectionCard>
-				</Box>
-
-				{/* Plugin Categories */}
-				<Box style={{ flex: 1 }}>
-					<SectionCard
-						title="Plugin Categories"
-						onViewAll={() =>
-							navigate(isProjectView ? `/repos/${repoId}/plugins` : "/plugins")
-						}
-					>
-						{pluginCategories.length > 0 ? (
-							<VStack gap="sm">
-								{pluginCategories.map((cat) => (
-									<HStack key={cat.category} justify="space-between">
-										<Text color="secondary" size="sm">
-											{cat.category}
-										</Text>
-										<Badge>{cat.count}</Badge>
-									</HStack>
-								))}
-							</VStack>
-						) : (
-							<Text color="muted" size="sm">
-								No plugins installed
-							</Text>
-						)}
-					</SectionCard>
-				</Box>
-			</HStack>
 
 			{/* Project Quick Access - only shown in project view */}
 			{isProjectView && (

@@ -12,6 +12,7 @@ import { Box } from "@/components/atoms/Box.tsx";
 import { HStack } from "@/components/atoms/HStack.tsx";
 import { Text } from "@/components/atoms/Text.tsx";
 import { VStack } from "@/components/atoms/VStack.tsx";
+import { SessionRow } from "@/components/molecules/SessionRow.tsx";
 
 interface DailyCost {
 	readonly date: string;
@@ -65,15 +66,6 @@ interface CostAnalysis {
 interface CostAnalysisCardProps {
 	costAnalysis: CostAnalysis;
 	onSessionClick?: (sessionId: string) => void;
-}
-
-/**
- * Format token count compactly (e.g., 1.2M, 450K)
- */
-function formatTokens(count: number): string {
-	if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
-	if (count >= 1_000) return `${(count / 1_000).toFixed(0)}K`;
-	return `${count}`;
 }
 
 /**
@@ -566,51 +558,19 @@ export function CostAnalysisCard({
 
 					<VStack gap="xs" style={{ width: "100%" }}>
 						{costAnalysis.topSessionsByCost.map((session, idx) => (
-							<Box
+							<SessionRow
 								key={session.sessionId}
-								onClick={() => onSessionClick?.(session.sessionId)}
-								style={{
-									padding: theme.spacing.sm,
-									backgroundColor: theme.colors.bg.tertiary,
-									borderRadius: theme.radii.md,
-									cursor: onSessionClick ? "pointer" : "default",
-								}}
-							>
-								<HStack justify="space-between" align="center">
-									<HStack
-										gap="sm"
-										align="center"
-										style={{ flex: 1, minWidth: 0 }}
-									>
-										<Text
-											color="muted"
-											size="xs"
-											style={{ width: 18, textAlign: "right" }}
-										>
-											{idx + 1}.
-										</Text>
-										<VStack gap="xs" style={{ flex: 1, minWidth: 0 }}>
-											<Text size="sm" weight="medium" numberOfLines={1}>
-												{session.slug || session.sessionId.slice(0, 8)}
-											</Text>
-											<HStack gap="sm">
-												<Text color="muted" size="xs">
-													{session.messageCount} msgs
-												</Text>
-												<Text color="muted" size="xs">
-													{formatTokens(
-														session.inputTokens + session.outputTokens,
-													)}{" "}
-													tokens
-												</Text>
-											</HStack>
-										</VStack>
-									</HStack>
-									<Text weight="semibold" size="sm">
-										{formatCost(session.costUsd)}
-									</Text>
-								</HStack>
-							</Box>
+								label={session.slug || session.sessionId.slice(0, 8)}
+								rank={idx + 1}
+								messageCount={session.messageCount}
+								tokenCount={session.inputTokens + session.outputTokens}
+								costUsd={session.costUsd}
+								onPress={
+									onSessionClick
+										? () => onSessionClick(session.sessionId)
+										: undefined
+								}
+							/>
 						))}
 					</VStack>
 				</VStack>
