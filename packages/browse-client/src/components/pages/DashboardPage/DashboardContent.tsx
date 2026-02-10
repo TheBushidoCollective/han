@@ -161,7 +161,6 @@ export function DashboardContent({
 			(s): s is NonNullable<typeof s> & { id: string } =>
 				s !== null && s !== undefined && typeof s.id === "string",
 		);
-	const pluginCategories = data.pluginCategories ?? [];
 	const frustrationRate = metrics.significantFrustrationRate ?? 0;
 
 	// Normalize activity data with defaults for nullable fields from GraphQL
@@ -593,39 +592,6 @@ export function DashboardContent({
 								</Box>
 							)}
 						</SectionCard>
-						<SectionCard title="Agent Health" style={{ flex: 1 }}>
-							<VStack gap="md">
-								<VStack gap="xs">
-									<Text color="secondary" size="xs">
-										Frustration Level
-									</Text>
-									<HStack gap="sm" align="center">
-										<Badge variant={getFrustrationVariant(frustrationRate)}>
-											{getFrustrationLabel(frustrationRate)}
-										</Badge>
-										{(metrics.significantFrustrations ?? 0) > 0 && (
-											<Text color="muted" size="xs">
-												{metrics.significantFrustrations} events
-											</Text>
-										)}
-									</HStack>
-								</VStack>
-								<VStack gap="sm">
-									<StatusItem
-										label="Total Tasks"
-										value={metrics.totalTasks ?? 0}
-									/>
-									<StatusItem
-										label="Success Rate"
-										value={`${Math.round((metrics.successRate ?? 0) * 100)}%`}
-									/>
-									<StatusItem
-										label="Avg Confidence"
-										value={`${Math.round((metrics.averageConfidence ?? 0) * 100)}%`}
-									/>
-								</VStack>
-							</VStack>
-						</SectionCard>
 					</VStack>
 				</Box>
 			</HStack>
@@ -692,23 +658,62 @@ export function DashboardContent({
 				</Box>
 			</HStack>
 
-			{/* Hook Health - full width */}
-			<SectionCard title="Hook Health">
-				{analyticsLoaded ? (
-					<HookHealthCard hookHealth={analytics.hookHealth} />
-				) : (
-					<Box
-						style={{
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							minHeight: "120px",
-						}}
-					>
-						<Text color="muted">Loading hook data...</Text>
-					</Box>
-				)}
-			</SectionCard>
+			{/* Hook Health and Agent Health - side by side */}
+			<HStack gap="lg" style={{ alignItems: "stretch" }}>
+				<Box style={{ flex: 1 }}>
+					<SectionCard title="Hook Health" style={{ height: "100%" }}>
+						{analyticsLoaded ? (
+							<HookHealthCard hookHealth={analytics.hookHealth} />
+						) : (
+							<Box
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									minHeight: "120px",
+								}}
+							>
+								<Text color="muted">Loading hook data...</Text>
+							</Box>
+						)}
+					</SectionCard>
+				</Box>
+				<Box style={{ flex: 1 }}>
+					<SectionCard title="Agent Health" style={{ height: "100%" }}>
+						<VStack gap="md">
+							<VStack gap="xs">
+								<Text color="secondary" size="xs">
+									Frustration Level
+								</Text>
+								<HStack gap="sm" align="center">
+									<Badge variant={getFrustrationVariant(frustrationRate)}>
+										{getFrustrationLabel(frustrationRate)}
+									</Badge>
+									{(metrics.significantFrustrations ?? 0) > 0 && (
+										<Text color="muted" size="xs">
+											{metrics.significantFrustrations} events
+										</Text>
+									)}
+								</HStack>
+							</VStack>
+							<VStack gap="sm">
+								<StatusItem
+									label="Total Tasks"
+									value={metrics.totalTasks ?? 0}
+								/>
+								<StatusItem
+									label="Success Rate"
+									value={`${Math.round((metrics.successRate ?? 0) * 100)}%`}
+								/>
+								<StatusItem
+									label="Avg Confidence"
+									value={`${Math.round((metrics.averageConfidence ?? 0) * 100)}%`}
+								/>
+							</VStack>
+						</VStack>
+					</SectionCard>
+				</Box>
+			</HStack>
 
 			{/* Recent Sessions - full width */}
 			<SectionCard
@@ -730,31 +735,6 @@ export function DashboardContent({
 				) : (
 					<Text color="muted" size="sm">
 						No recent sessions
-					</Text>
-				)}
-			</SectionCard>
-
-			{/* Plugin Categories - full width */}
-			<SectionCard
-				title="Plugin Categories"
-				onViewAll={() =>
-					navigate(isProjectView ? `/repos/${repoId}/plugins` : "/plugins")
-				}
-			>
-				{pluginCategories.length > 0 ? (
-					<VStack gap="sm">
-						{pluginCategories.map((cat) => (
-							<HStack key={cat.category} justify="space-between">
-								<Text color="secondary" size="sm">
-									{cat.category}
-								</Text>
-								<Badge>{cat.count}</Badge>
-							</HStack>
-						))}
-					</VStack>
-				) : (
-					<Text color="muted" size="sm">
-						No plugins installed
 					</Text>
 				)}
 			</SectionCard>
