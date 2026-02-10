@@ -307,33 +307,16 @@ export function registerCoordinatorCommands(program: Command): void {
           `Registered config directory: ${result.path}${result.name ? ` (${result.name})` : ''}`
         );
 
-        // Tell the running coordinator to re-scan (non-blocking via GraphQL)
-        try {
-          const port = getCoordinatorPort();
-          const url = `https://coordinator.local.han.guru:${port}/graphql`;
-          const init = {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              query: 'mutation { indexSessions { success sessionsIndexed } }',
-            }),
-          };
-          Object.assign(init, { tls: { rejectUnauthorized: false } });
-          const resp = await fetch(url, init);
-          const data = (await resp.json()) as {
-            data?: {
-              indexSessions?: { sessionsIndexed?: number };
-            };
-          };
-          const indexed = data?.data?.indexSessions?.sessionsIndexed ?? 0;
-          console.log(
-            `Triggered coordinator scan (${indexed} sessions queued)`
-          );
-        } catch {
-          console.log(
-            'Coordinator not reachable — sessions will be indexed on next startup'
-          );
-        }
+        // Spawn a detached subprocess to index sessions.
+        // fullScanAndIndex is a sync Rust napi call that blocks the Node event loop,
+        // so we run it out-of-process to avoid starving the coordinator's GraphQL.
+        const indexScript = `import { indexer } from '${import.meta.resolve('../../db/index.ts')}'; const r = await indexer.fullScanAndIndex(); console.log('Indexed ' + r.length + ' sessions');`;
+        const child = spawn(process.execPath, ['-e', indexScript], {
+          detached: true,
+          stdio: 'ignore',
+        });
+        child.unref();
+        console.log('Indexing sessions in background...');
       } catch (error: unknown) {
         console.error(
           'Error registering config directory:',

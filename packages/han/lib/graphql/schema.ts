@@ -15,7 +15,7 @@ import {
   GraphQLString,
 } from 'graphql';
 import type { ProjectGroup } from '../api/sessions.ts';
-import { getMessage, indexer } from '../db/index.ts';
+import { getMessage } from '../db/index.ts';
 import { startMemoryQuerySession } from '../memory/streaming.ts';
 import { builder } from './builder.ts';
 import { decodeGlobalId } from './node-registry.ts';
@@ -1414,22 +1414,33 @@ builder.mutationType({
     indexSessions: t.field({
       type: IndexingResultType,
       description:
-        'Trigger full indexing of all Claude Code sessions (non-blocking)',
-      resolve: () => {
-        // Defer the sync Rust napi call so it doesn't block the GraphQL response
-        setTimeout(() => {
-          try {
-            indexer.fullScanAndIndex();
-          } catch (e) {
-            console.error('[indexSessions] scan failed:', e);
-          }
-        }, 0);
-        return {
-          success: true,
-          sessionsIndexed: 0,
-          totalMessages: 0,
-          errors: [],
-        };
+        'Trigger full indexing of all Claude Code sessions. WARNING: This is a blocking operation that can take many seconds for large session counts. Prefer spawning indexing in a subprocess from CLI commands.',
+      resolve: async () => {
+        // Import lazily to avoid circular deps
+        const { indexer: idx } = await import('../db/index.ts');
+        try {
+          const results = await idx.fullScanAndIndex();
+          const errors = results
+            .filter((r) => r.error)
+            .map((r) => `${r.sessionId}: ${r.error}`);
+          const totalMessages = results.reduce(
+            (sum, r) => sum + r.messagesIndexed,
+            0
+          );
+          return {
+            success: errors.length === 0,
+            sessionsIndexed: results.length,
+            totalMessages,
+            errors,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            sessionsIndexed: 0,
+            totalMessages: 0,
+            errors: [error instanceof Error ? error.message : String(error)],
+          };
+        }
       },
     }),
     startMemoryQuery: t.field({

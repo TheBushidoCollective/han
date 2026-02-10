@@ -2026,7 +2026,9 @@ type Mutation {
   """
   acquireSlot(hookName: String!, pid: Int!, pluginName: String, sessionId: String!): SlotAcquireResult
 
-  """Trigger full indexing of all Claude Code sessions (non-blocking)"""
+  """
+  Trigger full indexing of all Claude Code sessions. WARNING: This is a blocking operation that can take many seconds for large session counts. Prefer spawning indexing in a subprocess from CLI commands.
+  """
   indexSessions: IndexingResult
 
   """Register a config directory for multi-environment session indexing"""
