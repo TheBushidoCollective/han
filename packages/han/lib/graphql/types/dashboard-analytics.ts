@@ -125,6 +125,9 @@ export interface SubscriptionComparison {
  */
 export interface CostAnalysis {
   estimatedCostUsd: number;
+  isEstimated: boolean;
+  billingType: string | null;
+  cacheSavingsUsd: number;
   maxSubscriptionCostUsd: number;
   costUtilizationPercent: number;
   dailyCostTrend: DailyCost[];
@@ -402,6 +405,19 @@ export const CostAnalysisType = CostAnalysisRef.implement({
     estimatedCostUsd: t.exposeFloat('estimatedCostUsd', {
       description: 'Total estimated cost in USD (API credit equivalent)',
     }),
+    isEstimated: t.exposeBoolean('isEstimated', {
+      description:
+        'Whether cost is estimated (true = Sonnet-class fallback, false = per-model pricing)',
+    }),
+    billingType: t.exposeString('billingType', {
+      nullable: true,
+      description:
+        'Billing type from ~/.claude.json (e.g., "stripe_subscription")',
+    }),
+    cacheSavingsUsd: t.exposeFloat('cacheSavingsUsd', {
+      description:
+        'Actual cache savings in USD based on per-model pricing difference',
+    }),
     maxSubscriptionCostUsd: t.exposeFloat('maxSubscriptionCostUsd', {
       description:
         'Current subscription tier cost (e.g., $200 for Max 20x, $100 for Max 5x)',
@@ -527,18 +543,13 @@ const COMPACTION_PENALTY_MAX = 5;
 /** Per-compaction penalty (100 / COMPACTION_PENALTY_MAX) */
 const COMPACTION_PENALTY_PER = 100 / COMPACTION_PENALTY_MAX;
 
-/**
- * Claude API pricing (Sonnet-class, as of 2025).
- * These are estimates — actual cost varies by model.
- * stats-cache.json provides more accurate data when available.
- */
+/** Theoretical optimal cache rate target for savings estimate */
 const PRICING = {
   inputPerMTok: 3.0,
   outputPerMTok: 15.0,
   cacheReadPerMTok: 0.3,
-} as const;
+};
 
-/** Theoretical optimal cache rate target for savings estimate */
 const OPTIMAL_CACHE_RATE = 0.8;
 
 /**
@@ -1067,8 +1078,19 @@ export async function queryDashboardAnalytics(
 
   const breakEvenDailySpend = round(subscriptionTier / 30, 2);
 
+  // Determine if cost is estimated (no stats-cache) and calculate cache savings
+  const isEstimated = statsCacheCost <= 0;
+  const cacheSavingsUsd = round(
+    (totalCacheReadTokens / 1_000_000) *
+      (PRICING.inputPerMTok - PRICING.cacheReadPerMTok),
+    2
+  );
+
   const costAnalysis: CostAnalysis = {
     estimatedCostUsd: round(finalCostUsd, 2),
+    isEstimated,
+    billingType: isEstimated ? null : 'api',
+    cacheSavingsUsd,
     maxSubscriptionCostUsd: subscriptionTier,
     costUtilizationPercent: round((finalCostUsd / subscriptionTier) * 100, 2),
     dailyCostTrend,

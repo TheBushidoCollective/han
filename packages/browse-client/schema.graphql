@@ -367,11 +367,17 @@ type CoordinatorStatus {
 
 """Cost analysis with subscription context"""
 type CostAnalysis {
+  """Billing type from ~/.claude.json (e.g., "stripe_subscription")"""
+  billingType: String
+
   """Daily API spend at which the current subscription breaks even"""
   breakEvenDailySpend: Float
 
   """Cache hit rate (0 to 1)"""
   cacheHitRate: Float
+
+  """Actual cache savings in USD based on per-model pricing difference"""
+  cacheSavingsUsd: Float
 
   """Average cost per completed task"""
   costPerCompletedTask: Float
@@ -387,6 +393,11 @@ type CostAnalysis {
 
   """Total estimated cost in USD (API credit equivalent)"""
   estimatedCostUsd: Float
+
+  """
+  Whether cost is estimated (true = Sonnet-class fallback, false = per-model pricing)
+  """
+  isEstimated: Boolean
 
   """
   Current subscription tier cost (e.g., $200 for Max 20x, $100 for Max 5x)
