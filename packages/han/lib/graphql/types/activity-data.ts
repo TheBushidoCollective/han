@@ -50,8 +50,8 @@ const ActivityDataRef = builder.objectRef<ActivityData>('ActivityData');
  * Convert model ID to human-readable display name
  */
 function getModelDisplayName(modelId: string): string {
-  // Parse: claude-{family}-{major}-{minor}-{date} or claude-{family}-{major}-{date}
-  const match = modelId.match(/claude-(\w+)-(\d+)(?:-(\d+))?-(\d{8})/);
+  // Parse: claude-{family}-{major}[-{minor}][-{date}]
+  const match = modelId.match(/claude-(\w+)-(\d+)(?:-(\d+))?(?:-\d{8})?$/);
   if (match) {
     const family = match[1].charAt(0).toUpperCase() + match[1].slice(1);
     const major = match[2];
