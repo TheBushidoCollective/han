@@ -50,18 +50,15 @@ const ActivityDataRef = builder.objectRef<ActivityData>('ActivityData');
  * Convert model ID to human-readable display name
  */
 function getModelDisplayName(modelId: string): string {
-  if (modelId.includes('opus-4-6')) return 'Opus 4.6';
-  if (modelId.includes('opus-4-5')) return 'Opus 4.5';
-  if (modelId.includes('opus-4-1')) return 'Opus 4.1';
-  if (modelId.includes('opus-4-')) return 'Opus 4';
-  if (modelId.includes('sonnet-4-5')) return 'Sonnet 4.5';
-  if (modelId.includes('sonnet-4-')) return 'Sonnet 4';
-  if (modelId.includes('haiku-4-5')) return 'Haiku 4.5';
-  if (modelId.includes('haiku-4-')) return 'Haiku 4';
-  if (modelId.includes('sonnet-3-5')) return 'Sonnet 3.5';
-  if (modelId.includes('haiku-3-5')) return 'Haiku 3.5';
-  if (modelId.includes('opus-3')) return 'Opus 3';
-  // Fallback: extract model family from ID
+  // Parse: claude-{family}-{major}-{minor}-{date} or claude-{family}-{major}-{date}
+  const match = modelId.match(/claude-(\w+)-(\d+)(?:-(\d+))?-(\d{8})/);
+  if (match) {
+    const family = match[1].charAt(0).toUpperCase() + match[1].slice(1);
+    const major = match[2];
+    const minor = match[3];
+    return minor ? `${family} ${major}.${minor}` : `${family} ${major}`;
+  }
+  // Fallback: capitalize second segment
   const parts = modelId.split('-');
   if (parts.length >= 2) {
     return parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
