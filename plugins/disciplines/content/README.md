@@ -152,7 +152,7 @@ han plugin install content
 Once installed, you can invoke any agent in your conversations with Claude Code:
 
 ```
-/skill do-content-creator:blog-writer
+/skill content:blog-writer
 
 Write a comprehensive blog post about the benefits of test-driven development
 for developers new to the practice
