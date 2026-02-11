@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-11
+
+### Changed
+
+- drop MCP server from blueprints plugin, use native tools ([33c4b9b8](../../commit/33c4b9b8))
+- mark 177 tools/validation/specialized/pattern skills as agent-internal ([cc83b672](../../commit/cc83b672))
+- remove deprecated jutsu-/hashi-/do- terminology from plugins ([bc76f2b7](../../commit/bc76f2b7))
+
 ## [1.2.0] - 2026-01-30
 
 ## [1.2.0] - 2026-01-24
