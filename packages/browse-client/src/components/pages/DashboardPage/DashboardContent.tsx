@@ -48,7 +48,7 @@ import { ModelUsageChart } from "./ModelUsageChart.tsx";
 import { SessionEffectivenessCard } from "./SessionEffectivenessCard.tsx";
 import { SubagentUsageChart } from "./SubagentUsageChart.tsx";
 import { TimeOfDayChart } from "./TimeOfDayChart.tsx";
-import { TokenUsageCard } from "./TokenUsageCard.tsx";
+
 import { ToolUsageChart } from "./ToolUsageChart.tsx";
 
 /**
@@ -584,13 +584,14 @@ export function DashboardContent({
 				</Box>
 			</HStack>
 
-			{/* Cost Analysis (flex:3) with stacked cards on right (flex:2) */}
+			{/* Cost Analysis (flex:3) with Compaction Health on right (flex:2) */}
 			<HStack gap="lg" style={{ alignItems: "stretch" }}>
 				<Box style={{ flex: 3 }}>
 					<SectionCard title="Cost Analysis" style={{ height: "100%" }}>
 						{analyticsLoaded ? (
 							<CostAnalysisCard
 								costAnalysis={analytics.costAnalysis}
+								tokenUsage={activityLoaded ? activity.tokenUsage : undefined}
 								onSessionClick={(sessionId) =>
 									navigate(`/sessions/${sessionId}`)
 								}
@@ -610,45 +611,24 @@ export function DashboardContent({
 					</SectionCard>
 				</Box>
 				<Box style={{ flex: 2 }}>
-					<VStack gap="lg" style={{ height: "100%" }}>
-						<SectionCard title="Compaction Health" style={{ flex: 1 }}>
-							{analyticsLoaded ? (
-								<CompactionHealthCard
-									compactionStats={analytics.compactionStats}
-								/>
-							) : (
-								<Box
-									style={{
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "center",
-										minHeight: "120px",
-									}}
-								>
-									<Text color="muted">Loading compaction data...</Text>
-								</Box>
-							)}
-						</SectionCard>
-						<SectionCard title="Token Usage (30 days)" style={{ flex: 1 }}>
-							{activityLoaded ? (
-								<TokenUsageCard
-									tokenUsage={activity.tokenUsage}
-									cacheSavingsUsd={analytics.costAnalysis.cacheSavingsUsd}
-								/>
-							) : (
-								<Box
-									style={{
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "center",
-										minHeight: "120px",
-									}}
-								>
-									<Text color="muted">Loading token data...</Text>
-								</Box>
-							)}
-						</SectionCard>
-					</VStack>
+					<SectionCard title="Compaction Health" style={{ height: "100%" }}>
+						{analyticsLoaded ? (
+							<CompactionHealthCard
+								compactionStats={analytics.compactionStats}
+							/>
+						) : (
+							<Box
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									minHeight: "120px",
+								}}
+							>
+								<Text color="muted">Loading compaction data...</Text>
+							</Box>
+						)}
+					</SectionCard>
 				</Box>
 			</HStack>
 

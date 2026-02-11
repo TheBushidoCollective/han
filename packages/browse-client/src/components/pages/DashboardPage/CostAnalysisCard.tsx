@@ -1,9 +1,10 @@
 /**
  * Cost Analysis Card Component
  *
- * Cost tracking with subscription context. Shows utilization gauge,
- * cost metrics grid, and daily cost sparkline chart.
- * Supports per-config-dir tabbed view with full parity to "All" tab.
+ * Subscription-aware cost tracking. For subscription users, shows actual
+ * subscription cost as primary with API-equivalent as a comparison metric.
+ * Daily/weekly charts use proportional subscription cost, not raw API pricing.
+ * Includes token distribution (merged from former TokenUsageCard).
  */
 
 import type React from "react";
@@ -93,9 +94,6 @@ interface CostAnalysis {
 	readonly configDirBreakdowns: readonly ConfigDirBreakdown[];
 }
 
-/**
- * Shared shape for both "All" and per-config-dir cost detail views
- */
 interface CostViewData {
 	readonly estimatedCostUsd: number;
 	readonly isEstimated: boolean;
@@ -114,8 +112,17 @@ interface CostViewData {
 	readonly breakEvenDailySpend: number;
 }
 
+export interface TokenUsageStats {
+	readonly totalInputTokens: number;
+	readonly totalOutputTokens: number;
+	readonly totalCachedTokens: number;
+	readonly totalTokens: number;
+	readonly sessionCount: number;
+}
+
 interface CostAnalysisCardProps {
 	costAnalysis: CostAnalysis;
+	tokenUsage?: TokenUsageStats;
 	onSessionClick?: (sessionId: string) => void;
 }
 
@@ -139,37 +146,31 @@ const currencyFormatterWhole = new Intl.NumberFormat(undefined, {
 
 const numberFormatter = new Intl.NumberFormat();
 
-/**
- * Format currency with locale-aware separators
- */
 function formatCost(usd: number): string {
 	if (usd < 0.01) return "< $0.01";
 	if (usd >= 100) return currencyFormatterWhole.format(usd);
 	return currencyFormatter.format(usd);
 }
 
-/**
- * Format percentage with locale-aware separators
- */
 function formatPercent(value: number): string {
 	return `${value.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 }
 
-/**
- * Format an integer with locale-aware grouping (commas)
- */
 function formatNumber(value: number): string {
 	return numberFormatter.format(value);
+}
+
+function formatTokenCount(num: number): string {
+	if (num >= 1_000_000_000) return `${(num / 1_000_000_000).toFixed(1)}B`;
+	if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+	if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
+	return num.toLocaleString();
 }
 
 // =============================================================================
 // Style Helpers
 // =============================================================================
 
-/**
- * Get utilization color based on percentage.
- * For subscriptions, HIGH utilization = GOOD (getting value for money).
- */
 function getUtilizationColor(percent: number): string {
 	if (percent >= 80) return "#10b981";
 	if (percent >= 40) return "#f59e0b";
@@ -344,36 +345,122 @@ function TabButton({
 	);
 }
 
+function TokenStat({
+	label,
+	value,
+	color,
+	subValue,
+}: {
+	label: string;
+	value: string;
+	color: string;
+	subValue?: string;
+}): React.ReactElement {
+	return (
+		<VStack gap="xs" style={{ minWidth: 80 }}>
+			<HStack gap="xs" align="center">
+				<Box
+					style={{
+						width: 8,
+						height: 8,
+						borderRadius: 4,
+						backgroundColor: color,
+					}}
+				/>
+				<Text color="secondary" size="xs">
+					{label}
+				</Text>
+			</HStack>
+			<Text weight="semibold" size="sm">
+				{value}
+			</Text>
+			{subValue && (
+				<Text color="muted" size="xs">
+					{subValue}
+				</Text>
+			)}
+		</VStack>
+	);
+}
+
 // =============================================================================
 // Shared Cost Detail View (used by both "All" and per-config-dir tabs)
 // =============================================================================
 
 function CostDetailView({
 	data,
+	tokenUsage,
 	onSessionClick,
 }: {
 	data: CostViewData;
+	tokenUsage?: TokenUsageStats;
 	onSessionClick?: (sessionId: string) => void;
 }): React.ReactElement {
+	const isSubscription = data.billingType === "stripe_subscription";
+	const apiEquivalentCost = data.estimatedCostUsd;
+	const subscriptionCost = data.maxSubscriptionCostUsd;
+
+	// For subscription users, scale daily/weekly costs to proportional subscription cost
+	const costScale = useMemo(() => {
+		if (!isSubscription || apiEquivalentCost <= 0) return 1;
+		return subscriptionCost / apiEquivalentCost;
+	}, [isSubscription, apiEquivalentCost, subscriptionCost]);
+
+	// Value multiplier: how much more the API equivalent is vs subscription
+	const valueMultiplier = useMemo(() => {
+		if (!isSubscription || subscriptionCost <= 0) return 0;
+		return apiEquivalentCost / subscriptionCost;
+	}, [isSubscription, apiEquivalentCost, subscriptionCost]);
+
 	const utilizationColor = getUtilizationColor(data.costUtilizationPercent);
 	const utilizationBg = getUtilizationBgColor(data.costUtilizationPercent);
-	const barPercent = Math.min(data.costUtilizationPercent, 100);
 
-	const dailyBudget = useMemo(
-		() => data.maxSubscriptionCostUsd / 30,
-		[data.maxSubscriptionCostUsd],
-	);
+	const dailyBudget = useMemo(() => subscriptionCost / 30, [subscriptionCost]);
+
+	// Scale daily costs for subscription users
+	const scaledDailyTrend = useMemo(() => {
+		return data.dailyCostTrend.map((day) => ({
+			...day,
+			displayCost: day.costUsd * costScale,
+		}));
+	}, [data.dailyCostTrend, costScale]);
 
 	const maxDailyCost = useMemo(() => {
-		const costs = data.dailyCostTrend.map((d) => d.costUsd);
+		const costs = scaledDailyTrend.map((d) => d.displayCost);
 		return Math.max(...costs, dailyBudget, 0.01);
-	}, [data.dailyCostTrend, dailyBudget]);
+	}, [scaledDailyTrend, dailyBudget]);
+
+	// Scale weekly costs
+	const scaledWeeklyTrend = useMemo(() => {
+		return data.weeklyCostTrend.map((week) => ({
+			...week,
+			displayCost: week.costUsd * costScale,
+		}));
+	}, [data.weeklyCostTrend, costScale]);
 
 	const sparklineHeight = 60;
 
+	// Token distribution percentages
+	const tokenTotal =
+		(tokenUsage?.totalInputTokens ?? 0) +
+		(tokenUsage?.totalOutputTokens ?? 0) +
+		(tokenUsage?.totalCachedTokens ?? 0);
+	const inputPercent =
+		tokenTotal > 0
+			? ((tokenUsage?.totalInputTokens ?? 0) / tokenTotal) * 100
+			: 0;
+	const outputPercent =
+		tokenTotal > 0
+			? ((tokenUsage?.totalOutputTokens ?? 0) / tokenTotal) * 100
+			: 0;
+	const cachedPercent =
+		tokenTotal > 0
+			? ((tokenUsage?.totalCachedTokens ?? 0) / tokenTotal) * 100
+			: 0;
+
 	return (
 		<>
-			{/* Cost accuracy and billing info */}
+			{/* Badges row */}
 			<HStack gap="sm" align="center" wrap>
 				{data.isEstimated && (
 					<Box
@@ -403,7 +490,7 @@ function CostDetailView({
 						</Text>
 					</Box>
 				)}
-				{data.billingType && (
+				{isSubscription && (
 					<Box
 						style={{
 							paddingHorizontal: theme.spacing.sm,
@@ -413,76 +500,130 @@ function CostDetailView({
 						}}
 					>
 						<Text size="xs" weight="semibold" style={{ color: "#6366f1" }}>
-							{data.billingType === "stripe_subscription"
-								? "Max Plan"
-								: data.billingType}
+							Max Plan
 						</Text>
 					</Box>
 				)}
 			</HStack>
 
-			{/* Subscription utilization gauge */}
-			<VStack gap="sm" style={{ width: "100%" }}>
-				<HStack justify="space-between" align="center">
-					<Text color="secondary" size="xs">
-						Subscription Utilization
-					</Text>
-					<Box
+			{/* Subscription: value multiplier + cost headline */}
+			{isSubscription ? (
+				<VStack gap="sm" style={{ width: "100%" }}>
+					<HStack justify="space-between" align="flex-end">
+						<VStack gap="xs">
+							<Text color="secondary" size="xs">
+								Your Plan
+							</Text>
+							<Text
+								weight="bold"
+								style={{
+									fontSize: 28,
+									color: theme.colors.accent.primary,
+								}}
+							>
+								{formatCost(subscriptionCost)}
+								<Text color="muted" size="sm">
+									/mo
+								</Text>
+							</Text>
+						</VStack>
+						{valueMultiplier > 1 && (
+							<VStack gap="xs" align="flex-end">
+								<Text color="secondary" size="xs">
+									Value Multiplier
+								</Text>
+								<Text
+									weight="bold"
+									style={{
+										fontSize: 28,
+										color: "#10b981",
+									}}
+								>
+									{valueMultiplier.toFixed(1)}x
+								</Text>
+							</VStack>
+						)}
+					</HStack>
+
+					{/* Utilization bar */}
+					<VStack gap="xs" style={{ width: "100%" }}>
+						<HStack justify="space-between" align="center">
+							<Text color="secondary" size="xs">
+								Subscription Utilization
+							</Text>
+							<Box
+								style={{
+									paddingHorizontal: theme.spacing.sm,
+									paddingVertical: 2,
+									backgroundColor: utilizationBg,
+									borderRadius: theme.radii.full,
+								}}
+							>
+								<Text
+									size="xs"
+									weight="semibold"
+									style={{ color: utilizationColor }}
+								>
+									{formatPercent(data.costUtilizationPercent)}
+								</Text>
+							</Box>
+						</HStack>
+						<Box
+							style={{
+								width: "100%",
+								height: 12,
+								backgroundColor: theme.colors.bg.tertiary,
+								borderRadius: theme.radii.md,
+								overflow: "hidden",
+							}}
+						>
+							<Box
+								style={{
+									width: `${Math.min(data.costUtilizationPercent, 100)}%`,
+									height: "100%",
+									backgroundColor: utilizationColor,
+									borderRadius: theme.radii.md,
+								}}
+							/>
+						</Box>
+						<Text color="muted" size="xs">
+							API-equivalent usage: {formatCost(apiEquivalentCost)} (
+							{formatCost(apiEquivalentCost - subscriptionCost)} saved vs API
+							pricing)
+						</Text>
+					</VStack>
+				</VStack>
+			) : (
+				/* Non-subscription: show API cost as primary */
+				<VStack gap="sm" style={{ width: "100%" }}>
+					<HStack justify="space-between" align="center">
+						<Text color="secondary" size="xs">
+							Estimated API Cost (30 days)
+						</Text>
+					</HStack>
+					<Text
+						weight="bold"
 						style={{
-							paddingHorizontal: theme.spacing.sm,
-							paddingVertical: 2,
-							backgroundColor: utilizationBg,
-							borderRadius: theme.radii.full,
+							fontSize: 28,
+							color: theme.colors.accent.primary,
 						}}
 					>
-						<Text
-							size="xs"
-							weight="semibold"
-							style={{ color: utilizationColor }}
-						>
-							{formatPercent(data.costUtilizationPercent)}
-						</Text>
-					</Box>
-				</HStack>
-
-				<Box
-					style={{
-						width: "100%",
-						height: 12,
-						backgroundColor: theme.colors.bg.tertiary,
-						borderRadius: theme.radii.md,
-						overflow: "hidden",
-					}}
-				>
-					<Box
-						style={{
-							width: `${barPercent}%`,
-							height: "100%",
-							backgroundColor: utilizationColor,
-							borderRadius: theme.radii.md,
-						}}
-					/>
-				</Box>
-
-				<HStack justify="space-between" align="center">
-					<Text size="sm" weight="semibold">
-						{formatCost(data.estimatedCostUsd)}
+						{formatCost(apiEquivalentCost)}
 					</Text>
-					<Text color="muted" size="xs">
-						of {formatCost(data.maxSubscriptionCostUsd)} used
-					</Text>
-				</HStack>
-			</VStack>
+				</VStack>
+			)}
 
 			{/* Cost metrics 2x2 grid */}
 			<VStack gap="sm" style={{ width: "100%" }}>
 				<HStack gap="sm" style={{ width: "100%" }}>
 					<CostMetric
-						label="Cost / Session"
+						label={
+							isSubscription ? "API-Equivalent / Session" : "Cost / Session"
+						}
 						value={formatCost(data.costPerSession)}
 					/>
 					<CostMetric
-						label="Cost / Task"
+						label={isSubscription ? "API-Equivalent / Task" : "Cost / Task"}
 						value={formatCost(data.costPerCompletedTask)}
 					/>
 				</HStack>
@@ -503,6 +644,77 @@ function CostDetailView({
 					/>
 				</HStack>
 			</VStack>
+
+			{/* Token distribution (merged from TokenUsageCard) */}
+			{tokenUsage && tokenTotal > 0 && (
+				<VStack gap="sm" style={{ width: "100%" }}>
+					<Text color="secondary" size="xs">
+						Token Distribution
+					</Text>
+					<Box
+						style={{
+							height: 12,
+							borderRadius: 6,
+							overflow: "hidden",
+							backgroundColor: theme.colors.bg.tertiary,
+							flexDirection: "row",
+						}}
+					>
+						{inputPercent > 0 && (
+							<Box
+								style={{
+									width: `${inputPercent}%`,
+									height: "100%",
+									backgroundColor: "#3b82f6",
+								}}
+							/>
+						)}
+						{outputPercent > 0 && (
+							<Box
+								style={{
+									width: `${outputPercent}%`,
+									height: "100%",
+									backgroundColor: "#10b981",
+								}}
+							/>
+						)}
+						{cachedPercent > 0 && (
+							<Box
+								style={{
+									width: `${cachedPercent}%`,
+									height: "100%",
+									backgroundColor: "#8b5cf6",
+								}}
+							/>
+						)}
+					</Box>
+					<HStack gap="lg" wrap>
+						<TokenStat
+							label="Input"
+							value={formatTokenCount(tokenUsage.totalInputTokens)}
+							color="#3b82f6"
+							subValue={`${inputPercent.toFixed(0)}%`}
+						/>
+						<TokenStat
+							label="Output"
+							value={formatTokenCount(tokenUsage.totalOutputTokens)}
+							color="#10b981"
+							subValue={`${outputPercent.toFixed(0)}%`}
+						/>
+						<TokenStat
+							label="Cached"
+							value={formatTokenCount(tokenUsage.totalCachedTokens)}
+							color="#8b5cf6"
+							subValue={`${cachedPercent.toFixed(0)}%`}
+						/>
+						<TokenStat
+							label="Total"
+							value={formatTokenCount(tokenUsage.totalTokens)}
+							color={theme.colors.text.primary}
+						/>
+					</HStack>
+				</VStack>
+			)}
 
 			{/* Subscription vs API Credits comparison */}
 			{data.subscriptionComparisons.length > 0 && (
@@ -546,14 +758,17 @@ function CostDetailView({
 				</VStack>
 			)}
 
-			{/* Daily cost sparkline */}
-			{data.dailyCostTrend.length > 0 && (
+			{/* Daily usage sparkline */}
+			{scaledDailyTrend.length > 0 && (
 				<VStack gap="sm" style={{ width: "100%" }}>
 					<Text color="secondary" size="xs">
-						Daily Cost (Last 30 Days)
+						{isSubscription
+							? "Daily Usage (Last 30 Days)"
+							: "Daily Cost (Last 30 Days)"}
 					</Text>
 
 					<Box style={{ width: "100%", position: "relative" }}>
+						{/* Budget line */}
 						<Box
 							style={{
 								position: "absolute",
@@ -572,12 +787,12 @@ function CostDetailView({
 								width: "100%",
 							}}
 						>
-							{data.dailyCostTrend.map((day, idx) => {
+							{scaledDailyTrend.map((day, idx) => {
 								const barHeight = Math.max(
-									(day.costUsd / maxDailyCost) * sparklineHeight,
-									day.costUsd > 0 ? 2 : 1,
+									(day.displayCost / maxDailyCost) * sparklineHeight,
+									day.displayCost > 0 ? 2 : 1,
 								);
-								const overBudget = day.costUsd > dailyBudget;
+								const overBudget = day.displayCost > dailyBudget;
 
 								return (
 									<Box
@@ -589,7 +804,7 @@ function CostDetailView({
 												? "#ef4444"
 												: theme.colors.accent.primary,
 											borderRadius: 1,
-											opacity: day.costUsd > 0 ? 1 : 0.2,
+											opacity: day.displayCost > 0 ? 1 : 0.2,
 											marginHorizontal: 0.5,
 										}}
 									/>
@@ -629,19 +844,19 @@ function CostDetailView({
 			)}
 
 			{/* Weekly cost trend */}
-			{data.weeklyCostTrend.length > 0 && (
+			{scaledWeeklyTrend.length > 0 && (
 				<VStack gap="sm" style={{ width: "100%" }}>
 					<Text color="secondary" size="xs">
-						Weekly Cost
+						{isSubscription ? "Weekly Usage" : "Weekly Cost"}
 					</Text>
 
 					<VStack gap="xs" style={{ width: "100%" }}>
-						{data.weeklyCostTrend.map((week) => {
-							const weeklyBudget = data.maxSubscriptionCostUsd / 4.33;
-							const overBudget = week.costUsd > weeklyBudget;
+						{scaledWeeklyTrend.map((week) => {
+							const weeklyBudget = subscriptionCost / 4.33;
+							const overBudget = week.displayCost > weeklyBudget;
 							const barWidth =
 								weeklyBudget > 0
-									? Math.min((week.costUsd / weeklyBudget) * 100, 100)
+									? Math.min((week.displayCost / weeklyBudget) * 100, 100)
 									: 0;
 
 							return (
@@ -668,7 +883,7 @@ function CostDetailView({
 														: theme.colors.text.primary,
 												}}
 											>
-												{formatCost(week.costUsd)}
+												{formatCost(week.displayCost)}
 											</Text>
 											<Text color="muted" size="xs">
 												{formatNumber(week.sessionCount)} sessions
@@ -717,7 +932,7 @@ function CostDetailView({
 								rank={idx + 1}
 								messageCount={session.messageCount}
 								tokenCount={session.inputTokens + session.outputTokens}
-								costUsd={session.costUsd}
+								costUsd={session.costUsd * costScale}
 								onPress={
 									onSessionClick
 										? () => onSessionClick(session.sessionId)
@@ -738,6 +953,7 @@ function CostDetailView({
 
 export function CostAnalysisCard({
 	costAnalysis,
+	tokenUsage,
 	onSessionClick,
 }: CostAnalysisCardProps): React.ReactElement {
 	const [activeTab, setActiveTab] = useState<string>("all");
@@ -751,7 +967,6 @@ export function CostAnalysisCard({
 				)
 			: null;
 
-	// Build CostViewData for the active view
 	const viewData: CostViewData = useMemo(() => {
 		if (activeBreakdown) {
 			return {
@@ -812,7 +1027,11 @@ export function CostAnalysisCard({
 				</HStack>
 			)}
 
-			<CostDetailView data={viewData} onSessionClick={onSessionClick} />
+			<CostDetailView
+				data={viewData}
+				tokenUsage={tokenUsage}
+				onSessionClick={onSessionClick}
+			/>
 		</VStack>
 	);
 }
