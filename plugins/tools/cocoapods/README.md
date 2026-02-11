@@ -1,8 +1,8 @@
-# Jutsu: CocoaPods
+# CocoaPods
 
 Validation and quality enforcement for CocoaPods dependency management in iOS, macOS, tvOS, watchOS, and visionOS projects.
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Validation Hooks
 
@@ -13,7 +13,7 @@ Validation and quality enforcement for CocoaPods dependency management in iOS, m
 
 ### Skills
 
-This jutsu provides the following skills for CocoaPods development:
+This plugin provides the following skills for CocoaPods development:
 
 - **cocoapods-podspec-fundamentals**: Creating and maintaining podspec files with required attributes, file patterns, dependencies, and platform specifications for iOS, macOS, tvOS, watchOS, and visionOS
 - **cocoapods-subspecs-organization**: Organizing complex libraries into modular subspecs with proper dependency management and default subspec patterns
@@ -23,17 +23,8 @@ This jutsu provides the following skills for CocoaPods development:
 
 ## Installation
 
-Install via the Han marketplace:
-
 ```bash
-han plugin install jutsu-cocoapods
-```
-
-Or install manually:
-
-```bash
-claude plugin marketplace add thebushidocollective/han
-claude plugin install jutsu-cocoapods@han
+han plugin install cocoapods
 ```
 
 ## Usage
