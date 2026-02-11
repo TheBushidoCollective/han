@@ -55,10 +55,10 @@ This plugin provides the following skills:
 Skills can be invoked using the Skill tool:
 
 ```javascript
-Skill("jutsu-gluestack:gluestack-components")
-Skill("jutsu-gluestack:gluestack-theming")
-Skill("jutsu-gluestack:gluestack-accessibility")
-Skill("jutsu-gluestack:gluestack-mcp-tools")
+Skill("gluestack:gluestack-components")
+Skill("gluestack:gluestack-theming")
+Skill("gluestack:gluestack-accessibility")
+Skill("gluestack:gluestack-mcp-tools")
 ```
 
 Each skill provides specialized knowledge and patterns for gluestack-ui development.
@@ -72,23 +72,17 @@ This plugin includes hooks that ensure TypeScript type checks pass before comple
 The hooks automatically detect directories with `gluestack-ui.config.json` and run TypeScript checks in each:
 
 ```bash
-han hook run jutsu-gluestack typecheck
+han hook run gluestack typecheck
 ```
 
 This ensures all packages in your monorepo pass TypeScript validation before work is marked complete.
 
 ## Installation
 
-Install with the han CLI:
+Install via the han CLI:
 
 ```bash
-han plugin install jutsu-gluestack
-```
-
-Or use npx (no installation required):
-
-```bash
-npx @thebushidocollective/han plugin install jutsu-gluestack
+han plugin install gluestack
 ```
 
 ## Configuration

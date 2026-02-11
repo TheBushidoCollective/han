@@ -45,15 +45,15 @@ The hook runs when any of the following file types are changed:
 The hooks automatically detect directories with Relay config files and run the compiler in each:
 
 ```bash
-han hook run jutsu-relay compile
+han hook run relay compile
 ```
 
 This ensures all packages in your monorepo have up-to-date Relay artifacts before work is marked complete.
 
 ## Installation
 
-Install with npx (no installation required):
+Install via the han CLI:
 
 ```bash
-han plugin install jutsu-relay
+han plugin install relay
 ```

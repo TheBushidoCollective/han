@@ -4,7 +4,7 @@ Advanced Ink skills for building beautiful, interactive terminal UIs with React.
 
 ## Overview
 
-Ink is React for the terminal - it lets you build interactive command-line apps using React components. This jutsu provides comprehensive skills for creating production-quality terminal interfaces.
+Ink is React for the terminal - it lets you build interactive command-line apps using React components. This plugin provides comprehensive skills for creating production-quality terminal interfaces.
 
 ## Skills Included
 
@@ -117,7 +117,7 @@ All skills emphasize TypeScript best practices:
 
 ## Real-World Examples
 
-This jutsu's patterns are used in production tools like:
+This plugin's patterns are used in production tools like:
 
 - `npx create-next-app` - Next.js project scaffolding
 - `npm` - Package manager output
@@ -126,8 +126,8 @@ This jutsu's patterns are used in production tools like:
 
 ## Installation
 
-Install with npx (no installation required):
+Install via the han CLI:
 
 ```bash
-han plugin install jutsu-ink
+han plugin install ink
 ```

@@ -1,12 +1,10 @@
-# Jutsu: React Native Web
+# React Native Web
 
 Validation and quality enforcement for React Native Web projects, ensuring code quality through TypeScript type checking and React Native Web best practices.
 
-## What This Jutsu Provides
+## Skills
 
-### Skills
-
-This jutsu provides the following skills:
+This plugin provides the following skills:
 
 - **react-native-web-core**: Core React Native Web concepts, components, and cross-platform patterns
 - **react-native-web-styling**: Styling patterns using StyleSheet API, platform-specific styles, and responsive design
@@ -16,10 +14,10 @@ This jutsu provides the following skills:
 
 ## Installation
 
-Install with npx (no installation required):
+Install via the han CLI:
 
 ```bash
-han plugin install jutsu-react-native-web
+han plugin install react-native-web
 ```
 
 ## Requirements
