@@ -26,7 +26,7 @@ Investigate, diagnose, and fix bugs or unexpected behavior in the codebase.
 
 ## Process
 
-Use the debugging skill from bushido to:
+Follow this process to fix bugs:
 
 1. **Reproduce the issue**: Confirm the bug exists and understand when it happens
 2. **Gather information**: Error messages, logs, stack traces, user reports

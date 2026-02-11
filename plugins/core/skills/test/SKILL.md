@@ -26,7 +26,7 @@ Write tests for the specified code or feature using test-driven development (TDD
 
 ## Process
 
-Use the test-driven-development skill from bushido to:
+Follow TDD methodology:
 
 1. **Understand the requirement**: Clarify what needs to be tested
 2. **Write failing test first**: Create a test that fails because the feature doesn't exist yet
