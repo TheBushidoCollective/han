@@ -1,5 +1,6 @@
 ---
 name: absinthe-schema
+user-invocable: false
 description: Use when designing GraphQL schemas with Absinthe. Covers type definitions, interfaces, unions, enums, and schema organization patterns.
 ---
 

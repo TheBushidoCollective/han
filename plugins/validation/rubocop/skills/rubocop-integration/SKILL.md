@@ -1,5 +1,6 @@
 ---
 name: rubocop-integration
+user-invocable: false
 description: Use when ruboCop CI integration including GitHub Actions, plugins, and performance optimization.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

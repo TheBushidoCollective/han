@@ -1,5 +1,6 @@
 ---
 name: eslint-custom
+user-invocable: false
 description: Use when custom ESLint rules and plugins including rule development, AST traversal, and publishing.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

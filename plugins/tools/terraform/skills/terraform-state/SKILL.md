@@ -1,5 +1,6 @@
 ---
 name: terraform-state
+user-invocable: false
 description: Use when managing Terraform state files, remote backends, and state locking for infrastructure coordination.
 allowed-tools: []
 ---

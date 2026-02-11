@@ -1,5 +1,6 @@
 ---
 name: storybook-args-controls
+user-invocable: false
 description: Use when configuring interactive controls and args for Storybook stories. Helps create dynamic, explorable component demonstrations with proper type constraints.
 allowed-tools:
   - Read

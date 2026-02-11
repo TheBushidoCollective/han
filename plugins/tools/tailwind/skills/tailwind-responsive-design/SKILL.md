@@ -1,5 +1,6 @@
 ---
 name: tailwind-responsive-design
+user-invocable: false
 description: Use when building responsive layouts and mobile-first designs with Tailwind CSS. Covers breakpoints, container queries, and responsive utilities.
 allowed-tools:
   - Read

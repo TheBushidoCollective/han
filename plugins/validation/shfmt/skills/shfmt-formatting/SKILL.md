@@ -1,5 +1,6 @@
 ---
 name: shfmt-formatting
+user-invocable: false
 description: Use when formatting shell scripts with shfmt. Covers consistent formatting patterns, shell dialect support, common issues, and editor integration.
 allowed-tools:
   - Read

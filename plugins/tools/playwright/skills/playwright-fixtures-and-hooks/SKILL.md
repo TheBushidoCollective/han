@@ -1,5 +1,6 @@
 ---
 name: playwright-fixtures-and-hooks
+user-invocable: false
 description: Use when managing test state and infrastructure with reusable Playwright fixtures and lifecycle hooks for efficient test setup and teardown.
 allowed-tools:
   - Bash

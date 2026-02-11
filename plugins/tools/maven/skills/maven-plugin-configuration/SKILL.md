@@ -1,5 +1,6 @@
 ---
 name: maven-plugin-configuration
+user-invocable: false
 description: Use when configuring Maven plugins, setting up common plugins like compiler, surefire, jar, or creating custom plugin executions.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

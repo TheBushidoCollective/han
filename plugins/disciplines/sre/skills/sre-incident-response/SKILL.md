@@ -1,5 +1,6 @@
 ---
 name: sre-incident-response
+user-invocable: false
 description: Use when responding to production incidents following SRE principles and best practices.
 allowed-tools: []
 ---

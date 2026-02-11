@@ -1,5 +1,6 @@
 ---
 name: storybook-component-documentation
+user-invocable: false
 description: Use when creating or improving component documentation in Storybook. Helps generate comprehensive docs using MDX, autodocs, and JSDoc comments.
 allowed-tools:
   - Read

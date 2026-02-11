@@ -1,5 +1,6 @@
 ---
 name: markdownlint-custom-rules
+user-invocable: false
 description: Create custom linting rules for markdownlint including rule structure, parser integration, error reporting, and automatic fixing.
 allowed-tools: [Bash, Read]
 ---

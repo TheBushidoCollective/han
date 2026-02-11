@@ -1,5 +1,6 @@
 ---
 name: cucumber-fundamentals
+user-invocable: false
 description: Core Cucumber concepts, Gherkin syntax, and feature file structure
 ---
 

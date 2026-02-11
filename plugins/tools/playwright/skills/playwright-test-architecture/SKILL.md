@@ -1,5 +1,6 @@
 ---
 name: playwright-test-architecture
+user-invocable: false
 description: Use when setting up Playwright test projects and organizing test suites with proper configuration and project structure.
 allowed-tools:
   - Bash

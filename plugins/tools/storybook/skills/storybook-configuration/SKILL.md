@@ -1,5 +1,6 @@
 ---
 name: storybook-configuration
+user-invocable: false
 description: Use when setting up or configuring Storybook for a project. Covers main configuration, addons, builders, and framework-specific setup.
 allowed-tools:
   - Read

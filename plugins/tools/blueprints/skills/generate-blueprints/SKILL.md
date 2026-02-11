@@ -1,5 +1,6 @@
 ---
 name: generate-blueprints
+user-invocable: false
 description: Deeply research all systems and create or update blueprints/ documentation for the entire codebase
 ---
 

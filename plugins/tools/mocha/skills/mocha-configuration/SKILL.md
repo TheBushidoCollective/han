@@ -1,5 +1,6 @@
 ---
 name: mocha-configuration
+user-invocable: false
 description: Use when mocha configuration including reporters, config files, plugins, and CI integration.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

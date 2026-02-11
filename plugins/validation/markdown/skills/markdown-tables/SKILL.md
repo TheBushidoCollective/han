@@ -1,5 +1,6 @@
 ---
 name: markdown-tables
+user-invocable: false
 description: Use when creating or formatting tables in markdown. Covers table syntax, alignment, escaping, and best practices.
 allowed-tools:
   - Read

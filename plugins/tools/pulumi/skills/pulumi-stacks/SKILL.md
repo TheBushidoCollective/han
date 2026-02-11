@@ -1,5 +1,6 @@
 ---
 name: pulumi-stacks
+user-invocable: false
 description: Use when managing multiple environments with Pulumi stacks for development, staging, and production deployments.
 allowed-tools: [Bash, Read]
 ---
@@ -62,6 +63,7 @@ pulumi config rm instanceType
 
 ```yaml
 name: my-infrastructure
+user-invocable: false
 runtime: nodejs
 description: Multi-environment infrastructure
 

@@ -1,5 +1,6 @@
 ---
 name: sip-protocol-fundamentals
+user-invocable: false
 description: Use when working with SIP messages, methods, call flows, and protocol fundamentals for VoIP applications.
 allowed-tools:
   - Bash

@@ -1,5 +1,6 @@
 ---
 name: kubernetes-security
+user-invocable: false
 description: Use when implementing Kubernetes security best practices including RBAC, pod security policies, and network policies.
 allowed-tools: []
 ---

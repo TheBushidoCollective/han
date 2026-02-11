@@ -1,5 +1,6 @@
 ---
 name: act-docker-setup
+user-invocable: false
 description: Use when configuring Docker environments for act, selecting runner images, managing container resources, or troubleshooting Docker-related issues with local GitHub Actions testing.
 allowed-tools:
   - Read

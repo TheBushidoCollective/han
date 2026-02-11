@@ -1,5 +1,6 @@
 ---
 name: blueprints-maintenance
+user-invocable: false
 description: Use after modifying existing systems to update blueprint documentation. Read blueprints with read_blueprint before changes, update with write_blueprint after. Prevents documentation drift.
 allowed-tools: [Read, Write, Edit, Grep, Glob, mcp__plugin_blueprints_blueprints__search_blueprints, mcp__plugin_blueprints_blueprints__read_blueprint, mcp__plugin_blueprints_blueprints__write_blueprint]
 ---

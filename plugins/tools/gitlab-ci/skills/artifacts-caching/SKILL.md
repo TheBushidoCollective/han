@@ -1,5 +1,6 @@
 ---
 name: gitlab-ci-artifacts-caching
+user-invocable: false
 description: Use when configuring artifacts for inter-job data passing or caching for faster builds. Covers cache strategies and artifact management.
 allowed-tools:
   - Read

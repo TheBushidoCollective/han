@@ -1,5 +1,6 @@
 ---
 name: gitlab-ci-variables-secrets
+user-invocable: false
 description: Use when configuring GitLab CI/CD variables, managing secrets, or integrating with external secret providers. Covers secure credential handling.
 allowed-tools:
   - Read

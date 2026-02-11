@@ -1,5 +1,6 @@
 ---
 name: graphql-performance
+user-invocable: false
 description: Use when optimizing GraphQL API performance with query complexity analysis, batching, caching strategies, depth limiting, monitoring, and database optimization.
 allowed-tools: []
 ---

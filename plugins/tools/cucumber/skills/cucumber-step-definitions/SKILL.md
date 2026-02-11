@@ -1,5 +1,6 @@
 ---
 name: cucumber-step-definitions
+user-invocable: false
 description: Writing effective step definitions and organizing test code
 ---
 

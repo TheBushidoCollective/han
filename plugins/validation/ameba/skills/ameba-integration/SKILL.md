@@ -1,5 +1,6 @@
 ---
 name: ameba-integration
+user-invocable: false
 description: Use when integrating Ameba into development workflows including CI/CD pipelines, pre-commit hooks, GitHub Actions, and automated code review processes.
 allowed-tools:
   - Bash
@@ -273,6 +274,7 @@ Create `.github/workflows/ameba.yml`:
 
 ```yaml
 name: Ameba
+user-invocable: false
 
 on:
   push:
@@ -306,6 +308,7 @@ jobs:
 
 ```yaml
 name: Code Quality
+user-invocable: false
 
 on:
   push:
@@ -357,6 +360,7 @@ jobs:
 
 ```yaml
 name: Quality Across Versions
+user-invocable: false
 
 on: [push, pull_request]
 
@@ -397,6 +401,7 @@ jobs:
 
 ```yaml
 name: PR Code Review
+user-invocable: false
 
 on:
   pull_request:
@@ -777,6 +782,7 @@ echo "✅ All quality gates passed"
 ```yaml
 # .github/workflows/quality-gates.yml
 name: Quality Gates
+user-invocable: false
 
 on: [push, pull_request]
 

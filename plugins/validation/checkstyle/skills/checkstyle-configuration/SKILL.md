@@ -1,5 +1,6 @@
 ---
 name: checkstyle-configuration
+user-invocable: false
 description: Use when configuring Checkstyle for Java projects with XML config, custom checks, properties, and module setup.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

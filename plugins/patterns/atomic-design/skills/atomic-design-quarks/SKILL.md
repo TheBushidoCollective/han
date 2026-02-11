@@ -1,5 +1,6 @@
 ---
 name: atomic-design-quarks
+user-invocable: false
 description: Use when working with design tokens, CSS custom properties, and primitive values that form the foundation below atoms. Quarks are the sub-atomic building blocks.
 allowed-tools:
   - Bash

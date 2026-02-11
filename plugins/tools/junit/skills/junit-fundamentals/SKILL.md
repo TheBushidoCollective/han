@@ -1,5 +1,6 @@
 ---
 name: junit-fundamentals
+user-invocable: false
 description: Use when jUnit fundamentals including annotations, assertions, and test lifecycle for Java testing.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

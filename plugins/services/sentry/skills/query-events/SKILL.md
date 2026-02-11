@@ -1,5 +1,6 @@
 ---
 name: query-events
+user-invocable: false
 description: Run custom queries on Sentry events and issues with advanced filtering
 ---
 

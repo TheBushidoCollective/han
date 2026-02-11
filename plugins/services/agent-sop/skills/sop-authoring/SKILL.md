@@ -1,5 +1,6 @@
 ---
 name: sop-authoring
+user-invocable: false
 description: Use when writing or creating new Standard Operating Procedures (SOPs) for AI agents. Covers effective SOP writing, clarity principles, and actionable instruction design.
 allowed-tools:
   - Read

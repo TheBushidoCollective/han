@@ -1,5 +1,6 @@
 ---
 name: markdown-syntax-fundamentals
+user-invocable: false
 description: Use when writing or editing markdown files. Covers headings, text formatting, lists, links, images, code blocks, and blockquotes.
 allowed-tools:
   - Read

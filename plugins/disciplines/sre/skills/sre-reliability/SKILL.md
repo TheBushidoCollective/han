@@ -1,5 +1,6 @@
 ---
 name: sre-reliability-engineering
+user-invocable: false
 description: Use when building reliable and scalable distributed systems.
 allowed-tools: []
 ---

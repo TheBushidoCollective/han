@@ -1,5 +1,6 @@
 ---
 name: helm-templates
+user-invocable: false
 description: Use when working with Helm templates and template functions for generating Kubernetes manifests dynamically.
 allowed-tools: []
 ---
@@ -40,6 +41,7 @@ spec:
 ```yaml
 # upper, lower, title
 name: {{ .Values.name | upper }}
+user-invocable: false
 
 # quote
 value: {{ .Values.password | quote }}

@@ -1,5 +1,6 @@
 ---
 name: runbooks-structure
+user-invocable: false
 description: Use when creating structured operational runbooks for human operators. Covers runbook organization, documentation patterns, and best practices for clear operational procedures.
 allowed-tools:
   - Read

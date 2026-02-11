@@ -1,5 +1,6 @@
 ---
 name: syncpack-version-groups
+user-invocable: false
 description: Use when defining version policies, banning dependencies, pinning versions, or creating partitioned version groups in syncpack. Covers advanced version management patterns.
 allowed-tools:
   - Read

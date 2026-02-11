@@ -1,5 +1,6 @@
 ---
 name: monorepo-architecture
+user-invocable: false
 description: Use when designing monorepo structure, organizing packages, or migrating to monorepo architecture with architectural patterns for managing dependencies and scalable workspace configurations.
 allowed-tools:
   - Read

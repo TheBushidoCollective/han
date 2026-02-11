@@ -1,5 +1,6 @@
 ---
 name: gitlab-ci-best-practices
+user-invocable: false
 description: Use when optimizing GitLab CI/CD pipelines for performance, reliability, or maintainability. Covers pipeline optimization and organizational patterns.
 allowed-tools:
   - Read

@@ -1,5 +1,6 @@
 ---
 name: playwright-bdd-gherkin-syntax
+user-invocable: false
 description: Use when writing Gherkin feature files, using Scenario Outline with Examples, applying tags for test organization, and leveraging Background sections for shared setup.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

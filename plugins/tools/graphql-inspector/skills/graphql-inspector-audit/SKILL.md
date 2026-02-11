@@ -1,5 +1,6 @@
 ---
 name: graphql-inspector-audit
+user-invocable: false
 description: Use when auditing GraphQL operations for complexity metrics, depth analysis, directive usage, or query performance concerns.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
@@ -158,6 +159,7 @@ audit:
 
 ```yaml
 name: Audit Operations
+user-invocable: false
 on:
   pull_request:
     paths:
@@ -214,6 +216,7 @@ Schedule regular audits:
 ```yaml
 # GitHub Action for weekly audit
 name: Weekly GraphQL Audit
+user-invocable: false
 on:
   schedule:
     - cron: '0 9 * * 1'  # Monday 9am

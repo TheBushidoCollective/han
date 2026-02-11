@@ -1,5 +1,6 @@
 ---
 name: terraform-modules
+user-invocable: false
 description: Use when creating and using reusable Terraform modules for organizing and sharing infrastructure code.
 allowed-tools: []
 ---

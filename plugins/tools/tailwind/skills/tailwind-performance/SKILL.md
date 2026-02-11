@@ -1,5 +1,6 @@
 ---
 name: tailwind-performance
+user-invocable: false
 description: Use when optimizing Tailwind CSS for production, reducing bundle size, and improving performance. Covers PurgeCSS, JIT mode, and build optimization.
 allowed-tools:
   - Read

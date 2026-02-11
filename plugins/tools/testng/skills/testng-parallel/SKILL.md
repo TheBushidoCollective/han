@@ -1,5 +1,6 @@
 ---
 name: testng-parallel
+user-invocable: false
 description: Use when configuring parallel test execution with TestNG including thread pools, suite configuration, and synchronization.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

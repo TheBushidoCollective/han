@@ -1,5 +1,6 @@
 ---
 name: oop-inheritance-composition
+user-invocable: false
 description: Use when deciding between inheritance and composition in object-oriented design. Use when creating class hierarchies or composing objects from smaller components.
 allowed-tools:
   - Bash

@@ -1,5 +1,6 @@
 ---
 name: bdd-patterns
+user-invocable: false
 description: Use when applying Behavior-Driven Development patterns including Given-When-Then structure, feature files, and acceptance criteria. Use when writing BDD-style tests and specifications.
 allowed-tools:
   - Bash

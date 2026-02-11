@@ -1,5 +1,6 @@
 ---
 name: kubernetes-manifests
+user-invocable: false
 description: Use when writing and deploying Kubernetes manifests for container orchestration.
 allowed-tools: []
 ---

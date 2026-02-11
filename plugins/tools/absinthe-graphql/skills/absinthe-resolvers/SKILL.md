@@ -1,5 +1,6 @@
 ---
 name: absinthe-resolvers
+user-invocable: false
 description: Use when implementing GraphQL resolvers with Absinthe. Covers resolver patterns, dataloader integration, batching, and error handling.
 ---
 

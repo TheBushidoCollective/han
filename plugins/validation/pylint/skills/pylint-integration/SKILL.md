@@ -1,5 +1,6 @@
 ---
 name: pylint-integration
+user-invocable: false
 description: Use when pylint CI integration including plugins, editor integration, and performance tuning.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

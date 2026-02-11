@@ -1,5 +1,6 @@
 ---
 name: checkstyle-custom
+user-invocable: false
 description: Use when developing custom Checkstyle checks, filters, and plugin integrations for project-specific Java code standards.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

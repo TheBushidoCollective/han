@@ -1,5 +1,6 @@
 ---
 name: dialyzer-integration
+user-invocable: false
 description: Use when integrating Dialyzer into development workflows and CI/CD pipelines for Erlang/Elixir projects.
 allowed-tools: []
 ---
@@ -39,6 +40,7 @@ mix dialyzer --clean
 
 ```yaml
 name: Dialyzer
+user-invocable: false
 
 on: [push, pull_request]
 

@@ -1,5 +1,6 @@
 ---
 name: ameba-custom-rules
+user-invocable: false
 description: Use when creating custom Ameba rules for Crystal code analysis including rule development, AST traversal, issue reporting, and rule testing.
 allowed-tools:
   - Bash
@@ -76,6 +77,7 @@ Update `shard.yml`:
 
 ```yaml
 name: ameba-custom-rules
+user-invocable: false
 version: 0.1.0
 authors:
   - Your Name <your.email@example.com>
@@ -753,6 +755,7 @@ end
 ```crystal
 # shard.yml
 name: ameba-company-rules
+user-invocable: false
 version: 1.0.0
 
 description: |

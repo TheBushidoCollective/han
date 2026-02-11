@@ -1,5 +1,6 @@
 ---
 name: ameba-configuration
+user-invocable: false
 description: Use when configuring Ameba rules and settings for Crystal projects including .ameba.yml setup, rule management, severity levels, and code quality enforcement.
 allowed-tools:
   - Bash

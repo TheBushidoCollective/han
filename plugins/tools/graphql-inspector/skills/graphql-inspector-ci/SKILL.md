@@ -1,5 +1,6 @@
 ---
 name: graphql-inspector-ci
+user-invocable: false
 description: Use when setting up GraphQL Inspector in CI/CD pipelines, GitHub Actions, or GitLab CI for automated schema validation.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
@@ -43,6 +44,7 @@ notifications:
 
 ```yaml
 name: GraphQL Schema Check
+user-invocable: false
 on:
   pull_request:
     paths:
@@ -76,6 +78,7 @@ jobs:
 
 ```yaml
 name: GraphQL Validation
+user-invocable: false
 on:
   pull_request:
     paths:
@@ -137,6 +140,7 @@ jobs:
 
 ```yaml
 name: Multi-Schema Validation
+user-invocable: false
 on: pull_request
 
 jobs:
