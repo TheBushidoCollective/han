@@ -1,5 +1,6 @@
 ---
 name: review
+user-invocable: false
 description: Multi-agent code review with confidence-based filtering
 ---
 

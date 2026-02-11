@@ -1,7 +1,7 @@
 ---
 name: test
 description: Write tests for code using test-driven development principles
-disable-model-invocation: false
+
 ---
 
 # test

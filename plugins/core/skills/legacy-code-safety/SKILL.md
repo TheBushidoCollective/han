@@ -1,5 +1,6 @@
 ---
 name: legacy-code-safety
+user-invocable: false
 description: Use when modifying, removing, or refactoring code that lacks test coverage. Emphasizes the danger of untested changes and the RGR workflow to add characterization tests before modifications.
 allowed-tools:
   - Read

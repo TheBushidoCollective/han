@@ -1,5 +1,6 @@
 ---
 name: simplicity-principles
+user-invocable: false
 description: Use when designing solutions, adding features, or refactoring by applying KISS, YAGNI, and Principle of Least Astonishment to write simple, predictable code.
 allowed-tools:
   - Read

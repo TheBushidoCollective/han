@@ -1,5 +1,6 @@
 ---
 name: develop
+user-invocable: false
 description: Comprehensive 8-phase workflow for developing new features with quality enforcement
 ---
 

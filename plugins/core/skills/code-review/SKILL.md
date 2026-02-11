@@ -12,7 +12,7 @@ allowed-tools:
   - "Bash(gh pr view:*)"
   - "Bash(gh pr list:*)"
 description: Code review a pull request
-disable-model-invocation: false
+
 ---
 
 # Code Review Skill

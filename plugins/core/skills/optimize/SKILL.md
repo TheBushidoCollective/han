@@ -1,7 +1,7 @@
 ---
 name: optimize
 description: Optimize code for performance, readability, or efficiency
-disable-model-invocation: false
+
 allowed-tools:
   - Read
   - Write

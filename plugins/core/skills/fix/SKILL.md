@@ -1,7 +1,7 @@
 ---
 name: fix
 description: Debug and fix bugs, errors, or unexpected behavior
-disable-model-invocation: false
+
 ---
 
 # fix

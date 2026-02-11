@@ -1,7 +1,7 @@
 ---
 name: plan
 description: Create tactical implementation plan for a feature or task
-disable-model-invocation: false
+
 allowed-tools:
   - Read
   - Grep

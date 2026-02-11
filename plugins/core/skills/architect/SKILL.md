@@ -1,7 +1,7 @@
 ---
 name: architect
 description: Design system architecture and high-level technical strategy
-disable-model-invocation: false
+
 allowed-tools:
   - Read
   - Grep

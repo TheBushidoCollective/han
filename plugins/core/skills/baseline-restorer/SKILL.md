@@ -1,5 +1,6 @@
 ---
 name: baseline-restorer
+user-invocable: false
 description: Use when multiple fix attempts fail and you need to systematically restore to a working baseline and reimplement instead of fixing broken code.
 allowed-tools:
   - Read

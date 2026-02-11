@@ -1,7 +1,7 @@
 ---
 name: document
 description: Generate or update documentation for code, APIs, or systems
-disable-model-invocation: false
+
 allowed-tools:
   - Read
   - Write
