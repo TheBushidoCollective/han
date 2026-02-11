@@ -1,8 +1,8 @@
-# Jutsu: GraphQL Inspector
+# GraphQL Inspector
 
 Validation and quality enforcement for GraphQL schemas and operations using [GraphQL Inspector](https://the-guild.dev/graphql/inspector).
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Validation Hooks
 
@@ -11,7 +11,7 @@ Validation and quality enforcement for GraphQL schemas and operations using [Gra
 
 ### Skills
 
-This jutsu provides the following skills:
+This plugin provides the following skills:
 
 - **graphql-inspector-diff**: Breaking change detection and schema comparison
 - **graphql-inspector-validate**: Operation validation with complexity analysis
@@ -20,22 +20,13 @@ This jutsu provides the following skills:
 
 ## Installation
 
-Install via the Han marketplace:
-
 ```bash
-han plugin install jutsu-graphql-inspector
-```
-
-Or install manually:
-
-```bash
-claude plugin marketplace add thebushidocollective/han
-claude plugin install jutsu-graphql-inspector@han
+han plugin install graphql-inspector
 ```
 
 ## Usage
 
-Once installed, this jutsu automatically validates your GraphQL code:
+Once installed, this plugin automatically validates your GraphQL code:
 
 - When you finish a conversation with Claude Code
 - When Claude Code agents complete their work
@@ -109,9 +100,9 @@ validate:
 
 ## Related Plugins
 
-- **jutsu-graphql**: Core GraphQL schema design skills
-- **jutsu-relay**: Relay framework integration
-- **jutsu-apollo-graphql**: Apollo Client/Server skills
+- **graphql**: Core GraphQL schema design skills
+- **relay**: Relay framework integration
+- **apollo-graphql**: Apollo Client/Server skills
 
 ## Resources
 
