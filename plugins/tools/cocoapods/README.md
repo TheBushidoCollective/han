@@ -29,7 +29,7 @@ han plugin install cocoapods
 
 ## Usage
 
-Once installed, this jutsu automatically validates your CocoaPods code:
+Once installed, this plugin automatically validates your CocoaPods code:
 
 - **When you finish a conversation** with Claude Code
 - **When Claude Code agents complete** their work
@@ -92,7 +92,7 @@ When you make changes to:
 2. Source code (`*.swift`, `*.h`, `*.m`, `*.mm`)
 3. Privacy manifests (`*.xcprivacy`)
 
-The jutsu automatically runs validation when you stop a conversation or complete agent work.
+The plugin automatically runs validation when you stop a conversation or complete agent work.
 
 ### Manual Validation
 
@@ -170,7 +170,7 @@ If you need to skip validation temporarily:
 HAN_SKIP_HOOKS=1
 
 # Or disable the plugin
-claude plugin disable jutsu-cocoapods
+claude plugin disable cocoapods
 ```
 
 ## Advanced Configuration
@@ -180,7 +180,7 @@ claude plugin disable jutsu-cocoapods
 Create `han-config.yml` in your project to customize validation:
 
 ```yaml
-jutsu-cocoapods:
+cocoapods:
   lint:
     command: pod lib lint --quick --fail-fast --allow-warnings
 ```
@@ -188,7 +188,7 @@ jutsu-cocoapods:
 ### Platform-Specific Validation
 
 ```yaml
-jutsu-cocoapods:
+cocoapods:
   lint:
     command: pod lib lint --platforms=ios --quick
 ```

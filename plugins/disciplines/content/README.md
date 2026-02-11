@@ -1,10 +1,10 @@
-# Content Creator
+# Content
 
 Specialized agents for creating engaging content across various formats and target audiences. These agents embody the discipline of effective communication, storytelling, and audience engagement.
 
 ## Overview
 
-The `do-content-creator` plugin provides expert writing agents that help you create compelling content optimized for different platforms, formats, and objectives. Each agent is specialized in a specific content discipline with deep knowledge of best practices, formulas, and proven techniques.
+The content plugin provides expert writing agents that help you create compelling content optimized for different platforms, formats, and objectives. Each agent is specialized in a specific content discipline with deep knowledge of best practices, formulas, and proven techniques.
 
 ## Available Agents
 
@@ -143,10 +143,8 @@ Write a weekly newsletter for our developer community highlighting new features 
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install do-content-creator
+han plugin install content
 ```
 
 ## How to Use
@@ -249,7 +247,7 @@ Include brand voice:
 
 ## Philosophy
 
-The `do-content-creator` agents embody the **discipline of effective communication**:
+The content agents embody the **discipline of effective communication**:
 
 - **Audience-First**: Every piece of content serves the reader, not just the writer
 - **Clarity Over Cleverness**: Clear communication trumps creative flourishes
