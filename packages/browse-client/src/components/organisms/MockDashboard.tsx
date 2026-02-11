@@ -127,7 +127,25 @@ const barContainerStyle = {
 	height: 180,
 };
 
-// Activity heatmap - green cells at varying opacity
+// Activity heatmap - Claude orange scale (matches ActivityHeatmap.tsx)
+const HEATMAP_COLORS = {
+	empty: theme.colors.bg.tertiary,
+	level1: "#4a2c1a", // Darkest orange
+	level2: "#8b4a2a", // Dark orange
+	level3: "#c96442", // Medium orange
+	level4: "#da7756", // Claude orange
+	level5: "#f5a580", // Bright orange
+};
+
+function getHeatmapColor(v: number): string {
+	if (v <= 0.05) return HEATMAP_COLORS.empty;
+	if (v <= 0.2) return HEATMAP_COLORS.level1;
+	if (v <= 0.4) return HEATMAP_COLORS.level2;
+	if (v <= 0.6) return HEATMAP_COLORS.level3;
+	if (v <= 0.8) return HEATMAP_COLORS.level4;
+	return HEATMAP_COLORS.level5;
+}
+
 const heatmapCells = [
 	{ k: "a1", v: 0.1 },
 	{ k: "a2", v: 0.4 },
@@ -234,8 +252,7 @@ function StubHeatmap(): React.ReactElement {
 						width: 14,
 						height: 14,
 						borderRadius: 2,
-						backgroundColor: theme.colors.accent.success,
-						opacity: cell.v * 0.8 + 0.1,
+						backgroundColor: getHeatmapColor(cell.v),
 					}}
 				/>
 			))}
@@ -243,7 +260,7 @@ function StubHeatmap(): React.ReactElement {
 	);
 }
 
-// Code changes - green (added) and red (removed) bars
+// Code changes - GitHub-style colors (matches LineChangesChart.tsx)
 const lineChangeBars = [
 	{ k: "w1", add: 25, del: 10 },
 	{ k: "w2", add: 40, del: 16 },
@@ -276,7 +293,7 @@ function StubLineChanges(): React.ReactElement {
 					<Box
 						style={{
 							height: `${bar.add}%`,
-							backgroundColor: theme.colors.accent.success,
+							backgroundColor: "#22c55e",
 							borderTopLeftRadius: theme.radii.sm,
 							borderTopRightRadius: theme.radii.sm,
 							opacity: 0.6,
@@ -285,7 +302,7 @@ function StubLineChanges(): React.ReactElement {
 					<Box
 						style={{
 							height: `${bar.del}%`,
-							backgroundColor: theme.colors.danger,
+							backgroundColor: "#ef4444",
 							opacity: 0.5,
 						}}
 					/>
@@ -295,7 +312,8 @@ function StubLineChanges(): React.ReactElement {
 	);
 }
 
-// Model usage - stacked bars in blue/purple/amber
+// Model usage - HSL family colors (matches ModelUsageChart.tsx)
+// Opus=purple (hue 265), Sonnet=blue (hue 217), Haiku=green (hue 160)
 const modelBars = [
 	{ k: "m1", a: 30, b: 20, c: 15 },
 	{ k: "m2", a: 45, b: 25, c: 10 },
@@ -310,9 +328,9 @@ const modelBars = [
 ];
 
 const modelColors = [
-	theme.colors.accent.primary,
-	theme.colors.purple,
-	theme.colors.accent.warning,
+	"hsl(265, 72%, 44%)", // Opus - purple
+	"hsl(217, 72%, 44%)", // Sonnet - blue
+	"hsl(160, 72%, 44%)", // Haiku - green
 ];
 
 function StubModelUsage(): React.ReactElement {
@@ -358,32 +376,41 @@ function StubModelUsage(): React.ReactElement {
 	);
 }
 
-// Time of day - blue bars
+// Time of day - circadian rhythm colors (matches TimeOfDayChart.tsx)
+function getStubBarColor(hour: number): string {
+	if (hour >= 22 || hour < 5) return "#312e81"; // Night - deep indigo
+	if (hour >= 5 && hour < 7) return "#6366f1"; // Dawn - soft blue
+	if (hour >= 7 && hour < 12) return "#f59e0b"; // Morning - golden amber
+	if (hour >= 12 && hour < 17) return "#fbbf24"; // Afternoon - bright yellow
+	if (hour >= 17 && hour < 20) return "#f97316"; // Evening - warm orange
+	return "#c026d3"; // Dusk - purple/magenta
+}
+
 const hourlyBars = [
-	{ k: "h0", h: 10 },
-	{ k: "h1", h: 5 },
-	{ k: "h2", h: 3 },
-	{ k: "h3", h: 2 },
-	{ k: "h4", h: 1 },
-	{ k: "h5", h: 5 },
-	{ k: "h6", h: 15 },
-	{ k: "h7", h: 30 },
-	{ k: "h8", h: 55 },
-	{ k: "h9", h: 80 },
-	{ k: "h10", h: 90 },
-	{ k: "h11", h: 70 },
-	{ k: "h12", h: 50 },
-	{ k: "h13", h: 75 },
-	{ k: "h14", h: 85 },
-	{ k: "h15", h: 95 },
-	{ k: "h16", h: 80 },
-	{ k: "h17", h: 65 },
-	{ k: "h18", h: 45 },
-	{ k: "h19", h: 55 },
-	{ k: "h20", h: 70 },
-	{ k: "h21", h: 50 },
-	{ k: "h22", h: 30 },
-	{ k: "h23", h: 15 },
+	{ k: "h0", h: 10, hour: 0 },
+	{ k: "h1", h: 5, hour: 1 },
+	{ k: "h2", h: 3, hour: 2 },
+	{ k: "h3", h: 2, hour: 3 },
+	{ k: "h4", h: 1, hour: 4 },
+	{ k: "h5", h: 5, hour: 5 },
+	{ k: "h6", h: 15, hour: 6 },
+	{ k: "h7", h: 30, hour: 7 },
+	{ k: "h8", h: 55, hour: 8 },
+	{ k: "h9", h: 80, hour: 9 },
+	{ k: "h10", h: 90, hour: 10 },
+	{ k: "h11", h: 70, hour: 11 },
+	{ k: "h12", h: 50, hour: 12 },
+	{ k: "h13", h: 75, hour: 13 },
+	{ k: "h14", h: 85, hour: 14 },
+	{ k: "h15", h: 95, hour: 15 },
+	{ k: "h16", h: 80, hour: 16 },
+	{ k: "h17", h: 65, hour: 17 },
+	{ k: "h18", h: 45, hour: 18 },
+	{ k: "h19", h: 55, hour: 19 },
+	{ k: "h20", h: 70, hour: 20 },
+	{ k: "h21", h: 50, hour: 21 },
+	{ k: "h22", h: 30, hour: 22 },
+	{ k: "h23", h: 15, hour: 23 },
 ];
 
 function StubTimeOfDay(): React.ReactElement {
@@ -395,7 +422,7 @@ function StubTimeOfDay(): React.ReactElement {
 					style={{
 						flex: 1,
 						height: `${bar.h}%`,
-						backgroundColor: theme.colors.accent.primary,
+						backgroundColor: getStubBarColor(bar.hour),
 						borderTopLeftRadius: theme.radii.sm,
 						borderTopRightRadius: theme.radii.sm,
 						opacity: 0.7,
@@ -406,7 +433,7 @@ function StubTimeOfDay(): React.ReactElement {
 	);
 }
 
-// Cost donut
+// Cost donut - model family colors
 function StubDonut(): React.ReactElement {
 	return (
 		<Box
@@ -423,10 +450,10 @@ function StubDonut(): React.ReactElement {
 					height: 130,
 					borderRadius: theme.radii.full,
 					borderWidth: 20,
-					borderColor: theme.colors.accent.success,
+					borderColor: "hsl(265, 72%, 44%)",
 					borderStyle: "solid" as const,
-					borderTopColor: theme.colors.accent.primary,
-					borderRightColor: theme.colors.accent.warning,
+					borderTopColor: "hsl(217, 72%, 44%)",
+					borderRightColor: "hsl(160, 72%, 44%)",
 					opacity: 0.7,
 				}}
 			/>
