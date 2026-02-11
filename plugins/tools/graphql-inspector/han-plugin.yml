@@ -1,4 +1,4 @@
-# jutsu-graphql-inspector plugin configuration
+# graphql-inspector plugin configuration
 # Provides validation hooks for GraphQL schema diffing and operation validation
 
 hooks:

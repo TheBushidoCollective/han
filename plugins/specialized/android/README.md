@@ -30,7 +30,7 @@ Automatically runs when you stop Claude Code to ensure the Android project build
 You can customize the hook behavior in your project's `han-config.yml`:
 
 ```yaml
-jutsu-android:
+android:
   hooks:
     build:
       enabled: true
@@ -41,7 +41,7 @@ jutsu-android:
 To disable the hook for a specific project:
 
 ```yaml
-jutsu-android:
+android:
   hooks:
     build:
       enabled: false

@@ -784,7 +784,7 @@ When evaluating or recommending API technologies, consider:
 
 **Note**: For implementation-specific guidance:
 
-- GraphQL with Elixir/Absinthe: See jutsu-elixir plugin
+- GraphQL with Elixir/Absinthe: See elixir plugin
 - REST with specific frameworks: See relevant Jutsu plugin
 - API gateway configuration: See infrastructure plugins
 

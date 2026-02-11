@@ -1,4 +1,4 @@
-# hashi-playwright-mcp plugin configuration
+# playwright-mcp plugin configuration
 # This plugin provides Playwright browser automation via MCP server
 # MCP server is defined in .mcp.json for direct exposure to Claude Code
 

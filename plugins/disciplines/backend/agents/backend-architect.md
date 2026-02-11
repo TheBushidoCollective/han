@@ -462,9 +462,9 @@ When recommending or evaluating technologies, consider:
 
 **Note**: For language or framework-specific implementations:
 
-- Elixir/Phoenix implementation: See jutsu-elixir plugin
-- PostgreSQL specifics: See jutsu-postgresql plugin
-- Python data engineering: See jutsu-python plugin
+- Elixir/Phoenix implementation: See elixir plugin
+- PostgreSQL specifics: See postgresql plugin
+- Python data engineering: See python plugin
 - Other technologies: Refer to relevant Jutsu plugin
 
 Remember: Great architecture is about making the right trade-offs for your

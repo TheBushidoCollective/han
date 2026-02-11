@@ -1,4 +1,4 @@
-# hashi-reddit plugin configuration
+# reddit plugin configuration
 # This plugin provides Reddit integration via MCP server
 # MCP server is defined in .mcp.json for direct exposure to Claude Code
 

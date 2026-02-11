@@ -374,8 +374,8 @@ Scenario Outline: Discount calculation with various amounts
 
 ### For BDD implementation tools
 
-For Cucumber/Gherkin implementation, see jutsu-cucumber plugin.
-For SpecFlow (.NET), see jutsu-specflow plugin.
+For Cucumber/Gherkin implementation, see cucumber plugin.
+For SpecFlow (.NET), see specflow plugin.
 
 ## Quality Gates and Continuous Integration
 

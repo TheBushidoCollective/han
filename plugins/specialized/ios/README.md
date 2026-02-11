@@ -30,7 +30,7 @@ Automatically runs when you stop Claude Code to ensure the iOS project builds:
 You can customize the hook behavior in your project's `han-config.yml`:
 
 ```yaml
-jutsu-ios:
+ios:
   hooks:
     build:
       enabled: true
@@ -41,7 +41,7 @@ jutsu-ios:
 To disable the hook for a specific project:
 
 ```yaml
-jutsu-ios:
+ios:
   hooks:
     build:
       enabled: false

@@ -18,7 +18,7 @@ han plugin install runbooks
 Or install via Claude Code:
 
 ```
-/plugin install bushido@han/jutsu/jutsu-runbooks
+/plugin install runbooks@han
 ```
 
 ## What This Plugin Provides
