@@ -1,4 +1,4 @@
-# jutsu-esbuild
+# esbuild
 
 esbuild build validation with automatic package manager detection.
 
@@ -9,7 +9,7 @@ Provides Stop hooks that validate esbuild builds complete successfully before al
 ## Installation
 
 ```bash
-han plugin install jutsu-esbuild
+han plugin install esbuild
 ```
 
 ## Features
