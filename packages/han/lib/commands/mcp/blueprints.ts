@@ -194,7 +194,7 @@ export function syncBlueprintsIndex(): { success: boolean; count: number } {
 
   // Find project root (where blueprints/ exists)
   const cwd = process.cwd();
-  const outputDir = join(cwd, '.claude', 'rules', 'hashi-blueprints');
+  const outputDir = join(cwd, '.claude', 'rules', 'blueprints');
   const outputFile = join(outputDir, 'blueprints-index.md');
 
   // Generate the index content
@@ -204,7 +204,7 @@ Technical documentation for this project's architecture and systems.
 
 ## When to Consult Blueprints
 
-Before modifying system architecture, use \`search_blueprints\` and \`read_blueprint\` to understand:
+Before modifying system architecture, use Glob and Read on the \`blueprints/\` directory to understand:
 - Current design decisions and rationale
 - Integration points and dependencies
 - Established patterns to follow
@@ -221,7 +221,7 @@ Consult blueprints when working on:
 
 ## After Modifications
 
-Update blueprints via \`write_blueprint\` when you:
+Update blueprints using the Write tool on \`blueprints/{name}.md\` when you:
 - Add new systems or major features
 - Change architectural patterns
 - Discover undocumented conventions

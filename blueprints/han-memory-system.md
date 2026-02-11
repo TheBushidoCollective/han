@@ -315,7 +315,6 @@ const agent = query({
 
 - `mcp__memory-dal__memory_search_fts` (from core)
 - `mcp__memory-dal__memory_search_hybrid` (from core)
-- `mcp__blueprints__search_blueprints` (from hashi-blueprints)
 - `mcp__github__list_pull_requests` (from hashi-github, if installed)
 - Any tool listed in `memory.allowed_tools` of discovered plugins
 

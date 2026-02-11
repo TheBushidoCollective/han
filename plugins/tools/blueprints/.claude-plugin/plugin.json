@@ -1,7 +1,7 @@
 {
   "name": "blueprints",
   "version": "1.2.0",
-  "description": "MCP server for managing technical blueprint documentation. Use search_blueprints before creating, read_blueprint before modifying, write_blueprint after implementation changes. Includes skills and hooks for quality enforcement.",
+  "description": "Skills and hooks for managing technical blueprint documentation. Provides guidelines for writing, maintaining, and organizing blueprints using native tools (Glob, Grep, Read, Write).",
   "author": {
     "name": "The Bushido Collective",
     "url": "https://thebushido.co"
@@ -10,18 +10,10 @@
   "repository": "https://github.com/thebushidocollective/han",
   "license": "Apache-2.0",
   "keywords": [
-    "mcp",
     "blueprints",
     "documentation",
     "technical-docs",
     "implementation-docs",
-    "architecture",
-    "server"
-  ],
-  "mcpServers": {
-    "blueprints": {
-      "command": "npx",
-      "args": ["-y", "@thebushidocollective/han", "mcp", "blueprints"]
-    }
-  }
+    "architecture"
+  ]
 }

@@ -1,6 +1,5 @@
 ---
 name: generate-blueprints
-user-invocable: false
 description: Deeply research all systems and create or update blueprints/ documentation for the entire codebase
 ---
 
@@ -22,9 +21,9 @@ Comprehensively document all systems in the codebase by creating or updating the
 
 **CRITICAL:** Blueprints MUST be created at the repository root, never in subdirectories or packages.
 
-- ✅ `{repo-root}/blueprints/`
-- ❌ `{repo-root}/packages/foo/blueprints/`
-- ❌ `{repo-root}/src/blueprints/`
+- `{repo-root}/blueprints/`
+- `{repo-root}/packages/foo/blueprints/`
+- `{repo-root}/src/blueprints/`
 
 Blueprints are repository-wide system design documents. Systems may span multiple packages or directories, but all blueprints belong in a single `blueprints/` directory at the repo root.
 
@@ -55,10 +54,10 @@ You are tasked with comprehensively documenting all systems in this codebase.
 
 ### Phase 2: Audit Existing Blueprints
 
-**Use the MCP tools to audit existing documentation**:
+Audit existing documentation using native tools:
 
-1. **Use `list_blueprints()`** to get all existing blueprints
-2. **Use `read_blueprint({ name: "blueprint-name" })`** to check each documented system:
+1. **List all blueprints**: Use `Glob("blueprints/*.md")` to find all existing blueprint files
+2. **Read each blueprint**: Use `Read("blueprints/{name}.md")` to check each documented system:
    - Does the blueprint match current implementation?
    - Are there new features not documented?
    - Is any documented functionality removed?
@@ -75,19 +74,20 @@ Order systems by importance:
 
 ### Phase 4: Generate Documentation
 
-For each system, **use `write_blueprint` to create or update the documentation**:
+For each system, use the `Write` tool to create or update the blueprint file:
 
 ```
-write_blueprint({
-  name: "system-name",
-  summary: "Brief one-line description",
-  content: "markdown content..."
-})
+Write("blueprints/{system-name}.md", content)
 ```
 
-The blueprint content should follow this structure:
+Each file MUST include YAML frontmatter:
 
 ```markdown
+---
+name: system-name
+summary: Brief one-line description
+---
+
 # {System Name}
 
 {Brief description}
@@ -119,16 +119,16 @@ The blueprint content should follow this structure:
 
 ### Phase 5: Index Management
 
-**The blueprint index is automatically managed** by the MCP tools. When you use `write_blueprint`, the index is updated automatically in `.claude/rules/blueprints/blueprints-index.md`.
+**The blueprint index is automatically managed** by the SessionStart hook. When you run `han blueprints sync-index`, the index is updated at `.claude/rules/blueprints/blueprints-index.md`.
 
-You don't need to manually create or update any README files - just focus on creating quality blueprint content using the MCP tools.
+You don't need to manually create or update any index files - just focus on creating quality blueprint content using the Write tool.
 
 ## De-duplication Strategy
 
 When documenting, actively prevent duplicates:
 
-1. **Check before creating** - Use `search_blueprints({ keyword: "system" })` for existing coverage
-2. **Read existing blueprints** - Use `read_blueprint({ name: "blueprint-name" })` to check content
+1. **Check before creating** - Use `Glob("blueprints/*.md")` and `Grep` to search for existing coverage
+2. **Read existing blueprints** - Use `Read("blueprints/{name}.md")` to check content
 3. **Merge related systems** - Document tightly coupled systems together
 4. **Use cross-references** - Link between blueprints rather than duplicating
 5. **One source of truth** - Each concept documented in exactly one place
@@ -138,8 +138,8 @@ When documenting, actively prevent duplicates:
 After completing:
 
 1. List all systems discovered
-2. List blueprints created/updated (using `write_blueprint`)
+2. List blueprints created/updated
 3. Note any systems that couldn't be documented (why)
 4. Identify areas needing future documentation
 
-**Remember:** Always use the MCP tools (`search_blueprints`, `read_blueprint`, `write_blueprint`) instead of directly reading/writing files. The tools handle frontmatter, indexing, and organization automatically.
+**Remember:** Use native tools (Glob, Grep, Read, Write) to manage blueprint files. The frontmatter format (`name` and `summary` fields) enables discovery via the auto-generated index.
