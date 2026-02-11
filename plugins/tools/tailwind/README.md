@@ -32,7 +32,7 @@ han plugin install tailwind
 
 ## Usage
 
-Once installed, this jutsu automatically validates your Tailwind CSS code:
+Once installed, this plugin automatically validates your Tailwind CSS code:
 
 - **On Conversation Stop**: When you finish a conversation with Claude Code
 - **On Agent Completion**: When Claude Code agents complete their work
@@ -72,7 +72,7 @@ To temporarily disable validation:
 export HAN_DISABLE_HOOKS=true
 ```
 
-Or remove the jutsu from your Claude Code settings.
+Or remove the plugin from your Claude Code settings.
 
 ## Requirements
 
@@ -189,7 +189,7 @@ If your Tailwind build is slow, you can adjust the timeout in `hooks/hooks.json`
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jutsu-tailwind build --fail-fast --cached",
+            "command": "han hook run tailwind build --fail-fast --cached",
             "timeout": 300
           }
         ]
@@ -201,7 +201,7 @@ If your Tailwind build is slow, you can adjust the timeout in `hooks/hooks.json`
 
 ## Best Practices
 
-When working with this jutsu:
+When working with this plugin:
 
 1. **Keep Config Simple**: Start with a minimal configuration and extend as needed
 2. **Use JIT Mode**: Tailwind 3.0+ uses JIT by default for better performance
@@ -213,7 +213,7 @@ When working with this jutsu:
 
 Enhance your Tailwind workflow with these complementary plugins:
 
-- **jutsu-typescript**: Type-checking for TypeScript projects using Tailwind
-- **jutsu-prettier**: Code formatting for consistent style
-- **jutsu-biome**: Alternative linting and formatting with Biome
-- **do-frontend-development**: Specialized agents for frontend development
+- **typescript**: Type-checking for TypeScript projects using Tailwind
+- **prettier**: Code formatting for consistent style
+- **biome**: Alternative linting and formatting with Biome
+- **frontend-development**: Specialized agents for frontend development
