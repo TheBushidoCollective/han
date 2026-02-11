@@ -27,7 +27,10 @@ const overlayStyle = {
 const contentBoxStyle = {
 	maxWidth: 520,
 	width: "100%",
-	padding: spacing.xxl,
+	paddingTop: spacing.xxl,
+	paddingBottom: spacing.xxl,
+	paddingLeft: spacing.xxl,
+	paddingRight: spacing.xxl,
 	backgroundColor: colors.bg.secondary,
 	borderRadius: radii.lg,
 	borderWidth: 1,
@@ -38,7 +41,10 @@ const contentBoxStyle = {
 const codeBlockStyle = {
 	backgroundColor: colors.bg.primary,
 	borderRadius: radii.sm,
-	padding: `${spacing.md}px ${spacing.lg}px`,
+	paddingTop: spacing.md,
+	paddingBottom: spacing.md,
+	paddingLeft: spacing.lg,
+	paddingRight: spacing.lg,
 	fontFamily: fonts.mono,
 	fontSize: fontSizes.sm,
 	color: colors.text.primary,
