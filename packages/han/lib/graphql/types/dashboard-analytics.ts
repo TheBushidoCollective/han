@@ -13,7 +13,10 @@ import {
   calculateTotalCostFromModelUsage,
   DEFAULT_PRICING,
 } from '../../pricing/model-pricing.ts';
-import { getAggregatedStats } from '../../pricing/stats-reader.ts';
+import {
+  getAggregatedStats,
+  getPerConfigDirStats,
+} from '../../pricing/stats-reader.ts';
 import { builder } from '../builder.ts';
 
 // =============================================================================
@@ -125,6 +128,19 @@ export interface SubscriptionComparison {
 }
 
 /**
+ * Per-config-dir cost breakdown
+ */
+export interface ConfigDirCostBreakdown {
+  configDirId: string;
+  configDirName: string;
+  estimatedCostUsd: number;
+  cacheSavingsUsd: number;
+  totalSessions: number;
+  totalMessages: number;
+  modelCount: number;
+}
+
+/**
  * Cost tracking with subscription context
  */
 export interface CostAnalysis {
@@ -143,6 +159,7 @@ export interface CostAnalysis {
   potentialSavingsUsd: number;
   subscriptionComparisons: SubscriptionComparison[];
   breakEvenDailySpend: number;
+  configDirBreakdowns: ConfigDirCostBreakdown[];
 }
 
 /**
@@ -401,6 +418,38 @@ export const SubscriptionComparisonType = SubscriptionComparisonRef.implement({
   }),
 });
 
+const ConfigDirCostBreakdownRef = builder.objectRef<ConfigDirCostBreakdown>(
+  'ConfigDirCostBreakdown'
+);
+
+export const ConfigDirCostBreakdownType = ConfigDirCostBreakdownRef.implement({
+  description: 'Per-config-dir cost breakdown',
+  fields: (t) => ({
+    configDirId: t.exposeString('configDirId', {
+      description: 'Unique identifier for the config directory',
+    }),
+    configDirName: t.exposeString('configDirName', {
+      description:
+        'Display name for the config directory (e.g., "Default", "Claude Work")',
+    }),
+    estimatedCostUsd: t.exposeFloat('estimatedCostUsd', {
+      description: 'Estimated cost in USD for this config directory',
+    }),
+    cacheSavingsUsd: t.exposeFloat('cacheSavingsUsd', {
+      description: 'Cache savings in USD for this config directory',
+    }),
+    totalSessions: t.exposeInt('totalSessions', {
+      description: 'Total sessions in this config directory',
+    }),
+    totalMessages: t.exposeInt('totalMessages', {
+      description: 'Total messages in this config directory',
+    }),
+    modelCount: t.exposeInt('modelCount', {
+      description: 'Number of distinct models used in this config directory',
+    }),
+  }),
+});
+
 const CostAnalysisRef = builder.objectRef<CostAnalysis>('CostAnalysis');
 
 export const CostAnalysisType = CostAnalysisRef.implement({
@@ -465,6 +514,11 @@ export const CostAnalysisType = CostAnalysisRef.implement({
     breakEvenDailySpend: t.exposeFloat('breakEvenDailySpend', {
       description:
         'Daily API spend at which the current subscription breaks even',
+    }),
+    configDirBreakdowns: t.field({
+      type: [ConfigDirCostBreakdownType],
+      description: 'Per-config-dir cost breakdowns',
+      resolve: (data) => data.configDirBreakdowns,
     }),
   }),
 });
@@ -1044,6 +1098,23 @@ export async function queryDashboardAnalytics(
 
   const breakEvenDailySpend = round(subscriptionTier / 30, 2);
 
+  // Build per-config-dir cost breakdowns
+  const perDirStats = await getPerConfigDirStats();
+  const configDirBreakdowns: ConfigDirCostBreakdown[] = perDirStats
+    .filter((d) => d.hasStatsCacheData)
+    .map((d) => ({
+      configDirId: d.configDirId,
+      configDirName: d.configDirName,
+      estimatedCostUsd: round(
+        calculateTotalCostFromModelUsage(d.modelUsage),
+        2
+      ),
+      cacheSavingsUsd: round(calculateCacheSavings(d.modelUsage), 2),
+      totalSessions: d.totalSessions,
+      totalMessages: d.totalMessages,
+      modelCount: Object.keys(d.modelUsage).length,
+    }));
+
   const costAnalysis: CostAnalysis = {
     estimatedCostUsd: round(finalCostUsd, 2),
     isEstimated,
@@ -1061,6 +1132,7 @@ export async function queryDashboardAnalytics(
     potentialSavingsUsd: round(savingsIfOptimal, 2),
     subscriptionComparisons,
     breakEvenDailySpend,
+    configDirBreakdowns,
   };
 
   const result: DashboardAnalytics = {

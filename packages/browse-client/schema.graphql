@@ -330,6 +330,30 @@ type ConfigDir {
   sessionCount: Int
 }
 
+"""Per-config-dir cost breakdown"""
+type ConfigDirCostBreakdown {
+  """Cache savings in USD for this config directory"""
+  cacheSavingsUsd: Float
+
+  """Unique identifier for the config directory"""
+  configDirId: String
+
+  """Display name for the config directory (e.g., "Default", "Claude Work")"""
+  configDirName: String
+
+  """Estimated cost in USD for this config directory"""
+  estimatedCostUsd: Float
+
+  """Number of distinct models used in this config directory"""
+  modelCount: Int
+
+  """Total messages in this config directory"""
+  totalMessages: Int
+
+  """Total sessions in this config directory"""
+  totalSessions: Int
+}
+
 """Result of a config directory mutation"""
 type ConfigDirMutationResult {
   """The affected config directory (if applicable)"""
@@ -378,6 +402,9 @@ type CostAnalysis {
 
   """Actual cache savings in USD based on per-model pricing difference"""
   cacheSavingsUsd: Float
+
+  """Per-config-dir cost breakdowns"""
+  configDirBreakdowns: [ConfigDirCostBreakdown!]
 
   """Average cost per completed task"""
   costPerCompletedTask: Float

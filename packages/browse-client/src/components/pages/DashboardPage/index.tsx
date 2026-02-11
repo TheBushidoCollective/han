@@ -113,6 +113,15 @@ export const DashboardAnalyticsFragment = graphql`
           recommendation
         }
         breakEvenDailySpend
+        configDirBreakdowns {
+          configDirId
+          configDirName
+          estimatedCostUsd
+          cacheSavingsUsd
+          totalSessions
+          totalMessages
+          modelCount
+        }
       }
     }
   }

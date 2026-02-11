@@ -55,6 +55,22 @@ export interface StatsCache {
  */
 export interface BillingInfo {
   billingType: string | null;
+  displayName: string | null;
+  organizationUuid: string | null;
+}
+
+/**
+ * Per-config-dir stats (not merged)
+ */
+export interface ConfigDirStats {
+  configDirId: string;
+  configDirName: string;
+  configDirPath: string;
+  modelUsage: Record<string, ModelTokenUsage>;
+  totalSessions: number;
+  totalMessages: number;
+  firstSessionDate: string | null;
+  hasStatsCacheData: boolean;
 }
 
 /**
@@ -95,15 +111,24 @@ export function readStatsCacheFromPath(
  * The oauthAccount field contains billing type (e.g., "stripe_subscription").
  */
 export function readBillingInfo(): BillingInfo {
+  const empty: BillingInfo = {
+    billingType: null,
+    displayName: null,
+    organizationUuid: null,
+  };
   try {
     const claudeJsonPath = join(homedir(), '.claude.json');
-    if (!existsSync(claudeJsonPath)) return { billingType: null };
+    if (!existsSync(claudeJsonPath)) return empty;
     const content = readFileSync(claudeJsonPath, 'utf-8');
     const data = JSON.parse(content);
-    const billingType = data?.oauthAccount?.billingType ?? null;
-    return { billingType };
+    const account = data?.oauthAccount;
+    return {
+      billingType: account?.billingType ?? null,
+      displayName: account?.displayName ?? null,
+      organizationUuid: account?.organizationUuid ?? null,
+    };
   } catch {
-    return { billingType: null };
+    return empty;
   }
 }
 
@@ -219,4 +244,61 @@ export async function getAggregatedStats(): Promise<AggregatedStats> {
     billingInfo,
     hasStatsCacheData,
   };
+}
+
+/**
+ * Get per-config-dir stats (not merged).
+ * Returns an array with one entry per config dir that has stats-cache.json.
+ */
+export async function getPerConfigDirStats(): Promise<ConfigDirStats[]> {
+  const results: ConfigDirStats[] = [];
+
+  let configDirs: Array<{ id: string; path: string; name?: string }> = [];
+  try {
+    const { listConfigDirs } = await import('../db/index.ts');
+    configDirs = await listConfigDirs();
+  } catch {
+    // Fallback
+  }
+
+  // Always include ~/.claude/
+  const defaultPath = join(homedir(), '.claude');
+  if (!configDirs.some((d) => d.path === defaultPath)) {
+    configDirs.unshift({ id: 'default', path: defaultPath, name: undefined });
+  }
+
+  for (const dir of configDirs) {
+    const statsCache = readStatsCacheFromPath(dir.path);
+    const modelUsage: Record<string, ModelTokenUsage> = {};
+
+    if (statsCache?.modelUsage) {
+      for (const [modelId, usage] of Object.entries(statsCache.modelUsage)) {
+        modelUsage[modelId] = {
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          cacheReadInputTokens: usage.cacheReadInputTokens,
+          cacheCreationInputTokens: usage.cacheCreationInputTokens,
+        };
+      }
+    }
+
+    // Derive a display name: use DB name, or basename of path
+    const basename = dir.path.split('/').pop() ?? dir.path;
+    const displayName =
+      dir.name ||
+      (basename === '.claude' ? 'Default' : basename.replace(/^\./, ''));
+
+    results.push({
+      configDirId: dir.id,
+      configDirName: displayName,
+      configDirPath: dir.path,
+      modelUsage,
+      totalSessions: statsCache?.totalSessions ?? 0,
+      totalMessages: statsCache?.totalMessages ?? 0,
+      firstSessionDate: statsCache?.firstSessionDate ?? null,
+      hasStatsCacheData: statsCache !== null,
+    });
+  }
+
+  return results;
 }

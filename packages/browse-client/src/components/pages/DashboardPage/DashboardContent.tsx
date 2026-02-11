@@ -331,6 +331,17 @@ export function DashboardContent({
 				recommendation: c?.recommendation ?? "overkill",
 			})),
 			breakEvenDailySpend: rawAnalytics?.costAnalysis?.breakEvenDailySpend ?? 0,
+			configDirBreakdowns: (
+				rawAnalytics?.costAnalysis?.configDirBreakdowns ?? []
+			).map((d) => ({
+				configDirId: d?.configDirId ?? "",
+				configDirName: d?.configDirName ?? "",
+				estimatedCostUsd: d?.estimatedCostUsd ?? 0,
+				cacheSavingsUsd: d?.cacheSavingsUsd ?? 0,
+				totalSessions: d?.totalSessions ?? 0,
+				totalMessages: d?.totalMessages ?? 0,
+				modelCount: d?.modelCount ?? 0,
+			})),
 		},
 	};
 

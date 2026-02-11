@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<3d51e954af923522aeafd528678e89c8>>
+ * @generated SignedSource<<283619fc2be277338af6b2e2768010b2>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -39,6 +39,15 @@ export type DashboardPageAnalytics_query$data = {
       readonly breakEvenDailySpend: number | null | undefined;
       readonly cacheHitRate: number | null | undefined;
       readonly cacheSavingsUsd: number | null | undefined;
+      readonly configDirBreakdowns: ReadonlyArray<{
+        readonly cacheSavingsUsd: number | null | undefined;
+        readonly configDirId: string | null | undefined;
+        readonly configDirName: string | null | undefined;
+        readonly estimatedCostUsd: number | null | undefined;
+        readonly modelCount: number | null | undefined;
+        readonly totalMessages: number | null | undefined;
+        readonly totalSessions: number | null | undefined;
+      }> | null | undefined;
       readonly costPerCompletedTask: number | null | undefined;
       readonly costPerSession: number | null | undefined;
       readonly costUtilizationPercent: number | null | undefined;
@@ -208,10 +217,24 @@ v5 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "costUsd",
+  "name": "estimatedCostUsd",
   "storageKey": null
 },
 v6 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "cacheSavingsUsd",
+  "storageKey": null
+},
+v7 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "costUsd",
+  "storageKey": null
+},
+v8 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
@@ -417,13 +440,7 @@ return {
           "name": "costAnalysis",
           "plural": false,
           "selections": [
-            {
-              "alias": null,
-              "args": null,
-              "kind": "ScalarField",
-              "name": "estimatedCostUsd",
-              "storageKey": null
-            },
+            (v5/*: any*/),
             {
               "alias": null,
               "args": null,
@@ -438,13 +455,7 @@ return {
               "name": "billingType",
               "storageKey": null
             },
-            {
-              "alias": null,
-              "args": null,
-              "kind": "ScalarField",
-              "name": "cacheSavingsUsd",
-              "storageKey": null
-            },
+            (v6/*: any*/),
             {
               "alias": null,
               "args": null,
@@ -474,8 +485,8 @@ return {
                   "name": "date",
                   "storageKey": null
                 },
-                (v5/*: any*/),
-                (v6/*: any*/)
+                (v7/*: any*/),
+                (v8/*: any*/)
               ],
               "storageKey": null
             },
@@ -501,8 +512,8 @@ return {
                   "name": "weekLabel",
                   "storageKey": null
                 },
-                (v5/*: any*/),
-                (v6/*: any*/),
+                (v7/*: any*/),
+                (v8/*: any*/),
                 {
                   "alias": null,
                   "args": null,
@@ -523,7 +534,7 @@ return {
               "selections": [
                 (v1/*: any*/),
                 (v2/*: any*/),
-                (v5/*: any*/),
+                (v7/*: any*/),
                 {
                   "alias": null,
                   "args": null,
@@ -643,6 +654,54 @@ return {
               "kind": "ScalarField",
               "name": "breakEvenDailySpend",
               "storageKey": null
+            },
+            {
+              "alias": null,
+              "args": null,
+              "concreteType": "ConfigDirCostBreakdown",
+              "kind": "LinkedField",
+              "name": "configDirBreakdowns",
+              "plural": true,
+              "selections": [
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "configDirId",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "configDirName",
+                  "storageKey": null
+                },
+                (v5/*: any*/),
+                (v6/*: any*/),
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "totalSessions",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "totalMessages",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "modelCount",
+                  "storageKey": null
+                }
+              ],
+              "storageKey": null
             }
           ],
           "storageKey": null
@@ -656,6 +715,6 @@ return {
 };
 })();
 
-(node as any).hash = "9054acaaccc83867b21fef0c91719aa2";
+(node as any).hash = "de8f163ce30f182efe357b5955b89d41";
 
 export default node;
