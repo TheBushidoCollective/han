@@ -24,8 +24,6 @@ This plugin provides comprehensive skills for working with Tailwind CSS:
 
 ## Installation
 
-### Via Han Marketplace
-
 ```bash
 han plugin install tailwind
 ```
