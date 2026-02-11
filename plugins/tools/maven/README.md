@@ -19,15 +19,13 @@ This plugin provides the following skills:
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install jutsu-maven
+han plugin install maven
 ```
 
 ## Usage
 
-Once installed, this jutsu automatically validates your Maven projects:
+Once installed, this plugin automatically validates your Maven projects:
 
 - When you finish a conversation with Claude Code
 - When Claude Code agents complete their work
