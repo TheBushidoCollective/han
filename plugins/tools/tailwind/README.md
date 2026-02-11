@@ -27,29 +27,8 @@ This plugin provides comprehensive skills for working with Tailwind CSS:
 ### Via Han Marketplace
 
 ```bash
-han plugin install jutsu-tailwind
+han plugin install tailwind
 ```
-
-### Via Claude Code
-
-```bash
-claude plugin marketplace add thebushidocollective/han
-claude plugin install jutsu-tailwind@han
-```
-
-### Manual Installation
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/thebushidocollective/han.git
-   ```
-
-2. Install the plugin:
-
-   ```bash
-   claude plugin install /path/to/han/jutsu/jutsu-tailwind@local
-   ```
 
 ## Usage
 
