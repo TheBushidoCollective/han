@@ -1,4 +1,4 @@
-# jutsu-vite
+# Vite
 
 Vite build validation with automatic package manager detection.
 
@@ -9,7 +9,7 @@ Provides Stop hooks that validate Vite builds complete successfully before allow
 ## Installation
 
 ```bash
-han plugin install jutsu-vite
+han plugin install vite
 ```
 
 ## Features
