@@ -150,7 +150,7 @@ If you use a custom build script, create a `han-config.yml` in your project root
 
 ```yaml
 plugins:
-  jutsu-storybook:
+  storybook:
     hooks:
       storybook-build-validation:
         command: "npm run custom-storybook-build"
@@ -162,7 +162,7 @@ In a monorepo, disable validation for specific packages:
 
 ```yaml
 plugins:
-  jutsu-storybook:
+  storybook:
     hooks:
       storybook-build-validation:
         enabled: false
