@@ -1,4 +1,4 @@
-# hashi-blueprints
+# Blueprints
 
 MCP server for managing technical blueprint documentation with programmatic tools, skills, and quality enforcement.
 
@@ -14,7 +14,7 @@ This plugin provides comprehensive blueprint management through:
 ## Installation
 
 ```bash
-han plugin install hashi-blueprints@han
+han plugin install blueprints
 ```
 
 This installs both the MCP server and the skills/commands/hooks.

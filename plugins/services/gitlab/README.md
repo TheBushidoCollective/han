@@ -400,7 +400,7 @@ Pipeline #1234 - Status: Running
 
 ## Related Plugins
 
-- **hashi-context7**: Up-to-date library documentation for code references
-- **hashi-playwright-mcp**: Browser automation for testing GitLab UIs
-- **jutsu-git**: Git operations and repository management skills
-- **do-devops**: DevOps practices including CI/CD workflows
+- **context7**: Up-to-date library documentation for code references
+- **playwright-mcp**: Browser automation for testing GitLab UIs
+- **git**: Git operations and repository management skills
+- **devops**: DevOps practices including CI/CD workflows

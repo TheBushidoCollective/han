@@ -6,8 +6,6 @@ Provides expertise in SIP, RTP, codec selection, QoS, network design, and troubl
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install do-voip-engineering
+han plugin install voip
 ```

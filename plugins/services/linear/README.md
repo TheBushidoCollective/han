@@ -461,9 +461,8 @@ Let me validate these issues before we stop...
 
 ## Related Plugins
 
-- **hashi-jira**: For teams using Jira instead of Linear
-- **bushido:proof-of-work**: Requires concrete evidence of task completion
-- **bushido:test-driven-development**: Ensures tests exist for acceptance criteria
+- **jira**: For teams using Jira instead of Linear
+- **core**: Core quality principles and enforcement
 
 ## Best Practices
 

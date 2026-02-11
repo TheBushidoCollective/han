@@ -70,5 +70,5 @@ resources through the MCP protocol.
 Install with han CLI:
 
 ```bash
-han plugin install hashi-playwright-mcp
+han plugin install playwright-mcp
 ```

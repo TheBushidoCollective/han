@@ -1,4 +1,4 @@
-# Do Quality Assurance
+# Quality
 
 Agents specialized in quality assurance, testing strategies, and test
 architecture. Focuses on ensuring code quality and reliability.
@@ -12,7 +12,7 @@ This plugin provides the following specialized agents:
 
 ## Usage
 
-Agents can be invoked using the Agent tool or through
+Agents can be invoked using the Task tool with the appropriate subagent_type or through
 natural conversation:
 
 ```text
@@ -24,8 +24,6 @@ to their domain.
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install do-quality-assurance
+han plugin install quality
 ```

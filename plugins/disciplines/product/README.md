@@ -1,4 +1,4 @@
-# Do Product Management
+# Product
 
 Agents specialized in product vision and strategy. Focuses on product direction,
 market positioning, and strategic planning.
@@ -11,7 +11,7 @@ This plugin provides the following specialized agents:
 
 ## Usage
 
-Agents can be invoked using the Agent tool or through
+Agents can be invoked using the Task tool with the appropriate subagent_type or through
 natural conversation:
 
 ```text
@@ -23,8 +23,6 @@ to their domain.
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install do-product-management
+han plugin install product
 ```

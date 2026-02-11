@@ -530,10 +530,9 @@ Let me validate these tasks before we stop...
 
 ## Related Plugins
 
-- **hashi-jira**: For teams using Jira instead of ClickUp
-- **hashi-linear**: For teams using Linear instead of ClickUp
-- **bushido:proof-of-work**: Requires concrete evidence of task completion
-- **bushido:test-driven-development**: Ensures tests exist for acceptance criteria
+- **jira**: For teams using Jira instead of ClickUp
+- **linear**: For teams using Linear instead of ClickUp
+- **core**: Core quality principles and enforcement
 
 ## Best Practices
 

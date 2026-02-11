@@ -172,6 +172,6 @@ Claude will use `notion-fetch` to get current content, then `notion-update-page`
 
 ## Related Plugins
 
-- **hashi-github**: GitHub integration for code and issues
-- **hashi-linear**: Linear project management integration
-- **hashi-jira**: Jira ticket management
+- **github**: GitHub integration for code and issues
+- **linear**: Linear project management integration
+- **jira**: Jira ticket management

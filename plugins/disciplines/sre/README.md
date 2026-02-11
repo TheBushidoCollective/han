@@ -1,4 +1,4 @@
-# Site Reliability Engineering Dō
+# SRE
 
 Discipline agent for site reliability engineering practices.
 
@@ -38,8 +38,6 @@ Use the SRE agent when:
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install do-site-reliability-engineering
+han plugin install sre
 ```

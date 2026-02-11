@@ -317,7 +317,6 @@ The remote server is not included in this plugin to maintain zero-config simplic
 
 ## Related Plugins
 
-- **jutsu-react**: React code generation patterns
-- **jutsu-typescript**: TypeScript validation hooks
-- **do-component-library**: Component library development workflows
-- **hashi-github**: Git-based design system versioning
+- **react**: React code generation patterns
+- **typescript**: TypeScript validation hooks
+- **github**: Git-based design system versioning

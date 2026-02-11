@@ -206,5 +206,4 @@ Claude: [uses get_subreddit_top_posts with time='all' parameter]
 
 ## Related Plugins
 
-- **hashi-github**: GitHub repository integration
-- **do-content-creator**: Content creation agents that could use Reddit research
+- **github**: GitHub repository integration

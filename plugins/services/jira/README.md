@@ -415,9 +415,7 @@ duedate < now() AND status != Done
 
 ## Related Plugins
 
-- **jutsu-jira**: Additional Jira-focused skills and commands (if you want extended functionality beyond the MCP)
-- **bushido:proof-of-work**: Requires concrete evidence of task completion
-- **bushido:test-driven-development**: Ensures tests exist for acceptance criteria
+- **core**: Core quality principles and enforcement
 
 ## Best Practices
 
