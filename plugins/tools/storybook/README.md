@@ -1,8 +1,8 @@
-# Jutsu: Storybook
+# Storybook
 
 Validation and quality enforcement for Storybook projects, ensuring stories always build and render correctly.
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Validation Hooks
 
@@ -12,7 +12,7 @@ Validation and quality enforcement for Storybook projects, ensuring stories alwa
 
 ### Skills
 
-This jutsu provides comprehensive Storybook expertise across five key areas:
+This plugin provides comprehensive Storybook expertise across five key areas:
 
 - **storybook-story-writing**: Creating well-structured stories using CSF3 format, showcasing component variations, and following best practices
 - **storybook-args-controls**: Configuring interactive controls and args for dynamic component exploration with proper type constraints
@@ -22,17 +22,8 @@ This jutsu provides comprehensive Storybook expertise across five key areas:
 
 ## Installation
 
-Install via the Han marketplace:
-
 ```bash
-han plugin install jutsu-storybook
-```
-
-Or install manually:
-
-```bash
-claude plugin marketplace add thebushidocollective/han
-claude plugin install jutsu-storybook@han
+han plugin install storybook
 ```
 
 ## Usage
