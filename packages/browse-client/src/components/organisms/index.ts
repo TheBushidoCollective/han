@@ -25,10 +25,8 @@ export {
 	ToolUseBlock,
 	type ToolUseBlockData,
 } from "@/components/pages/SessionDetailPage/ContentBlocks";
-
 export { FileChangeCard } from "@/components/pages/SessionDetailPage/FileChangeCard.tsx";
 export { HookExecutionCard } from "@/components/pages/SessionDetailPage/HookExecutionCard.tsx";
-
 // MessageCards - main registry and all individual cards (colocated with Relay fragments)
 export {
 	AssistantMessageCard,
@@ -66,11 +64,13 @@ export {
 	useMessageContext,
 	useRawJsonToggle,
 } from "@/components/pages/SessionDetailPage/MessageCards";
-
 // Session Detail organisms (colocated with Relay fragments in pages/)
 export { SessionMessages } from "@/components/pages/SessionDetailPage/SessionMessages.tsx";
 export { SessionSidebar } from "@/components/pages/SessionDetailPage/SessionSidebar.tsx";
 export { TaskCard } from "@/components/pages/SessionDetailPage/TaskCard.tsx";
+// Connection management
+export { ConnectionGate } from "./ConnectionGate.tsx";
+export { ConnectionOverlay } from "./ConnectionOverlay.tsx";
 export type { MarkdownContentProps } from "./MarkdownContent.tsx";
 export {
 	containsAnsi,
@@ -79,6 +79,7 @@ export {
 	MarkdownContent,
 	stripAnsi,
 } from "./MarkdownContent.tsx";
+export { MockDashboard } from "./MockDashboard.tsx";
 export { NavCard } from "./NavCard.tsx";
 export { NavItem } from "./NavItem.tsx";
 export { ProjectCardItem } from "./ProjectCardItem.tsx";
