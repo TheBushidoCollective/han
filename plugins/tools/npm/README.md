@@ -1,4 +1,4 @@
-# jutsu-npm
+# npm
 
 NPM package manager skills with dependency validation hooks for Claude Code.
 
@@ -11,7 +11,7 @@ NPM package manager skills with dependency validation hooks for Claude Code.
 ## Installation
 
 ```bash
-han plugin install jutsu-npm
+han plugin install npm
 ```
 
 ## Hooks
@@ -30,7 +30,7 @@ Automatically runs when you stop Claude Code to ensure dependencies are in sync:
 You can customize the hook behavior in your project's `han-config.yml`:
 
 ```yaml
-jutsu-npm:
+npm:
   hooks:
     install:
       enabled: true
@@ -41,7 +41,7 @@ jutsu-npm:
 To disable the hook for a specific project:
 
 ```yaml
-jutsu-npm:
+npm:
   hooks:
     install:
       enabled: false
@@ -49,4 +49,4 @@ jutsu-npm:
 
 ## Note
 
-If your project uses yarn instead of npm, consider using `jutsu-yarn` instead.
+If your project uses yarn instead of npm, consider using `yarn` instead.
