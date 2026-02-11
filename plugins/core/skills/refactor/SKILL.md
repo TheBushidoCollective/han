@@ -179,7 +179,7 @@ After refactoring:
 
 ## Notes
 
-- Use TodoWrite to track refactoring steps
+- Use TaskCreate to track refactoring steps
 - Apply boy-scout-rule skill (leave code better than found)
 - Apply simplicity-principles skill (KISS, YAGNI)
 - Apply structural-design-principles as appropriate

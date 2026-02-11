@@ -317,7 +317,7 @@ When the user says:
 
 ## Notes
 
-- Use TodoWrite to track documentation tasks
+- Use TaskCreate to track documentation tasks
 - Use explainer skill for creating clear explanations
 - Keep documentation close to code (inline comments, co-located READMEs)
 - Update docs when code changes (include in PR reviews)

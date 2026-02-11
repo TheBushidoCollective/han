@@ -295,7 +295,7 @@ When the user says:
 
 ## Notes
 
-- Use TodoWrite to track architecture design steps
+- Use TaskCreate to track architecture design steps
 - Apply all relevant design principle skills
 - Create diagrams (ASCII art or reference drawing tools)
 - Architecture evolves - document decisions and changes

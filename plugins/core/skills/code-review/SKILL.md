@@ -85,7 +85,7 @@ Notes:
 
 - Do not check build signal or attempt to build or typecheck the app. These will run separately, and are not relevant to your code review.
 - Use `gh` to interact with Github (eg. to fetch a pull request, or to create inline comments), rather than web fetch
-- Use TodoWrite tool to track progress through steps 1-8
+- Use TaskCreate to track progress through steps 1-8
 - You must cite and link each bug (eg. if referring to a CLAUDE.md, you must link it)
 - All review agents in step 4 should use the code-reviewer skill from bushido for systematic review process
 - For your final comment, follow the following format precisely (assuming for this example that you found 3 issues):

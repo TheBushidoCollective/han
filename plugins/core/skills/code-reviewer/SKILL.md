@@ -24,7 +24,7 @@ Use this skill to:
 
 ### NOT for
 
-- Technology-specific patterns (see appropriate Jutsu plugins)
+- Technology-specific patterns (see appropriate validation plugins)
 - Detailed implementation guidance (see discipline-specific agents)
 
 ## Review Process Overview

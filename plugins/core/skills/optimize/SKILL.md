@@ -86,7 +86,7 @@ When the user says:
 
 ## Notes
 
-- Use TodoWrite to track optimization steps
+- Use TaskCreate to track optimization steps
 - Always provide before/after metrics
 - Consider trade-offs (complexity vs performance)
 - Document why optimizations were made

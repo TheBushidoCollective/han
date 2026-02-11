@@ -303,7 +303,7 @@ When the user says:
 
 ## Notes
 
-- Use TodoWrite to track investigation steps
+- Use TaskCreate to track investigation steps
 - Use proof-of-work skill to document evidence
 - Document findings even if not fixing immediately
 - Create minimal reproduction case

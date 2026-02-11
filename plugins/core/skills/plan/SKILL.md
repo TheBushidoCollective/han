@@ -129,7 +129,7 @@ Before finishing plan, verify:
 
 ## Notes
 
-- Use TodoWrite to track planning steps
+- Use TaskCreate to track planning steps
 - Reference existing code patterns
 - Consider using /architect for larger system changes
 - Apply simplicity-principles (don't over-engineer)
