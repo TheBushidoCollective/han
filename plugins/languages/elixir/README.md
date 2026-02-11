@@ -21,8 +21,8 @@ Once enabled, Claude will automatically apply these skills when working with rel
 
 ## Installation
 
-Install with npx (no installation required):
+Install via the han CLI:
 
 ```bash
-han plugin install jutsu-elixir
+han plugin install elixir
 ```

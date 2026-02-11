@@ -23,8 +23,8 @@ Install this plugin in your Claude Code configuration to automatically validate 
 
 ## Installation
 
-Install with npx (no installation required):
+Install via the han CLI:
 
 ```bash
-han plugin install jutsu-typescript
+han plugin install typescript
 ```

@@ -1,8 +1,8 @@
-# Jutsu: Ruby
+# Ruby
 
 Advanced Ruby programming skills covering object-oriented programming, metaprogramming, blocks, closures, gems, and the standard library.
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Validation Hooks
 
@@ -11,7 +11,7 @@ Advanced Ruby programming skills covering object-oriented programming, metaprogr
 
 ### Skills
 
-This jutsu provides the following skills:
+This plugin provides the following skills:
 
 - **ruby-oop**: Object-oriented programming including classes, modules, inheritance, mixins, and method visibility
 - **ruby-blocks-procs-lambdas**: Blocks, procs, lambdas, closures, and functional programming patterns
@@ -21,15 +21,15 @@ This jutsu provides the following skills:
 
 ## Installation
 
-Install with npx (no installation required):
+Install via the han CLI:
 
 ```bash
-han plugin install jutsu-ruby
+han plugin install ruby
 ```
 
 ## Usage
 
-Once installed, this jutsu automatically validates your Ruby code:
+Once installed, this plugin automatically validates your Ruby code:
 
 - When you finish a conversation with Claude Code
 - When Claude Code agents complete their work
