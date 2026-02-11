@@ -1,4 +1,4 @@
-# jutsu-lerna
+# Lerna
 
 Lerna monorepo management skills with bootstrap validation hooks for Claude Code.
 
@@ -11,7 +11,7 @@ Lerna monorepo management skills with bootstrap validation hooks for Claude Code
 ## Installation
 
 ```bash
-han plugin install jutsu-lerna
+han plugin install lerna
 ```
 
 ## Hooks
@@ -30,7 +30,7 @@ Automatically runs when you stop Claude Code to ensure monorepo dependencies are
 You can customize the hook behavior in your project's `han-config.yml`:
 
 ```yaml
-jutsu-lerna:
+lerna:
   hooks:
     bootstrap:
       enabled: true
@@ -41,7 +41,7 @@ jutsu-lerna:
 To disable the hook for a specific project:
 
 ```yaml
-jutsu-lerna:
+lerna:
   hooks:
     bootstrap:
       enabled: false
