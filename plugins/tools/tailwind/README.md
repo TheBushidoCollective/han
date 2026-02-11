@@ -1,8 +1,8 @@
-# Jutsu: Tailwind CSS
+# Tailwind CSS
 
 Validation and quality enforcement for Tailwind CSS projects with comprehensive utility-first CSS patterns and best practices.
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Validation Hooks
 
@@ -14,7 +14,7 @@ The validation hook runs automatically when you finish a conversation with Claud
 
 ### Skills
 
-This jutsu provides comprehensive skills for working with Tailwind CSS:
+This plugin provides comprehensive skills for working with Tailwind CSS:
 
 - **tailwind-utility-classes**: Master Tailwind's utility-first approach with utilities for layout, spacing, typography, colors, and effects
 - **tailwind-configuration**: Set up and customize Tailwind config, theme extensions, plugins, and build configuration
