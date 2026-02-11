@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<283619fc2be277338af6b2e2768010b2>>
+ * @generated SignedSource<<58c5f6b354b695452994e5c33ff6ca86>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -40,13 +40,49 @@ export type DashboardPageAnalytics_query$data = {
       readonly cacheHitRate: number | null | undefined;
       readonly cacheSavingsUsd: number | null | undefined;
       readonly configDirBreakdowns: ReadonlyArray<{
+        readonly breakEvenDailySpend: number | null | undefined;
+        readonly cacheHitRate: number | null | undefined;
         readonly cacheSavingsUsd: number | null | undefined;
         readonly configDirId: string | null | undefined;
         readonly configDirName: string | null | undefined;
+        readonly costPerSession: number | null | undefined;
+        readonly costUtilizationPercent: number | null | undefined;
+        readonly dailyCostTrend: ReadonlyArray<{
+          readonly costUsd: number | null | undefined;
+          readonly date: string | null | undefined;
+          readonly sessionCount: number | null | undefined;
+        }> | null | undefined;
         readonly estimatedCostUsd: number | null | undefined;
+        readonly isEstimated: boolean | null | undefined;
         readonly modelCount: number | null | undefined;
+        readonly potentialSavingsUsd: number | null | undefined;
+        readonly subscriptionComparisons: ReadonlyArray<{
+          readonly apiCreditCostUsd: number | null | undefined;
+          readonly monthlyCostUsd: number | null | undefined;
+          readonly recommendation: string | null | undefined;
+          readonly savingsPercent: number | null | undefined;
+          readonly savingsUsd: number | null | undefined;
+          readonly tierName: string | null | undefined;
+        }> | null | undefined;
+        readonly topSessionsByCost: ReadonlyArray<{
+          readonly cacheReadTokens: number | null | undefined;
+          readonly costUsd: number | null | undefined;
+          readonly inputTokens: number | null | undefined;
+          readonly messageCount: number | null | undefined;
+          readonly outputTokens: number | null | undefined;
+          readonly sessionId: string | null | undefined;
+          readonly slug: string | null | undefined;
+          readonly startedAt: string | null | undefined;
+        }> | null | undefined;
         readonly totalMessages: number | null | undefined;
         readonly totalSessions: number | null | undefined;
+        readonly weeklyCostTrend: ReadonlyArray<{
+          readonly avgDailyCost: number | null | undefined;
+          readonly costUsd: number | null | undefined;
+          readonly sessionCount: number | null | undefined;
+          readonly weekLabel: string | null | undefined;
+          readonly weekStart: string | null | undefined;
+        }> | null | undefined;
       }> | null | undefined;
       readonly costPerCompletedTask: number | null | undefined;
       readonly costPerSession: number | null | undefined;
@@ -224,21 +260,213 @@ v6 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "cacheSavingsUsd",
+  "name": "isEstimated",
   "storageKey": null
 },
 v7 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "costUsd",
+  "name": "cacheSavingsUsd",
   "storageKey": null
 },
 v8 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
+  "name": "costUtilizationPercent",
+  "storageKey": null
+},
+v9 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "costUsd",
+  "storageKey": null
+},
+v10 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
   "name": "sessionCount",
+  "storageKey": null
+},
+v11 = {
+  "alias": null,
+  "args": null,
+  "concreteType": "DailyCost",
+  "kind": "LinkedField",
+  "name": "dailyCostTrend",
+  "plural": true,
+  "selections": [
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "date",
+      "storageKey": null
+    },
+    (v9/*: any*/),
+    (v10/*: any*/)
+  ],
+  "storageKey": null
+},
+v12 = {
+  "alias": null,
+  "args": null,
+  "concreteType": "WeeklyCost",
+  "kind": "LinkedField",
+  "name": "weeklyCostTrend",
+  "plural": true,
+  "selections": [
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "weekStart",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "weekLabel",
+      "storageKey": null
+    },
+    (v9/*: any*/),
+    (v10/*: any*/),
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "avgDailyCost",
+      "storageKey": null
+    }
+  ],
+  "storageKey": null
+},
+v13 = {
+  "alias": null,
+  "args": null,
+  "concreteType": "SessionCost",
+  "kind": "LinkedField",
+  "name": "topSessionsByCost",
+  "plural": true,
+  "selections": [
+    (v1/*: any*/),
+    (v2/*: any*/),
+    (v9/*: any*/),
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "inputTokens",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "outputTokens",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "cacheReadTokens",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "messageCount",
+      "storageKey": null
+    },
+    (v3/*: any*/)
+  ],
+  "storageKey": null
+},
+v14 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "costPerSession",
+  "storageKey": null
+},
+v15 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "cacheHitRate",
+  "storageKey": null
+},
+v16 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "potentialSavingsUsd",
+  "storageKey": null
+},
+v17 = {
+  "alias": null,
+  "args": null,
+  "concreteType": "SubscriptionComparison",
+  "kind": "LinkedField",
+  "name": "subscriptionComparisons",
+  "plural": true,
+  "selections": [
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "tierName",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "monthlyCostUsd",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "apiCreditCostUsd",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "savingsUsd",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "savingsPercent",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "recommendation",
+      "storageKey": null
+    }
+  ],
+  "storageKey": null
+},
+v18 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "breakEvenDailySpend",
   "storageKey": null
 };
 return {
@@ -441,13 +669,7 @@ return {
           "plural": false,
           "selections": [
             (v5/*: any*/),
-            {
-              "alias": null,
-              "args": null,
-              "kind": "ScalarField",
-              "name": "isEstimated",
-              "storageKey": null
-            },
+            (v6/*: any*/),
             {
               "alias": null,
               "args": null,
@@ -455,7 +677,7 @@ return {
               "name": "billingType",
               "storageKey": null
             },
-            (v6/*: any*/),
+            (v7/*: any*/),
             {
               "alias": null,
               "args": null,
@@ -463,117 +685,11 @@ return {
               "name": "maxSubscriptionCostUsd",
               "storageKey": null
             },
-            {
-              "alias": null,
-              "args": null,
-              "kind": "ScalarField",
-              "name": "costUtilizationPercent",
-              "storageKey": null
-            },
-            {
-              "alias": null,
-              "args": null,
-              "concreteType": "DailyCost",
-              "kind": "LinkedField",
-              "name": "dailyCostTrend",
-              "plural": true,
-              "selections": [
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "date",
-                  "storageKey": null
-                },
-                (v7/*: any*/),
-                (v8/*: any*/)
-              ],
-              "storageKey": null
-            },
-            {
-              "alias": null,
-              "args": null,
-              "concreteType": "WeeklyCost",
-              "kind": "LinkedField",
-              "name": "weeklyCostTrend",
-              "plural": true,
-              "selections": [
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "weekStart",
-                  "storageKey": null
-                },
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "weekLabel",
-                  "storageKey": null
-                },
-                (v7/*: any*/),
-                (v8/*: any*/),
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "avgDailyCost",
-                  "storageKey": null
-                }
-              ],
-              "storageKey": null
-            },
-            {
-              "alias": null,
-              "args": null,
-              "concreteType": "SessionCost",
-              "kind": "LinkedField",
-              "name": "topSessionsByCost",
-              "plural": true,
-              "selections": [
-                (v1/*: any*/),
-                (v2/*: any*/),
-                (v7/*: any*/),
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "inputTokens",
-                  "storageKey": null
-                },
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "outputTokens",
-                  "storageKey": null
-                },
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "cacheReadTokens",
-                  "storageKey": null
-                },
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "messageCount",
-                  "storageKey": null
-                },
-                (v3/*: any*/)
-              ],
-              "storageKey": null
-            },
-            {
-              "alias": null,
-              "args": null,
-              "kind": "ScalarField",
-              "name": "costPerSession",
-              "storageKey": null
-            },
+            (v8/*: any*/),
+            (v11/*: any*/),
+            (v12/*: any*/),
+            (v13/*: any*/),
+            (v14/*: any*/),
             {
               "alias": null,
               "args": null,
@@ -581,80 +697,10 @@ return {
               "name": "costPerCompletedTask",
               "storageKey": null
             },
-            {
-              "alias": null,
-              "args": null,
-              "kind": "ScalarField",
-              "name": "cacheHitRate",
-              "storageKey": null
-            },
-            {
-              "alias": null,
-              "args": null,
-              "kind": "ScalarField",
-              "name": "potentialSavingsUsd",
-              "storageKey": null
-            },
-            {
-              "alias": null,
-              "args": null,
-              "concreteType": "SubscriptionComparison",
-              "kind": "LinkedField",
-              "name": "subscriptionComparisons",
-              "plural": true,
-              "selections": [
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "tierName",
-                  "storageKey": null
-                },
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "monthlyCostUsd",
-                  "storageKey": null
-                },
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "apiCreditCostUsd",
-                  "storageKey": null
-                },
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "savingsUsd",
-                  "storageKey": null
-                },
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "savingsPercent",
-                  "storageKey": null
-                },
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "recommendation",
-                  "storageKey": null
-                }
-              ],
-              "storageKey": null
-            },
-            {
-              "alias": null,
-              "args": null,
-              "kind": "ScalarField",
-              "name": "breakEvenDailySpend",
-              "storageKey": null
-            },
+            (v15/*: any*/),
+            (v16/*: any*/),
+            (v17/*: any*/),
+            (v18/*: any*/),
             {
               "alias": null,
               "args": null,
@@ -679,6 +725,7 @@ return {
                 },
                 (v5/*: any*/),
                 (v6/*: any*/),
+                (v7/*: any*/),
                 {
                   "alias": null,
                   "args": null,
@@ -699,7 +746,16 @@ return {
                   "kind": "ScalarField",
                   "name": "modelCount",
                   "storageKey": null
-                }
+                },
+                (v14/*: any*/),
+                (v15/*: any*/),
+                (v16/*: any*/),
+                (v8/*: any*/),
+                (v11/*: any*/),
+                (v12/*: any*/),
+                (v17/*: any*/),
+                (v18/*: any*/),
+                (v13/*: any*/)
               ],
               "storageKey": null
             }
@@ -715,6 +771,6 @@ return {
 };
 })();
 
-(node as any).hash = "de8f163ce30f182efe357b5955b89d41";
+(node as any).hash = "981b21ffdaf9ba0aea6fe524f9673f82";
 
 export default node;

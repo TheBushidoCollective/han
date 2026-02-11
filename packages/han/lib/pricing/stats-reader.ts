@@ -71,6 +71,15 @@ export interface ConfigDirStats {
   totalMessages: number;
   firstSessionDate: string | null;
   hasStatsCacheData: boolean;
+  dailyActivity: Array<{
+    date: string;
+    sessionCount: number;
+    messageCount: number;
+  }>;
+  dailyModelTokens: Array<{
+    date: string;
+    tokensByModel: Record<string, number>;
+  }>;
 }
 
 /**
@@ -297,6 +306,12 @@ export async function getPerConfigDirStats(): Promise<ConfigDirStats[]> {
       totalMessages: statsCache?.totalMessages ?? 0,
       firstSessionDate: statsCache?.firstSessionDate ?? null,
       hasStatsCacheData: statsCache !== null,
+      dailyActivity: (statsCache?.dailyActivity ?? []).map((d) => ({
+        date: d.date,
+        sessionCount: d.sessionCount,
+        messageCount: d.messageCount,
+      })),
+      dailyModelTokens: statsCache?.dailyModelTokens ?? [],
     });
   }
 

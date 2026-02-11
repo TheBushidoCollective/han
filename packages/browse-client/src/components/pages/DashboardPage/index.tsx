@@ -117,10 +117,46 @@ export const DashboardAnalyticsFragment = graphql`
           configDirId
           configDirName
           estimatedCostUsd
+          isEstimated
           cacheSavingsUsd
           totalSessions
           totalMessages
           modelCount
+          costPerSession
+          cacheHitRate
+          potentialSavingsUsd
+          costUtilizationPercent
+          dailyCostTrend {
+            date
+            costUsd
+            sessionCount
+          }
+          weeklyCostTrend {
+            weekStart
+            weekLabel
+            costUsd
+            sessionCount
+            avgDailyCost
+          }
+          subscriptionComparisons {
+            tierName
+            monthlyCostUsd
+            apiCreditCostUsd
+            savingsUsd
+            savingsPercent
+            recommendation
+          }
+          breakEvenDailySpend
+          topSessionsByCost {
+            sessionId
+            slug
+            costUsd
+            inputTokens
+            outputTokens
+            cacheReadTokens
+            messageCount
+            startedAt
+          }
         }
       }
     }

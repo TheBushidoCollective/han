@@ -330,8 +330,14 @@ type ConfigDir {
   sessionCount: Int
 }
 
-"""Per-config-dir cost breakdown"""
+"""Per-config-dir cost breakdown (matches CostAnalysis shape)"""
 type ConfigDirCostBreakdown {
+  """Daily API spend at which the subscription breaks even"""
+  breakEvenDailySpend: Float
+
+  """Cache hit rate (0 to 1) for this config directory"""
+  cacheHitRate: Float
+
   """Cache savings in USD for this config directory"""
   cacheSavingsUsd: Float
 
@@ -341,17 +347,41 @@ type ConfigDirCostBreakdown {
   """Display name for the config directory (e.g., "Default", "Claude Work")"""
   configDirName: String
 
+  """Average cost per session in this config directory"""
+  costPerSession: Float
+
+  """Percentage of subscription cost utilized by this config dir"""
+  costUtilizationPercent: Float
+
+  """Daily cost breakdown for this config directory"""
+  dailyCostTrend: [DailyCost!]
+
   """Estimated cost in USD for this config directory"""
   estimatedCostUsd: Float
 
+  """Whether cost is estimated (always false for per-dir stats)"""
+  isEstimated: Boolean
+
   """Number of distinct models used in this config directory"""
   modelCount: Int
+
+  """Potential savings if cache hit rate were optimal"""
+  potentialSavingsUsd: Float
+
+  """Per-tier comparison scoped to this config dir cost"""
+  subscriptionComparisons: [SubscriptionComparison!]
+
+  """Top sessions by cost (empty for per-dir view)"""
+  topSessionsByCost: [SessionCost!]
 
   """Total messages in this config directory"""
   totalMessages: Int
 
   """Total sessions in this config directory"""
   totalSessions: Int
+
+  """Weekly cost aggregation for this config directory"""
+  weeklyCostTrend: [WeeklyCost!]
 }
 
 """Result of a config directory mutation"""
