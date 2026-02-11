@@ -1,4 +1,4 @@
-# jutsu-tdd
+# TDD
 
 Test-Driven Development (TDD) principles and red-green-refactor cycle enforcement.
 
