@@ -13,9 +13,9 @@ learn_patterns:
 # Convention: provider name = plugin name, script = memory-provider.ts
 memory:
   allowed_tools:
-    - mcp__plugin_hashi-linear_linear__list_issues
-    - mcp__plugin_hashi-linear_linear__get_issue
-    - mcp__plugin_hashi-linear_linear__list_projects
+    - mcp__plugin_linear_linear__list_issues
+    - mcp__plugin_linear_linear__get_issue
+    - mcp__plugin_linear_linear__list_projects
   system_prompt: |
     Extract observations from Linear issues and projects. For each item, capture:
     - author: Linear user who created/updated

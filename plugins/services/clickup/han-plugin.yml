@@ -13,9 +13,9 @@ learn_patterns:
 # Convention: provider name = plugin name, script = memory-provider.ts
 memory:
   allowed_tools:
-    - mcp__plugin_hashi-clickup_clickup__list_tasks
-    - mcp__plugin_hashi-clickup_clickup__get_task
-    - mcp__plugin_hashi-clickup_clickup__list_spaces
+    - mcp__plugin_clickup_clickup__list_tasks
+    - mcp__plugin_clickup_clickup__get_task
+    - mcp__plugin_clickup_clickup__list_spaces
   system_prompt: |
     Extract observations from ClickUp tasks and spaces. For each item, capture:
     - author: ClickUp user who created/assigned

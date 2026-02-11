@@ -13,9 +13,9 @@ learn_patterns:
 # Convention: provider name = plugin name, script = memory-provider.ts
 memory:
   allowed_tools:
-    - mcp__plugin_hashi-figma_figma__list_files
-    - mcp__plugin_hashi-figma_figma__get_file
-    - mcp__plugin_hashi-figma_figma__get_comments
+    - mcp__plugin_figma_figma__list_files
+    - mcp__plugin_figma_figma__get_file
+    - mcp__plugin_figma_figma__get_comments
   system_prompt: |
     Extract observations from Figma files and comments. For each item, capture:
     - author: Figma user who created/commented
