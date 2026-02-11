@@ -49,4 +49,4 @@ lerna:
 
 ## Note
 
-For modern Lerna (v7+) using npm/yarn/pnpm workspaces, the bootstrap command links local packages and installs remaining dependencies. Consider using `jutsu-npm` or `jutsu-yarn` alongside this plugin for complete dependency management.
+For modern Lerna (v7+) using npm/yarn/pnpm workspaces, the bootstrap command links local packages and installs remaining dependencies. Consider using `npm` or `yarn` alongside this plugin for complete dependency management.
