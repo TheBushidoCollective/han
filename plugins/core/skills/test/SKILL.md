@@ -54,7 +54,7 @@ When the user says:
 
 ## Notes
 
-- Use TodoWrite to track progress through TDD cycles
+- Use TaskCreate to track progress through TDD cycles
 - Run full test suite before considering work complete
 - Tests should be clear enough to serve as documentation
 - Follow existing test patterns in the codebase

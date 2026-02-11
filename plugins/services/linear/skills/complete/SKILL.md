@@ -7,7 +7,7 @@ description: Mark a Linear issue as complete after validating acceptance criteri
 
 ## Name
 
-hashi-linear:complete - Mark a Linear issue as complete after validating acceptance criteria
+linear:complete - Mark a Linear issue as complete after validating acceptance criteria
 
 ## Synopsis
 

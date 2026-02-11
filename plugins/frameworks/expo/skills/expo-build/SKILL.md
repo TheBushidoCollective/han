@@ -1,5 +1,5 @@
 ---
-name: jutsu-expo:expo-build
+name: expo-build
 description: Use when building and deploying Expo apps with EAS Build. Covers build configuration, development builds, production builds, and app store submission.
 allowed-tools:
   - Read

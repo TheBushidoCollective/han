@@ -1,4 +1,4 @@
-# SIP Jutsu
+# SIP
 
 Session Initiation Protocol (SIP) skills for VoIP and real-time communications.
 
@@ -13,5 +13,5 @@ Session Initiation Protocol (SIP) skills for VoIP and real-time communications.
 Install with npx (no installation required):
 
 ```bash
-han plugin install jutsu-sip
+han plugin install sip
 ```

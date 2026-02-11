@@ -88,8 +88,6 @@ project/
 │   ├── skills/
 │   │   └── my-skill/
 │   │       └── SKILL.md       # Skill definitions
-│   └── commands/
-│       └── my-command.md      # Slash commands
 └── src/
     └── index.ts               # Your code
 ```

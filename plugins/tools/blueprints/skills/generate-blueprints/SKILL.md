@@ -5,7 +5,7 @@ description: Deeply research all systems and create or update blueprints/ docume
 
 ## Name
 
-hashi-blueprints:generate-blueprints - Generate comprehensive blueprint documentation for the entire codebase
+blueprints:generate-blueprints - Generate comprehensive blueprint documentation for the entire codebase
 
 ## Synopsis
 
@@ -118,7 +118,7 @@ The blueprint content should follow this structure:
 
 ### Phase 5: Index Management
 
-**The blueprint index is automatically managed** by the MCP tools. When you use `write_blueprint`, the index is updated automatically in `.claude/rules/hashi-blueprints/blueprints-index.md`.
+**The blueprint index is automatically managed** by the MCP tools. When you use `write_blueprint`, the index is updated automatically in `.claude/rules/blueprints/blueprints-index.md`.
 
 You don't need to manually create or update any README files - just focus on creating quality blueprint content using the MCP tools.
 

@@ -1,4 +1,4 @@
-# BDD Jutsu
+# BDD
 
 Comprehensive Behavior-Driven Development principles, practices, and collaboration patterns.
 
@@ -14,5 +14,5 @@ Comprehensive Behavior-Driven Development principles, practices, and collaborati
 Install with npx (no installation required):
 
 ```bash
-han plugin install jutsu-bdd
+han plugin install bdd
 ```

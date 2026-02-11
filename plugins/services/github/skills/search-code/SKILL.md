@@ -7,7 +7,7 @@ description: Search for code across GitHub repositories
 
 ## Name
 
-hashi-github:search-code - Search for code across GitHub repositories
+github:search-code - Search for code across GitHub repositories
 
 ## Synopsis
 

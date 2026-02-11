@@ -1,4 +1,4 @@
-# jutsu-runbooks
+# Runbooks
 
 Structured operational documentation and runbook patterns for human operators. This plugin helps create clear, actionable runbooks for troubleshooting, incident response, and maintenance tasks.
 
@@ -12,7 +12,7 @@ Structured operational documentation and runbook patterns for human operators. T
 ## Installation
 
 ```bash
-han plugin install jutsu-runbooks
+han plugin install runbooks
 ```
 
 Or install via Claude Code:
@@ -54,7 +54,7 @@ This plugin is ideal for:
 - On-call guides with decision trees
 - Maintenance checklists
 
-**SOPs** (jutsu-sop) are for **AI agents**:
+**SOPs** (sop plugin) are for **AI agents**:
 
 - Workflow definitions for agent execution
 - Automated task sequences
@@ -103,5 +103,5 @@ runbooks/
 
 ## Related Plugins
 
-- **jutsu-sop** - Standard operating procedures for AI agent workflows
-- **jutsu-markdown** - Markdown syntax and formatting skills
+- **sop** - Standard operating procedures for AI agent workflows
+- **markdown** - Markdown syntax and formatting skills

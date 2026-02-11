@@ -1,12 +1,12 @@
-# jutsu-scratch
+# Scratch
 
 Scratch workspace enforcement - ensures temporary files are placed in `.claude/.scratch` and gitignored.
 
 ## Purpose
 
-This jutsu provides guidance for working with temporary, draft, or experimental files that should not be committed to version control. It enforces placement in a standardized, gitignored location.
+This plugin provides guidance for working with temporary, draft, or experimental files that should not be committed to version control. It enforces placement in a standardized, gitignored location.
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Hooks
 
@@ -19,7 +19,7 @@ This jutsu provides guidance for working with temporary, draft, or experimental 
 ## Installation
 
 ```bash
-han plugin install jutsu-scratch
+han plugin install scratch
 ```
 
 Or manually add to your Claude Code settings:
@@ -27,7 +27,7 @@ Or manually add to your Claude Code settings:
 ```json
 {
   "enabledPlugins": {
-    "jutsu-scratch@han": true
+    "scratch@han": true
   }
 }
 ```

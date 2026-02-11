@@ -7,7 +7,7 @@ description: Manage incident response workflow with Sentry alerts and issue trac
 
 ## Name
 
-hashi-sentry:incident-response - Manage incident response workflow with Sentry alerts and issue tracking
+sentry:incident-response - Manage incident response workflow with Sentry alerts and issue tracking
 
 ## Synopsis
 

@@ -7,7 +7,7 @@ description: Mark a Jira ticket as complete after validating acceptance criteria
 
 ## Name
 
-hashi-jira:complete - Mark a Jira ticket as complete after validating acceptance criteria
+jira:complete - Mark a Jira ticket as complete after validating acceptance criteria
 
 ## Synopsis
 

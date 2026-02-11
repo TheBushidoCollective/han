@@ -184,7 +184,7 @@ export GLUESTACK_PATH="/path/to/gluestack-ui"
 
 ## Integration with Other Skills
 
-Combine MCP tools with other jutsu-gluestack skills:
+Combine MCP tools with other gluestack skills:
 
 - **gluestack-components**: After getting source code, use component skill for implementation patterns
 - **gluestack-theming**: Use with Themed variant components for design token integration

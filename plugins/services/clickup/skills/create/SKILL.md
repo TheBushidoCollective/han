@@ -7,7 +7,7 @@ description: Create a new ClickUp task interactively
 
 ## Name
 
-hashi-clickup:create - Create a new ClickUp task interactively
+clickup:create - Create a new ClickUp task interactively
 
 ## Synopsis
 

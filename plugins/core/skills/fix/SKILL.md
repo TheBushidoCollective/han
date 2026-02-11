@@ -124,7 +124,7 @@ After fixing:
 
 ## Notes
 
-- Use TodoWrite to track debugging steps
+- Use TaskCreate to track debugging steps
 - Document findings even if you don't find the root cause immediately
 - Use proof-of-work skill to show the bug is actually fixed
 - Consider using boy-scout-rule skill to improve surrounding code

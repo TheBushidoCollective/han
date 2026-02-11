@@ -7,7 +7,7 @@ description: Add a comment to a Linear issue
 
 ## Name
 
-hashi-linear:comment - Add a comment to a Linear issue
+linear:comment - Add a comment to a Linear issue
 
 ## Synopsis
 

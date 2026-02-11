@@ -1,12 +1,12 @@
-# Jutsu: Notetaker
+# Notetaker
 
 Structured note-taking and code annotation patterns for AI-assisted development. Helps AI assistants leave meaningful notes, TODO comments, and documentation links in codebases.
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Skills
 
-This jutsu provides the following skills for AI-assisted note-taking and code annotation:
+This plugin provides the following skills for AI-assisted note-taking and code annotation:
 
 - **notetaker-fundamentals**: Structured note-taking patterns including AI-DEV-NOTE format, enhanced TODO comments, decision records, and context preservation for leaving development breadcrumbs
 - **code-annotation-patterns**: Advanced annotation patterns with semantic tags for technical debt, security, performance, accessibility, testing, and change impact tracking
@@ -14,7 +14,7 @@ This jutsu provides the following skills for AI-assisted note-taking and code an
 
 ## Philosophy
 
-When AI assistants make changes to code, they should leave breadcrumbs for future AI assistants and human developers. This jutsu provides standardized patterns for:
+When AI assistants make changes to code, they should leave breadcrumbs for future AI assistants and human developers. This plugin provides standardized patterns for:
 
 - **Preserving context** about implementation decisions
 - **Signaling uncertainty** where alternatives exist
@@ -27,14 +27,14 @@ When AI assistants make changes to code, they should leave breadcrumbs for futur
 Install via the Han marketplace:
 
 ```bash
-han plugin install jutsu-notetaker
+han plugin install notetaker
 ```
 
 Or install manually:
 
 ```bash
 claude plugin marketplace add thebushidocollective/han
-claude plugin install jutsu-notetaker@han
+claude plugin install notetaker@han
 ```
 
 ## Core Patterns
@@ -288,7 +288,7 @@ Document performance characteristics and optimization opportunities:
 
 ## Resources
 
-This jutsu is inspired by:
+This plugin is inspired by:
 
 - [AI-Powered Documentation: Make Your Codebase Self-Explanatory](https://dev.to/yysun/ai-powered-documentation-make-your-codebase-self-explanatory-231g)
 - [Top 2025 AI Documentation Tools to Boost Developer Productivity](https://max-productive.ai/ai-tools/documentation/)

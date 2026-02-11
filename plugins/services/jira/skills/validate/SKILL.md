@@ -7,7 +7,7 @@ description: Validate acceptance criteria for a Jira ticket without changing sta
 
 ## Name
 
-hashi-jira:validate - Validate acceptance criteria for a Jira ticket without changing status
+jira:validate - Validate acceptance criteria for a Jira ticket without changing status
 
 ## Synopsis
 

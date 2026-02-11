@@ -73,5 +73,5 @@ end
 Install with npx (no installation required):
 
 ```bash
-han plugin install jutsu-tdd
+han plugin install tdd
 ```

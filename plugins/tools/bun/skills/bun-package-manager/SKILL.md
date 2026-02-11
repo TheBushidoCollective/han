@@ -1,5 +1,5 @@
 ---
-name: jutsu-bun:bun-package-manager
+name: bun-package-manager
 description: Use when managing dependencies with Bun's package manager. Covers installing packages, workspaces, lockfiles, and migrating from npm/yarn/pnpm to Bun.
 allowed-tools:
   - Read

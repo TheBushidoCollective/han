@@ -1,7 +1,7 @@
 ---
 name: blueprints-writing
 description: Use when creating or updating technical blueprint documentation for new features, API changes, or architectural modifications. Always use search_blueprints first to avoid duplication, then write_blueprint with proper structure.
-allowed-tools: [Read, Write, Edit, Grep, Glob, mcp__plugin_hashi-blueprints_blueprints__search_blueprints, mcp__plugin_hashi-blueprints_blueprints__read_blueprint, mcp__plugin_hashi-blueprints_blueprints__write_blueprint]
+allowed-tools: [Read, Write, Edit, Grep, Glob, mcp__plugin_blueprints_blueprints__search_blueprints, mcp__plugin_blueprints_blueprints__read_blueprint, mcp__plugin_blueprints_blueprints__write_blueprint]
 ---
 
 # Writing Technical Blueprints

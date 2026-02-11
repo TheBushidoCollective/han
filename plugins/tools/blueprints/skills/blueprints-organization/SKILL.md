@@ -1,7 +1,7 @@
 ---
 name: blueprints-organization
 description: Use when managing blueprints directory structure and avoiding duplication. Always search_blueprints before creating to prevent duplicate documentation. Handles naming conventions and cross-references.
-allowed-tools: [Read, Write, Edit, Grep, Glob, mcp__plugin_hashi-blueprints_blueprints__search_blueprints, mcp__plugin_hashi-blueprints_blueprints__read_blueprint, mcp__plugin_hashi-blueprints_blueprints__write_blueprint]
+allowed-tools: [Read, Write, Edit, Grep, Glob, mcp__plugin_blueprints_blueprints__search_blueprints, mcp__plugin_blueprints_blueprints__read_blueprint, mcp__plugin_blueprints_blueprints__write_blueprint]
 ---
 
 # Organizing Technical Blueprints

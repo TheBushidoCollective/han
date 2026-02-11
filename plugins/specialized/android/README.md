@@ -1,4 +1,4 @@
-# jutsu-android
+# Android
 
 Android development validation with Gradle build hooks for Claude Code.
 
@@ -11,7 +11,7 @@ Android development validation with Gradle build hooks for Claude Code.
 ## Installation
 
 ```bash
-han plugin install jutsu-android
+han plugin install android
 ```
 
 ## Hooks
@@ -61,6 +61,6 @@ jutsu-android:
 
 ## Related Plugins
 
-- **jutsu-kotlin**: Kotlin language skills
-- **jutsu-java**: Java language skills
-- **jutsu-expo**: React Native with Expo
+- **kotlin**: Kotlin language skills
+- **java**: Java language skills
+- **expo**: React Native with Expo

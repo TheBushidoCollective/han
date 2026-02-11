@@ -7,7 +7,7 @@ description: Get detailed information about a specific Jira ticket
 
 ## Name
 
-hashi-jira:ticket - Get detailed information about a specific Jira ticket
+jira:ticket - Get detailed information about a specific Jira ticket
 
 ## Synopsis
 

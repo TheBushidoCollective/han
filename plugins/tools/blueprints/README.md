@@ -7,8 +7,7 @@ MCP server for managing technical blueprint documentation with programmatic tool
 This plugin provides comprehensive blueprint management through:
 
 - **MCP Server** - Programmatic access to blueprints via JSON-RPC tools
-- **Skills** - Guidelines for writing effective technical blueprints
-- **Commands** - Generate and update documentation
+- **Skills** - Guidelines for writing effective technical blueprints and generating/updating documentation
 - **Hooks** - Enforcement and reminders for documentation requirements
 
 ## Installation
@@ -17,7 +16,7 @@ This plugin provides comprehensive blueprint management through:
 han plugin install blueprints
 ```
 
-This installs both the MCP server and the skills/commands/hooks.
+This installs the MCP server, skills, and hooks.
 
 ## MCP Tools
 
@@ -79,7 +78,7 @@ Create or update a blueprint with frontmatter.
 }
 ```
 
-## Commands
+## Slash Commands (via Skills)
 
 ### `/blueprint <system-name>`
 
@@ -99,7 +98,7 @@ Deeply research all systems and create comprehensive documentation:
 /blueprints
 ```
 
-This command:
+This skill:
 
 1. Discovers all systems in the codebase
 2. Audits existing blueprints for accuracy

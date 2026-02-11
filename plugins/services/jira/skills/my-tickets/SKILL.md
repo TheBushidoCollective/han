@@ -7,7 +7,7 @@ description: Show all Jira tickets assigned to you
 
 ## Name
 
-hashi-jira:my-tickets - Show all Jira tickets assigned to you
+jira:my-tickets - Show all Jira tickets assigned to you
 
 ## Synopsis
 

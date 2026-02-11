@@ -7,7 +7,7 @@ description: Search for Jira tickets using JQL or text
 
 ## Name
 
-hashi-jira:search - Search for Jira tickets using JQL or text
+jira:search - Search for Jira tickets using JQL or text
 
 ## Synopsis
 

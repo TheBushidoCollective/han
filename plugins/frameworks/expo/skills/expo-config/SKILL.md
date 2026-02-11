@@ -1,5 +1,5 @@
 ---
-name: jutsu-expo:expo-config
+name: expo-config
 description: Use when configuring Expo apps with app.json, app.config.js, and EAS configuration. Covers app metadata, plugins, build configuration, and environment variables.
 allowed-tools:
   - Read

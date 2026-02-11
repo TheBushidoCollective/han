@@ -1,5 +1,5 @@
 ---
-name: jutsu-bun:bun-testing
+name: bun-testing
 description: Use when writing tests with Bun's built-in test runner. Covers test organization, assertions, mocking, and snapshot testing using Bun's fast test infrastructure.
 allowed-tools:
   - Read

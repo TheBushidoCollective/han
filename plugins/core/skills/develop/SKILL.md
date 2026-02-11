@@ -127,22 +127,22 @@ This command guides you through a systematic feature development process:
 
 ## Phase 4: Design (Parallel Agent Execution)
 
-### Create architecture with specialized Dō agents
+### Create architecture with specialized agents
 
 **Objective**: Design the implementation before coding.
 
-**Select appropriate Dō agent(s)** based on feature type:
+**Select appropriate specialized agent(s)** based on feature type:
 
-- **Frontend feature?** → `do-frontend-development:presentation-engineer`
-- **Backend API?** → `do-backend-development:api-designer`
-- **Database changes?** → `do-database-engineering:database-designer`
-- **Complex system?** → `do-architecture:solution-architect`
+- **Frontend feature?** → `frontend:presentation-engineer`
+- **Backend API?** → `backend:api-designer`
+- **Database changes?** → `databases:database-designer`
+- **Complex system?** → `architecture:solution-architect`
 
 **Launch agents in PARALLEL** for multi-disciplinary features:
 
 - Frontend + Backend agents simultaneously
-- Include `do-security-engineering:security-engineer` for sensitive features
-- Include `do-performance-engineering:performance-engineer` for high-traffic features
+- Include `security:security-engineer` for sensitive features
+- Include `performance:performance-engineer` for high-traffic features
 
 **Agent responsibilities**:
 
@@ -163,7 +163,7 @@ This command guides you through a systematic feature development process:
 
 **Objective**: Implement the designed solution with quality practices.
 
-**Apply TDD cycle** (use `han-core:test-driven-development` skill):
+**Apply TDD cycle** (use `tdd:test-driven-development` skill):
 
 ```
 For each component:
@@ -207,14 +207,14 @@ For each component:
    - Confidence scoring ≥80%
    - False positive filtering
 
-2. **Security Engineer** (do-security-engineering:security-engineer):
+2. **Security Engineer** (security:security-engineer):
    - Security vulnerability scan
    - Auth/authz pattern verification
    - Input validation review
 
 3. **Discipline-Specific Agent**:
-   - Frontend: `do-frontend-development:presentation-engineer` (accessibility, UX)
-   - Backend: `do-backend-development:backend-architect` (API design, scalability)
+   - Frontend: `frontend:presentation-engineer` (accessibility, UX)
+   - Backend: `backend:backend-architect` (API design, scalability)
    - etc.
 
 **Review consolidation**:
@@ -248,7 +248,7 @@ Options:
 **Run all validation hooks**:
 
 ```bash
-# All Jutsu plugins automatically run on Stop
+# All validation plugins automatically run on Stop
 # Verify: tests, linting, type checking, etc.
 ```
 
@@ -268,7 +268,7 @@ Options:
 3. **Breaking changes**: None, or list with migration guide
 4. **Follow-up tasks**: Any deferred work or tech debt
 
-**Create TODO list** (using TodoWrite tool):
+**Create TODO list** (using TaskCreate tool):
 
 - Document any follow-up tasks
 - Track deferred improvements
@@ -287,7 +287,7 @@ Options:
 **Blog post creation**:
 
 1. **Research context** (optional):
-   - Use `hashi-reddit` to find related community discussions
+   - Use `reddit` to find related community discussions
    - Identify pain points the feature addresses
    - Understand how users talk about this problem
 
@@ -403,7 +403,7 @@ Q: Should we use cursor-based or offset-based pagination?
 A: [User selects offset-based for consistency]
 
 Phase 4: Design
-- Agent: do-backend-development:api-designer
+- Agent: backend:api-designer
 - Design: Extend existing UserService with pagination
 - Interface: getUsersPaginated(page, limit) -> { users, total }
 
@@ -440,5 +440,5 @@ Testing: Run GET /api/users?page=1&limit=10
 - `/review` - Run multi-agent review only
 - `/commit` - Smart commit workflow
 - `/create-blog-post` - Research and write blog posts
-- `han-core:test-driven-development` - TDD skill
+- `tdd:test-driven-development` - TDD skill
 - `han-core:code-reviewer` - Review skill

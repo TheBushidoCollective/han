@@ -7,7 +7,7 @@ description: Search for Linear issues
 
 ## Name
 
-hashi-linear:search - Search for Linear issues
+linear:search - Search for Linear issues
 
 ## Synopsis
 
