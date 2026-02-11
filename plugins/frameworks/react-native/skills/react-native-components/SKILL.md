@@ -1,5 +1,6 @@
 ---
 name: react-native-components
+user-invocable: false
 description: Use when building React Native UI components with core components, custom components, and component patterns. Covers View, Text, Image, ScrollView, FlatList, and component composition.
 allowed-tools:
   - Read

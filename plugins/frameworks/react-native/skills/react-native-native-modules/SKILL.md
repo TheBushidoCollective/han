@@ -1,5 +1,6 @@
 ---
 name: react-native-native-modules
+user-invocable: false
 description: Use when building or integrating native modules in React Native. Covers creating native modules, Turbo Modules, bridging native code, and accessing platform-specific APIs.
 allowed-tools:
   - Read

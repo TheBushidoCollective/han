@@ -1,5 +1,6 @@
 ---
 name: csharp-async-patterns
+user-invocable: false
 description: Use when C# async/await patterns including Task, ValueTask, async streams, and cancellation. Use when writing asynchronous C# code.
 allowed-tools:
   - Bash

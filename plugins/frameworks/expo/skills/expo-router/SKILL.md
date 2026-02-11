@@ -1,5 +1,6 @@
 ---
 name: expo-router
+user-invocable: false
 description: Use when implementing file-based routing in Expo with Expo Router. Covers app directory structure, navigation, layouts, dynamic routes, and deep linking.
 allowed-tools:
   - Read

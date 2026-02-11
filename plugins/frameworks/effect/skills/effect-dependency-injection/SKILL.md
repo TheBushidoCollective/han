@@ -1,5 +1,6 @@
 ---
 name: effect-dependency-injection
+user-invocable: false
 description: Use when Effect dependency injection patterns including Context, Layer, service definitions, and dependency composition. Use for managing dependencies in Effect applications.
 allowed-tools:
   - Bash

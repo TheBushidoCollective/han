@@ -1,5 +1,6 @@
 ---
 name: csharp-nullable-types
+user-invocable: false
 description: Use when C# nullable reference types, null safety patterns, and migration strategies. Use when ensuring null safety in C# code.
 allowed-tools:
   - Bash

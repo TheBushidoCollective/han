@@ -1,5 +1,6 @@
 ---
 name: fastapi-dependency-injection
+user-invocable: false
 description: Master FastAPI dependency injection for building modular, testable APIs.
   Use when creating reusable dependencies and services.
 allowed-tools:

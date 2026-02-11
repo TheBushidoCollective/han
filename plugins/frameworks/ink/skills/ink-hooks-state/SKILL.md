@@ -1,5 +1,6 @@
 ---
 name: ink-hooks-state
+user-invocable: false
 description: Use when managing state and side effects in Ink applications using React hooks for terminal UIs.
 allowed-tools: []
 ---

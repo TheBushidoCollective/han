@@ -1,5 +1,6 @@
 ---
 name: effect-error-handling
+user-invocable: false
 description: Use when Effect error handling patterns including catchAll, catchTag, either, option, and typed errors. Use for handling expected errors in Effect applications.
 allowed-tools:
   - Bash

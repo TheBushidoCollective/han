@@ -1,5 +1,6 @@
 ---
 name: react-native-platform
+user-invocable: false
 description: Use when handling platform-specific code in React Native for iOS and Android. Covers Platform API, platform-specific components, native modules, and cross-platform best practices.
 allowed-tools:
   - Read

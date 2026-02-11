@@ -1,5 +1,6 @@
 ---
 name: ecto-query-patterns
+user-invocable: false
 description: Use when querying data with Ecto.Query DSL including where clauses, joins, aggregates, preloading, and query composition. Use for building flexible database queries in Elixir applications.
 allowed-tools:
   - Bash

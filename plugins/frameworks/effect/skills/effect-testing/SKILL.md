@@ -1,5 +1,6 @@
 ---
 name: effect-testing
+user-invocable: false
 description: Use when testing Effect code including Effect.gen in tests, test layers, mocking services, and testing error scenarios. Use for writing tests for Effect applications.
 allowed-tools:
   - Bash

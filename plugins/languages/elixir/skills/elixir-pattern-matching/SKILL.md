@@ -1,5 +1,6 @@
 ---
 name: elixir-pattern-matching
+user-invocable: false
 description: Use when Elixir pattern matching including function clauses, case statements, with statements, and destructuring. Use for elegant control flow.
 allowed-tools:
   - Bash

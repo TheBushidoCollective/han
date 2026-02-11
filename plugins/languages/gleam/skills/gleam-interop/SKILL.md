@@ -1,5 +1,6 @@
 ---
 name: Gleam Erlang Interop
+user-invocable: false
 description: Use when gleam-Erlang interoperability including calling Erlang code from Gleam, using Erlang libraries, external functions, working with Erlang types, NIFs, and leveraging the BEAM ecosystem from Gleam applications.
 allowed-tools: []
 ---

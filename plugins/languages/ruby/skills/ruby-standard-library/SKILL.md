@@ -1,5 +1,6 @@
 ---
 name: ruby-standard-library
+user-invocable: false
 description: Use when working with Ruby's standard library including Enumerable, File I/O, Time/Date, Regular Expressions, and core classes.
 allowed-tools:
   - Bash

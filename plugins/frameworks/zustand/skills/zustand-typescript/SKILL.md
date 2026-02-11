@@ -1,5 +1,6 @@
 ---
 name: zustand-typescript
+user-invocable: false
 description: Use when working with Zustand in TypeScript projects. Covers type-safe store creation, typed selectors, and advanced TypeScript patterns with Zustand.
 allowed-tools:
   - Read

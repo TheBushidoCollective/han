@@ -1,5 +1,6 @@
 ---
 name: Objective-C ARC Patterns
+user-invocable: false
 description: Use when automatic Reference Counting in Objective-C including strong/weak references, retain cycles, ownership qualifiers, bridging with Core Foundation, and patterns for memory-safe code without manual retain/release.
 allowed-tools: []
 ---

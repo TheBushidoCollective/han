@@ -1,5 +1,6 @@
 ---
 name: java-generics
+user-invocable: false
 description: Use when Java generics including type parameters, wildcards, and type bounds. Use when writing type-safe reusable code.
 allowed-tools:
   - Bash

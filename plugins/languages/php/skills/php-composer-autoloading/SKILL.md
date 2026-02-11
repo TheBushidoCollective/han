@@ -1,5 +1,6 @@
 ---
 name: PHP Composer and Autoloading
+user-invocable: false
 description: Use when composer package management and PSR-4 autoloading including dependency management, autoload strategies, package creation, version constraints, and patterns for modern PHP project organization and distribution.
 allowed-tools: []
 ---

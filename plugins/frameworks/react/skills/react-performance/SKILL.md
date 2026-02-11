@@ -1,5 +1,6 @@
 ---
 name: react-performance
+user-invocable: false
 description: Use when React performance optimization including memoization, lazy loading, and virtualization. Use when optimizing React applications.
 allowed-tools:
   - Bash

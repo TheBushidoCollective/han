@@ -1,5 +1,6 @@
 ---
 name: gluestack-theming
+user-invocable: false
 description: Use when customizing gluestack-ui themes and design tokens. Covers theme provider setup, design tokens, dark mode, NativeWind integration, and extending themes.
 allowed-tools:
   - Read

@@ -1,5 +1,6 @@
 ---
 name: ruby-metaprogramming
+user-invocable: false
 description: Use when working with Ruby metaprogramming features including dynamic method definition, method_missing, class_eval, define_method, and reflection.
 allowed-tools:
   - Bash

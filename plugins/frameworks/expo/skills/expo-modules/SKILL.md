@@ -1,5 +1,6 @@
 ---
 name: expo-modules
+user-invocable: false
 description: Use when working with Expo SDK modules for camera, location, notifications, file system, and other device APIs. Covers permissions, configurations, and best practices.
 allowed-tools:
   - Read

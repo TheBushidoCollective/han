@@ -1,5 +1,6 @@
 ---
 name: go-concurrency
+user-invocable: false
 description: Use when Go concurrency with goroutines, channels, and sync patterns. Use when writing concurrent Go code.
 allowed-tools:
   - Bash

@@ -1,5 +1,6 @@
 ---
 name: rust-ownership-system
+user-invocable: false
 description: Use when Rust's ownership system including ownership rules, borrowing, lifetimes, and memory safety. Use when working with Rust memory management.
 allowed-tools:
   - Bash

@@ -1,5 +1,6 @@
 ---
 name: rails-active-record-patterns
+user-invocable: false
 description: Use when active Record patterns including models, associations, queries, validations, and callbacks.
 allowed-tools:
   - Read

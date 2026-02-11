@@ -1,5 +1,6 @@
 ---
 name: java-streams-api
+user-invocable: false
 description: Use when Java Streams API for functional-style data processing. Use when processing collections with streams.
 allowed-tools:
   - Bash

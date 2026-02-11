@@ -1,5 +1,6 @@
 ---
 name: gluestack-components
+user-invocable: false
 description: Use when building UI with gluestack-ui components. Covers component composition, variants, sizes, states, accessibility props, and platform-specific considerations for React and React Native.
 allowed-tools:
   - Read

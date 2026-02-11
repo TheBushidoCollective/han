@@ -1,5 +1,6 @@
 ---
 name: expo-updates
+user-invocable: false
 description: Use when implementing over-the-air (OTA) updates with Expo Updates. Covers update configuration, checking for updates, and update strategies.
 allowed-tools:
   - Read

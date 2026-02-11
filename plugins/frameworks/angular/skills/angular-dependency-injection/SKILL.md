@@ -1,5 +1,6 @@
 ---
 name: angular-dependency-injection
+user-invocable: false
 description: Use when building modular Angular applications requiring dependency injection with providers, injectors, and services.
 allowed-tools:
   - Bash

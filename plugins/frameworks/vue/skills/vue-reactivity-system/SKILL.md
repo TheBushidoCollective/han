@@ -1,5 +1,6 @@
 ---
 name: vue-reactivity-system
+user-invocable: false
 description: Use when Vue reactivity system with refs, reactive, computed, and watchers. Use when managing complex state in Vue applications.
 allowed-tools:
   - Bash

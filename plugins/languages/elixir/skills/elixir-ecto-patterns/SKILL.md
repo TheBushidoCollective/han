@@ -1,5 +1,6 @@
 ---
 name: elixir-ecto-patterns
+user-invocable: false
 description: Use when Elixir Ecto patterns including schemas, changesets, queries, and transactions. Use when building database-driven Elixir applications.
 allowed-tools:
   - Bash

@@ -1,5 +1,6 @@
 ---
 name: react-native-navigation
+user-invocable: false
 description: Use when implementing navigation in React Native apps with React Navigation. Covers stack, tab, drawer navigation, deep linking, and navigation patterns.
 allowed-tools:
   - Read

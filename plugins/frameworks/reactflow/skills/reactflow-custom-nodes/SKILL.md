@@ -1,5 +1,6 @@
 ---
 name: reactflow-custom-nodes
+user-invocable: false
 description: Use when creating custom React Flow nodes, edges, and handles. Covers custom node components, resizable nodes, toolbars, and advanced customization.
 allowed-tools:
   - Bash

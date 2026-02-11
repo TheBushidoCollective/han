@@ -1,5 +1,6 @@
 ---
 name: phoenix-patterns
+user-invocable: false
 description: Use when applying Phoenix Framework best practices including context design, controller patterns, and application architecture. Use when building Phoenix applications.
 allowed-tools:
   - Bash

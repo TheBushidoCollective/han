@@ -1,5 +1,6 @@
 ---
 name: ecto-schema-patterns
+user-invocable: false
 description: Use when defining data structures using Ecto schemas including fields, associations, embedded schemas, and schema metadata. Use for modeling domain data in Elixir applications.
 allowed-tools:
   - Bash

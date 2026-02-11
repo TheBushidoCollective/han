@@ -1,5 +1,6 @@
 ---
 name: gluestack-mcp-tools
+user-invocable: false
 description: Use when discovering, exploring, or retrieving gluestack-ui components via MCP tools. Provides access to component source code, variants, demos, and metadata.
 allowed-tools:
   - Read
