@@ -1,4 +1,4 @@
-# Pulumi Jutsu
+# Pulumi
 
 Pulumi infrastructure-as-code validation and best practices.
 
@@ -29,8 +29,6 @@ Validates Pulumi projects in directories containing `Pulumi.yaml` using `pulumi 
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install jutsu-pulumi
+han plugin install pulumi
 ```
