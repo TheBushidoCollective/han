@@ -90,7 +90,7 @@ Ensure your project has a `build-storybook` script:
 
 ## Supported Frameworks
 
-This jutsu works with all Storybook-supported frameworks:
+This plugin works with all Storybook-supported frameworks:
 
 - React (Vite, Webpack, Next.js)
 - Vue 3 (Vite, Webpack)
