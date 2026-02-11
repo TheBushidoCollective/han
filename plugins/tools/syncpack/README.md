@@ -1,4 +1,4 @@
-# jutsu-syncpack
+# Syncpack
 
 Syncpack validation and auto-fix for consistent dependency versions in JavaScript monorepos.
 
@@ -12,7 +12,7 @@ Syncpack validation and auto-fix for consistent dependency versions in JavaScrip
 ## Installation
 
 ```bash
-han plugin install jutsu-syncpack
+han plugin install syncpack
 ```
 
 ## Hooks
