@@ -38,7 +38,7 @@ const contentBoxStyle = {
 const codeBlockStyle = {
 	backgroundColor: colors.bg.primary,
 	borderRadius: radii.sm,
-	padding: `${spacing.sm}px ${spacing.md}px`,
+	padding: `${spacing.md}px ${spacing.lg}px`,
 	fontFamily: fonts.mono,
 	fontSize: fontSizes.sm,
 	color: colors.text.primary,
