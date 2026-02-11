@@ -1,5 +1,6 @@
 ---
 name: cpp-templates-metaprogramming
+user-invocable: false
 description: Use when C++ templates and metaprogramming including template specialization, SFINAE, type traits, and C++20 concepts.
 allowed-tools:
   - Read

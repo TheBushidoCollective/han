@@ -1,5 +1,6 @@
 ---
 name: c-data-structures
+user-invocable: false
 description: Use when fundamental C data structures including arrays, structs, linked lists, trees, and hash tables with memory-efficient implementations.
 allowed-tools:
   - Read

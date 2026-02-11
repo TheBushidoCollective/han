@@ -1,5 +1,6 @@
 ---
 name: c-systems-programming
+user-invocable: false
 description: Use when c systems programming including file I/O, processes, signals, and system calls for low-level system interaction.
 allowed-tools:
   - Read
