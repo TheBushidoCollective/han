@@ -28,7 +28,7 @@ han plugin install storybook
 
 ## Usage
 
-Once installed, this jutsu automatically validates your Storybook build:
+Once installed, this plugin automatically validates your Storybook build:
 
 - When you finish a conversation with Claude Code (Stop hook)
 - When Claude Code agents complete their work (SubagentStop hook)
