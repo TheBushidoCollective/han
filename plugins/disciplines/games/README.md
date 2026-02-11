@@ -1,4 +1,4 @@
-# Do Game Development
+# Games
 
 Game development engineering agents providing expertise in engine architecture,
 gameplay systems, and performance optimization
@@ -13,7 +13,7 @@ This plugin provides the following specialized agents:
 
 ## Usage
 
-Agents can be invoked using the Agent tool or through
+Agents can be invoked using the Task tool with the appropriate subagent_type or through
 natural conversation:
 
 ```text
@@ -25,8 +25,6 @@ to their domain.
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install do-game-development
+han plugin install games
 ```

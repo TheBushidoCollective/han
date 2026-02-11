@@ -1,14 +1,14 @@
-# Hashi: GitHub
+# GitHub
 
 Connect Claude Code to the GitHub API for comprehensive repository management, issue tracking, pull request workflows, GitHub Actions, and code search.
 
 **Zero Configuration**: Uses GitHub Copilot's hosted MCP server - no installation, no Docker, no authentication setup required!
 
-## What This Hashi Provides
+## What This Plugin Provides
 
 ### MCP Server: github
 
-This hashi connects to GitHub's hosted [GitHub MCP Server](https://github.com/github/github-mcp-server) via `https://api.githubcopilot.com/mcp` to provide direct access to the GitHub API with 100+ tools for:
+This plugin connects to GitHub's hosted [GitHub MCP Server](https://github.com/github/github-mcp-server) via `https://api.githubcopilot.com/mcp` to provide direct access to the GitHub API with 100+ tools for:
 
 - **Repository Management**: Create, fork, and manage repositories
 - **File Operations**: Read, create, update, and delete files with automatic branch creation
@@ -66,10 +66,8 @@ Once installed, Claude Code gains access to these tool categories:
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install hashi-github
+han plugin install github
 ```
 
 ## Usage

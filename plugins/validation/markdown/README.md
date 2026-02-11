@@ -1,8 +1,8 @@
-# Jutsu: Markdown
+# Markdown
 
 Markdown documentation skills and linting with markdownlint.
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Validation Hooks
 
@@ -13,7 +13,7 @@ Markdown documentation skills and linting with markdownlint.
 
 ### Skills
 
-This jutsu provides the following skills:
+This plugin provides the following skills:
 
 #### Markdown Fundamentals
 
@@ -29,22 +29,13 @@ This jutsu provides the following skills:
 
 ## Installation
 
-Install via the Han marketplace:
-
 ```bash
-han plugin install jutsu-markdown
-```
-
-Or install manually:
-
-```bash
-claude plugin marketplace add thebushidocollective/han
-claude plugin install jutsu-markdown@han
+han plugin install markdown
 ```
 
 ## Usage
 
-Once installed, this jutsu automatically validates your markdown files:
+Once installed, this plugin automatically validates your markdown files:
 
 - When you finish a conversation with Claude Code
 - When Claude Code agents complete their work
@@ -82,7 +73,7 @@ Example `.markdownlint.json`:
 Create a `han-config.yml` in directories where you want to customize behavior:
 
 ```yaml
-jutsu-markdown:
+markdown:
   lint:
     enabled: false  # Disable markdownlint for this directory
 ```
@@ -90,7 +81,7 @@ jutsu-markdown:
 Or override the command:
 
 ```yaml
-jutsu-markdown:
+markdown:
   lint:
     command: "npx -y markdownlint-cli --fix . --disable MD013"  # Ignore line length
 ```

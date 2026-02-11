@@ -1,4 +1,4 @@
-# Do Frontend Development
+# Frontend
 
 Agents specialized in frontend development, UI design, and presentation
 engineering. Focuses on visual design, user experience, and interaction
@@ -12,7 +12,7 @@ This plugin provides the following specialized agents:
 
 ## Usage
 
-Agents can be invoked using the Agent tool or through
+Agents can be invoked using the Task tool with the appropriate subagent_type or through
 natural conversation:
 
 ```text
@@ -24,8 +24,6 @@ to their domain.
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install do-frontend-development
+han plugin install frontend
 ```

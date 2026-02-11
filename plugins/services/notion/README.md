@@ -1,14 +1,14 @@
-# Hashi: Notion
+# Notion
 
 Connect Claude Code to your Notion workspace via Notion's official hosted MCP server. Search pages, manage content, query databases, and collaborate with AI-optimized access to your knowledge base.
 
-## What This Hashi Provides
+## What This Plugin Provides
 
 ### MCP Server: notion
 
 Notion MCP provides a token-efficient, Markdown-based API optimized for AI assistants. The server uses "Notion-flavored" Markdown for powerful page creation and editing.
 
-This hashi connects Claude Code to Notion and provides:
+This plugin connects Claude Code to Notion and provides:
 
 - **Workspace Search**: Search across your Notion workspace and connected tools (Slack, Google Drive, Jira)
 - **Page Management**: Create, update, duplicate, and move pages
@@ -49,14 +49,14 @@ Once installed, Claude Code gains access to these tools:
 ### Via Han Marketplace
 
 ```bash
-han plugin install hashi-notion
+han plugin install notion
 ```
 
 Or install manually:
 
 ```bash
 claude plugin marketplace add thebushidocollective/han
-claude plugin install hashi-notion@han
+claude plugin install notion@han
 ```
 
 ### Authentication

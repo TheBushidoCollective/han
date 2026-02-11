@@ -1,12 +1,12 @@
-# Hashi: Reddit
+# Reddit
 
 MCP server integration for Reddit, enabling Claude Code to fetch frontpage posts, subreddit information, hot/new/top/rising posts, post content, and comments directly from Reddit's public API.
 
-## What This Hashi Provides
+## What This Plugin Provides
 
 ### MCP Server: reddit
 
-This hashi connects Claude Code to Reddit and provides read-only access to Reddit content:
+This plugin connects Claude Code to Reddit and provides read-only access to Reddit content:
 
 - **Frontpage Posts**: Fetch hot posts from Reddit's frontpage
 - **Subreddit Information**: Get details about any subreddit
@@ -46,14 +46,14 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 ### Via Han Marketplace
 
 ```bash
-han plugin install hashi-reddit
+han plugin install reddit
 ```
 
 Or install manually:
 
 ```bash
 claude plugin marketplace add thebushidocollective/han
-claude plugin install hashi-reddit@han
+claude plugin install reddit@han
 ```
 
 ### Manual Installation

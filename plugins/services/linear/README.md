@@ -1,12 +1,12 @@
-# Hashi: Linear
+# Linear
 
 MCP server for Linear integration with automatic acceptance criteria validation. Connects Claude Code directly to your Linear workspace for seamless issue management and quality enforcement.
 
-## What This Hashi Provides
+## What This Plugin Provides
 
 ### MCP Server: Linear
 
-This hashi connects Claude Code to Linear and provides complete issue lifecycle management with built-in validation to ensure work meets acceptance criteria before marking issues complete.
+This plugin connects Claude Code to Linear and provides complete issue lifecycle management with built-in validation to ensure work meets acceptance criteria before marking issues complete.
 
 **Key Capabilities:**
 
@@ -21,7 +21,7 @@ This hashi connects Claude Code to Linear and provides complete issue lifecycle 
 
 ### Automatic Validation
 
-When you stop a Claude Code session, this hashi automatically:
+When you stop a Claude Code session, this plugin automatically:
 
 1. **Scans the conversation** for any Linear issue identifiers (e.g., ENG-123, PROD-456)
 2. **Reminds you to validate** that work meets acceptance criteria
@@ -48,10 +48,8 @@ Once installed, Claude Code gains access to these Linear MCP tools:
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install hashi-linear
+han plugin install linear
 ```
 
 ## Usage

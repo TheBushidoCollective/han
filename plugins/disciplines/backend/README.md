@@ -1,4 +1,4 @@
-# Do Backend Development
+# Backend
 
 Agents specialized in backend development, API design, and system architecture.
 Focuses on scalable server-side solutions and data management.
@@ -12,7 +12,7 @@ This plugin provides the following specialized agents:
 
 ## Usage
 
-Agents can be invoked using the Agent tool or through
+Agents can be invoked using the Task tool with the appropriate subagent_type or through
 natural conversation:
 
 ```text
@@ -24,8 +24,6 @@ to their domain.
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install do-backend-development
+han plugin install backend
 ```

@@ -1,4 +1,4 @@
-# han-core
+# Core
 
 **Required infrastructure plugin for the Han marketplace.**
 
@@ -6,14 +6,14 @@ This plugin provides the foundational capabilities that power the Han ecosystem,
 
 > **Important:** The `core` plugin is required for all Han installations. It's automatically included when using `han plugin install --auto`.
 
-## What is han-core?
+## What is Core?
 
-`han-core` is the infrastructure backbone of the Han plugin marketplace. It consolidates the essential components that all plugins depend on:
+`core` is the infrastructure backbone of the Han plugin marketplace. It consolidates the essential components that all plugins depend on:
 
 - **Delegation Protocols**: Smart subagent handling and task routing
 - **Skill System**: Transparent skill selection and application
 - **Quality Enforcement**: Pre-push validation and quality gates
-- **MCP Servers**: Hook execution, metrics tracking, and documentation access
+- **MCP Server**: Unified hooks execution and documentation access (Context7, DeepWiki)
 - **Universal Principles**: Programming best practices and patterns
 
 This plugin was created by separating infrastructure from philosophy - it contains the operational tools and systems, while the `bushido` plugin focuses purely on the philosophical principles.
@@ -39,37 +39,27 @@ brew install thebushidocollective/tap/han
 
 ## What's Included
 
-### MCP Servers
+### MCP Server
 
-Two MCP servers provide advanced capabilities:
+The unified Han MCP server (`han`) provides:
 
-#### 1. Han (`han`)
-
-Unified MCP server providing hooks execution and metrics tracking:
-
-**Hook Commands:**
-
-- Dynamically exposes tools for installed plugins
-- Test commands (e.g., `mcp__plugin_hashi-han_han__jutsu_bun_test`)
-- Lint commands (e.g., `mcp__plugin_hashi-han_han__jutsu_biome_lint`)
+- Dynamically exposed tools for installed plugins
 - Format, typecheck, and validation commands
 - Smart caching and directory detection
+- Context7 documentation access (resolve library IDs, fetch docs, code examples)
+- DeepWiki repository documentation (wiki structure, contents, Q&A)
+- Blueprint management (read, write, search project blueprints)
+- Memory system (query project and team knowledge)
 
-**Metrics Tracking:**
+### Task Tracking
 
-- Task lifecycle tracking (start, update, complete, fail)
-- Self-assessment and confidence calibration
-- Objective validation against hook results
-- Local storage in `~/.claude/metrics/metrics.db`
+Tasks are tracked via Claude Code's native tools:
 
-#### 2. Context7 (`context7`)
+- **TaskCreate**: Start tracking a new task with description
+- **TaskUpdate**: Update task status (pending, in_progress, completed)
+- **TaskList** / **TaskGet**: View task history
 
-Access to up-to-date library documentation:
-
-- Resolve library IDs from package names
-- Fetch current documentation for any major library
-- Code examples and API references
-- Architectural guidance
+All task data is stored locally in `~/.han/han.db` and displayed in the Browse UI.
 
 ### Lifecycle Hooks
 
@@ -77,31 +67,47 @@ Access to up-to-date library documentation:
 
 Runs when a new session begins:
 
-- **no-time-estimates.md**: Enforces no temporal planning language
-- **metrics-tracking.md**: Instructs on task tracking for analytics
+- **ensure-han.sh**: Ensures the han binary is installed
+- **coordinator ensure**: Starts the coordinator daemon in the background
+- **plugin migrate**: Runs any pending plugin migrations
+- **register-config-dir.sh**: Registers the project config directory
+- **hook context**: Outputs session context information
+- **session-references.sh**: Loads relevant session references
 
 #### UserPromptSubmit
 
 Runs on every user prompt:
 
-- **ensure-subagent.md**: Delegation rules and subagent protocols
-- **ensure-skill-use.md**: Skill selection transparency requirements
+- **current-datetime.sh**: Provides current date and time
+- **no-excuses.md**: References rules about pre-existing issues
 
 #### PreToolUse
 
-Runs before git push operations:
+Runs before Task and Skill tool invocations:
 
-- **pre-push-check.sh**: Validates code quality before pushing
-
-#### Stop
-
-Runs before session ends:
-
-- **Task alignment review**: Ensures work matches original intent
+- **inject-subagent-context**: Injects context for subagents and skills
 
 ### Skills
 
-16 universal programming skills available:
+30 skills are available, covering both universal programming principles and workflow commands. All skills can be invoked as slash commands (e.g., `/core:develop`) or via the Skill tool.
+
+#### Workflow Skills
+
+- **architect**: Design system architecture
+- **code-review**: Review pull requests
+- **debug**: Investigate issues
+- **develop**: Full 7-phase development workflow
+- **document**: Generate/update documentation
+- **explain**: Explain code and concepts
+- **fix**: Debug and fix bugs
+- **optimize**: Performance optimization
+- **plan**: Create implementation plans
+- **refactor**: Restructure code safely
+- **review**: Multi-agent code review
+- **test**: Write tests with TDD
+- **project-memory**: Project memory learning and recall
+
+#### Programming Principle Skills
 
 - **architecture-design**: System design and technical decisions
 - **baseline-restorer**: Reset to working state when fixes fail
@@ -110,6 +116,7 @@ Runs before session ends:
 - **debugging**: Systematic bug investigation
 - **documentation**: Clear technical documentation
 - **explainer**: Explain code and concepts effectively
+- **legacy-code-safety**: Safe approaches to modifying legacy code
 - **orthogonality-principle**: Independent, non-overlapping components
 - **performance-optimization**: Measurement-driven optimization
 - **professional-honesty**: Direct, honest communication
@@ -120,87 +127,76 @@ Runs before session ends:
 - **structural-design-principles**: Composition, Law of Demeter, Encapsulation
 - **technical-planning**: Implementation planning and task breakdown
 
-### Commands
-
-12 workflow commands available:
-
-- **/han-core:architect**: Design system architecture
-- **/han-core:code-review**: Review pull requests
-- **/han-core:debug**: Investigate issues
-- **/han-core:develop**: Full 7-phase development workflow
-- **/han-core:document**: Generate/update documentation
-- **/han-core:explain**: Explain code and concepts
-- **/han-core:fix**: Debug and fix bugs
-- **/han-core:optimize**: Performance optimization
-- **/han-core:plan**: Create implementation plans
-- **/han-core:refactor**: Restructure code safely
-- **/han-core:review**: Multi-agent code review
-- **/han-core:test**: Write tests with TDD
-
 ## Installation
 
 Install the plugin using Claude Code:
 
 ```bash
 # Via Claude Code plugin system
-claude plugin install han-core@han
+claude plugin install core@han
 
 # Or via the han CLI
-han plugin install han-core
+han plugin install core
 ```
 
 ## Difference from bushido Plugin
 
-The han-core and bushido plugins serve complementary purposes:
+The core and bushido plugins serve complementary purposes:
 
-### han-core (Infrastructure)
+### core (Infrastructure)
 
-- MCP server configurations
+- MCP server configuration
 - Lifecycle hooks for quality and tracking
-- Skill and command implementations
+- Skill implementations (workflow + principles)
 - Delegation and transparency protocols
 - Operational tooling
 
 ### bushido (Philosophy)
 
-- quality principles and values
+- Quality principles and values
 - Code of conduct for development
 - Philosophical guidelines
 - Cultural context and meaning
 - Development philosophy agent
 
-**Recommendation**: Install both plugins. Use `bushido` for philosophical guidance and `han-core` for infrastructure capabilities.
+**Recommendation**: Install both plugins. Use `bushido` for philosophical guidance and `core` for infrastructure capabilities.
 
 ## Usage Examples
 
-### Using Skills
+### Using Skills as Slash Commands
 
-Skills are automatically available and can be invoked via the Skill tool:
-
-```typescript
-// Architecture design guidance
-Skill({ skill: "han-core:architecture-design" })
-
-// Code review checklist
-Skill({ skill: "han-core:code-reviewer" })
-
-// Refactoring best practices
-Skill({ skill: "han-core:refactoring" })
-```
-
-### Using Commands
-
-Commands provide comprehensive workflows:
+Skills can be invoked directly as slash commands:
 
 ```bash
 # Full development workflow
-/han-core:develop
+/core:develop
 
 # Create implementation plan
-/han-core:plan
+/core:plan
 
 # Perform code review
-/han-core:code-review
+/core:code-review
+
+# Design system architecture
+/core:architect
+
+# Explain code and concepts
+/core:explain
+```
+
+### Using Skills via the Skill Tool
+
+Skills can also be invoked programmatically via the Skill tool:
+
+```typescript
+// Architecture design guidance
+Skill({ skill: "core:architecture-design" })
+
+// Code review checklist
+Skill({ skill: "core:code-reviewer" })
+
+// Refactoring best practices
+Skill({ skill: "core:refactoring" })
 ```
 
 ### Using MCP Tools
@@ -208,23 +204,41 @@ Commands provide comprehensive workflows:
 MCP tools are available directly in your environment:
 
 ```typescript
-// Start tracking a task
-await mcp__plugin_hashi_han_metrics__start_task({
-  description: "Implement user authentication",
-  type: "implementation",
-  estimated_complexity: "moderate"
-});
-
-// Run project tests
-await mcp__plugin_hashi_han_han__jutsu_bun_test({
-  directory: "packages/core"
-});
+// Resolve a library ID for documentation lookup
+mcp__plugin_core_context7__resolve_library_id({
+  libraryName: "next.js",
+  query: "How to set up routing in Next.js"
+})
 
 // Fetch library documentation
-await mcp__plugin_bushido_context7__get_library_docs({
-  context7CompatibleLibraryID: "/vercel/next.js",
-  topic: "routing"
-});
+mcp__plugin_core_context7__query_docs({
+  libraryId: "/vercel/next.js",
+  query: "app router file-based routing"
+})
+
+// Query project memory
+mcp__plugin_core_han__memory({
+  question: "How do we handle authentication?"
+})
+```
+
+### Task Tracking
+
+Tasks are tracked using Claude Code's native task tools:
+
+```typescript
+// Create a task
+TaskCreate({
+  subject: "Implement user authentication",
+  description: "Add JWT-based auth flow",
+  activeForm: "Implementing user authentication"
+})
+
+// Update task status
+TaskUpdate({
+  taskId: "1",
+  status: "completed"
+})
 ```
 
 ## Hook Behavior
@@ -240,23 +254,12 @@ The pre-push check validates:
 
 If any check fails, the push is blocked until issues are resolved.
 
-### Metrics Tracking
-
-Tasks are tracked for performance analytics:
-
-1. Start task with description and complexity estimate
-2. Update progress during work (optional)
-3. Complete with outcome assessment and confidence level
-4. System validates self-assessment against objective results
-
-This creates a feedback loop for continuous improvement.
-
 ### Delegation Protocol
 
 When delegating to subagents:
 
-1. Use SlashCommand tool for slash commands
-2. Use Skill tool for skill invocation
+1. Use the Skill tool for skill invocation (e.g., `Skill({ skill: "core:develop" })`)
+2. Skills are also invocable as slash commands (e.g., `/core:develop`)
 3. Provide context and clear objectives
 4. No silent delegation - always make delegation explicit
 
@@ -271,23 +274,19 @@ When using skills:
 
 ## Configuration
 
-### Customizing MCP Servers
+### Customizing MCP Server
 
-The `mcpServers` field in `.claude-plugin/plugin.json` defines both MCP servers. You can customize their behavior by modifying environment variables:
+The `mcpServers` field in `.claude-plugin/plugin.json` defines the MCP server. You can customize its behavior by modifying environment variables:
 
 ```json
 {
   "mcpServers": {
     "han": {
-      "command": "han",
-      "args": ["mcp"],
+      "command": "npx",
+      "args": ["-y", "@thebushidocollective/han", "mcp"],
       "env": {
         "CUSTOM_VAR": "value"
       }
-    },
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"]
     }
   }
 }
@@ -299,7 +298,7 @@ To disable specific hooks, edit `hooks/hooks.json` and remove or comment out the
 
 ## Privacy and Data
 
-- **Metrics**: Stored locally in `~/.claude/metrics/metrics.db`
+- **Tasks**: Stored locally in `~/.han/han.db`
 - **No external tracking**: All data stays on your machine
 - **Context7**: Fetches public documentation, no personal data sent
 - **Han hooks**: Executes locally, no external communication
@@ -325,12 +324,5 @@ MIT License - see LICENSE file for details.
 - **Documentation**: [Han Marketplace](https://github.com/thebushidocollective/han)
 - **Issues**: [GitHub Issues](https://github.com/thebushidocollective/han/issues)
 - **Discord**: [The Bushido Collective](https://discord.gg/bushido)
-
-## Related Plugins
-
-- **bushido**: Philosophical principles and development philosophy
-- **jutsu-\***: Technology-specific plugins (TypeScript, React, Bun, etc.)
-- **do-\***: Discipline-specific agents (TDD, code review, etc.)
-- **hashi-\***: Bridge plugins for external integrations (GitHub, GitLab, etc.)
 
 Install complementary plugins to enhance your development workflow.

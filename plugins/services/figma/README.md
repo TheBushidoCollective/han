@@ -1,14 +1,14 @@
-# Hashi: Figma
+# Figma
 
 Connect Claude Code to Figma's official MCP server for design-to-code workflows, component access, and design system integration.
 
 **Zero Configuration**: Once enabled in the Figma desktop app, this plugin works instantly - no API keys, no tokens to manage!
 
-## What This Hashi Provides
+## What This Plugin Provides
 
 ### MCP Server: figma-desktop
 
-This hashi uses the official [Figma MCP Server](https://developers.figma.com/docs/figma-mcp-server/) to provide direct access to Figma designs with tools for:
+This plugin uses the official [Figma MCP Server](https://developers.figma.com/docs/figma-mcp-server/) to provide direct access to Figma designs with tools for:
 
 - **Frame-to-Code Generation**: Transform Figma frames into production-ready code
 - **Design Extraction**: Access variables, components, layout data, and design tokens
@@ -56,10 +56,8 @@ Once installed and enabled, Claude Code gains access to tools for:
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install hashi-figma
+han plugin install figma
 ```
 
 ## Setup
