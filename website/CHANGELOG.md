@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other
 
+- Han Team Platform (#42) ([6b124530](../../commit/6b124530))
+- Remove centralized hook orchestration layer (#62) ([910853e7](../../commit/910853e7))
+- document legacy plugin name references found in codebase ([2eccbbe6](../../commit/2eccbbe6))
+
+## [1.36.6] - 2026-02-12
+
+### Other
+
 - Remove centralized hook orchestration layer (#62) ([910853e7](../../commit/910853e7))
 - document legacy plugin name references found in codebase ([2eccbbe6](../../commit/2eccbbe6))
 
