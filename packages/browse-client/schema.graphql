@@ -289,6 +289,18 @@ type Citation {
   timestamp: DateTime
 }
 
+"""Visibility level for a citation"""
+enum CitationVisibility {
+  """Only visible to the session owner"""
+  PRIVATE
+
+  """Safe to share broadly within the org"""
+  PUBLIC
+
+  """Visible to team members with repo access"""
+  TEAM
+}
+
 """Summary of Claude user settings"""
 type ClaudeSettingsSummary {
   """Whether the settings file exists"""
@@ -1881,6 +1893,21 @@ enum MemoryLayer {
   TRANSCRIPTS
 }
 
+"""Information about a memory layer available to the user"""
+type MemoryLayerInfo {
+  """Whether this layer is available to the user"""
+  available: Boolean
+
+  """Human-readable description"""
+  description: String
+
+  """Layer name (personal, project, team, org)"""
+  name: String
+
+  """Number of sessions accessible in this layer"""
+  sessionCount: Int
+}
+
 """A memory learn event"""
 type MemoryLearnMessage implements Message {
   """
@@ -1994,6 +2021,21 @@ type MemoryQueryStartResult {
 
   """Whether the query was started successfully"""
   success: Boolean
+}
+
+"""Memory access scope levels"""
+enum MemoryScope {
+  """Aggregated learnings only (no raw data)"""
+  ORG
+
+  """User's own sessions (always accessible)"""
+  PERSONAL
+
+  """Sessions in projects user belongs to"""
+  PROJECT
+
+  """Sessions visible via repo permissions"""
+  TEAM
 }
 
 """Result from memory search"""
@@ -2416,6 +2458,48 @@ type Org {
 
   """URL-safe organization slug"""
   slug: String
+}
+
+"""Aggregated learning/pattern detected across organization sessions"""
+type OrgLearning {
+  """Confidence level based on consistency"""
+  confidence: Confidence
+
+  """Domain/category (e.g., api, testing, database)"""
+  domain: String
+
+  """How many sessions exhibited this pattern"""
+  frequency: Int
+
+  """When this pattern was last observed"""
+  lastSeen: DateTime
+
+  """Pattern or convention observed"""
+  pattern: String
+}
+
+"""Result of org learnings query"""
+type OrgLearningsResult {
+  """Whether result was served from cache"""
+  cached: Boolean
+
+  """Aggregated learnings"""
+  learnings: [OrgLearning!]
+
+  """Total sessions analyzed"""
+  sessionsAnalyzed: Int
+
+  """Time range of analysis"""
+  timeRange: OrgLearningsTimeRange
+}
+
+"""Time range of analysis"""
+type OrgLearningsTimeRange {
+  """End of analysis period"""
+  end: DateTime
+
+  """Start of analysis period"""
+  start: DateTime
 }
 
 """Pagination information for a connection"""
@@ -3741,6 +3825,27 @@ type TaskTypeCount {
   type: TaskType
 }
 
+"""Citation from team memory with visibility metadata"""
+type TeamCitation {
+  """Author if known"""
+  author: String
+
+  """Relevant excerpt (sanitized for privacy)"""
+  excerpt: String
+
+  """Session ID if from a session"""
+  sessionId: String
+
+  """Source identifier (e.g., transcript:sessionId:msgId)"""
+  source: String
+
+  """Timestamp if known"""
+  timestamp: DateTime
+
+  """Visibility level of the source"""
+  visibility: CitationVisibility
+}
+
 """A member of an organization"""
 type TeamMember {
   """Team member ID"""
@@ -3769,6 +3874,42 @@ enum TeamMemberRole {
 
   """Read-only viewer"""
   VIEWER
+}
+
+"""Result of a team memory query"""
+type TeamMemoryResult {
+  """Synthesized answer based on team memory"""
+  answer: String
+
+  """Whether result was served from cache"""
+  cached: Boolean
+
+  """Citations with visibility metadata"""
+  citations: [TeamCitation!]
+
+  """Confidence level based on source quality"""
+  confidence: Confidence
+
+  """Number of sessions searched"""
+  sessionsSearched: Int
+
+  """Search statistics"""
+  stats: TeamMemoryStats
+}
+
+"""Statistics from team memory search"""
+type TeamMemoryStats {
+  """Sessions user has permission to access"""
+  permittedSessions: Int
+
+  """Number of results filtered out by permissions"""
+  resultsFiltered: Int
+
+  """Number of results found"""
+  resultsFound: Int
+
+  """Total sessions available"""
+  totalSessions: Int
 }
 
 """Aggregate team-level metrics for dashboard"""
