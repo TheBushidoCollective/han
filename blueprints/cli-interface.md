@@ -1,21 +1,48 @@
 ---
 name: cli-interface
-summary: Interactive CLI with AI-powered plugin discovery
+summary: Interactive CLI with Commander.js, Ink UI, and AI-powered plugin discovery via Agent SDK
 ---
 
 # Han CLI Interface
 
 ## Overview
 
-The Han CLI provides a command-line interface for managing Claude Code plugins from The Bushido Collective's marketplace. It includes AI-powered features for plugin discovery, repository analysis, and gap identification.
+The Han CLI provides a command-line interface for managing Claude Code plugins from The Bushido Collective's marketplace. It uses Commander.js for argument parsing, Ink (React for CLI) for interactive UIs, and Claude Agent SDK for AI-powered features like plugin discovery and repository analysis.
+
+## Technology Stack
+
+- **Commander.js**: CLI argument parsing and command structure
+- **Ink**: React-based terminal UI for interactive components
+- **Claude Agent SDK**: AI-powered analysis features (summary, gaps)
+- **Bun**: Runtime and bundling
+- **YAML**: Plugin configuration parsing
+
+## Entry Point
+
+`packages/han/lib/main.ts` - Main CLI entry point
+
+Key responsibilities:
+- Command registration via Commander.js
+- Re-execution logic for `hanBinary` override (development mode)
+- Version information with binary location
+- Telemetry initialization
+- Shell completion support
+
+### Re-execution Pattern
+
+The CLI supports development mode via `.claude/han.yml`:
+
+```yaml
+hanBinary: bun "$(git rev-parse --show-toplevel)/packages/han/lib/main.ts"
+```
+
+When set, all `han` CLI calls delegate to the local TypeScript source instead of the installed binary. This enables live development without rebuilding/reinstalling.
 
 ## Command Structure
 
 ```
 han [command] [options]
 ```
-
-## Top-Level Commands
 
 ### Plugin Management Commands
 
@@ -35,7 +62,7 @@ Install one or more plugins from the Han marketplace.
 - `--auto` - Auto-detect and install recommended plugins using AI analysis
 - `--scope <scope>` - Installation scope: `user` (default), `project`, or `local`
   - `user`: ~/.claude/settings.json (shared across all projects)
-  - `project`: .claude/settings.json (project-specific)
+  - `project`: .claude/settings.json (project-specific, committed)
   - `local`: .claude/settings.local.json (gitignored, personal)
 
 **Examples:**
@@ -48,20 +75,20 @@ han plugin install
 han plugin install --auto
 
 # Install specific plugin
-han plugin install jutsu-typescript
+han plugin install typescript
 
 # Search-based installation (if not exact match)
 han plugin install playwright
-# Shows: jutsu-playwright, hashi-playwright-mcp, etc.
+# Shows: playwright, playwright-mcp, etc.
 
 # Install to project scope
-han plugin install jutsu-biome --scope project
+han plugin install biome --scope project
 
 # Install multiple plugins
-han plugin install jutsu-typescript jutsu-react jutsu-nextjs
+han plugin install typescript react nextjs
 ```
 
-**Implementation:** `lib/commands/plugin/install.ts` → `lib/plugin-install.ts`
+**Implementation:** `lib/commands/plugin/install.ts`
 
 **Features:**
 
@@ -69,7 +96,6 @@ han plugin install jutsu-typescript jutsu-react jutsu-nextjs
 - Validates plugins against marketplace
 - Interactive selector for ambiguous queries (uses `PluginSelector` component)
 - Shows installation confirmation and restart prompt
-- Automatically configures dispatch hooks
 
 #### `han plugin list`
 
@@ -79,25 +105,7 @@ List all installed plugins across all scopes.
 
 - `--scope <scope>` - Filter by scope: `user`, `project`, `local`, or `all` (default)
 
-**Output:**
-
-- Table showing: Plugin name, Scope, Category, Description
-- Total count of installed plugins
-
-**Examples:**
-
-```bash
-# List all plugins
-han plugin list
-
-# List only user-scoped plugins
-han plugin list --scope user
-
-# List project-specific plugins
-han plugin list --scope project
-```
-
-**Implementation:** `lib/commands/plugin/list.ts` → `lib/plugin-list.ts`
+**Implementation:** `lib/commands/plugin/list.ts`
 
 #### `han plugin search [query]`
 
@@ -108,28 +116,7 @@ Search for plugins in the Han marketplace.
 - Without query: Shows all available plugins
 - With query: Filters by name, description, keywords, and category
 
-**Output:**
-
-- Table showing: Name, Category, Description
-- Match count and installation instructions
-
-**Examples:**
-
-```bash
-# Show all plugins
-han plugin search
-
-# Search for TypeScript-related plugins
-han plugin search typescript
-
-# Search for testing tools
-han plugin search test
-
-# Search by category
-han plugin search jutsu
-```
-
-**Implementation:** `lib/commands/plugin/search.ts` → `lib/plugin-search.ts`
+**Implementation:** `lib/commands/plugin/search.ts`
 
 #### `han plugin uninstall <plugin-names...>`
 
@@ -139,245 +126,221 @@ Uninstall one or more plugins.
 
 - `--scope <scope>` - Uninstall from specific scope (default: `user`)
 
-**Examples:**
-
-```bash
-han plugin uninstall jutsu-typescript
-han plugin uninstall jutsu-react jutsu-nextjs
-han plugin uninstall hashi-playwright-mcp --scope project
-```
-
 **Implementation:** `lib/commands/plugin/uninstall.ts`
 
 #### `han plugin update`
 
 Update the local marketplace cache.
 
-**Behavior:**
-
-- Fetches latest plugin metadata from GitHub
-- Updates local cache (~/.han-cache/marketplace.json)
-
 **Implementation:** `lib/commands/plugin/update.ts`
 
-### Analysis Commands
+#### `han plugin validate [path]`
 
-#### `han explain`
+Validate plugin structure and configuration.
 
-Show comprehensive overview of Han configuration.
+**Implementation:** `lib/commands/plugin/validate.ts`
 
-**Output:**
+#### `han plugin generate-hooks`
 
-- Installed plugins table with capabilities
-- Features legend (📜 Commands, ⚔️ Skills, 🪝 Hooks, 🔌 MCP)
-- Summary statistics
-- Marketplace status
-- Useful commands reference
+Generate hooks.json from han-plugin.yml.
 
-**Features Analyzed:**
+**Implementation:** `lib/commands/plugin/generate-hooks.ts`
 
-- Commands: Slash commands available from plugins
-- Skills: Specialized skills/prompts
-- Hooks: Lifecycle hooks configured
-- MCP: MCP servers enabled
+### Browse Command
 
-**Examples:**
+#### `han browse`
 
-```bash
-han explain
-```
+Start the Han system browser dashboard.
 
-**Implementation:** `lib/explain.ts`
+**Options:**
 
-**Output Format:**
+- `-p, --port <port>` - Port to run the server on (default: 41956)
+- `-l, --local` - Run local dev server with HTTP (for offline use; default: open remote dashboard)
 
-```
-🏯 Han Configuration Overview
+**Implementation:** `lib/commands/browse/index.ts`
 
-📦 Installed Plugins
+See [Browse Architecture](./browse-architecture.md) for details.
 
-┌─────────────────────────┬───────────────┬──────────┬───────────────┐
-│ Plugin                  │ Category      │ Scope    │ Features      │
-├─────────────────────────┼───────────────┼──────────┼───────────────┤
-│ bushido                 │ Core          │ User     │ 📜 🪝         │
-│ jutsu-typescript        │ Language      │ User     │ 📜 ⚔️ 🪝      │
-│ hashi-playwright-mcp    │ MCP Server    │ User     │ 🔌            │
-└─────────────────────────┴───────────────┴──────────┴───────────────┘
+### Hook Commands
 
-📊 Features Legend:
-  📜 Commands   - Slash commands available
-  ⚔️  Skills     - Specialized skills/prompts
-  🪝 Hooks      - Lifecycle hooks configured
-  🔌 MCP        - MCP servers enabled
+#### `han hook context`
 
-📈 Summary:
-  Total Plugins: 3
-  With Commands: 2
-  With Skills: 1
-  With Hooks: 2
-  With MCP Servers: 1
-```
+Output session context for hooks.
 
-#### `han summary`
+**Implementation:** `lib/commands/hook/context.ts`
 
-AI-powered summary of how Han is improving the repository.
+#### `han hook dispatch <event>`
 
-**Behavior:**
+Dispatch hooks for an event (SessionStart, UserPromptSubmit, etc.).
 
-- Analyzes installed plugins and their capabilities
-- Uses Claude Agent SDK to explore the repository
-- Generates natural language summary of improvements
-- Streams output in real-time
+**Implementation:** `lib/commands/hook/dispatch.ts`
 
-**Features:**
+#### `han hook orchestrate <event>`
 
-- Uses Claude Haiku model for fast analysis
-- Read-only codebase exploration (glob, grep, read_file)
-- Concrete examples of capabilities added
-- Focus on actual workflow improvements
+Orchestrate hooks from multiple plugins for an event.
 
-**Examples:**
+**Implementation:** `lib/commands/hook/orchestrate.ts`
 
-```bash
-han summary
-```
+#### `han hook run <plugin> <hook>`
 
-**Implementation:** `lib/summary.ts`
+Run a specific hook from a plugin.
 
-**Sample Output:**
+**Options:**
 
-```
-🏯 Generating Han Summary...
+- `--cached` - Skip if no changes detected
+- `--cache=false` - Force re-run ignoring cache
 
-Analyzing installed plugins...
-Analyzing repository...
-Generating AI summary...
+**Implementation:** `lib/commands/hook/run.ts`
 
-🤖 AI Analysis:
+#### `han hook list`
 
-## How Han is Improving This Repository
+List configured hooks.
 
-### Code Quality (jutsu-typescript, jutsu-biome)
-The TypeScript and Biome plugins provide automated type checking and code
-formatting, ensuring consistent code style across the team. The hooks validate
-code before commits, catching errors early.
+**Implementation:** `lib/commands/hook/list.ts`
 
-### Testing Infrastructure (hashi-playwright-mcp)
-The Playwright MCP integration enables browser automation and end-to-end testing
-capabilities directly from Claude Code, streamlining test development.
+#### `han hook wait`
 
-### Overall Impact
-Han plugins have automated quality checks, standardized formatting, and enabled
-advanced testing capabilities, reducing manual review time and improving code
-consistency.
-```
+Wait for hooks to complete (used in async hook execution).
 
-#### `han gaps`
+**Implementation:** `lib/commands/hook/wait.ts`
 
-AI-powered analysis of repository gaps and plugin recommendations.
+### MCP Commands
 
-**Behavior:**
+#### `han mcp`
 
-- Analyzes codebase structure and technologies
-- Identifies gaps in current plugin coverage
-- Recommends specific plugins to fill gaps
-- Provides evidence-based reasoning
-- Streams output in real-time
+Start the Han MCP server (stdio JSON-RPC).
 
-**Features:**
+**Capabilities:**
 
-- Uses Claude Agent SDK with codebase statistics
-- Compares installed vs available plugins
-- Technology detection (package.json, config files, etc.)
-- Evidence-based recommendations
+- Exposes hook commands as tools (e.g., `jutsu_typescript_lint`)
+- Unified memory tool (auto-routing to personal, team, rules)
+- Dynamic discovery of exposed MCP servers from plugins
 
-**Examples:**
+**Implementation:** `lib/commands/mcp/server.ts`
 
-```bash
-han gaps
-```
+#### `han mcp blueprints`
 
-**Implementation:** `lib/gaps.ts`
+Start the Blueprints MCP server.
 
-**Sample Output:**
+**Implementation:** `lib/commands/mcp/blueprints.ts`
 
-```
-🔍 Analyzing Repository Gaps...
+#### `han mcp memory`
 
-Analyzing codebase...
-Fetching plugin data...
-Exploring repository structure...
-Generating AI analysis...
+Start the Memory DAL MCP server (read-only search tools for Memory Agent).
 
-🤖 Gap Analysis:
+**Implementation:** `lib/commands/mcp/dal.ts`
 
-## Repository Analysis
-This is a Next.js application with TypeScript, using Playwright for testing.
-Package.json shows React 18 and several UI libraries.
+See [MCP Server](./mcp-server.md) for architecture details.
 
-## Identified Gaps
-1. **Missing React Development Tools**: No React-specific linting or hooks
-2. **No Next.js Support**: Next.js patterns not being validated
-3. **Missing Markdown Tools**: README and docs lack linting
+### Memory Command
 
-## Recommended Plugins
-1. **jutsu-react** - Adds React hooks patterns and best practices
-   - Evidence: Found 15+ React components in src/components/
-   - Benefit: Validates hooks usage, suggests optimizations
+#### `han memory <question>`
 
-2. **jutsu-nextjs** - Next.js specific development support
-   - Evidence: next.config.js and App Router usage detected
-   - Benefit: Validates routing patterns, data fetching
+Query Han memory system (personal, team, rules).
 
-3. **jutsu-markdown** - Markdown linting and formatting
-   - Evidence: 8 .md files in repository
-   - Benefit: Consistent documentation style
+**Implementation:** `lib/commands/memory/index.ts`
 
-## Summary
-Implementing these 3 plugins would add specialized support for the core
-technologies in use, improving code quality and developer experience.
+See [Han Memory System](./han-memory-system.md) for architecture.
 
-💡 To install recommended plugins, run: han plugin install <plugin-name>
-   Or use: han plugin install --auto
-```
+### Coordinator Commands
+
+#### `han coordinator start`
+
+Start the coordinator daemon.
+
+**Implementation:** `lib/commands/coordinator/daemon.ts`
+
+#### `han coordinator stop`
+
+Stop the coordinator daemon.
+
+#### `han coordinator status`
+
+Check coordinator health.
+
+**Implementation:** `lib/commands/coordinator/health.ts`
+
+#### `han coordinator install` (macOS only)
+
+Install coordinator as launchd service.
+
+**Implementation:** `lib/commands/coordinator/launchd/install.ts`
+
+See [Coordinator Daemon](./coordinator-daemon.md) for architecture.
+
+### Blueprints Commands
+
+#### `han blueprints list`
+
+List all blueprints.
+
+#### `han blueprints read <name>`
+
+Read a specific blueprint.
+
+#### `han blueprints write <name>`
+
+Write a blueprint.
+
+**Implementation:** `lib/commands/blueprints/index.ts`
 
 ### Other Commands
 
-#### `han hook <subcommand>`
+#### `han keep <note>`
 
-Manage Claude Code hooks.
+Save a note to personal memory.
 
-**Subcommands:**
+**Implementation:** `lib/commands/keep/index.ts`
 
-- `han hook list` - List configured hooks
-- `han hook add <hook-type> <command>` - Add a hook
-- `han hook remove <hook-type> <command>` - Remove a hook
+#### `han parse <jsonl-file>`
 
-**Implementation:** `lib/commands/hook/index.ts`
+Parse and display JSONL transcript.
 
-#### `han mcp <subcommand>`
+**Implementation:** `lib/commands/parse/index.ts`
 
-Manage MCP server configurations.
+#### `han index`
 
-**Subcommands:**
+Re-index JSONL transcripts to database.
 
-- `han mcp list` - List configured MCP servers
-- `han mcp enable <server>` - Enable an MCP server
-- `han mcp disable <server>` - Disable an MCP server
+**Implementation:** `lib/commands/index/index.ts`
 
-**Implementation:** `lib/commands/mcp/index.ts`
+#### `han create plugin <name>`
 
-#### `han metrics <subcommand>`
+Create a new plugin from template.
 
-View and manage Han usage metrics.
+**Implementation:** `lib/commands/create/plugin.ts`
 
-**Implementation:** `lib/commands/metrics/index.ts`
+#### `han setup`
 
-## UI Components
+Setup hook for plugin installation.
+
+**Implementation:** `lib/commands/setup/index.ts`
+
+#### `han doctor`
+
+Diagnose han installation and configuration.
+
+**Implementation:** `lib/commands/doctor.ts`
+
+#### `han worktree list`
+
+List git worktrees.
+
+**Implementation:** `lib/commands/worktree/list.ts`
+
+#### `han completion`
+
+Generate shell completion scripts (bash, zsh, fish).
+
+**Implementation:** `lib/commands/completion/index.ts`
+
+## Interactive UI Components
 
 ### PluginSelector (Ink Component)
 
 Interactive plugin selector used by `han plugin install`.
+
+**File:** `lib/plugin-selector.tsx`
 
 **Features:**
 
@@ -394,8 +357,6 @@ Interactive plugin selector used by `han plugin install`.
 - Navigation → Typing: Press ESC or type any character
 - Search → Selection: Select "← Back to selection" or ESC when typing
 
-**Implementation:** `lib/plugin-selector.tsx`, `lib/plugin-selector-wrapper.tsx`
-
 **UI States:**
 
 **Selection Mode:**
@@ -403,9 +364,9 @@ Interactive plugin selector used by `han plugin install`.
 ```
 Select plugins to install (Space to toggle, Enter to confirm):
 
-  [ ] jutsu-typescript ⭐
-  [✓] jutsu-biome ⭐
-  [ ] hashi-playwright-mcp
+  [ ] typescript ⭐
+  [✓] biome ⭐
+  [ ] playwright-mcp
   > 🔍 Search for more plugins
     ✅ Done - Install selected plugins
     ❌ Cancel
@@ -422,8 +383,8 @@ Search: react█
 
 Press Enter to navigate results, or continue typing to refine
 
-  jutsu-react (Language): React hooks patterns and optimization
-  jutsu-nextjs (Framework): Next.js development support
+  react (Language): React hooks patterns and optimization
+  nextjs (Framework): Next.js development support
   ← Back to selection
 ```
 
@@ -436,114 +397,73 @@ Search: react
 
 ↑↓ navigate, Enter to add, ESC to continue typing
 
-> jutsu-react (Language): React hooks patterns and optimization
-  jutsu-nextjs (Framework): Next.js development support
+> react (Language): React hooks patterns and optimization
+  nextjs (Framework): Next.js development support
   ← Back to selection
 ```
 
 ## File Organization
 
 ```
-packages/han/
-├── lib/
-│   ├── main.ts                      # CLI entry point, command registration
-│   ├── shared.ts                    # Shared utilities, types, Claude SDK integration
-│   ├── codebase-analyzer.ts         # Codebase analysis for AI features
-│   │
-│   ├── commands/                    # Command definitions
-│   │   ├── plugin/
-│   │   │   ├── index.ts             # Plugin command group
-│   │   │   ├── install.ts           # Install command
-│   │   │   ├── list.ts              # List command
-│   │   │   ├── search.ts            # Search command
-│   │   │   ├── uninstall.ts         # Uninstall command
-│   │   │   └── update.ts            # Update marketplace command
-│   │   ├── hook/index.ts            # Hook commands
-│   │   ├── mcp/index.ts             # MCP commands
-│   │   ├── metrics/index.ts         # Metrics commands
-│   │   └── aliases.ts               # Command aliases
-│   │
-│   ├── plugin-install.ts            # Plugin installation logic
-│   ├── plugin-list.ts               # Plugin listing logic
-│   ├── plugin-search.ts             # Plugin search logic
-│   ├── plugin-selector.tsx          # Interactive selector UI (Ink)
-│   ├── plugin-selector-wrapper.tsx  # TSX wrapper for selector
-│   │
-│   ├── explain.ts                   # Han configuration overview
-│   ├── summary.ts                   # AI-powered improvement summary
-│   └── gaps.ts                      # AI-powered gap analysis
-│
-└── blueprints/
-    ├── distribution-architecture.md # Binary distribution docs
-    └── cli-interface.md             # This file
+packages/han/lib/
+├── main.ts                           # CLI entry point, command registration
+├── shared.ts                         # Shared utilities, types
+├── config/                           # Configuration management
+│   ├── claude-settings.ts            # Claude Code settings
+│   └── han-settings.ts               # Han configuration
+├── commands/                         # Command definitions
+│   ├── plugin/
+│   │   ├── index.ts                  # Plugin command group
+│   │   ├── install.ts                # Install command
+│   │   ├── list.ts                   # List command
+│   │   ├── search.ts                 # Search command
+│   │   ├── uninstall.ts              # Uninstall command
+│   │   ├── update.ts                 # Update marketplace command
+│   │   ├── validate.ts               # Validate plugin command
+│   │   └── generate-hooks.ts         # Generate hooks.json
+│   ├── browse/                       # Browse dashboard
+│   │   ├── index.ts                  # Browse command
+│   │   ├── server.ts                 # GraphQL + Vite server
+│   │   └── watch.ts                  # File watcher
+│   ├── hook/                         # Hook commands
+│   │   ├── index.ts                  # Hook command group
+│   │   ├── context.ts                # Session context
+│   │   ├── dispatch.ts               # Dispatch hooks
+│   │   ├── orchestrate.ts            # Orchestrate hooks
+│   │   ├── run.ts                    # Run specific hook
+│   │   ├── list.ts                   # List hooks
+│   │   └── wait.ts                   # Wait for completion
+│   ├── mcp/                          # MCP servers
+│   │   ├── index.ts                  # MCP command group
+│   │   ├── server.ts                 # Main MCP server
+│   │   ├── blueprints.ts             # Blueprints MCP server
+│   │   ├── dal.ts                    # Memory DAL MCP server
+│   │   ├── exposed-tools.ts          # Exposed MCP discovery
+│   │   └── backend-pool.ts           # MCP backend pool
+│   ├── coordinator/                  # Coordinator daemon
+│   │   ├── index.ts                  # Coordinator commands
+│   │   ├── daemon.ts                 # Daemon lifecycle
+│   │   ├── server.ts                 # GraphQL server
+│   │   ├── health.ts                 # Health check
+│   │   ├── tls.ts                    # TLS certificate
+│   │   └── launchd/install.ts        # macOS launchd
+│   ├── memory/index.ts               # Memory query
+│   ├── blueprints/index.ts           # Blueprint commands
+│   ├── keep/index.ts                 # Keep notes
+│   ├── parse/index.ts                # Parse JSONL
+│   ├── index/index.ts                # Re-index
+│   ├── create/                       # Create plugin
+│   ├── setup/index.ts                # Setup hook
+│   ├── doctor.ts                     # Diagnose installation
+│   ├── worktree/                     # Git worktree commands
+│   ├── completion/                   # Shell completions
+│   └── aliases.ts                    # Command aliases
+├── plugin-selector.tsx               # Interactive selector UI (Ink)
+├── plugin-selector-wrapper.tsx       # TSX wrapper for selector
+├── memory/                           # Memory system
+├── events/                           # Event logging
+└── telemetry/                        # OpenTelemetry
 ```
-
-## Technology Stack
-
-- **Commander.js**: CLI argument parsing and command structure
-- **Ink**: React-based terminal UI for interactive components
-- **Claude Agent SDK**: AI-powered analysis features
-- **cli-table3**: Table formatting for output
-- **Bun**: Runtime and bundling
-
-## AI Features Architecture
-
-### Claude Agent SDK Integration
-
-AI-powered commands (`summary`, `gaps`) use the Claude Agent SDK for repository analysis:
-
-```typescript
-import { query } from "@anthropic-ai/claude-agent-sdk";
-
-const agent = query({
-  prompt: analysisPrompt,
-  options: {
-    model: "haiku",                    // Fast, cost-effective
-    includePartialMessages: true,      // Stream responses
-    allowedTools: ["read_file", "glob", "grep"],  // Read-only access
-    pathToClaudeCodeExecutable: claudePath
-  }
-});
-
-// Stream response
-for await (const sdkMessage of agent) {
-  if (sdkMessage.type === "assistant") {
-    for (const block of sdkMessage.message.content) {
-      if (block.type === "text") {
-        process.stdout.write(block.text);
-      }
-    }
-  }
-}
-```
-
-**Key Design Decisions:**
-
-- **Haiku model**: Fast and cost-effective for analysis tasks
-- **Read-only tools**: Safety constraint (glob, grep, read_file only)
-- **Streaming output**: Real-time feedback for better UX
-- **Evidence-based**: AI must provide concrete examples from codebase
-
-### Codebase Analysis
-
-The `codebase-analyzer.ts` module provides statistics for AI context:
-
-```typescript
-interface CodebaseStats {
-  packageJson?: PackageJson;
-  frameworks: string[];
-  languages: Map<string, number>;  // extension → file count
-  configFiles: string[];
-  totalFiles: number;
-}
-```
-
-This data helps the AI:
-
-- Detect technologies in use
-- Understand project structure
-- Make relevant plugin recommendations
-- Provide evidence-based analysis
 
 ## Error Handling
 
@@ -588,14 +508,11 @@ The CLI supports three installation scopes:
    - Developer-specific overrides
    - Not shared with team
 
-## Future Enhancements
+## Related Systems
 
-Potential improvements to consider:
-
-1. **Plugin Dependencies**: Automatic installation of plugin dependencies
-2. **Plugin Profiles**: Save/load plugin configurations
-3. **Bulk Operations**: `han plugin install --all` for all recommended
-4. **Version Management**: Pin/upgrade specific plugin versions
-5. **Custom Prompts**: Allow custom analysis prompts for `summary`/`gaps`
-6. **Export Reports**: Save AI analysis to markdown files
-7. **Interactive Config**: `han init` wizard for initial setup
+- [MCP Server](./mcp-server.md) - MCP tool exposure
+- [Hook System](./hook-system.md) - Hook execution
+- [Browse Architecture](./browse-architecture.md) - Browse dashboard
+- [Coordinator Daemon](./coordinator-daemon.md) - Background service
+- [Han Memory System](./han-memory-system.md) - Memory queries
+- [Settings Management](./settings-management.md) - Configuration precedence

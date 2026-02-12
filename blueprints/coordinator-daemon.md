@@ -1,53 +1,63 @@
 ---
 name: coordinator-daemon
-summary: Coordinator daemon architecture with GraphQL server, lazy startup, and unified data access
+summary: Coordinator daemon with GraphQL server, lazy startup, file watching, and unified data access via han-native
 ---
 
 # Coordinator Daemon Architecture
 
 ## Overview
 
-The coordinator is a lazily-started daemon that serves as the central GraphQL server and data manager for all Han processes.
+The coordinator is a lazily-started daemon that serves as the central GraphQL server and data indexer for all Han processes. It runs a single GraphQL endpoint with WebSocket subscriptions and indexes Claude Code JSONL transcripts into SQLite.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                 Coordinator Daemon (:41957)                     │
+│              Coordinator Daemon (:41956 HTTP, :41957 TLS)       │
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │              GraphQL Server (Pothos)                     │   │
 │  │         Queries + Mutations + Subscriptions              │   │
+│  │              HTTP/HTTPS + WebSocket                      │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                              │                                  │
 │  ┌──────────────┐  ┌────────┴───────┐  ┌──────────────────┐   │
-│  │ File Watcher │  │     SQLite     │  │     PubSub       │   │
-│  │ (JSONL→DB)   │  │   (Database)   │  │  (Subscriptions) │   │
-│  └──────────────┘  └────────────────┘  └──────────────────┘   │
+│  │ File Watcher │  │   han-native   │  │     PubSub       │   │
+│  │ (FSEvents/   │  │ SQLite (WAL)   │  │  (Subscriptions) │   │
+│  │  inotify)    │  │  FTS5, Vec     │  │                  │   │
+│  └──────┬───────┘  └────────┬───────┘  └──────────────────┘   │
+│         │                   │                                  │
+│         │ Indexes JSONL    │ Batch queries                    │
+│         │ on file change   │ for GraphQL                      │
+│         └──────────────────►│                                  │
+│                             │                                  │
 └─────────────────────────────────────────────────────────────────┘
         ▲                    ▲                    ▲
         │                    │                    │
-  HTTPS/WSS :41957     HTTPS/WSS :41957    HTTPS/WSS :41957
+  HTTPS/WSS :41957    HTTPS/WSS :41957    HTTPS/WSS :41957
         │                    │                    │
 ┌───────┴───────┐   ┌────────┴───────┐   ┌───────┴───────┐
 │    Browse     │   │   MCP Server   │   │     Hooks     │
 │ (static files)│   │ (GraphQL client│   │(GraphQL client│
-│   :41956      │   │   + codegen)   │   │  + codegen)   │
+│   :41956*     │   │   + codegen)   │   │  + codegen)   │
 └───────┬───────┘   └────────────────┘   └───────────────┘
         │
-   Static files
+   Static files*
         │
 ┌───────┴───────┐
 │   Frontend    │
-│   (Relay)     │──── connects directly to :41957 ────►
+│   (Relay)     │──── connects to :41957 ────►
 └───────────────┘
+
+* Browse serves static files only in local mode (`--local`)
+  Default mode uses hosted dashboard at dashboard.local.han.guru
 ```
 
 ## Ports
 
 | Port | Service | Purpose |
-|------|---------|---------|
-| 41956 | Browse | Static file server (UI) |
-| 41957 | Coordinator | GraphQL server (API) |
+|---------|---------|---------|
+| 41956 | HTTP | GraphQL server (HTTP only, no TLS) |
+| 41957 | HTTPS/WSS | GraphQL server (TLS via coordinator.local.han.guru) |
 
 ## Components
 
@@ -57,9 +67,10 @@ The coordinator is a lazily-started daemon that serves as the central GraphQL se
 
 **Responsibilities:**
 
-- GraphQL server (queries, mutations, subscriptions)
-- SQLite database management (WAL mode)
-- JSONL file watching and indexing
+- GraphQL server with queries, mutations, and subscriptions
+- SQLite database management (WAL mode for concurrent reads)
+- JSONL file watching via native watcher (FSEvents/inotify)
+- Incremental indexing (only processes new lines)
 - PubSub for real-time subscription events
 - Single source of truth for all data
 
@@ -67,8 +78,9 @@ The coordinator is a lazily-started daemon that serves as the central GraphQL se
 
 - Lazily started by first client (browse, MCP, hooks)
 - Runs as detached daemon process
-- PID file at `~/.claude/han/coordinator.pid`
+- PID file at `~/.han/coordinator.pid`
 - Stays running until explicitly stopped or system restart
+- Single-instance coordination via lock file
 
 **CLI Commands:**
 
@@ -78,16 +90,57 @@ han coordinator stop    # Stop daemon gracefully
 han coordinator status  # Check if running, show PID
 ```
 
+**File Structure:**
+
+```
+packages/han/lib/commands/coordinator/
+├── index.ts          # Exports and port configuration
+├── daemon.ts         # Process management (PID, logs)
+├── server.ts         # GraphQL server setup
+├── health.ts         # Health check endpoint
+└── types.ts          # Type definitions
+```
+
+### GraphQL Server
+
+**Location:** `packages/han/lib/commands/coordinator/server.ts`
+
+**Stack:**
+
+- **Pothos GraphQL** - Type-safe schema builder
+- **graphql-yoga** - GraphQL server with WebSocket support
+- **Bun.serve()** - HTTP/HTTPS server
+
+**Endpoints:**
+
+- `GET /health` - Health check (returns coordinator status)
+- `POST /graphql` - GraphQL queries and mutations
+- `WS /graphql` - GraphQL subscriptions (via graphql-ws protocol)
+
+**Schema Location:** `packages/han/lib/graphql/schema.ts`
+
+**Key Features:**
+
+- Relay-style pagination with `@prependEdge` directive
+- Real-time subscriptions via PubSub
+- DataLoader pattern for efficient batch queries
+- Unified error handling
+
 ### Browse (Static Server)
 
 **Location:** `packages/han/lib/commands/browse/`
 
-**Responsibilities:**
+**Two Modes:**
 
-- Serve static frontend files
-- Dev mode: Vite with HMR
-- Prod mode: Simple Bun static server
-- Ensure coordinator is running on startup
+1. **Remote (default)** - Opens `https://dashboard.local.han.guru`
+   - Frontend hosted on Railway
+   - Connects to local coordinator via TLS
+   - No local static server needed
+
+2. **Local (`--local`)** - Serves static files locally
+   - Dev mode: Vite with HMR on port 41956
+   - Prod mode: Bun.build() + simple HTTP server
+   - Ensures coordinator is running on startup
 
 **No longer responsible for:**
 
@@ -99,13 +152,20 @@ han coordinator status  # Check if running, show PID
 
 **Location:** `packages/browse-client/`
 
-**Configuration:**
+**Connection:**
 
 ```typescript
-// Direct connection to coordinator (HTTPS required)
+// Direct connection to coordinator daemon
 const GRAPHQL_HTTP = 'https://coordinator.local.han.guru:41957/graphql';
 const GRAPHQL_WS = 'wss://coordinator.local.han.guru:41957/graphql';
 ```
+
+**Stack:**
+
+- React Native Web (cross-platform UI)
+- Gluestack UI (component library)
+- Relay (GraphQL client with subscriptions)
+- React Router (navigation)
 
 ### MCP Server / Hooks
 
@@ -125,10 +185,10 @@ const GRAPHQL_WS = 'wss://coordinator.local.han.guru:41957/graphql';
                               ▼
               ┌───────────────────────────────┐
               │ Check if coordinator running  │
-              │ (try connect to :41957)       │
+              │ (GET /health endpoint)        │
               └───────────────────────────────┘
                      │              │
-                 Responds        Connection refused
+                 Healthy         Unhealthy
                      │              │
                      ▼              ▼
               ┌──────────┐  ┌─────────────────┐
@@ -137,7 +197,7 @@ const GRAPHQL_WS = 'wss://coordinator.local.han.guru:41957/graphql';
                             │ start           │
                             │                 │
                             │ Wait for ready  │
-                            │ (poll :41957)   │
+                            │ (poll /health)  │
                             │                 │
                             │ Then continue   │
                             └─────────────────┘
@@ -146,74 +206,203 @@ const GRAPHQL_WS = 'wss://coordinator.local.han.guru:41957/graphql';
 **Helper function:**
 
 ```typescript
-export async function ensureCoordinator(): Promise<void> {
-  // Try to connect
-  const healthy = await checkCoordinatorHealth();
-  if (healthy) return;
+// packages/han/lib/commands/coordinator/daemon.ts
+export async function ensureCoordinator(port?: number): Promise<CoordinatorStatus> {
+  const effectivePort = port ?? getCoordinatorPort();
   
-  // Spawn daemon
-  spawn('han', ['coordinator', 'start'], {
+  // Check if already running
+  const health = await checkHealth(effectivePort);
+  if (health?.status === 'ok') {
+    return { running: true, port: effectivePort };
+  }
+  
+  // Spawn daemon as detached process
+  const hanBinary = getHanBinary();
+  spawn(hanBinary, ['coordinator', 'start'], {
     detached: true,
     stdio: 'ignore'
   }).unref();
   
-  // Wait for ready (poll with timeout)
-  await waitForCoordinator({ timeout: 10000 });
-}
-```
-
-## GraphQL Schema
-
-The existing Pothos schema moves to coordinator. Key additions:
-
-### Mutations (for MCP/hooks)
-
-```graphql
-type Mutation {
-  # Task/Metrics
-  createTask(input: TaskInput!): Task!
-  completeTask(input: TaskCompletionInput!): Task!
-  failTask(input: TaskFailureInput!): Task!
+  // Wait for health check to pass (timeout: 10s)
+  await waitForHealth(effectivePort, 10000);
   
-  # Hook cache
-  setHookCache(input: HookCacheInput!): Boolean!
-  invalidateHookCache(key: String!): Boolean!
+  return { running: true, port: effectivePort };
+}
+```
+
+## Data Layer Integration
+
+The coordinator uses the `han-native` Rust module for all data operations:
+
+**SQLite Database:** `~/.han/han.db`
+
+- **WAL mode** - Concurrent reads while coordinator indexes
+- **FTS5** - Full-text search on messages
+- **sqlite-vec** - Vector similarity search
+- **Single writer** - Only coordinator writes, all others read
+
+**Indexing Flow:**
+
+1. File watcher detects JSONL change (FSEvents/inotify)
+2. Native watcher calls `indexSessionFile(filePath)`
+3. Rust parser reads new lines, parses JSON, inserts to SQLite
+4. PubSub notifies GraphQL subscribers of new data
+
+**Database Schema:**
+
+```sql
+repos             -- Git repositories
+projects          -- Worktrees/paths within repos
+sessions          -- Claude Code sessions
+messages          -- Individual messages (line-based indexing)
+native_tasks      -- Claude Code TaskCreate/TaskUpdate events
+session_todos     -- TodoWrite task state
+session_file_changes -- Edit/Write/NotebookEdit tracking
+session_file_validations -- Hook result caching
+hook_executions   -- Hook run history
+```
+
+## File Watcher
+
+**Implementation:** `han-native/src/watcher.rs`
+
+**Strategy:**
+
+- Primary: FSEvents (macOS) / inotify (Linux) for real-time events
+- Fallback: 30-second periodic full scan (catches missed events)
+- Multi-path support: Can watch multiple config directories (multi-environment)
+
+**What it watches:**
+
+- `~/.claude/projects/**/*.jsonl` (default)
+- Additional paths via `configDirs` registry
+
+**Event handling:**
+
+```
+File change event
+    ↓
+Queue index job
+    ↓
+Rust indexer processes new lines
+    ↓
+Insert to SQLite
+    ↓
+Publish PubSub event
+    ↓
+GraphQL subscriptions notify clients
+```
+
+## PubSub Events
+
+**Implementation:** `packages/han/lib/graphql/pubsub.ts`
+
+**Events:**
+
+- `sessionAdded` - New session created
+- `sessionUpdated` - Session metadata changed
+- `sessionMessageAdded` - New message in session (with edge data for Relay)
+- `sessionTodosChanged` - TodoWrite state updated
+- `sessionFilesChanged` - File modified by tool
+- `sessionHooksChanged` - Hook executed
+- `toolResultAdded` - Tool result available
+- `hookResultAdded` - Hook result available
+
+**Relay Integration:**
+
+```typescript
+// PubSub payload includes edge data for @prependEdge
+publishSessionMessageAdded(sessionId, messageIndex, {
+  node: { id, timestamp, type, rawJson, ... },
+  cursor: base64(`cursor:${messageIndex}`)
+});
+```
+
+## Health Check
+
+**Endpoint:** `GET /health`
+
+**Response:**
+
+```json
+{
+  "status": "ok",
+  "version": "0.45.0",
+  "port": 41957,
+  "uptime": 3600000,
+  "coordinator": {
+    "isCoordinator": true,
+    "heartbeat": "2025-01-15T10:30:00Z"
+  }
+}
+```
+
+**Used by:**
+
+- Lazy startup (detect if daemon running)
+- Health monitoring
+- Version mismatch detection
+
+## Coordinator Service
+
+**Implementation:** `packages/han/lib/services/coordinator-service.ts`
+
+**Single-Instance Pattern:**
+
+```typescript
+export async function startCoordinatorService(): Promise<void> {
+  // Initialize database
+  await initDb();
   
-  # Existing
-  togglePlugin(...): PluginMutationResult!
-  removePlugin(...): PluginMutationResult!
+  // Try to acquire coordinator lock (via han-native)
+  const isCoordinator = coordinator.tryAcquire();
+  
+  if (isCoordinator) {
+    // Start coordinating: file watching + indexing
+    await startCoordinating();
+  } else {
+    // Become reader, poll to take over if coordinator dies
+    scheduleCoordinatorCheck();
+  }
 }
 ```
 
-### Subscriptions (existing)
+**Heartbeat:**
 
-```graphql
-type Subscription {
-  sessionUpdated(sessionId: ID!): SessionUpdatedPayload!
-  sessionMessageAdded(sessionId: ID!): SessionMessageAddedPayload!
-  sessionAdded(parentId: ID): SessionAddedPayload!
-  # ... etc
+- Coordinator updates heartbeat every 5 seconds
+- Lock is considered stale after 30 seconds
+- Other instances can take over stale locks
+
+**Coordinating Responsibilities:**
+
+1. Start file watcher
+2. Run initial full scan and index
+3. Process file events incrementally
+4. Publish PubSub events on data changes
+5. Maintain heartbeat
+
+## Version Management
+
+**Problem:** Coordinator may be older version than clients
+
+**Solution:** Automatic restart on version mismatch
+
+```typescript
+// In GraphQL context
+export function checkClientVersion(clientVersion: string): boolean {
+  if (clientVersion > coordinatorVersion) {
+    console.log('Client newer than coordinator, scheduling restart');
+    
+    // Release lock gracefully
+    setTimeout(() => {
+      stopCoordinatorService();
+      // Newer client will detect coordinator is down and become new coordinator
+    }, 1000);
+    
+    return true;
+  }
+  return false;
 }
-```
-
-## File Structure
-
-```
-packages/han/lib/commands/
-├── coordinator/
-│   ├── index.ts          # CLI entry (start/stop/status)
-│   ├── daemon.ts         # Daemon process main loop
-│   ├── server.ts         # GraphQL server setup
-│   └── health.ts         # Health check endpoint
-├── browse/
-│   ├── index.ts          # Static server (simplified)
-│   └── dev.ts            # Vite dev server
-└── ...
-
-packages/han/lib/graphql/
-├── schema.ts             # Pothos schema (shared)
-├── client.ts             # GraphQL client for MCP/hooks
-└── generated/            # Code-generated types
 ```
 
 ## CORS Configuration
@@ -222,113 +411,114 @@ Coordinator allows requests from browse and dashboard origins:
 
 ```typescript
 cors: {
-  origin: ['http://localhost:41956', 'https://dashboard.local.han.guru'],
+  origin: [
+    'http://localhost:41956',           // Local browse
+    'https://dashboard.local.han.guru', // Hosted dashboard
+  ],
   credentials: true
 }
 ```
 
----
+## TLS Support
 
-## Future Exploration: Hosted Dashboard
+**Domain:** `coordinator.local.han.guru`
 
-### Vision (Not Yet Implemented)
+- DNS A record points to `127.0.0.1`
+- Valid Let's Encrypt certificate
+- Allows HTTPS from browser to localhost
+- Required for WebSocket connections from hosted dashboard
 
-**Note:** This is a potential future direction being explored. The current implementation uses `han browse` to serve the UI locally.
+**Certificate Location:** `~/.han/coordinator.pem`, `~/.han/coordinator-key.pem`
 
-Potential future state: Eliminate the need for local UI serving by hosting the dashboard and using DNS + certificate infrastructure for secure local connections.
+**Auto-fetch:** Coordinator downloads cert on startup if missing
 
-### Architecture
+## Performance Optimizations
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                  https://dashboard.han.guru                     │
-│                  Hosted on Vercel/Cloudflare (CDN)             │
-│                  Static Relay frontend                          │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              │ HTTPS + WebSocket
-                              │ (valid Let's Encrypt cert)
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              https://coordinator.han.guru:41957                 │
-│              DNS A record → 127.0.0.1                           │
-│              Valid Let's Encrypt certificate                    │
-│              Actually connects to localhost!                    │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-                     Local coordinator daemon
+**Batch Queries:**
+
+```typescript
+// DataLoader pattern - batch multiple requests into single SQL query
+const messageCountLoader = new DataLoader(async (sessionIds: string[]) => {
+  return messages.countBatch(sessionIds); // Single SQL query with IN clause
+});
 ```
 
-### How It Works
+**SQL Aggregation:**
 
-1. **DNS Configuration:**
-   - `dashboard.han.guru` → CDN edge servers (Vercel/Cloudflare)
-   - `coordinator.han.guru` → `127.0.0.1` (A record pointing to localhost)
+```typescript
+// Dashboard analytics - 850 queries → 10 queries
+const dashboardData = await queryDashboardAggregates(cutoffDate);
+// Returns: sessions, messages, tasks, costs, activity, hooks, etc.
+```
 
-2. **Certificate Issuance:**
-   - Use DNS-01 challenge (TXT record) to validate domain ownership
-   - Issue Let's Encrypt certificate for `coordinator.han.guru`
-   - Certificate is valid for the domain, even though it resolves to localhost
+**Incremental Indexing:**
 
-3. **Certificate Distribution:**
-   - Host cert + key at `https://certs.han.guru/coordinator/latest`
-   - Coordinator downloads and caches cert on startup
-   - Auto-refresh before expiry (Let's Encrypt = 90 days)
+- Only processes new lines since last index
+- Upserts prevent duplicates
+- Line-based cursor tracking per session
 
-4. **Security Model:**
-   - Private key is "public" but domain resolves to 127.0.0.1
-   - Cannot MITM yourself - connection stays local
-   - Cert just satisfies browser security requirements
-   - Same pattern used by Plex (`*.plex.direct`)
+**Periodic Full Scan:**
 
-### Benefits
+- 30-second background scan catches missed events
+- Only indexes sessions with new data
+- Minimal overhead (only stats file to detect changes)
 
-- **No local browse process needed** - UI is hosted
-- **Instant UI updates** - No han upgrades for frontend changes
-- **Valid HTTPS** - Browser trusts the connection
-- **Same origin** - `*.han.guru` avoids CORS complexity
-- **Works offline** - After initial cert fetch, coordinator runs locally
+## Shutdown
 
-### Implementation Steps
+**Graceful shutdown:**
 
-1. **Infrastructure Setup:**
+```typescript
+export function stopCoordinatorService(): void {
+  if (isCoordinator) {
+    watcher.stop();           // Stop file watcher
+    coordinator.release();    // Release lock
+  }
+  
+  // GraphQL server cleanup happens in server.ts
+}
+```
 
-   ```
-   dashboard.han.guru  → Vercel/Cloudflare (static hosting)
-   coordinator.han.guru → 127.0.0.1 (DNS A record)
-   certs.han.guru      → Certificate distribution server
-   ```
+**Process signals:**
 
-2. **Cert Server:**
-   - Automated Let's Encrypt renewal via DNS-01
-   - Secure distribution endpoint (could require han version/auth)
-   - Returns PEM bundle: `{ cert: string, key: string, expires: Date }`
+- `SIGTERM` - Graceful shutdown
+- `SIGINT` (Ctrl+C) - Graceful shutdown
+- PID file removed on clean exit
 
-3. **Coordinator HTTPS:**
+## Monitoring
 
-   ```typescript
-   // On startup
-   const { cert, key } = await fetchCertificate();
-   
-   Bun.serve({
-     port: 41957,
-     tls: { cert, key },
-     // ... GraphQL handlers
-   });
-   ```
+**Logs:** `~/.han/coordinator.log`
 
-4. **Frontend Configuration:**
+**Metrics tracked:**
 
-   ```typescript
-   // Both production and development use HTTPS via local DNS
-   const GRAPHQL_ENDPOINT = 'https://coordinator.local.han.guru:41957/graphql';
-   ```
+- Sessions indexed
+- Messages indexed
+- Index duration
+- File events processed
+- Subscription connections
+- GraphQL query counts
 
-### Rollout Plan
+## Error Handling
 
-1. **Phase 1 (Current):** Local browse + local coordinator
-2. **Phase 2:** Add HTTPS support to coordinator (optional cert)
-3. **Phase 3:** Set up DNS + cert infrastructure
-4. **Phase 4:** Deploy hosted dashboard
-5. **Phase 5:** Deprecate local browse (coordinator-only)
+**JSONL parse errors:**
+
+- Logged but don't stop indexing
+- Partial data inserted where possible
+- `error` field in `IndexResult`
+
+**SQLite errors:**
+
+- WAL mode prevents most concurrency issues
+- Retry logic for transient errors
+- Corrupted database detected via `PRAGMA integrity_check`
+
+**Network errors:**
+
+- Health check retries with exponential backoff
+- Subscription reconnection automatic (Relay)
+
+## Related Blueprints
+
+- [Coordinator Data Layer](./coordinator-data-layer.md) - Database schema and indexing
+- [GraphQL Schema](./graphql-schema.md) - Type definitions and resolvers
+- [Browse Architecture](./browse-architecture.md) - Frontend integration
+- [Hook System](./hook-system.md) - Hook execution and caching
