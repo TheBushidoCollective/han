@@ -45,6 +45,7 @@ import {
 } from "./index.tsx";
 import { LineChangesChart } from "./LineChangesChart.tsx";
 import { ModelUsageChart } from "./ModelUsageChart.tsx";
+import { PerformanceTrendChart } from "./PerformanceTrendChart.tsx";
 import { SessionEffectivenessCard } from "./SessionEffectivenessCard.tsx";
 import { SubagentUsageChart } from "./SubagentUsageChart.tsx";
 import { TimeOfDayChart } from "./TimeOfDayChart.tsx";
@@ -277,6 +278,14 @@ export function DashboardContent({
 			failCount: h?.failCount ?? 0,
 			passRate: h?.passRate ?? 1,
 			avgDurationMs: h?.avgDurationMs ?? 0,
+		})),
+		performanceTrend: (rawAnalytics?.performanceTrend ?? []).map((p) => ({
+			weekStart: p?.weekStart ?? "",
+			weekLabel: p?.weekLabel ?? "",
+			sessionCount: p?.sessionCount ?? 0,
+			avgTurns: p?.avgTurns ?? 0,
+			avgCompactions: p?.avgCompactions ?? 0,
+			avgEffectiveness: p?.avgEffectiveness ?? 0,
 		})),
 		costAnalysis: {
 			estimatedCostUsd: rawAnalytics?.costAnalysis?.estimatedCostUsd ?? 0,
@@ -631,6 +640,26 @@ export function DashboardContent({
 					</SectionCard>
 				</Box>
 			</HStack>
+
+			{/* Performance Trend - full width */}
+			<SectionCard title="Session Performance Trend (30 days)">
+				{analyticsLoaded ? (
+					<PerformanceTrendChart
+						performanceTrend={analytics.performanceTrend}
+					/>
+				) : (
+					<Box
+						style={{
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							minHeight: "120px",
+						}}
+					>
+						<Text color="muted">Loading performance data...</Text>
+					</Box>
+				)}
+			</SectionCard>
 
 			{/* Session Effectiveness - full width */}
 			<SectionCard title="Session Effectiveness (30 days)">

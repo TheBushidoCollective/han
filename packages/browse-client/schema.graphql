@@ -542,6 +542,11 @@ type DashboardAnalytics {
   """Hook health and pass/fail rates"""
   hookHealth: [HookHealthStats!]
 
+  """
+  Weekly session performance trend (turns, compactions, effectiveness over time)
+  """
+  performanceTrend: [SessionPerformancePoint!]
+
   """Subagent type usage breakdown"""
   subagentUsage: [SubagentUsageStats!]
 
@@ -3036,6 +3041,27 @@ type SessionMessageAddedPayload {
 
   """ID of the session the message was added to"""
   sessionId: String
+}
+
+"""Weekly session performance data point for trend visualization"""
+type SessionPerformancePoint {
+  """Average compactions per session this week"""
+  avgCompactions: Float
+
+  """Average effectiveness score (0-100) this week"""
+  avgEffectiveness: Float
+
+  """Average user turns per session this week"""
+  avgTurns: Float
+
+  """Number of sessions this week"""
+  sessionCount: Int
+
+  """Human-readable week label (e.g., "Jan 27 - Feb 2")"""
+  weekLabel: String
+
+  """Monday of the week (YYYY-MM-DD)"""
+  weekStart: String
 }
 
 """Payload for session todos changed events"""

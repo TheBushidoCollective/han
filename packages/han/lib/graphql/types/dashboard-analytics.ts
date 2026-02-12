@@ -174,6 +174,20 @@ export interface CostAnalysis {
 }
 
 /**
+ * Weekly performance trend data point.
+ * Tracks session efficiency metrics over time — lower compactions and turns
+ * indicates improving performance.
+ */
+export interface SessionPerformancePoint {
+  weekStart: string;
+  weekLabel: string;
+  sessionCount: number;
+  avgTurns: number;
+  avgCompactions: number;
+  avgEffectiveness: number;
+}
+
+/**
  * Main analytics container
  */
 export interface DashboardAnalytics {
@@ -184,6 +198,7 @@ export interface DashboardAnalytics {
   toolUsage: ToolUsageStats[];
   hookHealth: HookHealthStats[];
   costAnalysis: CostAnalysis;
+  performanceTrend: SessionPerformancePoint[];
 }
 
 // =============================================================================
@@ -573,6 +588,35 @@ export const CostAnalysisType = CostAnalysisRef.implement({
   }),
 });
 
+const SessionPerformancePointRef =
+  builder.objectRef<SessionPerformancePoint>('SessionPerformancePoint');
+
+export const SessionPerformancePointType =
+  SessionPerformancePointRef.implement({
+    description:
+      'Weekly session performance data point for trend visualization',
+    fields: (t) => ({
+      weekStart: t.exposeString('weekStart', {
+        description: 'Monday of the week (YYYY-MM-DD)',
+      }),
+      weekLabel: t.exposeString('weekLabel', {
+        description: 'Human-readable week label (e.g., "Jan 27 - Feb 2")',
+      }),
+      sessionCount: t.exposeInt('sessionCount', {
+        description: 'Number of sessions this week',
+      }),
+      avgTurns: t.exposeFloat('avgTurns', {
+        description: 'Average user turns per session this week',
+      }),
+      avgCompactions: t.exposeFloat('avgCompactions', {
+        description: 'Average compactions per session this week',
+      }),
+      avgEffectiveness: t.exposeFloat('avgEffectiveness', {
+        description: 'Average effectiveness score (0-100) this week',
+      }),
+    }),
+  });
+
 const DashboardAnalyticsRef =
   builder.objectRef<DashboardAnalytics>('DashboardAnalytics');
 
@@ -613,6 +657,12 @@ export const DashboardAnalyticsType = DashboardAnalyticsRef.implement({
       type: CostAnalysisType,
       description: 'Cost analysis with subscription context',
       resolve: (data) => data.costAnalysis,
+    }),
+    performanceTrend: t.field({
+      type: [SessionPerformancePointType],
+      description:
+        'Weekly session performance trend (turns, compactions, effectiveness over time)',
+      resolve: (data) => data.performanceTrend,
     }),
   }),
 });
@@ -1347,6 +1397,44 @@ export async function queryDashboardAnalytics(
     configDirBreakdowns,
   };
 
+  // ==========================================================================
+  // Build performance trend (weekly aggregation from scored sessions)
+  // ==========================================================================
+  const perfWeeklyMap = new Map<
+    string,
+    { turns: number; compactions: number; scores: number; count: number }
+  >();
+
+  for (const session of scoredSessions) {
+    if (!session.startedAt) continue;
+    const dateStr = session.startedAt.split('T')[0];
+    const weekStart = getWeekStart(dateStr);
+    const existing = perfWeeklyMap.get(weekStart) || {
+      turns: 0,
+      compactions: 0,
+      scores: 0,
+      count: 0,
+    };
+    existing.turns += session.turnCount;
+    existing.compactions += session.compactionCount;
+    existing.scores += session.score;
+    existing.count++;
+    perfWeeklyMap.set(weekStart, existing);
+  }
+
+  const performanceTrend: SessionPerformancePoint[] = Array.from(
+    perfWeeklyMap.entries()
+  )
+    .map(([weekStart, data]) => ({
+      weekStart,
+      weekLabel: formatWeekLabel(weekStart),
+      sessionCount: data.count,
+      avgTurns: round(data.turns / data.count, 1),
+      avgCompactions: round(data.compactions / data.count, 2),
+      avgEffectiveness: round(data.scores / data.count, 1),
+    }))
+    .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+
   const result: DashboardAnalytics = {
     subagentUsage,
     compactionStats,
@@ -1355,6 +1443,7 @@ export async function queryDashboardAnalytics(
     toolUsage,
     hookHealth,
     costAnalysis,
+    performanceTrend,
   };
 
   analyticsCache.set(cacheKey, {

@@ -71,6 +71,14 @@ export const DashboardAnalyticsFragment = graphql`
         passRate
         avgDurationMs
       }
+      performanceTrend {
+        weekStart
+        weekLabel
+        sessionCount
+        avgTurns
+        avgCompactions
+        avgEffectiveness
+      }
       costAnalysis {
         estimatedCostUsd
         isEstimated
