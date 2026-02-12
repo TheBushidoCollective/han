@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.36.6] - 2026-02-12
+
+### Other
+
+- Remove centralized hook orchestration layer (#62) ([910853e7](../../commit/910853e7))
+- document legacy plugin name references found in codebase ([2eccbbe6](../../commit/2eccbbe6))
+
 ## [1.36.5] - 2026-02-09
 
 ### Added
