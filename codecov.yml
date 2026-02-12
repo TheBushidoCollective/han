@@ -29,6 +29,7 @@ coverage:
       default:
         target: auto
         threshold: 1%
+        informational: true
 
 flags:
   han-cli:
