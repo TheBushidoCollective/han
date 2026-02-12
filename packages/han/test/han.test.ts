@@ -980,7 +980,6 @@ describe('Hook config (han-plugin.yml)', () => {
     },
     { timeout: BINARY_TIMEOUT }
   );
-
 });
 
 // ============================================
