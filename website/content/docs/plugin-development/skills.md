@@ -260,7 +260,7 @@ Sets up Biome with auto-detected configuration.
 For discipline plugins, agents are defined in the `agents/` directory:
 
 ```
-disciplines/frontend/
+disciplines/frontend-development/
 ├── agents/
 │   ├── ui-developer.md
 │   └── accessibility-auditor.md
