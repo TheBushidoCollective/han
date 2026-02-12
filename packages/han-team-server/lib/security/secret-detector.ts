@@ -11,15 +11,20 @@
  * Types of secrets that can be detected
  */
 export type SecretType =
-  | "api_key"
-  | "aws_key"
-  | "github_token"
-  | "private_key"
-  | "password"
-  | "jwt"
-  | "database_url"
-  | "oauth_token"
-  | "generic_secret";
+  | 'api_key'
+  | 'aws_key'
+  | 'github_token'
+  | 'private_key'
+  | 'password'
+  | 'jwt'
+  | 'database_url'
+  | 'oauth_token'
+  | 'generic_secret';
+
+/**
+ * Sensitivity levels for secret detection
+ */
+export type SensitivityLevel = 'standard' | 'strict' | 'permissive';
 
 /**
  * A detected secret in content
@@ -27,6 +32,8 @@ export type SecretType =
 export interface DetectedSecret {
   /** Type of secret detected */
   type: SecretType;
+  /** Pattern name that matched */
+  patternName: string;
   /** Start position in content */
   startIndex: number;
   /** End position in content */
@@ -71,72 +78,89 @@ export interface DetectionOptions {
  * Default secret patterns
  */
 const SECRET_PATTERNS: Array<{
+  name: string;
   type: SecretType;
   pattern: RegExp;
   confidence: number;
 }> = [
   // AWS keys
   {
-    type: "aws_key",
+    name: 'aws_access_key',
+    type: 'aws_key',
     pattern: /AKIA[0-9A-Z]{16}/g,
     confidence: 0.95,
   },
   {
-    type: "aws_key",
-    pattern: /(?:aws_secret_access_key|AWS_SECRET_ACCESS_KEY)[=:\s]+['""]?([A-Za-z0-9/+=]{40})['""]?/gi,
+    name: 'aws_secret_key',
+    type: 'aws_key',
+    pattern:
+      /(?:aws_secret_access_key|AWS_SECRET_ACCESS_KEY)[=:\s]+['""]?([A-Za-z0-9/+=]{40})['""]?/gi,
     confidence: 0.9,
   },
   // GitHub tokens
   {
-    type: "github_token",
+    name: 'github_token',
+    type: 'github_token',
     pattern: /gh[pousr]_[A-Za-z0-9_]{36,}/g,
     confidence: 0.95,
   },
   {
-    type: "github_token",
+    name: 'github_fine_grained_pat',
+    type: 'github_token',
     pattern: /github_pat_[A-Za-z0-9_]{22,}/g,
     confidence: 0.95,
   },
   // API keys (generic patterns)
   {
-    type: "api_key",
-    pattern: /(?:api[_-]?key|apikey)[=:\s]+['""]?([A-Za-z0-9_\-]{20,})['""]?/gi,
+    name: 'api_key',
+    type: 'api_key',
+    pattern: /(?:api[_-]?key|apikey)[=:\s]+['""]?([A-Za-z0-9_-]{20,})['""]?/gi,
     confidence: 0.7,
   },
   // Private keys
   {
-    type: "private_key",
-    pattern: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g,
+    name: 'private_key',
+    type: 'private_key',
+    pattern:
+      /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g,
     confidence: 0.99,
   },
   // JWTs
   {
-    type: "jwt",
+    name: 'jwt',
+    type: 'jwt',
     pattern: /eyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*/g,
     confidence: 0.85,
   },
   // Database URLs with credentials
   {
-    type: "database_url",
-    pattern: /(?:postgres|mysql|mongodb|redis)(?:ql)?:\/\/[^:]+:[^@]+@[^\s'"]+/gi,
+    name: 'database_url',
+    type: 'database_url',
+    pattern:
+      /(?:postgres|mysql|mongodb|redis)(?:ql)?:\/\/[^:]+:[^@]+@[^\s'"]+/gi,
     confidence: 0.9,
   },
   // Password patterns
   {
-    type: "password",
+    name: 'password',
+    type: 'password',
     pattern: /(?:password|passwd|pwd)[=:\s]+['""]?([^\s'"]{8,})['""]?/gi,
     confidence: 0.6,
   },
   // OAuth tokens
   {
-    type: "oauth_token",
-    pattern: /(?:access_token|refresh_token|bearer)[=:\s]+['""]?([A-Za-z0-9_\-.]{20,})['""]?/gi,
+    name: 'oauth_token',
+    type: 'oauth_token',
+    pattern:
+      /(?:access_token|refresh_token|bearer)[=:\s]+['""]?([A-Za-z0-9_\-.]{20,})['""]?/gi,
     confidence: 0.75,
   },
   // Generic secrets (high entropy strings in suspicious contexts)
   {
-    type: "generic_secret",
-    pattern: /(?:secret|token|key|credential)[=:\s]+['""]?([A-Za-z0-9_\-/+=]{16,})['""]?/gi,
+    name: 'generic_secret',
+    type: 'generic_secret',
+    pattern:
+      /(?:secret|token|key|credential)[=:\s]+['""]?([A-Za-z0-9_\-/+=]{16,})['""]?/gi,
     confidence: 0.5,
   },
 ];
@@ -144,7 +168,7 @@ const SECRET_PATTERNS: Array<{
 /**
  * Redaction placeholder
  */
-const REDACTION_PLACEHOLDER = "[REDACTED]";
+const REDACTION_PLACEHOLDER = '[REDACTED]';
 
 /**
  * Secret Detector Service
@@ -165,11 +189,17 @@ export class SecretDetector {
 
     // Add custom patterns if provided
     const allPatterns = options.customPatterns
-      ? [...this.patterns, ...options.customPatterns.map((p) => ({ ...p, confidence: 0.8 }))]
+      ? [
+          ...this.patterns,
+          ...options.customPatterns.map((p) => ({
+            ...p,
+            confidence: 0.8,
+          })),
+        ]
       : this.patterns;
 
     // Scan with each pattern
-    for (const { type, pattern, confidence } of allPatterns) {
+    for (const { name, type, pattern, confidence } of allPatterns) {
       // Skip if type filtering enabled and this type not included
       if (typesToDetect && !typesToDetect.includes(type)) {
         continue;
@@ -197,6 +227,7 @@ export class SecretDetector {
 
         secrets.push({
           type,
+          patternName: name,
           startIndex,
           endIndex,
           confidence,
@@ -245,7 +276,10 @@ export class SecretDetector {
   /**
    * Get summary of secret types found (for logging without exposing values)
    */
-  getSummary(content: string, options: DetectionOptions = {}): Record<SecretType, number> {
+  getSummary(
+    content: string,
+    options: DetectionOptions = {}
+  ): Record<SecretType, number> {
     const result = this.scan(content, options);
     const summary: Partial<Record<SecretType, number>> = {};
 
@@ -270,4 +304,39 @@ export function getSecretDetector(): SecretDetector {
     _instance = new SecretDetector();
   }
   return _instance;
+}
+
+/**
+ * Create a new SecretDetector instance with optional sensitivity
+ */
+export function createSecretDetector(options?: {
+  sensitivity?: SensitivityLevel;
+}): SecretDetector {
+  const detector = new SecretDetector();
+  // Sensitivity can be used to adjust minConfidence in future
+  if (options?.sensitivity) {
+    // Currently all sensitivities use the same detector
+    // Future: adjust thresholds based on sensitivity level
+  }
+  return detector;
+}
+
+/**
+ * Convenience function to scan content for secrets using default detector
+ */
+export function scanForSecrets(
+  content: string,
+  options?: DetectionOptions
+): DetectedSecret[] {
+  return getSecretDetector().scan(content, options).secrets;
+}
+
+/**
+ * Convenience function to redact secrets from content using default detector
+ */
+export function redactSecrets(
+  content: string,
+  options?: DetectionOptions
+): string {
+  return getSecretDetector().redact(content, options);
 }

@@ -14,73 +14,24 @@
  * - ApiInfo: API metadata and feature discovery
  */
 
-// User types
+export type { ApiInfoData } from './api-info.ts';
+// API info types
+export { ApiInfoRef, ApiInfoType, getApiInfo } from './api-info.ts';
+// Billing types
 export {
-  TeamMembershipRef,
-  TeamMembershipType,
-  UserRef,
-  UserTierEnum,
-  UserType,
-  getUserById,
-  getUserTeamMemberships,
-  updateUserDisplayName,
-} from "./user.ts";
-export type { TeamMembershipData, UserData } from "./user.ts";
-
-// Team types
-export {
-  DeleteTeamPayloadRef,
-  DeleteTeamPayloadType,
-  RemoveMemberPayloadRef,
-  RemoveMemberPayloadType,
-  TeamMemberRef,
-  TeamMemberRoleEnum,
-  TeamMemberType,
-  TeamRef,
-  TeamRoleEnum,
-  TeamType,
-  generateTeamSlug,
-  getTeamRole,
-  isTeamAdmin,
-  isTeamMember,
-} from "./team.ts";
+  BillingInfoRef,
+  BillingInfoType,
+  CheckoutSessionResultRef,
+  CheckoutSessionResultType,
+  PriceIntervalEnum,
+  SubscriptionStatusEnum,
+} from './billing.ts';
 export type {
-  DeleteTeamPayloadData,
-  RemoveMemberPayloadData,
-  TeamData,
-  TeamMemberData,
-} from "./team.ts";
-
-// Team invite types
-export {
-  TeamInviteRef,
-  TeamInviteType,
-  createTeamInvite,
-  generateInviteCode,
-  isInviteValid,
-} from "./team-invite.ts";
-export type { TeamInviteData } from "./team-invite.ts";
-
-// Organization types
-export {
-  BillingPlanEnum,
-  OrgMemberRef,
-  OrgMemberRoleEnum,
-  OrgMemberType,
-  OrgRef,
-  OrgType,
-} from "./organization.ts";
-export type { OrgData, OrgMemberData } from "./organization.ts";
-
-// Session types
-export {
-  SessionRef,
-  SessionStatusEnum,
-  SessionType,
-  SessionVisibilityEnum,
-} from "./session.ts";
-export type { SessionData } from "./session.ts";
-
+  AuthErrorData,
+  BaseErrorData,
+  FieldErrorData,
+  ValidationErrorData,
+} from './errors.ts';
 // Error types
 export {
   AuthErrorRef,
@@ -92,25 +43,68 @@ export {
   FieldErrorType,
   ValidationErrorRef,
   ValidationErrorType,
-} from "./errors.ts";
-export type {
-  AuthErrorData,
-  BaseErrorData,
-  FieldErrorData,
-  ValidationErrorData,
-} from "./errors.ts";
+} from './errors.ts';
+export type { OrgData, OrgMemberData } from './organization.ts';
 
-// API info types
-export { ApiInfoRef, ApiInfoType, getApiInfo } from "./api-info.ts";
-export type { ApiInfoData } from "./api-info.ts";
-
-// Billing types
+// Organization types
 export {
-  BillingInfoRef,
-  BillingInfoType,
-  CheckoutSessionResultRef,
-  CheckoutSessionResultType,
-  PriceIntervalEnum,
-  SubscriptionStatusEnum,
+  BillingPlanEnum,
+  OrgMemberRef,
+  OrgMemberRoleEnum,
+  OrgMemberType,
+  OrgRef,
+  OrgType,
+} from './organization.ts';
+export type { SessionData } from './session.ts';
+
+// Session types
+export {
+  SessionRef,
+  SessionStatusEnum,
+  SessionType,
+  SessionVisibilityEnum,
+} from './session.ts';
+export type {
+  DeleteTeamPayloadData,
+  RemoveMemberPayloadData,
+  TeamData,
+  TeamMemberData,
+} from './team.ts';
+// Team types
+export {
+  DeleteTeamPayloadRef,
+  DeleteTeamPayloadType,
+  generateTeamSlug,
+  getTeamRole,
+  isTeamAdmin,
+  isTeamMember,
+  RemoveMemberPayloadRef,
+  RemoveMemberPayloadType,
+  TeamMemberRef,
+  TeamMemberRoleEnum,
+  TeamMemberType,
+  TeamRef,
+  TeamRoleEnum,
+  TeamType,
+} from './team.ts';
+export type { TeamInviteData } from './team-invite.ts';
+// Team invite types
+export {
+  createTeamInvite,
+  generateInviteCode,
+  isInviteValid,
+  TeamInviteRef,
+  TeamInviteType,
+} from './team-invite.ts';
+export type { TeamMembershipData, UserData } from './user.ts';
+// User types
+export {
+  getUserById,
+  getUserTeamMemberships,
+  TeamMembershipRef,
+  TeamMembershipType,
+  UserRef,
   UserTierEnum,
-} from "./billing.ts";
+  UserType,
+  updateUserDisplayName,
+} from './user.ts';

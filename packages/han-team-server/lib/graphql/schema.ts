@@ -16,8 +16,8 @@
  * - Authentication requirements are documented
  */
 
-import { builder } from "./builder.ts";
-import { getEncryptionService } from "../crypto/encryption-service.ts";
+import { getEncryptionService } from '../crypto/encryption-service.ts';
+import { builder } from './builder.ts';
 
 // Import all types to register them with the builder (side effects)
 import {
@@ -26,20 +26,35 @@ import {
   BaseErrorType,
   BillingInfoType,
   BillingPlanEnum,
-CheckoutSessionResultType,
+  CheckoutSessionResultType,
+  createTeamInvite,
   DeleteTeamPayloadRef,
   DeleteTeamPayloadType,
   ErrorCodeEnum,
   FieldErrorType,
+  generateTeamSlug,
+  getApiInfo,
+  isTeamAdmin,
+  isTeamMember,
+  OrgMemberRoleEnum,
+  OrgMemberType,
+  OrgRef,
+  OrgType,
+  PriceIntervalEnum,
   RemoveMemberPayloadRef,
   RemoveMemberPayloadType,
+  SessionRef,
+  SessionStatusEnum,
+  SessionType,
+  SessionVisibilityEnum,
+  SubscriptionStatusEnum,
   TeamInviteRef,
   TeamInviteType,
   TeamMemberRef,
   TeamMemberRoleEnum,
-  TeamMemberType,
   TeamMembershipRef,
   TeamMembershipType,
+  TeamMemberType,
   TeamRef,
   TeamRoleEnum,
   TeamType,
@@ -47,22 +62,7 @@ CheckoutSessionResultType,
   UserTierEnum,
   UserType,
   ValidationErrorType,
-  OrgMemberRoleEnum,
-  OrgMemberType,
-  OrgRef,
-  OrgType,
-  PriceIntervalEnum,
-  SessionRef,
-  SessionStatusEnum,
-  SessionType,
-  SessionVisibilityEnum,
-SubscriptionStatusEnum,
-  createTeamInvite,
-  generateTeamSlug,
-  getApiInfo,
-  isTeamAdmin,
-  isTeamMember,
-} from "./types/index.ts";
+} from './types/index.ts';
 
 // =============================================================================
 // Root Query Fields
@@ -74,11 +74,11 @@ SubscriptionStatusEnum,
  * @description Returns metadata about the API including version and features.
  * No authentication required.
  */
-builder.queryField("apiInfo", (t) =>
+builder.queryField('apiInfo', (t) =>
   t.field({
     type: ApiInfoType,
     description:
-      "Get API metadata including version, environment, and available features. No authentication required.",
+      'Get API metadata including version, environment, and available features. No authentication required.',
     resolve: (_parent, _args, context) => getApiInfo(context.env),
   })
 );
@@ -89,22 +89,22 @@ builder.queryField("apiInfo", (t) =>
  * @description Returns the authenticated user or throws if not authenticated.
  * Use this to get current user details and team memberships.
  */
-builder.queryField("me", (t) =>
+builder.queryField('me', (t) =>
   t.field({
     type: UserRef,
     description:
-      "Get the currently authenticated user. Throws if not authenticated. Returns user with team memberships.",
+      'Get the currently authenticated user. Throws if not authenticated. Returns user with team memberships.',
     resolve: async (_parent, _args, context) => {
       if (!context.user) {
-        throw new Error("Authentication required");
+        throw new Error('Authentication required');
       }
       // Return user data from context
       return {
         id: context.user.id,
         email: context.user.email,
-        name: context.user.name ?? context.user.email.split("@")[0],
+        name: context.user.name ?? context.user.email.split('@')[0],
         avatarUrl: null,
-        tier: "free" as const,
+        tier: 'free' as const,
         createdAt: new Date(),
         lastLoginAt: new Date(),
       };
@@ -118,18 +118,18 @@ builder.queryField("me", (t) =>
  * @description Fetch a specific organization by ID. Requires authentication
  * and membership in the organization.
  */
-builder.queryField("organization", (t) =>
+builder.queryField('organization', (t) =>
   t.field({
     type: OrgRef,
     nullable: true,
     args: {
       id: t.arg.string({
         required: true,
-        description: "Organization ID (UUID format)",
+        description: 'Organization ID (UUID format)',
       }),
     },
     description:
-      "Get an organization by ID. Requires authentication and organization membership.",
+      'Get an organization by ID. Requires authentication and organization membership.',
     resolve: async (_parent, args, context) => {
       // Authentication check
       if (!context.user) {
@@ -152,18 +152,18 @@ builder.queryField("organization", (t) =>
  * @description Fetch a specific team by ID. Requires authentication
  * and team membership.
  */
-builder.queryField("team", (t) =>
+builder.queryField('team', (t) =>
   t.field({
     type: TeamRef,
     nullable: true,
     args: {
       id: t.arg.string({
         required: true,
-        description: "Team ID (UUID format)",
+        description: 'Team ID (UUID format)',
       }),
     },
     description:
-      "Get a team by ID. Requires authentication and team membership.",
+      'Get a team by ID. Requires authentication and team membership.',
     resolve: async (_parent, args, context) => {
       // Authentication check
       if (!context.user) {
@@ -189,15 +189,15 @@ builder.queryField("team", (t) =>
  * @description Fetch teams the authenticated user belongs to.
  * Returns a Relay connection.
  */
-builder.queryField("teams", (t) =>
+builder.queryField('teams', (t) =>
   t.connection({
     type: TeamRef,
     description:
-      "Get teams the authenticated user belongs to. Returns a Relay connection.",
+      'Get teams the authenticated user belongs to. Returns a Relay connection.',
     resolve: async (_parent, args, context) => {
       // Authentication check
       if (!context.user) {
-        throw new Error("Authentication required");
+        throw new Error('Authentication required');
       }
 
       // In a real implementation, query team_members for user's teams
@@ -221,18 +221,18 @@ builder.queryField("teams", (t) =>
  * @description Fetch a specific session by ID. Requires authentication
  * and appropriate visibility/ownership.
  */
-builder.queryField("session", (t) =>
+builder.queryField('session', (t) =>
   t.field({
     type: SessionRef,
     nullable: true,
     args: {
       id: t.arg.string({
         required: true,
-        description: "Session ID (UUID format, matches local session ID)",
+        description: 'Session ID (UUID format, matches local session ID)',
       }),
     },
     description:
-      "Get a session by ID. Requires authentication and view permission (owner, team member, or org member based on visibility).",
+      'Get a session by ID. Requires authentication and view permission (owner, team member, or org member based on visibility).',
     resolve: async (_parent, args, context) => {
       // Authentication check
       if (!context.user) {
@@ -249,7 +249,7 @@ builder.queryField("session", (t) =>
 // =============================================================================
 
 // Import auth service for token operations
-import { getAuthService, AuthError } from "../auth/index.ts";
+import { AuthError, getAuthService } from '../auth/index.ts';
 
 /**
  * Token refresh mutation result type.
@@ -259,18 +259,19 @@ const RefreshTokenResultType = builder.objectType(
     accessToken: string;
     refreshToken: string;
     expiresIn: number;
-  }>("RefreshTokenResult"),
+  }>('RefreshTokenResult'),
   {
-    description: "Result of a successful token refresh operation",
+    description: 'Result of a successful token refresh operation',
     fields: (t) => ({
-      accessToken: t.exposeString("accessToken", {
-        description: "New JWT access token (valid for 24 hours)",
+      accessToken: t.exposeString('accessToken', {
+        description: 'New JWT access token (valid for 24 hours)',
       }),
-      refreshToken: t.exposeString("refreshToken", {
-        description: "New refresh token (valid for 30 days)",
+      refreshToken: t.exposeString('refreshToken', {
+        description: 'New refresh token (valid for 30 days)',
       }),
-      expiresIn: t.exposeInt("expiresIn", {
-        description: "Access token expiration time in seconds (86400 = 24 hours)",
+      expiresIn: t.exposeInt('expiresIn', {
+        description:
+          'Access token expiration time in seconds (86400 = 24 hours)',
       }),
     }),
   }
@@ -282,18 +283,18 @@ const RefreshTokenResultType = builder.objectType(
  * @description Exchange a valid refresh token for new access and refresh tokens.
  * This implements token rotation for security - old refresh tokens are invalidated.
  */
-builder.mutationField("refreshToken", (t) =>
+builder.mutationField('refreshToken', (t) =>
   t.field({
     type: RefreshTokenResultType,
     nullable: true,
     args: {
       refreshToken: t.arg.string({
         required: true,
-        description: "Current refresh token to exchange for new tokens",
+        description: 'Current refresh token to exchange for new tokens',
       }),
     },
     description:
-      "Exchange a refresh token for new access and refresh tokens. Returns null if token is invalid or expired.",
+      'Exchange a refresh token for new access and refresh tokens. Returns null if token is invalid or expired.',
     resolve: async (_parent, args, _context) => {
       try {
         const authService = getAuthService();
@@ -306,7 +307,9 @@ builder.mutationField("refreshToken", (t) =>
           result.userId,
           result.email
         );
-        const newRefreshToken = await authService.signRefreshToken(result.userId);
+        const newRefreshToken = await authService.signRefreshToken(
+          result.userId
+        );
 
         return {
           accessToken,
@@ -316,10 +319,12 @@ builder.mutationField("refreshToken", (t) =>
       } catch (error) {
         if (error instanceof AuthError) {
           // Token is invalid, expired, or wrong type
-          console.error(`Token refresh failed: ${error.code} - ${error.message}`);
+          console.error(
+            `Token refresh failed: ${error.code} - ${error.message}`
+          );
           return null;
         }
-        console.error("Unexpected error during token refresh:", error);
+        console.error('Unexpected error during token refresh:', error);
         return null;
       }
     },
@@ -332,29 +337,29 @@ builder.mutationField("refreshToken", (t) =>
  * @description Creates a new team with the authenticated user as admin.
  * Provisions encryption key for the team via EncryptionService.
  */
-builder.mutationField("createTeam", (t) =>
+builder.mutationField('createTeam', (t) =>
   t.field({
     type: TeamRef,
     args: {
       name: t.arg.string({
         required: true,
-        description: "Team name (1-255 characters)",
+        description: 'Team name (1-255 characters)',
       }),
     },
     description:
-      "Create a new team. The authenticated user becomes the team admin. Provisions encryption key for the team.",
+      'Create a new team. The authenticated user becomes the team admin. Provisions encryption key for the team.',
     resolve: async (_parent, args, context) => {
       // Authentication check
       if (!context.user) {
-        throw new Error("Authentication required");
+        throw new Error('Authentication required');
       }
 
       // Validate team name
       if (!args.name || args.name.trim().length === 0) {
-        throw new Error("Team name is required");
+        throw new Error('Team name is required');
       }
       if (args.name.length > 255) {
-        throw new Error("Team name must be 255 characters or less");
+        throw new Error('Team name must be 255 characters or less');
       }
 
       const teamId = crypto.randomUUID();
@@ -386,24 +391,24 @@ builder.mutationField("createTeam", (t) =>
  *
  * @description Updates team name/settings. Admin only.
  */
-builder.mutationField("updateTeam", (t) =>
+builder.mutationField('updateTeam', (t) =>
   t.field({
     type: TeamRef,
     args: {
       id: t.arg.string({
         required: true,
-        description: "Team ID to update",
+        description: 'Team ID to update',
       }),
       name: t.arg.string({
         required: true,
-        description: "New team name",
+        description: 'New team name',
       }),
     },
-    description: "Update team name. Only team admins can update team settings.",
+    description: 'Update team name. Only team admins can update team settings.',
     resolve: async (_parent, args, context) => {
       // Authentication check
       if (!context.user) {
-        throw new Error("Authentication required");
+        throw new Error('Authentication required');
       }
 
       // SECURITY: Verify team membership via database lookup (not just headers)
@@ -413,18 +418,22 @@ builder.mutationField("updateTeam", (t) =>
         context.db
       );
       if (!membershipCheck) {
-        throw new Error("Not a member of this team");
+        throw new Error('Not a member of this team');
       }
 
       // SECURITY: Verify user is admin before allowing update
-      const adminCheck = await isTeamAdmin(context.user.id, args.id, context.db);
+      const adminCheck = await isTeamAdmin(
+        context.user.id,
+        args.id,
+        context.db
+      );
       if (!adminCheck) {
-        throw new Error("Only team admins can update team settings");
+        throw new Error('Only team admins can update team settings');
       }
 
       // Validate name
       if (!args.name || args.name.trim().length === 0) {
-        throw new Error("Team name is required");
+        throw new Error('Team name is required');
       }
 
       const slug = generateTeamSlug(args.name);
@@ -446,21 +455,21 @@ builder.mutationField("updateTeam", (t) =>
  *
  * @description Soft-deletes a team. Admin only.
  */
-builder.mutationField("deleteTeam", (t) =>
+builder.mutationField('deleteTeam', (t) =>
   t.field({
     type: DeleteTeamPayloadRef,
     args: {
       id: t.arg.string({
         required: true,
-        description: "Team ID to delete",
+        description: 'Team ID to delete',
       }),
     },
     description:
-      "Soft-delete a team. Only team admins can delete teams. Sessions are preserved but unlinked.",
+      'Soft-delete a team. Only team admins can delete teams. Sessions are preserved but unlinked.',
     resolve: async (_parent, args, context) => {
       // Authentication check
       if (!context.user) {
-        throw new Error("Authentication required");
+        throw new Error('Authentication required');
       }
 
       // SECURITY: Verify team membership via database lookup (not just headers)
@@ -470,13 +479,17 @@ builder.mutationField("deleteTeam", (t) =>
         context.db
       );
       if (!membershipCheck) {
-        throw new Error("Not a member of this team");
+        throw new Error('Not a member of this team');
       }
 
       // SECURITY: Verify user is admin before allowing delete
-      const adminCheck = await isTeamAdmin(context.user.id, args.id, context.db);
+      const adminCheck = await isTeamAdmin(
+        context.user.id,
+        args.id,
+        context.db
+      );
       if (!adminCheck) {
-        throw new Error("Only team admins can delete teams");
+        throw new Error('Only team admins can delete teams');
       }
 
       return {
@@ -492,21 +505,21 @@ builder.mutationField("deleteTeam", (t) =>
  *
  * @description Creates an invite code valid for 24 hours. Admin only.
  */
-builder.mutationField("createTeamInvite", (t) =>
+builder.mutationField('createTeamInvite', (t) =>
   t.field({
     type: TeamInviteRef,
     args: {
       teamId: t.arg.string({
         required: true,
-        description: "Team ID to create invite for",
+        description: 'Team ID to create invite for',
       }),
     },
     description:
-      "Create an invite code for the team. Valid for 24 hours. Only team admins can create invites.",
+      'Create an invite code for the team. Valid for 24 hours. Only team admins can create invites.',
     resolve: async (_parent, args, context) => {
       // Authentication check
       if (!context.user) {
-        throw new Error("Authentication required");
+        throw new Error('Authentication required');
       }
 
       // SECURITY: Verify team membership via database lookup (not just headers)
@@ -516,7 +529,7 @@ builder.mutationField("createTeamInvite", (t) =>
         context.db
       );
       if (!membershipCheck) {
-        throw new Error("Not a member of this team");
+        throw new Error('Not a member of this team');
       }
 
       // SECURITY: Verify user is admin before allowing invite creation
@@ -526,7 +539,7 @@ builder.mutationField("createTeamInvite", (t) =>
         context.db
       );
       if (!adminCheck) {
-        throw new Error("Only team admins can create invites");
+        throw new Error('Only team admins can create invites');
       }
 
       // Create the invite
@@ -544,27 +557,27 @@ builder.mutationField("createTeamInvite", (t) =>
  * @description Joins a team using an invite code.
  * SECURITY: Rate limited to 5 attempts/min with lockout after 5 failures.
  */
-builder.mutationField("joinTeam", (t) =>
+builder.mutationField('joinTeam', (t) =>
   t.field({
     type: TeamRef,
     args: {
       code: t.arg.string({
         required: true,
-        description: "8-character invite code",
+        description: '8-character invite code',
       }),
     },
     description:
-      "Join a team using an invite code. The code must be valid (not expired or used). Rate limited to prevent brute force attacks.",
+      'Join a team using an invite code. The code must be valid (not expired or used). Rate limited to prevent brute force attacks.',
     resolve: async (_parent, args, context) => {
       // Authentication check
       if (!context.user) {
-        throw new Error("Authentication required");
+        throw new Error('Authentication required');
       }
 
       // SECURITY: Check if user is locked out due to too many failed attempts
       // Import at module level would be better, but keeping inline for demonstration
       const { checkInviteLockout, recordInviteFailure, clearInviteLockout } =
-        await import("../middleware/rate-limit.ts");
+        await import('../middleware/rate-limit.ts');
 
       const lockoutStatus = checkInviteLockout(context.user.id);
       if (lockoutStatus.isLocked) {
@@ -582,7 +595,7 @@ builder.mutationField("joinTeam", (t) =>
             `Too many failed attempts. Account locked for ${result.retryAfter} seconds.`
           );
         }
-        throw new Error("Invalid invite code format");
+        throw new Error('Invalid invite code format');
       }
 
       // In a real implementation:
@@ -600,7 +613,7 @@ builder.mutationField("joinTeam", (t) =>
           `Too many failed attempts. Account locked for ${result.retryAfter} seconds.`
         );
       }
-      throw new Error("Invite code not found");
+      throw new Error('Invite code not found');
     },
   })
 );
@@ -608,29 +621,29 @@ builder.mutationField("joinTeam", (t) =>
 /**
  * Valid team roles for runtime validation.
  */
-const VALID_TEAM_ROLES = ["admin", "member"] as const;
+const VALID_TEAM_ROLES = ['admin', 'member'] as const;
 
 /**
  * Update team member mutation.
  *
  * @description Changes a team member's role. Admin only.
  */
-builder.mutationField("updateTeamMember", (t) =>
+builder.mutationField('updateTeamMember', (t) =>
   t.field({
     type: TeamMemberRef,
     args: {
       teamId: t.arg.string({
         required: true,
-        description: "Team ID",
+        description: 'Team ID',
       }),
       userId: t.arg.string({
         required: true,
-        description: "User ID to update",
+        description: 'User ID to update',
       }),
       role: t.arg({
         type: TeamRoleEnum,
         required: true,
-        description: "New role for the user",
+        description: 'New role for the user',
       }),
     },
     description:
@@ -638,13 +651,13 @@ builder.mutationField("updateTeamMember", (t) =>
     resolve: async (_parent, args, context) => {
       // Authentication check
       if (!context.user) {
-        throw new Error("Authentication required");
+        throw new Error('Authentication required');
       }
 
       // SECURITY: Runtime validation of role enum to prevent mass assignment
       const roleValue = args.role as string;
-      if (!VALID_TEAM_ROLES.includes(roleValue as "admin" | "member")) {
-        throw new Error("Invalid role value");
+      if (!VALID_TEAM_ROLES.includes(roleValue as 'admin' | 'member')) {
+        throw new Error('Invalid role value');
       }
 
       // SECURITY: Verify team membership via database lookup (not just headers)
@@ -654,7 +667,7 @@ builder.mutationField("updateTeamMember", (t) =>
         context.db
       );
       if (!membershipCheck) {
-        throw new Error("Not a member of this team");
+        throw new Error('Not a member of this team');
       }
 
       // SECURITY: Verify user is admin before allowing role changes
@@ -664,12 +677,12 @@ builder.mutationField("updateTeamMember", (t) =>
         context.db
       );
       if (!adminCheck) {
-        throw new Error("Only team admins can change member roles");
+        throw new Error('Only team admins can change member roles');
       }
 
       // Can't change own role to prevent lockout
       if (args.userId === context.user.id) {
-        throw new Error("Cannot change your own role");
+        throw new Error('Cannot change your own role');
       }
 
       // In real implementation, update database
@@ -677,7 +690,7 @@ builder.mutationField("updateTeamMember", (t) =>
         id: crypto.randomUUID(),
         userId: args.userId,
         teamId: args.teamId,
-        role: roleValue as "admin" | "member",
+        role: roleValue as 'admin' | 'member',
         joinedAt: new Date(),
       };
     },
@@ -689,25 +702,25 @@ builder.mutationField("updateTeamMember", (t) =>
  *
  * @description Removes a member from the team. Admin only.
  */
-builder.mutationField("removeTeamMember", (t) =>
+builder.mutationField('removeTeamMember', (t) =>
   t.field({
     type: RemoveMemberPayloadRef,
     args: {
       teamId: t.arg.string({
         required: true,
-        description: "Team ID",
+        description: 'Team ID',
       }),
       userId: t.arg.string({
         required: true,
-        description: "User ID to remove",
+        description: 'User ID to remove',
       }),
     },
     description:
-      "Remove a member from the team. Only team admins can remove members.",
+      'Remove a member from the team. Only team admins can remove members.',
     resolve: async (_parent, args, context) => {
       // Authentication check
       if (!context.user) {
-        throw new Error("Authentication required");
+        throw new Error('Authentication required');
       }
 
       // SECURITY: Verify team membership via database lookup (not just headers)
@@ -717,7 +730,7 @@ builder.mutationField("removeTeamMember", (t) =>
         context.db
       );
       if (!membershipCheck) {
-        throw new Error("Not a member of this team");
+        throw new Error('Not a member of this team');
       }
 
       // SECURITY: Verify user is admin before allowing member removal
@@ -727,12 +740,12 @@ builder.mutationField("removeTeamMember", (t) =>
         context.db
       );
       if (!adminCheck) {
-        throw new Error("Only team admins can remove members");
+        throw new Error('Only team admins can remove members');
       }
 
       // Can't remove self
       if (args.userId === context.user.id) {
-        throw new Error("Cannot remove yourself from the team");
+        throw new Error('Cannot remove yourself from the team');
       }
 
       // In real implementation, delete from team_members
@@ -750,26 +763,26 @@ builder.mutationField("removeTeamMember", (t) =>
  *
  * @description Updates the authenticated user's display name.
  */
-builder.mutationField("updateProfile", (t) =>
+builder.mutationField('updateProfile', (t) =>
   t.field({
     type: UserRef,
     args: {
       displayName: t.arg.string({
         required: false,
-        description: "New display name (null to keep current)",
+        description: 'New display name (null to keep current)',
       }),
     },
     description: "Update the authenticated user's profile (display name).",
     resolve: async (_parent, args, context) => {
       // Authentication check
       if (!context.user) {
-        throw new Error("Authentication required");
+        throw new Error('Authentication required');
       }
 
       // Validate display name if provided
       if (args.displayName !== undefined && args.displayName !== null) {
         if (args.displayName.length > 255) {
-          throw new Error("Display name must be 255 characters or less");
+          throw new Error('Display name must be 255 characters or less');
         }
       }
 
@@ -777,9 +790,12 @@ builder.mutationField("updateProfile", (t) =>
       return {
         id: context.user.id,
         email: context.user.email,
-        name: args.displayName ?? context.user.name ?? context.user.email.split("@")[0],
+        name:
+          args.displayName ??
+          context.user.name ??
+          context.user.email.split('@')[0],
         avatarUrl: null,
-        tier: "free" as const,
+        tier: 'free' as const,
         createdAt: new Date(),
         lastLoginAt: new Date(),
       };
@@ -793,25 +809,25 @@ builder.mutationField("updateProfile", (t) =>
  * @description Change who can view a session. Only the session owner can modify.
  * @deprecated Use updateSessionSharing instead for more granular control
  */
-builder.mutationField("updateSessionVisibility", (t) =>
+builder.mutationField('updateSessionVisibility', (t) =>
   t.field({
     type: SessionRef,
     nullable: true,
     deprecationReason:
-      "Use updateSessionSharing for granular team-level sharing control",
+      'Use updateSessionSharing for granular team-level sharing control',
     args: {
       sessionId: t.arg.string({
         required: true,
-        description: "ID of the session to update",
+        description: 'ID of the session to update',
       }),
       visibility: t.arg({
         type: SessionVisibilityEnum,
         required: true,
-        description: "New visibility setting for the session",
+        description: 'New visibility setting for the session',
       }),
     },
     description:
-      "Update session visibility. Only the session owner can modify. Deprecated: use updateSessionSharing instead.",
+      'Update session visibility. Only the session owner can modify. Deprecated: use updateSessionSharing instead.',
     resolve: async (_parent, args, context) => {
       // Authentication check
       if (!context.user) {
@@ -858,7 +874,6 @@ export {
   CheckoutSessionResultType,
   PriceIntervalEnum,
   SubscriptionStatusEnum,
-  UserTierEnum,
   // Error types
   ErrorCodeEnum,
   BaseErrorType,

@@ -14,17 +14,18 @@
  * @security All redirect URLs are validated against APP_BASE_URL to prevent open redirects
  */
 
-import { builder } from "../builder.ts";
 import {
+  type BillingInfo,
   BillingService,
   getBillingService,
-  type BillingInfo,
   type PriceInterval,
   type SubscriptionStatus,
   type UserTier,
-} from "../../billing/index.ts";
-import { getStripeConfig } from "../../config/schema.ts";
-import { getRedisConnection } from "../../db/index.ts";
+} from '../../billing/index.ts';
+import { getStripeConfig } from '../../config/schema.ts';
+import { getRedisConnection } from '../../db/index.ts';
+import { builder } from '../builder.ts';
+import { UserTierEnum } from './user.ts';
 
 /**
  * Rate limit configuration for billing mutations
@@ -35,7 +36,7 @@ const BILLING_RATE_LIMIT = {
   /** Rate limit window in seconds (1 minute) */
   windowSeconds: 60,
   /** Redis key prefix */
-  keyPrefix: "rl:billing:checkout:",
+  keyPrefix: 'rl:billing:checkout:',
 };
 
 /**
@@ -91,55 +92,36 @@ function isValidRedirectUrl(url: string, appBaseUrl: string): boolean {
 }
 
 /**
- * User tier enum type.
- *
- * @description Simplified tier for feature gating.
- */
-export const UserTierEnum = builder.enumType("UserTier", {
-  description: "User subscription tier for feature gating",
-  values: {
-    FREE: {
-      value: "free" as UserTier,
-      description: "Free tier with limited features and retention",
-    },
-    PRO: {
-      value: "pro" as UserTier,
-      description: "Pro tier with full features and extended retention",
-    },
-  },
-});
-
-/**
  * Subscription status enum type.
  *
  * @description Maps to Stripe subscription statuses plus 'none' for no subscription.
  */
-export const SubscriptionStatusEnum = builder.enumType("SubscriptionStatus", {
-  description: "Stripe subscription status",
+export const SubscriptionStatusEnum = builder.enumType('SubscriptionStatus', {
+  description: 'Stripe subscription status',
   values: {
     NONE: {
-      value: "none" as SubscriptionStatus,
-      description: "No subscription exists",
+      value: 'none' as SubscriptionStatus,
+      description: 'No subscription exists',
     },
     TRIALING: {
-      value: "trialing" as SubscriptionStatus,
-      description: "Subscription is in trial period",
+      value: 'trialing' as SubscriptionStatus,
+      description: 'Subscription is in trial period',
     },
     ACTIVE: {
-      value: "active" as SubscriptionStatus,
-      description: "Subscription is active and paid",
+      value: 'active' as SubscriptionStatus,
+      description: 'Subscription is active and paid',
     },
     PAST_DUE: {
-      value: "past_due" as SubscriptionStatus,
-      description: "Payment failed but subscription still active",
+      value: 'past_due' as SubscriptionStatus,
+      description: 'Payment failed but subscription still active',
     },
     CANCELED: {
-      value: "canceled" as SubscriptionStatus,
-      description: "Subscription has been canceled",
+      value: 'canceled' as SubscriptionStatus,
+      description: 'Subscription has been canceled',
     },
     UNPAID: {
-      value: "unpaid" as SubscriptionStatus,
-      description: "Subscription is unpaid and suspended",
+      value: 'unpaid' as SubscriptionStatus,
+      description: 'Subscription is unpaid and suspended',
     },
   },
 });
@@ -147,16 +129,16 @@ export const SubscriptionStatusEnum = builder.enumType("SubscriptionStatus", {
 /**
  * Price interval enum for checkout.
  */
-export const PriceIntervalEnum = builder.enumType("PriceInterval", {
-  description: "Billing interval for subscription pricing",
+export const PriceIntervalEnum = builder.enumType('PriceInterval', {
+  description: 'Billing interval for subscription pricing',
   values: {
     MONTHLY: {
-      value: "monthly" as PriceInterval,
-      description: "Monthly billing cycle",
+      value: 'monthly' as PriceInterval,
+      description: 'Monthly billing cycle',
     },
     YEARLY: {
-      value: "yearly" as PriceInterval,
-      description: "Yearly billing cycle (typically discounted)",
+      value: 'yearly' as PriceInterval,
+      description: 'Yearly billing cycle (typically discounted)',
     },
   },
 });
@@ -164,7 +146,7 @@ export const PriceIntervalEnum = builder.enumType("PriceInterval", {
 /**
  * Billing info object reference.
  */
-export const BillingInfoRef = builder.objectRef<BillingInfo>("BillingInfo");
+export const BillingInfoRef = builder.objectRef<BillingInfo>('BillingInfo');
 
 /**
  * Billing info GraphQL type implementation.
@@ -176,27 +158,27 @@ export const BillingInfoType = BillingInfoRef.implement({
   fields: (t) => ({
     tier: t.field({
       type: UserTierEnum,
-      description: "Current subscription tier (free or pro)",
+      description: 'Current subscription tier (free or pro)',
       resolve: (info) => info.tier,
     }),
     subscriptionStatus: t.field({
       type: SubscriptionStatusEnum,
-      description: "Current Stripe subscription status",
+      description: 'Current Stripe subscription status',
       resolve: (info) => info.subscriptionStatus,
     }),
     subscriptionId: t.string({
       nullable: true,
-      description: "Stripe subscription ID if subscribed",
+      description: 'Stripe subscription ID if subscribed',
       resolve: (info) => info.subscriptionId,
     }),
     currentPeriodEnd: t.field({
-      type: "DateTime",
+      type: 'DateTime',
       nullable: true,
-      description: "When the current billing period ends",
+      description: 'When the current billing period ends',
       resolve: (info) => info.currentPeriodEnd,
     }),
     hasPaymentMethod: t.boolean({
-      description: "Whether the user has a Stripe customer account",
+      description: 'Whether the user has a Stripe customer account',
       resolve: (info) => info.stripeCustomerId !== null,
     }),
   }),
@@ -208,16 +190,16 @@ export const BillingInfoType = BillingInfoRef.implement({
 export const CheckoutSessionResultRef = builder.objectRef<{
   sessionId: string;
   url: string;
-}>("CheckoutSessionResult");
+}>('CheckoutSessionResult');
 
 export const CheckoutSessionResultType = CheckoutSessionResultRef.implement({
-  description: "Result of creating a Stripe Checkout session",
+  description: 'Result of creating a Stripe Checkout session',
   fields: (t) => ({
-    sessionId: t.exposeString("sessionId", {
-      description: "Stripe Checkout session ID",
+    sessionId: t.exposeString('sessionId', {
+      description: 'Stripe Checkout session ID',
     }),
-    url: t.exposeString("url", {
-      description: "URL to redirect user to for checkout",
+    url: t.exposeString('url', {
+      description: 'URL to redirect user to for checkout',
     }),
   }),
 });
@@ -234,17 +216,18 @@ export const CheckoutSessionResultType = CheckoutSessionResultRef.implement({
  *
  * @security Validates returnUrl against APP_BASE_URL to prevent open redirects
  */
-builder.queryField("billingPortalUrl", (t) =>
+builder.queryField('billingPortalUrl', (t) =>
   t.string({
     nullable: true,
     description:
-      "Get a URL to the Stripe billing portal for managing subscription. " +
-      "Requires authentication and an existing Stripe customer account. " +
-      "The returnUrl must match the application domain for security.",
+      'Get a URL to the Stripe billing portal for managing subscription. ' +
+      'Requires authentication and an existing Stripe customer account. ' +
+      'The returnUrl must match the application domain for security.',
     args: {
       returnUrl: t.arg.string({
         required: true,
-        description: "URL to return to after leaving the billing portal (must match app domain)",
+        description:
+          'URL to return to after leaving the billing portal (must match app domain)',
       }),
     },
     resolve: async (_parent, args, context) => {
@@ -258,7 +241,7 @@ builder.queryField("billingPortalUrl", (t) =>
         console.warn(
           `[Billing] Invalid returnUrl rejected: ${args.returnUrl} (expected origin: ${stripeConfig.appBaseUrl})`
         );
-        throw new Error("Invalid return URL: must match application domain");
+        throw new Error('Invalid return URL: must match application domain');
       }
 
       try {
@@ -269,7 +252,7 @@ builder.queryField("billingPortalUrl", (t) =>
         );
       } catch (error) {
         // User doesn't have a Stripe customer account
-        console.warn("Failed to get billing portal URL:", error);
+        console.warn('Failed to get billing portal URL:', error);
         return null;
       }
     },
@@ -290,28 +273,30 @@ builder.queryField("billingPortalUrl", (t) =>
  * - Validates successUrl and cancelUrl against APP_BASE_URL to prevent open redirects
  * - Rate limited to 10 requests per minute per user (via billing tier rate limiter)
  */
-builder.mutationField("createCheckoutSession", (t) =>
+builder.mutationField('createCheckoutSession', (t) =>
   t.field({
     type: CheckoutSessionResultRef,
     nullable: true,
     description:
-      "Create a Stripe Checkout session to upgrade to PRO subscription. " +
-      "Returns a URL to redirect the user to for payment. " +
-      "Success and cancel URLs must match the application domain. " +
-      "Rate limited to prevent abuse.",
+      'Create a Stripe Checkout session to upgrade to PRO subscription. ' +
+      'Returns a URL to redirect the user to for payment. ' +
+      'Success and cancel URLs must match the application domain. ' +
+      'Rate limited to prevent abuse.',
     args: {
       interval: t.arg({
         type: PriceIntervalEnum,
         required: true,
-        description: "Billing interval (monthly or yearly)",
+        description: 'Billing interval (monthly or yearly)',
       }),
       successUrl: t.arg.string({
         required: true,
-        description: "URL to redirect to after successful payment (must match app domain)",
+        description:
+          'URL to redirect to after successful payment (must match app domain)',
       }),
       cancelUrl: t.arg.string({
         required: true,
-        description: "URL to redirect to if user cancels checkout (must match app domain)",
+        description:
+          'URL to redirect to if user cancels checkout (must match app domain)',
       }),
     },
     resolve: async (_parent, args, context) => {
@@ -328,13 +313,13 @@ builder.mutationField("createCheckoutSession", (t) =>
         console.warn(
           `[Billing] Invalid successUrl rejected: ${args.successUrl} (expected origin: ${stripeConfig.appBaseUrl})`
         );
-        throw new Error("Invalid success URL: must match application domain");
+        throw new Error('Invalid success URL: must match application domain');
       }
       if (!isValidRedirectUrl(args.cancelUrl, stripeConfig.appBaseUrl)) {
         console.warn(
           `[Billing] Invalid cancelUrl rejected: ${args.cancelUrl} (expected origin: ${stripeConfig.appBaseUrl})`
         );
-        throw new Error("Invalid cancel URL: must match application domain");
+        throw new Error('Invalid cancel URL: must match application domain');
       }
 
       try {
@@ -349,8 +334,8 @@ builder.mutationField("createCheckoutSession", (t) =>
 
         return result;
       } catch (error) {
-        console.error("Failed to create checkout session:", error);
-        throw new Error("Failed to create checkout session");
+        console.error('Failed to create checkout session:', error);
+        throw new Error('Failed to create checkout session');
       }
     },
   })
@@ -364,14 +349,14 @@ builder.mutationField("createCheckoutSession", (t) =>
 // Since User type is defined separately, we'll add this as an extension.
 // This is typically done by importing the UserRef and adding a field.
 
-import { UserRef } from "./user.ts";
+import { UserRef } from './user.ts';
 
 /**
  * Add billing field to User type.
  *
  * @description Returns the user's billing information including tier and subscription status.
  */
-builder.objectField(UserRef, "billing", (t) =>
+builder.objectField(UserRef, 'billing', (t) =>
   t.field({
     type: BillingInfoRef,
     nullable: true,
@@ -381,32 +366,11 @@ builder.objectField(UserRef, "billing", (t) =>
         const billingService = getBillingService();
         return await billingService.getBillingInfo(user.id);
       } catch (error) {
-        console.warn("Failed to get billing info:", error);
+        console.warn('Failed to get billing info:', error);
         return null;
       }
     },
   })
 );
 
-/**
- * Add tier field to User type for convenience.
- *
- * @description Returns the user's current tier directly, derived from subscription status.
- */
-builder.objectField(UserRef, "tier", (t) =>
-  t.field({
-    type: UserTierEnum,
-    description:
-      "User's current subscription tier. Derived from subscription status: " +
-      "'pro' if active or trialing, 'free' otherwise.",
-    resolve: async (user, _args, _context) => {
-      try {
-        const billingService = getBillingService();
-        const billing = await billingService.getBillingInfo(user.id);
-        return billing.tier;
-      } catch {
-        return "free" as UserTier;
-      }
-    },
-  })
-);
+// Note: User.tier field is defined in user.ts - do not duplicate here

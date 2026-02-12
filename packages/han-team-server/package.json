@@ -23,6 +23,7 @@
     "@noble/hashes": "^2.0.1",
     "@pothos/core": "^4.6.0",
     "@pothos/plugin-relay": "^4.5.0",
+    "archiver": "^7.0.1",
     "graphql": "^16.10.0",
     "graphql-yoga": "^5.10.10",
     "hono": "^4.6.15",
@@ -33,6 +34,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/archiver": "^7.0.0",
     "@types/bun": "^1.1.14",
     "@types/node": "^22.10.5",
     "@types/pg": "^8.11.10",

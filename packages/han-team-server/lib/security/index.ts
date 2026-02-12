@@ -2,10 +2,14 @@
  * Security module exports
  */
 export {
-  SecretDetector,
-  getSecretDetector,
-  type SecretType,
+  createSecretDetector,
   type DetectedSecret,
-  type ScanResult,
   type DetectionOptions,
-} from "./secret-detector.ts";
+  getSecretDetector,
+  redactSecrets,
+  type ScanResult,
+  SecretDetector,
+  type SecretType,
+  type SensitivityLevel,
+  scanForSecrets,
+} from './secret-detector.ts';
