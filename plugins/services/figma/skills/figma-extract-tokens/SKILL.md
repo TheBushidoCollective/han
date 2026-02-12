@@ -7,7 +7,7 @@ description: Extract design tokens and variables from a Figma file to create or 
 
 ## Name
 
-hashi-figma:figma-extract-tokens - Extract design tokens and variables from Figma files
+figma:figma-extract-tokens - Extract design tokens and variables from Figma files
 
 ## Synopsis
 

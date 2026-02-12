@@ -1,5 +1,6 @@
 ---
 name: act-local-testing
+user-invocable: false
 description: Use when testing GitHub Actions workflows locally with act. Covers act CLI usage, Docker configuration, debugging workflows, and troubleshooting common issues when running workflows on your local machine.
 allowed-tools:
   - Read

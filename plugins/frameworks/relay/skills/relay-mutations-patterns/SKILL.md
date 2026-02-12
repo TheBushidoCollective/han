@@ -1,5 +1,6 @@
 ---
 name: relay-mutations-patterns
+user-invocable: false
 description: Use when relay mutations with optimistic updates, connections, declarative mutations, and error handling.
 allowed-tools:
   - Read

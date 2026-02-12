@@ -1,14 +1,14 @@
-# Hashi: Agent SOP
+# Agent SOP
 
 MCP server configuration for Agent SOP integration providing Standard Operating Procedures (SOPs) for AI agents with markdown-based workflow definitions, RFC 2119 compliance, and comprehensive SOP authoring capabilities.
 
-## What This Hashi Provides
+## What This Plugin Provides
 
 ### MCP Server: agent-sops
 
 Agent SOP transforms single-use prompts into reusable workflow templates. Rather than embedding all instructions upfront, SOPs enable progressive context disclosure—AI assistants load only relevant workflows based on specific tasks. This approach optimizes context efficiency while providing specialized procedures for complex, multi-step workflows.
 
-This hashi connects Claude Code to the Agent SOP system and provides:
+This plugin connects Claude Code to the Agent SOP system and provides:
 
 - **Reusable Workflow Templates**: Standard Operating Procedures defined in markdown format
 - **RFC 2119 Constraint Keywords**: Use MUST, SHOULD, MAY for precise agent guidance
@@ -63,14 +63,14 @@ pip install strands-agents-sops
 ### Via Han Marketplace
 
 ```bash
-han plugin install hashi-agent-sop
+han plugin install agent-sop
 ```
 
 Or install manually:
 
 ```bash
 claude plugin marketplace add thebushidocollective/han
-claude plugin install hashi-agent-sop@han
+claude plugin install agent-sop@han
 ```
 
 ### Configuration
@@ -436,9 +436,9 @@ pip install --upgrade strands-agents-sops
 
 ## Related Plugins
 
-- **bushido**: Core quality principles and enforcement
-- **jutsu-tdd**: Test-Driven Development principles
-- **hashi-blueprints**: Technical blueprint documentation
-- **jutsu-markdown**: Markdown documentation and linting
-- **do-backend-development**: Backend engineering agents
-- **do-frontend-development**: Frontend engineering agents
+- **core**: Core quality principles and enforcement
+- **tdd**: Test-Driven Development principles
+- **blueprints**: Technical blueprint documentation
+- **markdown**: Markdown documentation and linting
+- **backend**: Backend engineering agents
+- **frontend**: Frontend engineering agents

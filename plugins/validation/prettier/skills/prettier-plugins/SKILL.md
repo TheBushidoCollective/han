@@ -1,5 +1,6 @@
 ---
 name: prettier-plugins
+user-invocable: false
 description: Use when prettier plugins including plugin ecosystem, custom parsers, and plugin development.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

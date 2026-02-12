@@ -1,5 +1,6 @@
 ---
 name: helm-values
+user-invocable: false
 description: Use when managing Helm values files and configuration overrides for customizing Kubernetes deployments.
 allowed-tools: []
 ---

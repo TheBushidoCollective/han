@@ -1,5 +1,6 @@
 ---
 name: jest-configuration
+user-invocable: false
 description: Use when jest configuration, setup files, module resolution, and project organization for optimal testing environments.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

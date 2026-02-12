@@ -1,5 +1,6 @@
 ---
 name: project-memory
+user-invocable: false
 description: Use when setting up or organizing Claude Code project memory (CLAUDE.md, .claude/rules/) for better context awareness, consistent behavior, and project-specific instructions.
 allowed-tools:
   - Read

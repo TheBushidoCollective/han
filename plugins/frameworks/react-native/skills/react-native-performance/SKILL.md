@@ -1,5 +1,6 @@
 ---
-name: jutsu-react-native:react-native-performance
+name: react-native-performance
+user-invocable: false
 description: Use when optimizing React Native app performance. Covers FlatList optimization, memoization, image optimization, bundle size reduction, and profiling techniques.
 allowed-tools:
   - Read

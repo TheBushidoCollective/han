@@ -1,5 +1,6 @@
 ---
 name: android-architecture
+user-invocable: false
 description: Use when implementing MVVM, clean architecture, dependency injection with Hilt, or structuring Android app layers.
 allowed-tools:
   - Read

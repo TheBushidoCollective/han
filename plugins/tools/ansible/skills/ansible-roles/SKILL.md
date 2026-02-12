@@ -1,5 +1,6 @@
 ---
 name: ansible-roles
+user-invocable: false
 description: Use when structuring and reusing code with Ansible roles for modular, maintainable automation and configuration management.
 allowed-tools: [Bash, Read]
 ---

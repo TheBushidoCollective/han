@@ -1,4 +1,4 @@
-# jutsu-rollup
+# Rollup
 
 Rollup build validation with automatic package manager detection.
 
@@ -9,7 +9,7 @@ Provides Stop hooks that validate Rollup builds complete successfully before all
 ## Installation
 
 ```bash
-han plugin install jutsu-rollup
+han plugin install rollup
 ```
 
 ## Features

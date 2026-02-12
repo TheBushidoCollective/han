@@ -1,4 +1,4 @@
-# jutsu-tdd
+# TDD
 
 Test-Driven Development (TDD) principles and red-green-refactor cycle enforcement.
 
@@ -73,5 +73,5 @@ end
 Install with npx (no installation required):
 
 ```bash
-han plugin install jutsu-tdd
+han plugin install tdd
 ```

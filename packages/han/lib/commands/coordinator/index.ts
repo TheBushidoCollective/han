@@ -285,9 +285,7 @@ export function registerCoordinatorCommands(program: Command): void {
     .option('--name <name>', 'Human-friendly name for this environment')
     .action(async (options: { configDir?: string; name?: string }) => {
       try {
-        const { registerConfigDir, getConfigDirByPath } = await import(
-          '../../db/index.ts'
-        );
+        const { registerConfigDir } = await import('../../db/index.ts');
 
         // Determine config dir to register
         const configDir =
@@ -295,46 +293,30 @@ export function registerCoordinatorCommands(program: Command): void {
           process.env.CLAUDE_CONFIG_DIR ||
           `${process.env.HOME}/.claude`;
 
-        // Get the default config dir
         const defaultConfigDir = `${process.env.HOME}/.claude`;
+        const isDefault = configDir === defaultConfigDir;
 
-        // Check if this is the default config dir (no need to register)
-        if (configDir === defaultConfigDir) {
-          console.log(
-            'Default config directory detected - no registration needed'
-          );
-          return;
-        }
-
-        // Check if already registered
-        const existing = await getConfigDirByPath(configDir);
-        if (existing) {
-          console.log(
-            `Config directory already registered: ${configDir}${existing.name ? ` (${existing.name})` : ''}`
-          );
-          return;
-        }
-
-        // Register the config directory
+        // Always register (idempotent upsert)
         const result = await registerConfigDir({
           path: configDir,
           name: options.name,
-          isDefault: false,
+          isDefault,
         });
 
         console.log(
           `Registered config directory: ${result.path}${result.name ? ` (${result.name})` : ''}`
         );
 
-        // If watcher is running, add the watch path
-        const { watcher } = await import('../../db/index.ts');
-        if (watcher.isRunning()) {
-          const projectsPath = `${configDir}/projects`;
-          const added = watcher.addWatchPath(configDir, projectsPath);
-          if (added) {
-            console.log(`Added watch path: ${projectsPath}`);
-          }
-        }
+        // Spawn a detached subprocess to index sessions.
+        // fullScanAndIndex is a sync Rust napi call that blocks the Node event loop,
+        // so we run it out-of-process to avoid starving the coordinator's GraphQL.
+        const indexScript = `import { indexer } from '${import.meta.resolve('../../db/index.ts')}'; const r = await indexer.fullScanAndIndex(); console.log('Indexed ' + r.length + ' sessions');`;
+        const child = spawn(process.execPath, ['-e', indexScript], {
+          detached: true,
+          stdio: 'ignore',
+        });
+        child.unref();
+        console.log('Indexing sessions in background...');
       } catch (error: unknown) {
         console.error(
           'Error registering config directory:',

@@ -1,5 +1,6 @@
 ---
 name: nextjs-server-components
+user-invocable: false
 description: Use when next.js Server Components for optimal performance. Use when building data-intensive Next.js applications.
 allowed-tools:
   - Bash

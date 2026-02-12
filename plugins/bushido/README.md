@@ -6,7 +6,7 @@ The philosophy of the Samurai applied to software development.
 
 Bushido (武士道) is the code of the Samurai - a set of seven virtues that guide honorable conduct. This plugin applies these timeless principles to software development, shaping how AI agents approach their work.
 
-**This plugin provides ONLY the philosophical overlay.** For marketplace infrastructure, skills, commands, and MCP servers, install `han-core`.
+**This plugin provides ONLY the philosophical overlay.** For marketplace infrastructure, skills, and MCP servers, install `core`.
 
 ## The Seven Virtues
 
@@ -19,7 +19,7 @@ When this plugin is enabled, agents are guided by:
 - Admit when multiple valid approaches exist
 - Never hide complexity or make unjustified assumptions
 
-### 勇 Courage (Yū) - Challenge and recommend
+### 勇 Courage (Yu) - Challenge and recommend
 
 - Point out code smells and anti-patterns even if not explicitly asked
 - Suggest better architectural patterns when you see them
@@ -54,7 +54,7 @@ When this plugin is enabled, agents are guided by:
 - Deliver what was promised in specifications
 - Maintain high standards even under time pressure
 
-### 忠義 Loyalty (Chūgi) - Long-term thinking
+### 忠義 Loyalty (Chugi) - Long-term thinking
 
 - Consider maintenance burden of every decision
 - Optimize for team velocity over quick fixes
@@ -65,11 +65,11 @@ When this plugin is enabled, agents are guided by:
 
 ### Requirements
 
-**This plugin requires han-core:**
+**This plugin requires core:**
 
 ```bash
-# Install han-core first
-han plugin install han-core
+# Install core first
+han plugin install core
 
 # Then install bushido
 han plugin install bushido
@@ -78,22 +78,22 @@ han plugin install bushido
 Or install both together:
 
 ```bash
-han plugin install han-core bushido
+han plugin install core bushido
 ```
 
 ### What You Get
 
-**With han-core only:**
+**With core only:**
 
 - Marketplace infrastructure
-- All skills and commands
-- MCP servers (hooks, metrics, context7)
+- All skills (workflow + programming principles)
+- MCP server (hooks, documentation access, memory, blueprints)
 - Quality enforcement
 - No philosophical overlay
 
-**With han-core + bushido:**
+**With core + bushido:**
 
-- Everything from han-core
+- Everything from core
 - Plus the 7 Bushido virtues guiding agent behavior
 - Work shaped by honor, courage, compassion, respect, honesty, quality ownership, and long-term thinking
 
@@ -110,7 +110,7 @@ The virtues influence how agents:
 
 Bushido is a **cultural choice**, not a technical requirement. You can:
 
-- Use `han-core` alone for pure infrastructure
+- Use `core` alone for pure infrastructure
 - Add `bushido` when you want the philosophical overlay
 - Disable `bushido` anytime to remove the virtues
 
@@ -118,10 +118,10 @@ The seven virtues are injected at session start. They shape agent behavior but d
 
 ## Comparison
 
-| Plugin | Philosophy | Infrastructure | Skills/Commands |
-|--------|------------|----------------|-----------------|
-| han-core | None | ✓ Full | ✓ All |
-| bushido | ✓ 7 Virtues | Depends on han-core | Depends on han-core |
+| Plugin | Philosophy | Infrastructure | Skills |
+|--------|------------|----------------|--------|
+| core | None | Full | All |
+| bushido | 7 Virtues | Depends on core | Depends on core |
 
 ## License
 
@@ -130,5 +130,5 @@ MIT
 ## Links
 
 - [Repository](https://github.com/thebushidocollective/han)
-- [han-core plugin](https://github.com/thebushidocollective/han/tree/main/han-core)
-- [The Bushido Collective](https://thebushido.co)
+- [core plugin](https://github.com/thebushidocollective/han/tree/main/plugins/core)
+- [The Bushido Collective](https://thebushidocollective.com)

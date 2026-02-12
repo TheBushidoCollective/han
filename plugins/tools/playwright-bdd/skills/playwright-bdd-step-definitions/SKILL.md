@@ -1,5 +1,6 @@
 ---
 name: playwright-bdd-step-definitions
+user-invocable: false
 description: Use when creating step definitions with Given, When, Then, using createBdd() for step functions, implementing Page Object Model patterns, and sharing fixtures between steps.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

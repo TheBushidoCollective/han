@@ -1,5 +1,6 @@
 ---
-name: jutsu-bun:bun-sqlite
+name: bun-sqlite
+user-invocable: false
 description: Use when working with SQLite databases in Bun. Covers Bun's built-in SQLite driver, database operations, prepared statements, and transactions with high performance.
 allowed-tools:
   - Read

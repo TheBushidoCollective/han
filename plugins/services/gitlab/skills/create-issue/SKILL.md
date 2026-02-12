@@ -7,7 +7,7 @@ description: Create a new issue in a GitLab project
 
 ## Name
 
-hashi-gitlab:create-issue - Create a new issue in a GitLab project
+gitlab:create-issue - Create a new issue in a GitLab project
 
 ## Synopsis
 

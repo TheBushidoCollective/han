@@ -330,6 +330,60 @@ type ConfigDir {
   sessionCount: Int
 }
 
+"""Per-config-dir cost breakdown (matches CostAnalysis shape)"""
+type ConfigDirCostBreakdown {
+  """Daily API spend at which the subscription breaks even"""
+  breakEvenDailySpend: Float
+
+  """Cache hit rate (0 to 1) for this config directory"""
+  cacheHitRate: Float
+
+  """Cache savings in USD for this config directory"""
+  cacheSavingsUsd: Float
+
+  """Unique identifier for the config directory"""
+  configDirId: String
+
+  """Display name for the config directory (e.g., "Default", "Claude Work")"""
+  configDirName: String
+
+  """Average cost per session in this config directory"""
+  costPerSession: Float
+
+  """Percentage of subscription cost utilized by this config dir"""
+  costUtilizationPercent: Float
+
+  """Daily cost breakdown for this config directory"""
+  dailyCostTrend: [DailyCost!]
+
+  """Estimated cost in USD for this config directory"""
+  estimatedCostUsd: Float
+
+  """Whether cost is estimated (always false for per-dir stats)"""
+  isEstimated: Boolean
+
+  """Number of distinct models used in this config directory"""
+  modelCount: Int
+
+  """Potential savings if cache hit rate were optimal"""
+  potentialSavingsUsd: Float
+
+  """Per-tier comparison scoped to this config dir cost"""
+  subscriptionComparisons: [SubscriptionComparison!]
+
+  """Top sessions by cost (empty for per-dir view)"""
+  topSessionsByCost: [SessionCost!]
+
+  """Total messages in this config directory"""
+  totalMessages: Int
+
+  """Total sessions in this config directory"""
+  totalSessions: Int
+
+  """Weekly cost aggregation for this config directory"""
+  weeklyCostTrend: [WeeklyCost!]
+}
+
 """Result of a config directory mutation"""
 type ConfigDirMutationResult {
   """The affected config directory (if applicable)"""
@@ -367,11 +421,20 @@ type CoordinatorStatus {
 
 """Cost analysis with subscription context"""
 type CostAnalysis {
+  """Billing type from ~/.claude.json (e.g., "stripe_subscription")"""
+  billingType: String
+
   """Daily API spend at which the current subscription breaks even"""
   breakEvenDailySpend: Float
 
   """Cache hit rate (0 to 1)"""
   cacheHitRate: Float
+
+  """Actual cache savings in USD based on per-model pricing difference"""
+  cacheSavingsUsd: Float
+
+  """Per-config-dir cost breakdowns"""
+  configDirBreakdowns: [ConfigDirCostBreakdown!]
 
   """Average cost per completed task"""
   costPerCompletedTask: Float
@@ -387,6 +450,11 @@ type CostAnalysis {
 
   """Total estimated cost in USD (API credit equivalent)"""
   estimatedCostUsd: Float
+
+  """
+  Whether cost is estimated (true = Sonnet-class fallback, false = per-model pricing)
+  """
+  isEstimated: Boolean
 
   """
   Current subscription tier cost (e.g., $200 for Max 20x, $100 for Max 5x)
@@ -2004,6 +2072,9 @@ type ModelUsageStats {
   """Total cache read tokens"""
   cacheReadTokens: BigInt
 
+  """Estimated cost in USD using per-model pricing"""
+  costUsd: Float
+
   """Human-readable model name"""
   displayName: String
 
@@ -2026,7 +2097,9 @@ type Mutation {
   """
   acquireSlot(hookName: String!, pid: Int!, pluginName: String, sessionId: String!): SlotAcquireResult
 
-  """Trigger full indexing of all Claude Code sessions from JSONL files"""
+  """
+  Trigger full indexing of all Claude Code sessions. WARNING: This is a blocking operation that can take many seconds for large session counts. Prefer spawning indexing in a subprocess from CLI commands.
+  """
   indexSessions: IndexingResult
 
   """Register a config directory for multi-environment session indexing"""

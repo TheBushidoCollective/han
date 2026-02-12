@@ -1,5 +1,6 @@
 ---
 name: professional-honesty
+user-invocable: false
 description: Use when responding to questions or providing information requiring professional honesty and directness over excessive agreeableness.
 allowed-tools:
   - "*"

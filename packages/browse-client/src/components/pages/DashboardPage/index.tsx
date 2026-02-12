@@ -73,6 +73,9 @@ export const DashboardAnalyticsFragment = graphql`
       }
       costAnalysis {
         estimatedCostUsd
+        isEstimated
+        billingType
+        cacheSavingsUsd
         maxSubscriptionCostUsd
         costUtilizationPercent
         dailyCostTrend {
@@ -110,6 +113,51 @@ export const DashboardAnalyticsFragment = graphql`
           recommendation
         }
         breakEvenDailySpend
+        configDirBreakdowns {
+          configDirId
+          configDirName
+          estimatedCostUsd
+          isEstimated
+          cacheSavingsUsd
+          totalSessions
+          totalMessages
+          modelCount
+          costPerSession
+          cacheHitRate
+          potentialSavingsUsd
+          costUtilizationPercent
+          dailyCostTrend {
+            date
+            costUsd
+            sessionCount
+          }
+          weeklyCostTrend {
+            weekStart
+            weekLabel
+            costUsd
+            sessionCount
+            avgDailyCost
+          }
+          subscriptionComparisons {
+            tierName
+            monthlyCostUsd
+            apiCreditCostUsd
+            savingsUsd
+            savingsPercent
+            recommendation
+          }
+          breakEvenDailySpend
+          topSessionsByCost {
+            sessionId
+            slug
+            costUsd
+            inputTokens
+            outputTokens
+            cacheReadTokens
+            messageCount
+            startedAt
+          }
+        }
       }
     }
   }
@@ -164,6 +212,7 @@ export const DashboardActivityFragment = graphql`
         cacheReadTokens
         cacheCreationTokens
         totalTokens
+        costUsd
       }
       totalSessions
       totalMessages

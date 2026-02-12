@@ -1,17 +1,5 @@
 {
   "hooks": {
-    "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han hook run han-plugins lint --async"
-          }
-        ],
-        "matcher": "Edit|Write|NotebookEdit",
-        "async": true
-      }
-    ],
     "Stop": [
       {
         "hooks": [

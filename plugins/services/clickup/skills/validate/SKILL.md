@@ -7,7 +7,7 @@ description: Validate checklist items for a ClickUp task without changing status
 
 ## Name
 
-hashi-clickup:validate - Validate checklist items for a ClickUp task without changing status
+clickup:validate - Validate checklist items for a ClickUp task without changing status
 
 ## Synopsis
 

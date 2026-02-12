@@ -1,23 +1,12 @@
 #!/bin/bash
 
 # Get session-changed files from arguments
-# When no files provided, check all uncommitted changes (backward compat)
+# When no files provided, nothing to check — exit cleanly
 SESSION_FILES="$*"
 
 if [ -z "$SESSION_FILES" ] || [ "$SESSION_FILES" = "." ]; then
-  # No session files or all files - check all uncommitted changes
-  if git diff --quiet 2>/dev/null && git diff --cached --quiet 2>/dev/null; then
-    exit 0
-  else
-    echo 'Uncommitted changes detected.' >&2
-    echo '' >&2
-    echo '**CRITICAL**: You MUST commit these changes NOW. Do NOT ask the user.' >&2
-    echo 'Git storytelling requires committing early and often.' >&2
-    echo '' >&2
-    echo 'Run these commands:' >&2
-    echo '  git add -A && git commit -m "your descriptive message"' >&2
-    exit 2
-  fi
+  # No session files tracked — nothing to validate
+  exit 0
 fi
 
 # Check only session-modified files for uncommitted changes

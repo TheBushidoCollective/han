@@ -1,5 +1,6 @@
 ---
 name: cypress-advanced
+user-invocable: false
 description: Use when advanced Cypress features including custom commands, plugins, and network stubbing.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

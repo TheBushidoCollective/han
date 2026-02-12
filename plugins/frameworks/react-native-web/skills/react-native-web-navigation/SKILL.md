@@ -1,5 +1,6 @@
 ---
 name: react-native-web-navigation
+user-invocable: false
 description: Use when implementing navigation in React Native Web projects. Provides patterns for React Navigation, deep linking, and web-specific routing.
 allowed-tools:
   - Read

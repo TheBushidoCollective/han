@@ -1,4 +1,4 @@
-# jutsu-ios
+# iOS
 
 iOS development validation with Xcode build hooks for Claude Code.
 
@@ -11,7 +11,7 @@ iOS development validation with Xcode build hooks for Claude Code.
 ## Installation
 
 ```bash
-han plugin install jutsu-ios
+han plugin install ios
 ```
 
 ## Hooks
@@ -30,7 +30,7 @@ Automatically runs when you stop Claude Code to ensure the iOS project builds:
 You can customize the hook behavior in your project's `han-config.yml`:
 
 ```yaml
-jutsu-ios:
+ios:
   hooks:
     build:
       enabled: true
@@ -41,7 +41,7 @@ jutsu-ios:
 To disable the hook for a specific project:
 
 ```yaml
-jutsu-ios:
+ios:
   hooks:
     build:
       enabled: false
@@ -61,5 +61,5 @@ jutsu-ios:
 
 ## Related Plugins
 
-- **jutsu-swift**: Swift language skills and SwiftLint validation
-- **jutsu-objective-c**: Objective-C development skills
+- **swift**: Swift language skills and SwiftLint validation
+- **objective-c**: Objective-C development skills

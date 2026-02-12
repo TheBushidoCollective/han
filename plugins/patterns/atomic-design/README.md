@@ -30,13 +30,13 @@ This plugin provides the following skills:
 Skills can be invoked using the Skill tool:
 
 ```javascript
-Skill("jutsu-atomic-design:atomic-design-fundamentals")
-Skill("jutsu-atomic-design:atomic-design-quarks")
-Skill("jutsu-atomic-design:atomic-design-atoms")
-Skill("jutsu-atomic-design:atomic-design-molecules")
-Skill("jutsu-atomic-design:atomic-design-organisms")
-Skill("jutsu-atomic-design:atomic-design-templates")
-Skill("jutsu-atomic-design:atomic-design-integration")
+Skill("atomic-design:atomic-design-fundamentals")
+Skill("atomic-design:atomic-design-quarks")
+Skill("atomic-design:atomic-design-atoms")
+Skill("atomic-design:atomic-design-molecules")
+Skill("atomic-design:atomic-design-organisms")
+Skill("atomic-design:atomic-design-templates")
+Skill("atomic-design:atomic-design-integration")
 ```
 
 Each skill provides specialized knowledge, best practices, and code examples for that level of atomic design.
@@ -109,7 +109,7 @@ Key configuration choices:
 Install with the Han CLI:
 
 ```bash
-han plugin install jutsu-atomic-design
+han plugin install atomic-design
 ```
 
 Or add to your Claude Code settings manually.

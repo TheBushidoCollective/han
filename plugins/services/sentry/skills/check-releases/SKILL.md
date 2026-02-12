@@ -7,7 +7,7 @@ description: Check release health and compare error rates across deployments
 
 ## Name
 
-hashi-sentry:check-releases - Check release health and compare error rates across deployments
+sentry:check-releases - Check release health and compare error rates across deployments
 
 ## Synopsis
 

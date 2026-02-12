@@ -1,4 +1,4 @@
-# Ansible Jutsu
+# Ansible
 
 Ansible playbook validation and configuration management best practices.
 
@@ -29,8 +29,6 @@ Validates Ansible playbooks in directories containing `.yml` or `.yaml` files us
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install jutsu-ansible
+han plugin install ansible
 ```

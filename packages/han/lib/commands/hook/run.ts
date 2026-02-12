@@ -1,7 +1,11 @@
 import { fstatSync, readFileSync } from 'node:fs';
 import type { Command } from 'commander';
 import { initEventLogger } from '../../events/logger.ts';
-import { runConfiguredHook, validate } from '../../hook-runner.ts';
+import {
+  runAsyncPostToolUse,
+  runConfiguredHook,
+  validate,
+} from '../../hook-runner.ts';
 import { isDebugMode } from '../../shared.ts';
 
 /**
@@ -27,9 +31,9 @@ function hasStdinData(): boolean {
  * Read and parse stdin to extract session_id for event logging
  * This is called once at startup since stdin is only readable once
  */
-let stdinPayload: { session_id?: string } | null = null;
+let stdinPayload: Record<string, unknown> | null = null;
 let stdinRead = false;
-function getStdinPayload(): { session_id?: string } | null {
+function getStdinPayload(): Record<string, unknown> | null {
   if (!stdinRead) {
     stdinRead = true;
     try {
@@ -96,6 +100,10 @@ export function registerHookRun(hookCommand: Command): void {
       '--session-id <id>',
       'Claude session ID for event logging and cache tracking'
     )
+    .option(
+      '--async',
+      'Enable per-file HAN_FILES substitution (PostToolUse) or session-file substitution (Stop)'
+    )
     .allowUnknownOption()
     .action(
       async (
@@ -111,6 +119,7 @@ export function registerHookRun(hookCommand: Command): void {
           checkpointId?: string;
           skipDeps?: boolean;
           sessionId?: string;
+          async?: boolean;
         }
       ) => {
         // Allow global disable of all hooks via environment variable
@@ -124,16 +133,20 @@ export function registerHookRun(hookCommand: Command): void {
         // Initialize event logger for this session
         // Session ID can come from: CLI option, stdin payload, or environment
         const payload = getStdinPayload();
+        const payloadSessionId =
+          typeof payload?.session_id === 'string'
+            ? payload.session_id
+            : undefined;
         const sessionId =
           options.sessionId ||
-          payload?.session_id ||
+          payloadSessionId ||
           process.env.CLAUDE_SESSION_ID;
         if (isDebugMode()) {
           console.error(
             `[han hook run] stdin payload: ${JSON.stringify(payload)}`
           );
           console.error(
-            `[han hook run] session_id: ${sessionId || '(none)'} (source: ${options.sessionId ? 'cli' : payload?.session_id ? 'stdin' : process.env.CLAUDE_SESSION_ID ? 'env' : 'none'})`
+            `[han hook run] session_id: ${sessionId || '(none)'} (source: ${options.sessionId ? 'cli' : payloadSessionId ? 'stdin' : process.env.CLAUDE_SESSION_ID ? 'env' : 'none'})`
           );
         }
         if (sessionId) {
@@ -202,6 +215,22 @@ export function registerHookRun(hookCommand: Command): void {
             process.exit(1);
           }
 
+          // --async with tool_input in payload → per-file PostToolUse mode
+          if (options.async && payload?.tool_input) {
+            await runAsyncPostToolUse({
+              pluginName,
+              hookName,
+              payload: payload as {
+                session_id?: string;
+                tool_name?: string;
+                tool_input?: Record<string, unknown>;
+                cwd?: string;
+              },
+              verbose,
+            });
+            return;
+          }
+
           // Read checkpoint info from options or environment variables
           const checkpointTypeRaw =
             options.checkpointType || process.env.HAN_CHECKPOINT_TYPE;
@@ -242,6 +271,7 @@ export function registerHookRun(hookCommand: Command): void {
             checkpointId,
             skipDeps: options.skipDeps,
             sessionId, // Pass sessionId for cache tracking
+            async: options.async,
           });
         }
       }

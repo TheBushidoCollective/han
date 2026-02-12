@@ -1,5 +1,6 @@
 ---
 name: rubocop-configuration
+user-invocable: false
 description: Use when ruboCop configuration including YAML config, departments, inheritance, and customization.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

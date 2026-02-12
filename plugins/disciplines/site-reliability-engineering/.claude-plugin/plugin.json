@@ -1,0 +1,19 @@
+{
+  "name": "site-reliability-engineering",
+  "version": "1.1.2",
+  "description": "Site Reliability Engineering discipline agent for reliability, monitoring, and incident response",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "sre",
+    "reliability",
+    "monitoring",
+    "incidents",
+    "devops"
+  ]
+}

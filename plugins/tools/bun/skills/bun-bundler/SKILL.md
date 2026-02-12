@@ -1,5 +1,6 @@
 ---
-name: jutsu-bun:bun-bundler
+name: bun-bundler
+user-invocable: false
 description: Use when bundling JavaScript/TypeScript code with Bun's fast bundler. Covers building for different targets, tree-shaking, code splitting, and optimization strategies.
 allowed-tools:
   - Read

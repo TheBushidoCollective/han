@@ -1,5 +1,6 @@
 ---
 name: Swift Protocol-Oriented Programming
+user-invocable: false
 description: Use when protocol-oriented programming in Swift including protocol extensions, default implementations, protocol composition, associated types, and designing flexible, reusable abstractions that favor composition over inheritance.
 allowed-tools: []
 ---

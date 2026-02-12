@@ -1,5 +1,6 @@
 ---
 name: crystal-engineer
+user-invocable: false
 description: Use when working with Crystal language development including WebSocket communication, TLS/SSL configuration, HTTP frameworks, ORM operations, and high-performance concurrent systems.
 allowed-tools: []
 ---

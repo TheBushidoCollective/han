@@ -21,8 +21,6 @@ Once enabled, Claude will automatically apply these skills when working with rel
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install jutsu-graphql
+han plugin install graphql
 ```

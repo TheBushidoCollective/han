@@ -10,29 +10,12 @@ import { join } from 'node:path';
 import {
   createMemoryStore,
   generateId,
-  getProjectIndexPath,
   type IndexedObservation,
   normalizeGitRemote,
   type RawObservation,
   type SessionSummary,
   setMemoryRoot,
 } from '../lib/memory/index.ts';
-
-/**
- * Clean up any existing observations for a gitRemote
- * Needed because parallel tests can race on setMemoryRoot
- */
-function cleanupGitRemote(gitRemote: string): void {
-  try {
-    const indexPath = getProjectIndexPath(gitRemote);
-    const dataFile = `${indexPath}/observations.jsonl`;
-    if (existsSync(dataFile)) {
-      rmSync(dataFile);
-    }
-  } catch {
-    // Ignore cleanup errors
-  }
-}
 
 let testDir: string;
 
@@ -225,8 +208,8 @@ describe('Memory Storage', () => {
   describe('Team Memory', () => {
     test('indexes and searches observations', async () => {
       const gitRemote = `git@github.com:test/search-repo-${generateId()}.git`;
-      cleanupGitRemote(gitRemote);
-      const store = createMemoryStore();
+      // Use rootPath to avoid global memoryRootOverride races with parallel tests
+      const store = createMemoryStore({ rootPath: testDir });
 
       const observations: IndexedObservation[] = [
         {
@@ -268,8 +251,7 @@ describe('Memory Storage', () => {
 
     test('filters by author', async () => {
       const gitRemote = `git@github.com:test/author-filter-${generateId()}.git`;
-      cleanupGitRemote(gitRemote);
-      const store = createMemoryStore();
+      const store = createMemoryStore({ rootPath: testDir });
 
       const observations: IndexedObservation[] = [
         {
@@ -307,8 +289,7 @@ describe('Memory Storage', () => {
 
     test('filters by type', async () => {
       const gitRemote = `git@github.com:test/type-filter-${generateId()}.git`;
-      cleanupGitRemote(gitRemote);
-      const store = createMemoryStore();
+      const store = createMemoryStore({ rootPath: testDir });
 
       const observations: IndexedObservation[] = [
         {
@@ -346,8 +327,7 @@ describe('Memory Storage', () => {
 
     test('filters by timeframe', async () => {
       const gitRemote = `git@github.com:test/timeframe-filter-${generateId()}.git`;
-      cleanupGitRemote(gitRemote);
-      const store = createMemoryStore();
+      const store = createMemoryStore({ rootPath: testDir });
       const now = Date.now();
 
       const observations: IndexedObservation[] = [
@@ -388,7 +368,7 @@ describe('Memory Storage', () => {
 
     test('returns empty results for no matches', async () => {
       const gitRemote = 'git@github.com:test/empty-results.git';
-      const store = createMemoryStore();
+      const store = createMemoryStore({ rootPath: testDir });
       const results = await store.search(gitRemote, 'nonexistent query');
       expect(results).toEqual([]);
     });
@@ -397,7 +377,7 @@ describe('Memory Storage', () => {
   describe('Index Metadata', () => {
     test('creates and updates metadata', () => {
       const gitRemote = 'git@github.com:test/meta-create.git';
-      const store = createMemoryStore();
+      const store = createMemoryStore({ rootPath: testDir });
 
       // Initially null
       expect(store.getIndexMetadata(gitRemote)).toBeNull();
@@ -419,7 +399,7 @@ describe('Memory Storage', () => {
 
     test('merges metadata updates', () => {
       const gitRemote = 'git@github.com:test/meta-merge.git';
-      const store = createMemoryStore();
+      const store = createMemoryStore({ rootPath: testDir });
 
       // First update
       store.updateIndexMetadata(gitRemote, {

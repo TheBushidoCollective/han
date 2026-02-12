@@ -1,5 +1,6 @@
 ---
 name: cucumber-best-practices
+user-invocable: false
 description: Cucumber best practices, patterns, and anti-patterns
 ---
 

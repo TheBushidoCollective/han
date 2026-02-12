@@ -16,16 +16,16 @@ export function buildSessionContext(
   pluginCount: number,
   hookCount: number,
   skillCount: number,
-  disciplineCount: number,
+  disciplineCount: number
 ): string {
   const lines: string[] = [
     `Han bridge active: ${pluginCount} plugins, ${hookCount} hooks, ${skillCount} skills, ${disciplineCount} disciplines.`,
-    "",
-    "Validation hooks run automatically after file edits (AfterTool) and when you complete a turn (AfterAgent).",
-    "If validation fails, fix the issues before continuing.",
-  ]
+    '',
+    'Validation hooks run automatically after file edits (AfterTool) and when you complete a turn (AfterAgent).',
+    'If validation fails, fix the issues before continuing.',
+  ];
 
-  return lines.join("\n")
+  return lines.join('\n');
 }
 
 /**
@@ -33,17 +33,17 @@ export function buildSessionContext(
  * Mirrors core plugin's UserPromptSubmit hook: current datetime.
  */
 export function buildPromptContext(): string {
-  const now = new Date()
-  const dateStr = now.toLocaleString("en-US", {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZoneName: "short",
-  })
+  const now = new Date();
+  const dateStr = now.toLocaleString('en-US', {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZoneName: 'short',
+  });
 
-  return `Current local time: ${dateStr}`
+  return `Current local time: ${dateStr}`;
 }

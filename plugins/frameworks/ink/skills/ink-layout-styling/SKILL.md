@@ -1,5 +1,6 @@
 ---
 name: ink-layout-styling
+user-invocable: false
 description: Use when creating terminal layouts with Ink using Flexbox-based positioning and styling for CLI applications.
 allowed-tools: []
 ---

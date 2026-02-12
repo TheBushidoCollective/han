@@ -1,5 +1,6 @@
 ---
 name: vitest-performance
+user-invocable: false
 description: Use when vitest performance optimization including fast execution, watch mode, and parallelization strategies.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

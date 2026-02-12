@@ -1,8 +1,8 @@
-# Jutsu: Claude Agent SDK
+# Claude Agent SDK
 
 Validation and quality enforcement for Claude Agent SDK projects.
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Validation Hooks
 
@@ -10,11 +10,11 @@ Validation and quality enforcement for Claude Agent SDK projects.
 - **Structure Validation**: Ensures correct `.claude/` directory structure
   - Agents must be `.md` files in `.claude/agents/`
   - Skills must be `SKILL.md` in `.claude/skills/{skill-name}/`
-  - Commands must be `.md` files in `.claude/commands/`
+  - Skills must be `SKILL.md` in `.claude/skills/{skill-name}/`
 
 ### Skills
 
-This jutsu provides the following skills:
+This plugin provides the following skills:
 
 - **agent-creation**: Agent initialization, configuration, and setup patterns
 - **tool-integration**: Working with tools, permissions, and MCP servers
@@ -25,19 +25,19 @@ This jutsu provides the following skills:
 Install via the Han marketplace:
 
 ```bash
-han plugin install jutsu-claude-agent-sdk
+han plugin install claude-agent-sdk
 ```
 
 Or install manually:
 
 ```bash
 claude plugin marketplace add thebushidocollective/han
-claude plugin install jutsu-claude-agent-sdk@han
+claude plugin install claude-agent-sdk@han
 ```
 
 ## Usage
 
-Once installed, this jutsu automatically validates your Claude Agent SDK projects:
+Once installed, this plugin automatically validates your Claude Agent SDK projects:
 
 - When you finish a conversation with Claude Code
 - Before commits (when combined with git hooks)
@@ -60,7 +60,6 @@ Checks `.claude/` directory compliance:
 
 - Agent files are Markdown (`.md`)
 - Skill files follow `SKILL.md` naming
-- Command files are Markdown
 - Proper directory structure
 
 ## Requirements
@@ -77,11 +76,9 @@ my-agent-project/
 │   ├── CLAUDE.md
 │   ├── agents/
 │   │   └── specialist.md
-│   ├── skills/
-│   │   └── my-skill/
-│   │       └── SKILL.md
-│   └── commands/
-│       └── my-command.md
+│   └── skills/
+│       └── my-skill/
+│           └── SKILL.md
 ├── src/
 │   └── index.ts
 ├── package.json

@@ -1,8 +1,8 @@
-# Jutsu: Fnox
+# Fnox
 
 Validation and quality enforcement for Fnox secrets management projects.
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Validation Hooks
 
@@ -13,7 +13,7 @@ Validation and quality enforcement for Fnox secrets management projects.
 
 ### Skills
 
-This jutsu provides the following skills:
+This plugin provides the following skills:
 
 - **configuration**: Managing fnox.toml structure, secrets, profiles, and hierarchical configurations
 - **providers**: Configuring encryption (age, AWS KMS) and secret storage (AWS Secrets Manager, Azure Key Vault, GCP, Vault, 1Password, Bitwarden)
@@ -24,19 +24,19 @@ This jutsu provides the following skills:
 Install via the Han marketplace:
 
 ```bash
-han plugin install jutsu-fnox
+han plugin install fnox
 ```
 
 Or install manually:
 
 ```bash
 claude plugin marketplace add thebushidocollective/han
-claude plugin install jutsu-fnox@han
+claude plugin install fnox@han
 ```
 
 ## Usage
 
-Once installed, this jutsu automatically validates your Fnox configuration:
+Once installed, this plugin automatically validates your Fnox configuration:
 
 - When you finish a conversation with Claude Code
 - Before commits (when combined with git hooks)

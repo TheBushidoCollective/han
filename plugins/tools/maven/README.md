@@ -1,8 +1,8 @@
-# Jutsu: Maven
+# Maven
 
 Validation and quality enforcement for Apache Maven projects with comprehensive skills for dependency management, build lifecycle, and plugin configuration.
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Validation Hooks
 
@@ -11,7 +11,7 @@ Validation and quality enforcement for Apache Maven projects with comprehensive 
 
 ### Skills
 
-This jutsu provides the following skills:
+This plugin provides the following skills:
 
 - **maven-dependency-management**: Manage dependencies, resolve conflicts, configure BOMs, and optimize dependency trees
 - **maven-build-lifecycle**: Work with build phases, goals, profiles, and customize the build process
@@ -19,15 +19,13 @@ This jutsu provides the following skills:
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install jutsu-maven
+han plugin install maven
 ```
 
 ## Usage
 
-Once installed, this jutsu automatically validates your Maven projects:
+Once installed, this plugin automatically validates your Maven projects:
 
 - When you finish a conversation with Claude Code
 - When Claude Code agents complete their work

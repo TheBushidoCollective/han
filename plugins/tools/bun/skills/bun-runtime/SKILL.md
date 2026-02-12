@@ -1,5 +1,6 @@
 ---
-name: jutsu-bun:bun-runtime
+name: bun-runtime
+user-invocable: false
 description: Use when working with Bun's runtime APIs including file I/O, HTTP servers, and native APIs. Covers modern JavaScript/TypeScript execution in Bun's fast runtime environment.
 allowed-tools:
   - Read

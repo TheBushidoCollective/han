@@ -1,0 +1,42 @@
+{
+  "name": "kiro-plugin-han",
+  "version": "0.1.0",
+  "description": "Han bridge for Kiro CLI - enables Han's validation hooks and plugin ecosystem in Kiro sessions",
+  "main": "src/index.ts",
+  "bin": {
+    "kiro-plugin-han": "src/index.ts"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src/",
+    "kiro-agent.json"
+  ],
+  "keywords": [
+    "kiro",
+    "kiro-cli",
+    "kiro-plugin",
+    "han",
+    "claude-code",
+    "hooks",
+    "validation",
+    "linting",
+    "bridge"
+  ],
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thebushidocollective/han",
+    "directory": "plugins/bridges/kiro"
+  },
+  "homepage": "https://github.com/thebushidocollective/han/tree/main/plugins/bridges/kiro",
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}

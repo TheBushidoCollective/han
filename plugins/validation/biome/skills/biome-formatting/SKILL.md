@@ -1,5 +1,6 @@
 ---
 name: biome-formatting
+user-invocable: false
 description: Use when formatting JavaScript/TypeScript code with Biome's fast formatter including patterns, options, and code style management.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

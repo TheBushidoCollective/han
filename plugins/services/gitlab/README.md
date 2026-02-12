@@ -1,14 +1,14 @@
-# Hashi: GitLab
+# GitLab
 
 Official GitLab MCP server integration for comprehensive project management, issue tracking, merge request operations, and code search capabilities.
 
-## What This Hashi Provides
+## What This Plugin Provides
 
 ### MCP Server: gitlab
 
 The official GitLab MCP server enables AI assistants to securely interact with your GitLab instance through OAuth 2.0 authentication. This integration provides full access to GitLab's project management, issue tracking, merge request workflows, CI/CD pipelines, and intelligent code search capabilities.
 
-This hashi connects Claude Code to GitLab and provides:
+This plugin connects Claude Code to GitLab and provides:
 
 - **Issue Management**: Create, read, and manage GitLab issues across projects
 - **Merge Request Operations**: Create MRs, view commits, diffs, and pipeline status
@@ -34,10 +34,8 @@ Once installed, Claude Code gains access to these tools:
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install hashi-gitlab
+han plugin install gitlab
 ```
 
 ## Usage
@@ -402,7 +400,7 @@ Pipeline #1234 - Status: Running
 
 ## Related Plugins
 
-- **hashi-context7**: Up-to-date library documentation for code references
-- **hashi-playwright-mcp**: Browser automation for testing GitLab UIs
-- **jutsu-git**: Git operations and repository management skills
-- **do-devops**: DevOps practices including CI/CD workflows
+- **context7**: Up-to-date library documentation for code references
+- **playwright-mcp**: Browser automation for testing GitLab UIs
+- **git**: Git operations and repository management skills
+- **devops**: DevOps practices including CI/CD workflows

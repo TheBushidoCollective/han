@@ -1,12 +1,10 @@
-# Jutsu: Zustand
+# Zustand
 
 Comprehensive Zustand state management skills for React applications with store patterns, middleware, TypeScript integration, and advanced techniques.
 
-## What This Jutsu Provides
+## Skills
 
-### Skills
-
-This jutsu provides comprehensive skills for working with Zustand:
+This plugin provides comprehensive skills for working with Zustand:
 
 - **zustand-store-patterns**: Store creation, selectors, actions, and basic usage patterns
 - **zustand-typescript**: Type-safe store creation, typed selectors, and advanced TypeScript patterns
@@ -15,32 +13,9 @@ This jutsu provides comprehensive skills for working with Zustand:
 
 ## Installation
 
-### Via Han Marketplace
-
 ```bash
-han plugin install jutsu-zustand
+han plugin install zustand
 ```
-
-### Via Claude Code
-
-```bash
-claude plugin marketplace add thebushidocollective/han
-claude plugin install jutsu-zustand@han
-```
-
-### Manual Installation
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/thebushidocollective/han.git
-   ```
-
-2. Install the plugin:
-
-   ```bash
-   claude plugin install /path/to/han/jutsu/jutsu-zustand@local
-   ```
 
 ## Usage
 
@@ -219,9 +194,9 @@ persist(
 
 ## Related Plugins
 
-- **jutsu-react**: React patterns and best practices
-- **jutsu-typescript**: TypeScript type system mastery
-- **jutsu-vite**: Vite build tooling for fast development
+- **react**: React patterns and best practices
+- **typescript**: TypeScript type system mastery
+- **vite**: Vite build tooling for fast development
 
 ## Resources
 

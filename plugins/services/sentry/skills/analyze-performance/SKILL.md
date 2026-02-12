@@ -7,7 +7,7 @@ description: Analyze performance metrics and identify slow transactions in Sentr
 
 ## Name
 
-hashi-sentry:analyze-performance - Analyze performance metrics and identify slow transactions in Sentry
+sentry:analyze-performance - Analyze performance metrics and identify slow transactions in Sentry
 
 ## Synopsis
 

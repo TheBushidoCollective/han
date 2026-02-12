@@ -1,0 +1,21 @@
+{
+  "name": "kiro",
+  "version": "0.1.0",
+  "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with Kiro CLI by translating Kiro hook events into Han hook executions.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "kiro",
+    "bridge",
+    "hooks",
+    "compatibility",
+    "claude-code",
+    "validation",
+    "linting"
+  ]
+}

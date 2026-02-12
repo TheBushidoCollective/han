@@ -1,4 +1,4 @@
-# jutsu-yarn
+# Yarn
 
 Yarn package manager skills with dependency validation hooks for Claude Code.
 
@@ -11,7 +11,7 @@ Yarn package manager skills with dependency validation hooks for Claude Code.
 ## Installation
 
 ```bash
-han plugin install jutsu-yarn
+han plugin install yarn
 ```
 
 ## Hooks
@@ -30,7 +30,7 @@ Automatically runs when you stop Claude Code to ensure dependencies are in sync:
 You can customize the hook behavior in your project's `han-config.yml`:
 
 ```yaml
-jutsu-yarn:
+yarn:
   hooks:
     install:
       enabled: true
@@ -41,7 +41,7 @@ jutsu-yarn:
 To disable the hook for a specific project:
 
 ```yaml
-jutsu-yarn:
+yarn:
   hooks:
     install:
       enabled: false

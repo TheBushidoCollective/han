@@ -1,5 +1,6 @@
 ---
 name: graphql-inspector-validate
+user-invocable: false
 description: Use when validating GraphQL operations/documents against a schema, checking query depth, complexity, or fragment usage.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
@@ -204,6 +205,7 @@ Fix: Remove or use the fragment.
 
 ```yaml
 name: Validate Operations
+user-invocable: false
 on:
   pull_request:
     paths:

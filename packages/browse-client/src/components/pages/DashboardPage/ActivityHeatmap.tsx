@@ -23,6 +23,7 @@ interface DailyActivity {
 
 interface ActivityHeatmapProps {
 	dailyActivity: ReadonlyArray<DailyActivity>;
+	firstSessionDate?: string | null;
 	streakDays: number;
 	totalActiveDays: number;
 }
@@ -80,26 +81,53 @@ function organizeIntoWeeks(
 
 export function ActivityHeatmap({
 	dailyActivity,
+	firstSessionDate,
 	streakDays,
 	totalActiveDays,
 }: ActivityHeatmapProps): React.ReactElement {
+	// Trim activity to start from the first session date
+	const trimmedActivity = useMemo(() => {
+		if (!firstSessionDate) return dailyActivity;
+		return dailyActivity.filter((d) => d.date >= firstSessionDate);
+	}, [dailyActivity, firstSessionDate]);
+
 	// Calculate max messages for color scaling
 	const maxMessages = useMemo(() => {
-		return Math.max(...dailyActivity.map((d) => d.messageCount), 1);
-	}, [dailyActivity]);
+		return Math.max(...trimmedActivity.map((d) => d.messageCount), 1);
+	}, [trimmedActivity]);
 
 	// Organize into weeks (columns)
 	const weeks = useMemo(
-		() => organizeIntoWeeks(dailyActivity),
-		[dailyActivity],
+		() => organizeIntoWeeks(trimmedActivity),
+		[trimmedActivity],
 	);
 
-	// Cell size for activity grid - balance between visibility and fitting data
+	// Cell size for activity grid
 	const cellSize = 12;
 	const cellGap = 2;
 
+	// Pad with empty weeks so the grid fills the container width.
+	// We generate 52 weeks of padding (1 year) and rely on overflow:hidden
+	// + justifyContent:flex-end to clip the excess on the left.
+	const paddedWeeks = useMemo(() => {
+		const padCount = Math.max(0, 52 - weeks.length);
+		if (padCount === 0) return weeks;
+		const emptyWeeks: DailyActivity[][] = Array.from(
+			{ length: padCount },
+			(_, wi) =>
+				Array.from({ length: 7 }, (_, di) => ({
+					date: `pad-${wi}-${di}`,
+					messageCount: 0,
+					sessionCount: 0,
+					inputTokens: 0,
+					outputTokens: 0,
+				})),
+		);
+		return [...emptyWeeks, ...weeks];
+	}, [weeks]);
+
 	return (
-		<VStack gap="sm">
+		<VStack gap="sm" style={{ width: "100%" }}>
 			{/* Stats row */}
 			<HStack gap="lg">
 				<VStack gap="xs">
@@ -120,7 +148,7 @@ export function ActivityHeatmap({
 				</VStack>
 			</HStack>
 
-			{/* Year and month labels - shown above grid, right-aligned */}
+			{/* Year and month labels */}
 			<HStack gap="sm" align="flex-start" style={{ width: "100%" }}>
 				<Box style={{ width: "28px", flexShrink: 0 }} />
 				<Box
@@ -134,25 +162,43 @@ export function ActivityHeatmap({
 						justifyContent: "flex-end",
 					}}
 				>
-					{weeks.map((week, weekIdx) => {
+					{paddedWeeks.map((week, weekIdx) => {
 						// Find if this week starts a new year or month
 						const firstDay = week[0];
 						if (!firstDay) return null;
+						// Skip labels for padding weeks (non-real dates)
+						if (firstDay.date.startsWith("pad-")) {
+							return (
+								<Box
+									key={`label-${firstDay.date}`}
+									style={{
+										width: cellSize,
+										flexShrink: 0,
+									}}
+								/>
+							);
+						}
 						const date = new Date(firstDay.date);
-						const monthLabel = date.toLocaleDateString("en-US", {
+						const month = date.toLocaleDateString("en-US", {
 							month: "short",
 						});
-						const yearLabel = date.getFullYear().toString();
 
-						// Check if this is first week of data or new year/month
-						const prevWeek = weeks[weekIdx - 1];
+						// Check if this is first week of data or new month
+						const prevWeek = paddedWeeks[weekIdx - 1];
 						const prevFirstDay = prevWeek?.[0];
-						const isNewYear =
-							!prevFirstDay ||
-							new Date(prevFirstDay.date).getFullYear() !== date.getFullYear();
+						const prevIsPad = prevFirstDay?.date.startsWith("pad-");
 						const isNewMonth =
+							prevIsPad ||
 							!prevFirstDay ||
 							new Date(prevFirstDay.date).getMonth() !== date.getMonth();
+
+						// Show year suffix only on January labels
+						const isJanuary = date.getMonth() === 0;
+						const label = isNewMonth
+							? isJanuary
+								? `Jan '${String(date.getFullYear()).slice(2)}`
+								: month
+							: null;
 
 						return (
 							<Box
@@ -163,21 +209,16 @@ export function ActivityHeatmap({
 									overflow: "visible",
 								}}
 							>
-								{isNewYear ? (
+								{label ? (
 									<Text
-										color="secondary"
+										color={isJanuary ? "secondary" : "muted"}
 										size="xs"
-										style={{ fontWeight: 600, whiteSpace: "nowrap" }}
+										style={{
+											whiteSpace: "nowrap",
+											...(isJanuary && { fontWeight: 600 }),
+										}}
 									>
-										{yearLabel}
-									</Text>
-								) : isNewMonth ? (
-									<Text
-										color="muted"
-										size="xs"
-										style={{ whiteSpace: "nowrap" }}
-									>
-										{monthLabel}
+										{label}
 									</Text>
 								) : null}
 							</Box>
@@ -189,65 +230,39 @@ export function ActivityHeatmap({
 			{/* Heatmap grid */}
 			<HStack gap="sm" align="flex-start" style={{ width: "100%" }}>
 				{/* Day labels */}
-				<VStack
-					gap="xs"
+				<Box
 					style={{
+						display: "flex",
+						flexDirection: "column",
+						gap: `${cellGap}px`,
 						width: "28px",
 						flexShrink: 0,
 					}}
 				>
-					<Text
-						color="muted"
-						size="xs"
-						style={{ height: `${cellSize}px`, lineHeight: `${cellSize}px` }}
-					>
-						{/* Empty for Sunday */}
-					</Text>
-					<Text
-						color="muted"
-						size="xs"
-						style={{ height: `${cellSize}px`, lineHeight: `${cellSize}px` }}
-					>
-						Mon
-					</Text>
-					<Text
-						color="muted"
-						size="xs"
-						style={{ height: `${cellSize}px`, lineHeight: `${cellSize}px` }}
-					>
-						{/* Empty for Tuesday */}
-					</Text>
-					<Text
-						color="muted"
-						size="xs"
-						style={{ height: `${cellSize}px`, lineHeight: `${cellSize}px` }}
-					>
-						Wed
-					</Text>
-					<Text
-						color="muted"
-						size="xs"
-						style={{ height: `${cellSize}px`, lineHeight: `${cellSize}px` }}
-					>
-						{/* Empty for Thursday */}
-					</Text>
-					<Text
-						color="muted"
-						size="xs"
-						style={{ height: `${cellSize}px`, lineHeight: `${cellSize}px` }}
-					>
-						Fri
-					</Text>
-					<Text
-						color="muted"
-						size="xs"
-						style={{ height: `${cellSize}px`, lineHeight: `${cellSize}px` }}
-					>
-						{/* Empty for Saturday */}
-					</Text>
-				</VStack>
+					{[
+						{ key: "sun", label: "" },
+						{ key: "mon", label: "Mon" },
+						{ key: "tue", label: "" },
+						{ key: "wed", label: "Wed" },
+						{ key: "thu", label: "" },
+						{ key: "fri", label: "Fri" },
+						{ key: "sat", label: "" },
+					].map((day) => (
+						<Text
+							key={day.key}
+							color="muted"
+							size="xs"
+							style={{
+								height: `${cellSize}px`,
+								lineHeight: `${cellSize}px`,
+							}}
+						>
+							{day.label}
+						</Text>
+					))}
+				</Box>
 
-				{/* Grid of weeks - most recent on right, no scrollbar */}
+				{/* Grid of weeks */}
 				<Box
 					style={{
 						display: "flex",
@@ -260,7 +275,7 @@ export function ActivityHeatmap({
 						justifyContent: "flex-end",
 					}}
 				>
-					{weeks.map((week) => (
+					{paddedWeeks.map((week) => (
 						<Box
 							key={`week-${week[0]?.date ?? "empty"}`}
 							style={{

@@ -26,13 +26,13 @@ describe('plugin-aliases', () => {
 
     test('contains expected do plugins', () => {
       expect(PLUGIN_ALIASES['do-frontend-development']).toBe(
-        'disciplines/frontend'
+        'disciplines/frontend-development'
       );
       expect(PLUGIN_ALIASES['do-backend-development']).toBe(
-        'disciplines/backend'
+        'disciplines/backend-development'
       );
       expect(PLUGIN_ALIASES['do-security-engineering']).toBe(
-        'disciplines/security'
+        'disciplines/security-engineering'
       );
     });
 
@@ -58,7 +58,7 @@ describe('plugin-aliases', () => {
     test('maps new paths back to old names', () => {
       expect(REVERSE_ALIASES['languages/typescript']).toBe('jutsu-typescript');
       expect(REVERSE_ALIASES['frameworks/react']).toBe('jutsu-react');
-      expect(REVERSE_ALIASES['disciplines/frontend']).toBe(
+      expect(REVERSE_ALIASES['disciplines/frontend-development']).toBe(
         'do-frontend-development'
       );
       expect(REVERSE_ALIASES['services/github']).toBe('hashi-github');
@@ -155,8 +155,8 @@ describe('plugin-aliases', () => {
         expect(resolvePluginName('frameworks/react')).toBe('jutsu-react');
       });
 
-      test('resolves disciplines/frontend', () => {
-        expect(resolvePluginName('disciplines/frontend')).toBe(
+      test('resolves disciplines/frontend-development', () => {
+        expect(resolvePluginName('disciplines/frontend-development')).toBe(
           'do-frontend-development'
         );
       });
@@ -237,7 +237,7 @@ describe('plugin-aliases', () => {
 
     test('returns new path for do plugins', () => {
       expect(getNewPluginPath('do-frontend-development')).toBe(
-        'disciplines/frontend'
+        'disciplines/frontend-development'
       );
     });
 
@@ -261,7 +261,7 @@ describe('plugin-aliases', () => {
     });
 
     test('returns old name for disciplines', () => {
-      expect(getOldPluginName('disciplines/frontend')).toBe(
+      expect(getOldPluginName('disciplines/frontend-development')).toBe(
         'do-frontend-development'
       );
     });

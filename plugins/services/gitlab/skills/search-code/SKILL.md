@@ -7,7 +7,7 @@ description: Search for code across your GitLab instance
 
 ## Name
 
-hashi-gitlab:search-code - Search for code across your GitLab instance
+gitlab:search-code - Search for code across your GitLab instance
 
 ## Synopsis
 

@@ -1,5 +1,6 @@
 ---
 name: vitest-configuration
+user-invocable: false
 description: Use when vitest configuration, Vite integration, workspace setup, and test environment configuration for modern testing.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

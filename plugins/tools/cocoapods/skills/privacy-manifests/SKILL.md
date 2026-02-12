@@ -1,5 +1,6 @@
 ---
 name: cocoapods-privacy-manifests
+user-invocable: false
 description: Use when implementing iOS 17+ privacy manifests for CocoaPods libraries. Covers PrivacyInfo.xcprivacy file creation, required reasons API declarations, and proper resource bundle integration for App Store compliance.
 allowed-tools:
   - Read

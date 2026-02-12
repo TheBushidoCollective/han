@@ -7,7 +7,7 @@ description: Get detailed information about a specific ClickUp task
 
 ## Name
 
-hashi-clickup:task - Get detailed information about a specific ClickUp task
+clickup:task - Get detailed information about a specific ClickUp task
 
 ## Synopsis
 

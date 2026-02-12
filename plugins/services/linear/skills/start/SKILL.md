@@ -7,7 +7,7 @@ description: Start work on a Linear issue (transition to In Progress)
 
 ## Name
 
-hashi-linear:start - Start work on a Linear issue (transition to In Progress)
+linear:start - Start work on a Linear issue (transition to In Progress)
 
 ## Synopsis
 

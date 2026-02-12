@@ -1,5 +1,6 @@
 ---
 name: checkstyle-rules
+user-invocable: false
 description: Use when applying Checkstyle built-in checks for Java code including naming conventions, code metrics, and suppressions.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

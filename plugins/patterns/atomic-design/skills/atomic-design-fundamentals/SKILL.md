@@ -1,5 +1,6 @@
 ---
 name: atomic-design-fundamentals
+user-invocable: false
 description: Use when applying Atomic Design methodology to organize UI components into quarks, atoms, molecules, organisms, templates, and pages. Core principles and hierarchy.
 allowed-tools:
   - Bash

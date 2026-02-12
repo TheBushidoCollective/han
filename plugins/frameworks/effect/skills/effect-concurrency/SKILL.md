@@ -1,5 +1,6 @@
 ---
 name: effect-concurrency
+user-invocable: false
 description: Use when Effect concurrency patterns including fibers, fork, join, parallel execution, and race conditions. Use for concurrent operations in Effect applications.
 allowed-tools:
   - Bash

@@ -15,22 +15,22 @@
  *   3. A standalone bridge (imported as a JS/TS module)
  */
 export interface CodexPluginContext {
-  client: CodexClient
-  project: unknown
-  directory: string
-  worktree: string
+  client: CodexClient;
+  project: unknown;
+  directory: string;
+  worktree: string;
 }
 
 export interface CodexClient {
   session: {
     prompt(args: {
-      path: { id: string }
+      path: { id: string };
       body: {
-        noReply?: boolean
-        parts: Array<{ type: "text"; text: string }>
-      }
-    }): Promise<void>
-  }
+        noReply?: boolean;
+        parts: Array<{ type: 'text'; text: string }>;
+      };
+    }): Promise<void>;
+  };
 }
 
 /**
@@ -38,38 +38,38 @@ export interface CodexClient {
  * Codex uses function_call / function_call_output response items.
  */
 export interface ToolBeforeInput {
-  tool: string
-  sessionID: string
-  callID: string
+  tool: string;
+  sessionID: string;
+  callID: string;
 }
 
 export interface ToolBeforeOutput {
-  args: Record<string, unknown>
+  args: Record<string, unknown>;
 }
 
 /**
  * Codex tool event shape after execution.
  */
 export interface ToolEventInput {
-  tool: string
-  sessionID: string
-  callID: string
+  tool: string;
+  sessionID: string;
+  callID: string;
 }
 
 export interface ToolEventOutput {
-  title: string
-  output: string
-  metadata?: Record<string, unknown>
+  title: string;
+  output: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface CodexEvent {
-  type: string
-  properties?: Record<string, unknown>
+  type: string;
+  properties?: Record<string, unknown>;
 }
 
 export interface StopResult {
-  continue: boolean
-  assistantMessage?: string
+  continue: boolean;
+  assistantMessage?: string;
 }
 
 // ─── Han Hook Types ──────────────────────────────────────────────────────────
@@ -79,25 +79,25 @@ export interface StopResult {
  */
 export interface HookDefinition {
   /** Hook name (key in the hooks map, e.g. "lint-async") */
-  name: string
+  name: string;
   /** Plugin short name (e.g. "biome") */
-  pluginName: string
+  pluginName: string;
   /** Absolute path to the plugin directory */
-  pluginRoot: string
+  pluginRoot: string;
   /** The hook event type(s) */
-  event: string | string[]
+  event: string | string[];
   /** Shell command to execute (may contain ${HAN_FILES}) */
-  command: string
+  command: string;
   /** Which tools trigger this hook (e.g. ["Edit", "Write", "NotebookEdit"]) */
-  toolFilter?: string[]
+  toolFilter?: string[];
   /** File glob patterns that trigger this hook */
-  fileFilter?: string[]
+  fileFilter?: string[];
   /** Directories required to exist (e.g. ["biome.json"]) */
-  dirsWith?: string[]
+  dirsWith?: string[];
   /** Bash expression to test if hook applies to this directory */
-  dirTest?: string
+  dirTest?: string;
   /** Timeout in milliseconds */
-  timeout?: number
+  timeout?: number;
 }
 
 /**
@@ -105,17 +105,17 @@ export interface HookDefinition {
  */
 export interface HookResult {
   /** The hook that was executed */
-  hook: HookDefinition
+  hook: HookDefinition;
   /** Process exit code (0 = success) */
-  exitCode: number
+  exitCode: number;
   /** Combined stdout output */
-  stdout: string
+  stdout: string;
   /** Combined stderr output */
-  stderr: string
+  stderr: string;
   /** Execution duration in milliseconds */
-  durationMs: number
+  durationMs: number;
   /** Whether the hook was skipped (e.g. no matching files) */
-  skipped: boolean
+  skipped: boolean;
 }
 
 // ─── Provider ────────────────────────────────────────────────────────────────
@@ -124,12 +124,12 @@ export interface HookResult {
  * Han provider identifies which AI coding tool is running the session.
  * Defaults to "claude-code" when HAN_PROVIDER is not set.
  */
-export type HanProvider = "codex" | "claude-code"
+export type HanProvider = 'codex' | 'claude-code';
 
 export function getProvider(): HanProvider {
-  const env = process.env.HAN_PROVIDER
-  if (env === "codex") return "codex"
-  return "claude-code"
+  const env = process.env.HAN_PROVIDER;
+  if (env === 'codex') return 'codex';
+  return 'claude-code';
 }
 
 // ─── Codex → Claude Code Tool Name Mapping ───────────────────────────────────
@@ -146,17 +146,17 @@ export function getProvider(): HanProvider {
  * - list: List directory contents (equivalent to Glob)
  */
 export const TOOL_NAME_MAP: Record<string, string> = {
-  shell: "Bash",
-  edit: "Edit",
-  write: "Write",
-  read: "Read",
-  list: "Glob",
-  bash: "Bash",
-  glob: "Glob",
-  grep: "Grep",
-  notebook_edit: "NotebookEdit",
-}
+  shell: 'Bash',
+  edit: 'Edit',
+  write: 'Write',
+  read: 'Read',
+  list: 'Glob',
+  bash: 'Bash',
+  glob: 'Glob',
+  grep: 'Grep',
+  notebook_edit: 'NotebookEdit',
+};
 
 export function mapToolName(codexTool: string): string {
-  return TOOL_NAME_MAP[codexTool.toLowerCase()] ?? codexTool
+  return TOOL_NAME_MAP[codexTool.toLowerCase()] ?? codexTool;
 }

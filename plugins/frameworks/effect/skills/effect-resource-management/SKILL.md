@@ -1,5 +1,6 @@
 ---
 name: effect-resource-management
+user-invocable: false
 description: Use when Effect resource management patterns including Scope, addFinalizer, scoped effects, and automatic cleanup. Use for managing resources in Effect applications.
 allowed-tools:
   - Bash

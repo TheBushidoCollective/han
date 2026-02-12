@@ -1,5 +1,6 @@
 ---
 name: testng-data-driven
+user-invocable: false
 description: Use when implementing data-driven tests with TestNG DataProviders, factory methods, and parameterization patterns.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

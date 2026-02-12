@@ -1,5 +1,6 @@
 ---
 name: monorepo-workflows
+user-invocable: false
 description: Use when setting up CI/CD, implementing versioning, optimizing workflows, or managing releases with monorepo development workflows including version management, publishing, and team collaboration practices.
 allowed-tools:
   - Read
@@ -288,6 +289,7 @@ Run builds in parallel across packages.
 ```yaml
 # .github/workflows/ci.yml
 name: CI
+user-invocable: false
 
 on:
   pull_request:
@@ -332,6 +334,7 @@ Build and test only changed packages.
 ```yaml
 # .github/workflows/ci.yml
 name: CI
+user-invocable: false
 
 on:
   pull_request:
@@ -382,6 +385,7 @@ Spread tasks across multiple CI agents.
 ```yaml
 # .github/workflows/ci.yml
 name: CI with Distribution
+user-invocable: false
 
 on: [pull_request, push]
 
@@ -419,6 +423,7 @@ Execute independent jobs concurrently.
 ```yaml
 # .github/workflows/ci.yml
 name: Parallel CI
+user-invocable: false
 
 on: [pull_request, push]
 
@@ -479,6 +484,7 @@ Deploy only changed applications.
 ```yaml
 # .github/workflows/deploy.yml
 name: Deploy
+user-invocable: false
 
 on:
   push:
@@ -601,6 +607,7 @@ git push --follow-tags
 ```yaml
 # .github/workflows/release.yml
 name: Release
+user-invocable: false
 
 on:
   push:
@@ -923,6 +930,7 @@ echo "Published canary release: canary-$COMMIT_HASH"
 
 ```yaml
 name: Canary Release
+user-invocable: false
 
 on:
   pull_request:

@@ -1,5 +1,6 @@
 ---
 name: graphql-resolvers
+user-invocable: false
 description: Use when implementing GraphQL resolvers with resolver functions, context management, DataLoader batching, error handling, authentication, and testing strategies.
 allowed-tools: []
 ---

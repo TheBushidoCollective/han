@@ -1,5 +1,6 @@
 ---
 name: bdd-principles
+user-invocable: false
 description: Core BDD concepts, philosophy, and the Three Amigos practice
 ---
 

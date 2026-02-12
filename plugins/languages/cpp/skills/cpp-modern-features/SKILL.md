@@ -1,5 +1,6 @@
 ---
 name: cpp-modern-features
+user-invocable: false
 description: Use when working with modern C++ codebases requiring features from C++11 to C++23 including lambdas, move semantics, ranges, and concepts.
 allowed-tools:
   - Bash

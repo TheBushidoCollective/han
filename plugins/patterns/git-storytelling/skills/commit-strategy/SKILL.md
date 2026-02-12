@@ -505,7 +505,7 @@ git reset --hard HEAD@{5}     # Go back to that state
 2. **Review before committing** - Use `git diff` to review changes
 3. **Write commit messages for future you** - Explain the "why" not just the "what"
 4. **Keep the story coherent** - Each commit should make sense on its own
-5. **Use the hook** - Let the jutsu-git-storytelling hook remind you to commit
+5. **Use the hook** - Let the git-storytelling hook remind you to commit
 6. **Clean up before pushing** - Use `git rebase -i` to polish local commits before sharing
 7. **Never rebase pushed commits** - Respect shared history, only rebase local work
 

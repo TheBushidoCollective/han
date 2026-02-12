@@ -7,7 +7,7 @@ description: Get comprehensive review of a GitHub pull request
 
 ## Name
 
-hashi-github:review-pr - Get comprehensive review of a GitHub pull request
+github:review-pr - Get comprehensive review of a GitHub pull request
 
 ## Synopsis
 

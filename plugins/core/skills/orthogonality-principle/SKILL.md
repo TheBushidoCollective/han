@@ -1,5 +1,6 @@
 ---
 name: orthogonality-principle
+user-invocable: false
 description: Use when designing modules, APIs, and system architecture requiring independent, non-overlapping components where changes in one don't affect others.
 allowed-tools:
   - Read

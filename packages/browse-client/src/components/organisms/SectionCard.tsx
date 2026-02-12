@@ -6,21 +6,24 @@
  */
 
 import type React from "react";
+import type { CSSProperties } from "react";
 import { Card, Heading, HStack, Link, Text, VStack } from "../atoms/index.ts";
 
 interface SectionCardProps {
 	title: string;
 	children: React.ReactNode;
 	onViewAll?: () => void;
+	style?: CSSProperties;
 }
 
 export function SectionCard({
 	title,
 	children,
 	onViewAll,
+	style,
 }: SectionCardProps): React.ReactElement {
 	return (
-		<Card>
+		<Card style={style}>
 			<VStack gap="md">
 				<HStack justify="space-between" align="center">
 					<Heading size="sm" as="h3">

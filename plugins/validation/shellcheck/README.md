@@ -1,8 +1,8 @@
-# Jutsu: ShellCheck
+# ShellCheck
 
 Validation and quality enforcement for Bash and shell scripts using [ShellCheck](https://www.shellcheck.net/).
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Validation Hooks
 
@@ -12,7 +12,7 @@ Validation and quality enforcement for Bash and shell scripts using [ShellCheck]
 
 ### Skills
 
-This jutsu provides the following skills:
+This plugin provides the following skills:
 
 - **shell-scripting-fundamentals**: Core patterns for variables, conditionals, loops, and functions
 - **shell-error-handling**: Traps, exit codes, cleanup routines, and debugging techniques
@@ -20,22 +20,13 @@ This jutsu provides the following skills:
 
 ## Installation
 
-Install via the Han marketplace:
-
 ```bash
-han plugin install jutsu-shellcheck
-```
-
-Or install manually:
-
-```bash
-claude plugin marketplace add thebushidocollective/han
-claude plugin install jutsu-shellcheck@han
+han plugin install shellcheck
 ```
 
 ## Usage
 
-Once installed, this jutsu automatically validates your shell scripts:
+Once installed, this plugin automatically validates your shell scripts:
 
 - When you finish a conversation with Claude Code
 - When Claude Code agents complete their work
@@ -113,7 +104,7 @@ cabal install ShellCheck
 Create a `han-config.yml` in directories where you want to customize behavior:
 
 ```yaml
-jutsu-shellcheck:
+shellcheck:
   shellcheck:
     enabled: false  # Disable shellcheck for this directory
 ```
@@ -121,7 +112,7 @@ jutsu-shellcheck:
 Or override the command:
 
 ```yaml
-jutsu-shellcheck:
+shellcheck:
   shellcheck:
     command: "shellcheck -e SC2034 *.sh"  # Ignore unused variable warnings
 ```

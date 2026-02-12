@@ -22,8 +22,6 @@ Once enabled, Claude will automatically apply these skills when working with rel
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install jutsu-prettier
+han plugin install prettier
 ```

@@ -1,5 +1,6 @@
 ---
 name: crystal-macros
+user-invocable: false
 description: Use when implementing compile-time metaprogramming in Crystal using macros for code generation, DSLs, compile-time computation, and abstract syntax tree manipulation.
 allowed-tools: [Bash, Read]
 ---

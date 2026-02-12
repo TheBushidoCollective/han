@@ -7,7 +7,7 @@ description: Generate production-ready code from a Figma component or frame usin
 
 ## Name
 
-hashi-figma:figma-generate-component - Generate production-ready code from Figma designs
+figma:figma-generate-component - Generate production-ready code from Figma designs
 
 ## Synopsis
 

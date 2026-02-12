@@ -1,12 +1,12 @@
-# Hashi: Jira
+# Jira
 
 MCP server for Atlassian Jira integration with automatic acceptance criteria validation. Connects Claude Code directly to your Jira instance for seamless ticket management and quality enforcement.
 
-## What This Hashi Provides
+## What This Plugin Provides
 
 ### MCP Server: Atlassian
 
-This hashi connects Claude Code to Atlassian Jira and provides complete ticket lifecycle management with built-in validation to ensure work meets acceptance criteria before marking tickets complete.
+This plugin connects Claude Code to Atlassian Jira and provides complete ticket lifecycle management with built-in validation to ensure work meets acceptance criteria before marking tickets complete.
 
 **Key Capabilities:**
 
@@ -20,7 +20,7 @@ This hashi connects Claude Code to Atlassian Jira and provides complete ticket l
 
 ### Automatic Validation
 
-When you stop a Claude Code session, this hashi automatically:
+When you stop a Claude Code session, this plugin automatically:
 
 1. **Scans the conversation** for any Jira ticket keys (e.g., PROJ-123)
 2. **Reminds you to validate** that work meets acceptance criteria
@@ -45,10 +45,8 @@ Once installed, Claude Code gains access to these Atlassian MCP tools:
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install hashi-jira
+han plugin install jira
 ```
 
 ## Usage
@@ -417,9 +415,7 @@ duedate < now() AND status != Done
 
 ## Related Plugins
 
-- **jutsu-jira**: Additional Jira-focused skills and commands (if you want extended functionality beyond the MCP)
-- **bushido:proof-of-work**: Requires concrete evidence of task completion
-- **bushido:test-driven-development**: Ensures tests exist for acceptance criteria
+- **core**: Core quality principles and enforcement
 
 ## Best Practices
 

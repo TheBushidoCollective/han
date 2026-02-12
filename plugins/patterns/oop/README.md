@@ -1,4 +1,4 @@
-# OOP Jutsu
+# OOP
 
 Object-Oriented Programming principles, design patterns, and best practices.
 
@@ -13,5 +13,5 @@ Object-Oriented Programming principles, design patterns, and best practices.
 Install with npx (no installation required):
 
 ```bash
-han plugin install jutsu-oop
+han plugin install oop
 ```

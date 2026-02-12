@@ -334,4 +334,18 @@ export function getRelayEnvironment(): Environment {
 	return relayEnvironment;
 }
 
+/**
+ * Reset the Relay environment and WebSocket client
+ *
+ * Called by ConnectionGate when reconnecting after a disconnect
+ * to ensure stale cached data and broken WS connections are cleared.
+ */
+export function resetRelayEnvironment(): void {
+	if (wsClient) {
+		wsClient.dispose();
+		wsClient = null;
+	}
+	relayEnvironment = null;
+}
+
 export default getRelayEnvironment;

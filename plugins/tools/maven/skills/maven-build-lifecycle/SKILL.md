@@ -1,5 +1,6 @@
 ---
 name: maven-build-lifecycle
+user-invocable: false
 description: Use when working with Maven build phases, goals, profiles, or customizing the build process for Java projects.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

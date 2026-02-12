@@ -1,5 +1,6 @@
 ---
 name: python-async-patterns
+user-invocable: false
 description: Master Python asynchronous programming with asyncio, async/await,
   and concurrent.futures. Use for async code and concurrency patterns.
 allowed-tools:

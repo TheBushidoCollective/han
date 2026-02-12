@@ -1,5 +1,6 @@
 ---
 name: solid-principles
+user-invocable: false
 description: Use during implementation when designing modules, functions, and components requiring SOLID principles for maintainable, flexible architecture.
 allowed-tools:
   - Read

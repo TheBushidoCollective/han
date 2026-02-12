@@ -1,5 +1,6 @@
 ---
 name: cypress-ci-cd
+user-invocable: false
 description: Use when cypress CI/CD integration including parallelization, test recording, and media capture.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

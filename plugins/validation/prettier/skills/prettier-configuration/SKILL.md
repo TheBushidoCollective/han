@@ -1,5 +1,6 @@
 ---
 name: prettier-configuration
+user-invocable: false
 description: Use when prettier configuration including options, config files, ignore patterns, and formatting rules.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

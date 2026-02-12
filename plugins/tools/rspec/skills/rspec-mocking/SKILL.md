@@ -1,5 +1,6 @@
 ---
 name: rspec-mocking
+user-invocable: false
 description: Use when rSpec mocking with doubles, stubs, mocks, spies, and partial mocking strategies.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

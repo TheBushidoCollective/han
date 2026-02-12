@@ -1,5 +1,6 @@
 ---
 name: credo-custom-checks
+user-invocable: false
 description: Use when creating custom Credo checks for project-specific code quality rules and standards in Elixir.
 allowed-tools: []
 ---

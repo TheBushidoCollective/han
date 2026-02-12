@@ -1,5 +1,6 @@
 ---
-name: jutsu-react-native:react-native-styling
+name: react-native-styling
+user-invocable: false
 description: Use when styling React Native components with StyleSheet, Flexbox layout, responsive design, and theming. Covers platform-specific styling and design systems.
 allowed-tools:
   - Read

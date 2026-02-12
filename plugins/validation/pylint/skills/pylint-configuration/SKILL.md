@@ -1,5 +1,6 @@
 ---
 name: pylint-configuration
+user-invocable: false
 description: Use when pylint configuration including pylintrc, message control, plugins, and scoring system.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

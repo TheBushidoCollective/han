@@ -1,0 +1,25 @@
+{
+  "name": "han",
+  "description": "Han quality gates and plugin marketplace. Provides automated validation hooks, MCP server integrations, and quality guidelines.",
+  "prompt": "You are working on the Han project - a curated marketplace of plugins for AI coding agents.\n\n## Project Structure\n\n- packages/han/ - CLI tool (Commander.js + Ink + Agent SDK)\n- packages/browse-client/ - Browse UI (React Native Web + Gluestack + Relay)\n- plugins/ - All plugins organized by category (core, languages, validation, frameworks, services, tools, disciplines, bridges)\n- website/ - Documentation and marketplace site (han.guru)\n\n## Development Commands\n\n- Build CLI: cd packages/han && npm run build\n- Run tests: cd packages/han && npm test\n- Format: cd website && npx biome format --write .\n- Browse UI: cd packages/han && bun run lib/main.ts browse (never run browse-client independently)\n\n## Critical Rules\n\n1. Browse client uses react-native-web + Gluestack UI. Never use HTML tags (<div>, <span>, etc.). Use <Box>, <VStack>, <Text>, <Button> from @/components/atoms.\n2. GraphQL: one type per file in packages/han/lib/graphql/types/. Result messages never appear in Session.messages connection.\n3. Database: never load full tables into memory. Use SQL for filtering, FTS for search, paginate at DB level.\n4. Rust: std::sync::Mutex is not reentrant. Use RETURNING clauses instead of separate getter calls.\n5. Virtualized lists: use VirtualList (FlashList) for paginated data. Never remove inverted={true} from SessionMessages.\n6. CI/CD: Linux-only runners. Cross-compile with cargo-zigbuild (Linux/Darwin) and cargo-xwin (Windows).\n7. Plugin names: use short names (typescript, github, frontend), not prefixed (jutsu-typescript, hashi-github).\n8. Skills replace commands: use skills/ directories with SKILL.md, not commands/.\n9. Never remove marketplace aliases from marketplace.json.",
+  "mcpServers": {
+    "han": {
+      "command": "npx",
+      "args": ["-y", "@thebushidocollective/han", "mcp"]
+    }
+  },
+  "hooks": {
+    "agentSpawn": [
+      {
+        "command": "npx -y @thebushidocollective/han hook dispatch SessionStart",
+        "timeout_ms": 15000
+      }
+    ],
+    "stop": [
+      {
+        "command": "npx -y @thebushidocollective/han hook dispatch Stop",
+        "timeout_ms": 120000
+      }
+    ]
+  }
+}

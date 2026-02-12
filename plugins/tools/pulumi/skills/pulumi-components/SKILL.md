@@ -1,5 +1,6 @@
 ---
 name: pulumi-components
+user-invocable: false
 description: Use when building reusable infrastructure components with Pulumi for modular, composable cloud resources.
 allowed-tools: [Bash, Read]
 ---

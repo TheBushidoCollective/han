@@ -420,6 +420,10 @@ async function startCoordinating(): Promise<void> {
           '[coordinator] Data version changed - truncating derived tables for full reindex...'
         );
         await indexer.truncateDerivedTables();
+        // Clear flag immediately after truncation to prevent destructive loop
+        // if the subsequent full scan is interrupted or fails
+        await indexer.clearReindexFlag();
+        console.log('[coordinator] Reindex flag cleared');
       }
 
       // Perform full scan and index
@@ -435,12 +439,6 @@ async function startCoordinating(): Promise<void> {
       console.log(
         `[coordinator] Indexed ${totalSessions} sessions (${newSessions} new), ${totalMessages} messages`
       );
-
-      // Clear reindex flag after successful completion
-      if (needsReindex) {
-        await indexer.clearReindexFlag();
-        console.log('[coordinator] Reindex complete, flag cleared');
-      }
 
       // Publish events for indexed data
       for (const result of results) {

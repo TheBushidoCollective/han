@@ -7,7 +7,7 @@ description: Start work on a Jira ticket (transition to In Progress)
 
 ## Name
 
-hashi-jira:start - Start work on a Jira ticket (transition to In Progress)
+jira:start - Start work on a Jira ticket (transition to In Progress)
 
 ## Synopsis
 

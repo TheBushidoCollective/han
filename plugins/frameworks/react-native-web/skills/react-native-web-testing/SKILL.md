@@ -1,5 +1,6 @@
 ---
 name: react-native-web-testing
+user-invocable: false
 description: Use when testing React Native Web applications. Provides patterns for Jest, React Native Testing Library, component testing, and web-specific testing strategies.
 allowed-tools:
   - Read

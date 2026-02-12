@@ -1,5 +1,6 @@
 ---
 name: jest-testing-patterns
+user-invocable: false
 description: Use when jest testing patterns including unit tests, mocks, spies, snapshots, and assertion techniques for comprehensive test coverage.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

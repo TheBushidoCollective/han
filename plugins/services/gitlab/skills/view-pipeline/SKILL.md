@@ -7,7 +7,7 @@ description: View CI/CD pipeline status for a merge request or project
 
 ## Name
 
-hashi-gitlab:view-pipeline - View CI/CD pipeline status for a merge request or project
+gitlab:view-pipeline - View CI/CD pipeline status for a merge request or project
 
 ## Synopsis
 

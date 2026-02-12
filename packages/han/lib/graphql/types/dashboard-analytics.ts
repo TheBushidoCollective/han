@@ -6,10 +6,18 @@
  * tool usage, hook health, and cost analysis.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import { queryDashboardAggregates } from '../../db/index.ts';
+import {
+  calculateCacheSavings,
+  calculateDefaultCost,
+  calculateModelCost,
+  calculateTotalCostFromModelUsage,
+  DEFAULT_PRICING,
+} from '../../pricing/model-pricing.ts';
+import {
+  getAggregatedStats,
+  getPerConfigDirStats,
+} from '../../pricing/stats-reader.ts';
 import { builder } from '../builder.ts';
 
 // =============================================================================
@@ -121,10 +129,36 @@ export interface SubscriptionComparison {
 }
 
 /**
+ * Per-config-dir cost breakdown (matches CostAnalysis shape for UI parity)
+ */
+export interface ConfigDirCostBreakdown {
+  configDirId: string;
+  configDirName: string;
+  estimatedCostUsd: number;
+  isEstimated: boolean;
+  cacheSavingsUsd: number;
+  totalSessions: number;
+  totalMessages: number;
+  modelCount: number;
+  costPerSession: number;
+  cacheHitRate: number;
+  potentialSavingsUsd: number;
+  costUtilizationPercent: number;
+  dailyCostTrend: DailyCost[];
+  weeklyCostTrend: WeeklyCost[];
+  subscriptionComparisons: SubscriptionComparison[];
+  breakEvenDailySpend: number;
+  topSessionsByCost: SessionCost[];
+}
+
+/**
  * Cost tracking with subscription context
  */
 export interface CostAnalysis {
   estimatedCostUsd: number;
+  isEstimated: boolean;
+  billingType: string | null;
+  cacheSavingsUsd: number;
   maxSubscriptionCostUsd: number;
   costUtilizationPercent: number;
   dailyCostTrend: DailyCost[];
@@ -136,6 +170,7 @@ export interface CostAnalysis {
   potentialSavingsUsd: number;
   subscriptionComparisons: SubscriptionComparison[];
   breakEvenDailySpend: number;
+  configDirBreakdowns: ConfigDirCostBreakdown[];
 }
 
 /**
@@ -394,6 +429,77 @@ export const SubscriptionComparisonType = SubscriptionComparisonRef.implement({
   }),
 });
 
+const ConfigDirCostBreakdownRef = builder.objectRef<ConfigDirCostBreakdown>(
+  'ConfigDirCostBreakdown'
+);
+
+export const ConfigDirCostBreakdownType = ConfigDirCostBreakdownRef.implement({
+  description: 'Per-config-dir cost breakdown (matches CostAnalysis shape)',
+  fields: (t) => ({
+    configDirId: t.exposeString('configDirId', {
+      description: 'Unique identifier for the config directory',
+    }),
+    configDirName: t.exposeString('configDirName', {
+      description:
+        'Display name for the config directory (e.g., "Default", "Claude Work")',
+    }),
+    estimatedCostUsd: t.exposeFloat('estimatedCostUsd', {
+      description: 'Estimated cost in USD for this config directory',
+    }),
+    isEstimated: t.exposeBoolean('isEstimated', {
+      description: 'Whether cost is estimated (always false for per-dir stats)',
+    }),
+    cacheSavingsUsd: t.exposeFloat('cacheSavingsUsd', {
+      description: 'Cache savings in USD for this config directory',
+    }),
+    totalSessions: t.exposeInt('totalSessions', {
+      description: 'Total sessions in this config directory',
+    }),
+    totalMessages: t.exposeInt('totalMessages', {
+      description: 'Total messages in this config directory',
+    }),
+    modelCount: t.exposeInt('modelCount', {
+      description: 'Number of distinct models used in this config directory',
+    }),
+    costPerSession: t.exposeFloat('costPerSession', {
+      description: 'Average cost per session in this config directory',
+    }),
+    cacheHitRate: t.exposeFloat('cacheHitRate', {
+      description: 'Cache hit rate (0 to 1) for this config directory',
+    }),
+    potentialSavingsUsd: t.exposeFloat('potentialSavingsUsd', {
+      description: 'Potential savings if cache hit rate were optimal',
+    }),
+    costUtilizationPercent: t.exposeFloat('costUtilizationPercent', {
+      description:
+        'Percentage of subscription cost utilized by this config dir',
+    }),
+    dailyCostTrend: t.field({
+      type: [DailyCostType],
+      description: 'Daily cost breakdown for this config directory',
+      resolve: (data) => data.dailyCostTrend,
+    }),
+    weeklyCostTrend: t.field({
+      type: [WeeklyCostType],
+      description: 'Weekly cost aggregation for this config directory',
+      resolve: (data) => data.weeklyCostTrend,
+    }),
+    subscriptionComparisons: t.field({
+      type: [SubscriptionComparisonType],
+      description: 'Per-tier comparison scoped to this config dir cost',
+      resolve: (data) => data.subscriptionComparisons,
+    }),
+    breakEvenDailySpend: t.exposeFloat('breakEvenDailySpend', {
+      description: 'Daily API spend at which the subscription breaks even',
+    }),
+    topSessionsByCost: t.field({
+      type: [SessionCostType],
+      description: 'Top sessions by cost (empty for per-dir view)',
+      resolve: (data) => data.topSessionsByCost,
+    }),
+  }),
+});
+
 const CostAnalysisRef = builder.objectRef<CostAnalysis>('CostAnalysis');
 
 export const CostAnalysisType = CostAnalysisRef.implement({
@@ -401,6 +507,19 @@ export const CostAnalysisType = CostAnalysisRef.implement({
   fields: (t) => ({
     estimatedCostUsd: t.exposeFloat('estimatedCostUsd', {
       description: 'Total estimated cost in USD (API credit equivalent)',
+    }),
+    isEstimated: t.exposeBoolean('isEstimated', {
+      description:
+        'Whether cost is estimated (true = Sonnet-class fallback, false = per-model pricing)',
+    }),
+    billingType: t.exposeString('billingType', {
+      nullable: true,
+      description:
+        'Billing type from ~/.claude.json (e.g., "stripe_subscription")',
+    }),
+    cacheSavingsUsd: t.exposeFloat('cacheSavingsUsd', {
+      description:
+        'Actual cache savings in USD based on per-model pricing difference',
     }),
     maxSubscriptionCostUsd: t.exposeFloat('maxSubscriptionCostUsd', {
       description:
@@ -445,6 +564,11 @@ export const CostAnalysisType = CostAnalysisRef.implement({
     breakEvenDailySpend: t.exposeFloat('breakEvenDailySpend', {
       description:
         'Daily API spend at which the current subscription breaks even',
+    }),
+    configDirBreakdowns: t.field({
+      type: [ConfigDirCostBreakdownType],
+      description: 'Per-config-dir cost breakdowns',
+      resolve: (data) => data.configDirBreakdowns,
     }),
   }),
 });
@@ -527,17 +651,6 @@ const COMPACTION_PENALTY_MAX = 5;
 /** Per-compaction penalty (100 / COMPACTION_PENALTY_MAX) */
 const COMPACTION_PENALTY_PER = 100 / COMPACTION_PENALTY_MAX;
 
-/**
- * Claude API pricing (Sonnet-class, as of 2025).
- * These are estimates — actual cost varies by model.
- * stats-cache.json provides more accurate data when available.
- */
-const PRICING = {
-  inputPerMTok: 3.0,
-  outputPerMTok: 15.0,
-  cacheReadPerMTok: 0.3,
-} as const;
-
 /** Theoretical optimal cache rate target for savings estimate */
 const OPTIMAL_CACHE_RATE = 0.8;
 
@@ -559,21 +672,6 @@ const SUBSCRIPTION_TIERS = [
 export function round(value: number, decimals: number): number {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
-}
-
-/**
- * Calculate estimated cost based on Claude pricing.
- * Uses Sonnet-class pricing as a baseline estimate.
- */
-export function calculateCost(
-  inputTokens: number,
-  outputTokens: number,
-  cachedTokens: number
-): number {
-  const inputCost = (inputTokens / 1_000_000) * PRICING.inputPerMTok;
-  const outputCost = (outputTokens / 1_000_000) * PRICING.outputPerMTok;
-  const cacheCost = (cachedTokens / 1_000_000) * PRICING.cacheReadPerMTok;
-  return inputCost + outputCost + cacheCost;
 }
 
 /**
@@ -609,36 +707,6 @@ export function parseTokensFromRawJson(rawJson: string | null): {
     };
   } catch {
     return zero;
-  }
-}
-
-/**
- * Read stats-cache.json from ~/.claude/ for model usage data.
- * Returns null if unavailable (logs warning on parse failure).
- */
-function readStatsCache(): {
-  modelUsage?: Record<
-    string,
-    {
-      inputTokens: number;
-      outputTokens: number;
-      cacheReadInputTokens: number;
-      cacheCreationInputTokens: number;
-      costUSD: number;
-    }
-  >;
-} | null {
-  try {
-    const statsPath = join(homedir(), '.claude', 'stats-cache.json');
-    if (!existsSync(statsPath)) return null;
-    const content = readFileSync(statsPath, 'utf-8');
-    return JSON.parse(content);
-  } catch (err) {
-    console.warn(
-      'Failed to read stats-cache.json, using estimated costs:',
-      err
-    );
-    return null;
   }
 }
 
@@ -913,38 +981,51 @@ export async function queryDashboardAnalytics(
   }));
 
   // ==========================================================================
-  // Build cost analysis
+  // Build cost analysis (per-model pricing from aggregated stats-cache)
   // ==========================================================================
   const totalInputTokens = agg.totalInputTokens;
   const totalOutputTokens = agg.totalOutputTokens;
   const totalCacheReadTokens = agg.totalCacheReadTokens;
   const totalSessions = agg.totalSessions;
 
-  const estimatedCostUsd = calculateCost(
-    totalInputTokens,
-    totalOutputTokens,
-    totalCacheReadTokens
-  );
+  // Get aggregated stats from all config dirs for per-model pricing
+  const aggregatedStats = await getAggregatedStats();
+  const hasModelUsage =
+    aggregatedStats.hasStatsCacheData &&
+    Object.keys(aggregatedStats.modelUsage).length > 0;
 
-  // Check stats-cache for more accurate cost data (survives session cleanup)
-  const statsCache = readStatsCache();
-  let statsCacheCost = 0;
-  if (statsCache?.modelUsage) {
-    for (const usage of Object.values(statsCache.modelUsage)) {
-      statsCacheCost += usage.costUSD || 0;
-    }
+  // Use per-model pricing when available, fall back to default Sonnet-class rates
+  let finalCostUsd: number;
+  let isEstimated: boolean;
+  let cacheSavingsUsd: number;
+
+  if (hasModelUsage) {
+    finalCostUsd = calculateTotalCostFromModelUsage(aggregatedStats.modelUsage);
+    isEstimated = false;
+    cacheSavingsUsd = calculateCacheSavings(aggregatedStats.modelUsage);
+  } else {
+    finalCostUsd = calculateDefaultCost(
+      totalInputTokens,
+      totalOutputTokens,
+      totalCacheReadTokens
+    );
+    isEstimated = true;
+    // Fallback: savings based on default pricing (input - cacheRead rate)
+    const savedPerMTok =
+      DEFAULT_PRICING.inputPerMTok - DEFAULT_PRICING.cacheReadPerMTok;
+    cacheSavingsUsd = (totalCacheReadTokens / 1_000_000) * savedPerMTok;
   }
 
-  const finalCostUsd = statsCacheCost > 0 ? statsCacheCost : estimatedCostUsd;
+  const billingType = aggregatedStats.billingInfo.billingType;
 
-  // Build daily cost trend from SQL aggregation
+  // Build daily cost trend from SQL aggregation (uses default pricing — no per-model breakdown per day)
   const dailyCostMap = new Map<
     string,
     { costUsd: number; sessionCount: number }
   >();
   for (const dc of agg.dailyCosts) {
     dailyCostMap.set(dc.date, {
-      costUsd: calculateCost(
+      costUsd: calculateDefaultCost(
         dc.inputTokens,
         dc.outputTokens,
         dc.cacheReadTokens
@@ -998,10 +1079,10 @@ export async function queryDashboardAnalytics(
     }))
     .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
 
-  // Top 10 most expensive sessions
+  // Top 10 most expensive sessions (uses default pricing — no per-model breakdown per session)
   const topSessionsByCost: SessionCost[] = agg.sessionStats
     .map((s) => {
-      const cost = calculateCost(
+      const cost = calculateDefaultCost(
         s.inputTokens,
         s.outputTokens,
         s.cacheReadTokens
@@ -1031,7 +1112,7 @@ export async function queryDashboardAnalytics(
   // Potential savings if cache hit rate reached optimal target
   const currentNonCachedInputCost =
     ((totalInputTokens - totalCacheReadTokens) / 1_000_000) *
-    PRICING.inputPerMTok;
+    DEFAULT_PRICING.inputPerMTok;
   const savingsIfOptimal =
     cacheHitRate < OPTIMAL_CACHE_RATE
       ? currentNonCachedInputCost * (OPTIMAL_CACHE_RATE - cacheHitRate)
@@ -1067,8 +1148,190 @@ export async function queryDashboardAnalytics(
 
   const breakEvenDailySpend = round(subscriptionTier / 30, 2);
 
+  // Build per-config-dir cost breakdowns with full analytics
+  const perDirStats = await getPerConfigDirStats();
+  const configDirBreakdowns: ConfigDirCostBreakdown[] = perDirStats
+    .filter((d) => d.hasStatsCacheData)
+    .map((d) => {
+      const dirCostUsd = calculateTotalCostFromModelUsage(d.modelUsage);
+      const dirCacheSavingsUsd = calculateCacheSavings(d.modelUsage);
+
+      // Compute per-model cost-per-token for proportional daily distribution
+      const modelCostPerToken = new Map<string, number>();
+      for (const [modelId, usage] of Object.entries(d.modelUsage)) {
+        const totalTokens =
+          usage.inputTokens +
+          usage.outputTokens +
+          usage.cacheReadInputTokens +
+          usage.cacheCreationInputTokens;
+        if (totalTokens > 0) {
+          const cost = calculateModelCost(
+            modelId,
+            usage.inputTokens,
+            usage.outputTokens,
+            usage.cacheReadInputTokens,
+            usage.cacheCreationInputTokens
+          );
+          modelCostPerToken.set(modelId, cost / totalTokens);
+        }
+      }
+
+      // Build daily activity lookup
+      const dailyActivityMap = new Map<
+        string,
+        { sessionCount: number; messageCount: number }
+      >();
+      for (const da of d.dailyActivity) {
+        dailyActivityMap.set(da.date, {
+          sessionCount: da.sessionCount,
+          messageCount: da.messageCount,
+        });
+      }
+
+      // Build daily model tokens lookup
+      const dailyModelTokensMap = new Map<string, Record<string, number>>();
+      for (const dmt of d.dailyModelTokens) {
+        dailyModelTokensMap.set(dmt.date, dmt.tokensByModel);
+      }
+
+      // Build daily cost trend for this config dir
+      const dirDailyCostTrend: DailyCost[] = [];
+      const todayForDir = new Date();
+      for (let i = 0; i < days; i++) {
+        const dt = new Date(todayForDir);
+        dt.setDate(dt.getDate() - i);
+        const dateStr = dt.toISOString().split('T')[0];
+        const dayTokens = dailyModelTokensMap.get(dateStr);
+        const dayActivity = dailyActivityMap.get(dateStr);
+
+        let dayCost = 0;
+        if (dayTokens) {
+          for (const [modelId, tokens] of Object.entries(dayTokens)) {
+            const cpt = modelCostPerToken.get(modelId);
+            if (cpt) {
+              dayCost += tokens * cpt;
+            } else {
+              // Fallback: use default pricing with rough input/output split
+              dayCost +=
+                (tokens / 1_000_000) * DEFAULT_PRICING.inputPerMTok * 0.5 +
+                (tokens / 1_000_000) * DEFAULT_PRICING.outputPerMTok * 0.5;
+            }
+          }
+        }
+
+        dirDailyCostTrend.push({
+          date: dateStr,
+          costUsd: round(dayCost, 4),
+          sessionCount: dayActivity?.sessionCount ?? 0,
+        });
+      }
+      dirDailyCostTrend.reverse();
+
+      // Aggregate daily costs into weekly buckets
+      const dirWeeklyMap = new Map<
+        string,
+        { costUsd: number; sessionCount: number; dayCount: number }
+      >();
+      for (const day of dirDailyCostTrend) {
+        if (day.costUsd === 0 && day.sessionCount === 0) continue;
+        const ws = getWeekStart(day.date);
+        const existing = dirWeeklyMap.get(ws) || {
+          costUsd: 0,
+          sessionCount: 0,
+          dayCount: 0,
+        };
+        existing.costUsd += day.costUsd;
+        existing.sessionCount += day.sessionCount;
+        existing.dayCount++;
+        dirWeeklyMap.set(ws, existing);
+      }
+      const dirWeeklyCostTrend: WeeklyCost[] = Array.from(
+        dirWeeklyMap.entries()
+      )
+        .map(([ws, data]) => ({
+          weekStart: ws,
+          weekLabel: formatWeekLabel(ws),
+          costUsd: round(data.costUsd, 2),
+          sessionCount: data.sessionCount,
+          avgDailyCost:
+            data.dayCount > 0 ? round(data.costUsd / data.dayCount, 2) : 0,
+        }))
+        .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+
+      // Cache hit rate for this config dir
+      let dirTotalInput = 0;
+      let dirTotalCacheRead = 0;
+      for (const usage of Object.values(d.modelUsage)) {
+        dirTotalInput += usage.inputTokens + usage.cacheReadInputTokens;
+        dirTotalCacheRead += usage.cacheReadInputTokens;
+      }
+      const dirCacheHitRate =
+        dirTotalInput > 0 ? round(dirTotalCacheRead / dirTotalInput, 2) : 0;
+
+      // Potential savings
+      const dirNonCachedCost =
+        ((dirTotalInput - dirTotalCacheRead) / 1_000_000) *
+        DEFAULT_PRICING.inputPerMTok;
+      const dirPotentialSavings =
+        dirCacheHitRate < OPTIMAL_CACHE_RATE
+          ? dirNonCachedCost * (OPTIMAL_CACHE_RATE - dirCacheHitRate)
+          : 0;
+
+      // Subscription comparisons scoped to this dir's cost
+      const dirMonthlyApiCost =
+        days > 0 ? (dirCostUsd / days) * 30 : dirCostUsd;
+      const dirSubscriptionComparisons: SubscriptionComparison[] =
+        SUBSCRIPTION_TIERS.map((tier) => {
+          const savings = round(dirMonthlyApiCost - tier.monthlyCostUsd, 2);
+          const savPct =
+            dirMonthlyApiCost > 0
+              ? round((savings / dirMonthlyApiCost) * 100, 2)
+              : 0;
+          let rec: string;
+          if (dirMonthlyApiCost < tier.monthlyCostUsd * 0.5) {
+            rec = 'overkill';
+          } else if (dirMonthlyApiCost >= tier.monthlyCostUsd) {
+            rec = 'recommended';
+          } else {
+            rec = 'good_value';
+          }
+          return {
+            tierName: tier.name,
+            monthlyCostUsd: tier.monthlyCostUsd,
+            apiCreditCostUsd: round(dirMonthlyApiCost, 2),
+            savingsUsd: savings,
+            savingsPercent: savPct,
+            recommendation: rec,
+          };
+        });
+
+      return {
+        configDirId: d.configDirId,
+        configDirName: d.configDirName,
+        estimatedCostUsd: round(dirCostUsd, 2),
+        isEstimated: false,
+        cacheSavingsUsd: round(dirCacheSavingsUsd, 2),
+        totalSessions: d.totalSessions,
+        totalMessages: d.totalMessages,
+        modelCount: Object.keys(d.modelUsage).length,
+        costPerSession:
+          d.totalSessions > 0 ? round(dirCostUsd / d.totalSessions, 2) : 0,
+        cacheHitRate: dirCacheHitRate,
+        potentialSavingsUsd: round(dirPotentialSavings, 2),
+        costUtilizationPercent: round((dirCostUsd / subscriptionTier) * 100, 2),
+        dailyCostTrend: dirDailyCostTrend,
+        weeklyCostTrend: dirWeeklyCostTrend,
+        subscriptionComparisons: dirSubscriptionComparisons,
+        breakEvenDailySpend: round(subscriptionTier / 30, 2),
+        topSessionsByCost: [], // Not available per config dir from stats-cache
+      };
+    });
+
   const costAnalysis: CostAnalysis = {
     estimatedCostUsd: round(finalCostUsd, 2),
+    isEstimated,
+    billingType,
+    cacheSavingsUsd: round(cacheSavingsUsd, 2),
     maxSubscriptionCostUsd: subscriptionTier,
     costUtilizationPercent: round((finalCostUsd / subscriptionTier) * 100, 2),
     dailyCostTrend,
@@ -1081,6 +1344,7 @@ export async function queryDashboardAnalytics(
     potentialSavingsUsd: round(savingsIfOptimal, 2),
     subscriptionComparisons,
     breakEvenDailySpend,
+    configDirBreakdowns,
   };
 
   const result: DashboardAnalytics = {

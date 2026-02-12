@@ -1,5 +1,6 @@
 ---
 name: react-native-web-performance
+user-invocable: false
 description: Use when optimizing React Native Web performance. Provides patterns for code splitting, bundle optimization, memoization, and web-specific performance improvements.
 allowed-tools:
   - Read

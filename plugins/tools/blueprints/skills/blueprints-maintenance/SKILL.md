@@ -1,7 +1,8 @@
 ---
 name: blueprints-maintenance
-description: Use after modifying existing systems to update blueprint documentation. Read blueprints with read_blueprint before changes, update with write_blueprint after. Prevents documentation drift.
-allowed-tools: [Read, Write, Edit, Grep, Glob, mcp__plugin_hashi-blueprints_blueprints__search_blueprints, mcp__plugin_hashi-blueprints_blueprints__read_blueprint, mcp__plugin_hashi-blueprints_blueprints__write_blueprint]
+user-invocable: false
+description: Use after modifying existing systems to update blueprint documentation. Read blueprints before changes, update after. Prevents documentation drift.
+allowed-tools: [Read, Write, Edit, Grep, Glob]
 ---
 
 # Maintaining Technical Blueprints
@@ -19,14 +20,14 @@ Documentation drifts from implementation when:
 
 ### Before Making Changes
 
-1. **Read existing blueprint** using MCP tools:
+1. **Find relevant blueprints**:
 
-   ```typescript
-   // Find the blueprint
-   const results = await search_blueprints({ keyword: "auth" });
+   ```
+   # Search for blueprints related to your system
+   Grep("auth", path: "blueprints/", output_mode: "files_with_matches")
 
-   // Read it to understand current documentation
-   const blueprint = await read_blueprint({ name: "authentication" });
+   # Read the blueprint to understand current documentation
+   Read("blueprints/authentication.md")
    ```
 
 2. **Note what documentation exists**:
@@ -39,8 +40,8 @@ Documentation drifts from implementation when:
 
 1. **Re-read the blueprint** to verify accuracy:
 
-   ```typescript
-   const current = await read_blueprint({ name: "authentication" });
+   ```
+   Read("blueprints/authentication.md")
    ```
 
 2. **Verify each section**:
@@ -49,14 +50,11 @@ Documentation drifts from implementation when:
    - Is behavior description accurate?
    - Are file paths still correct?
 
-3. **Update using MCP tool**:
+3. **Update the blueprint**:
 
-   ```typescript
-   await write_blueprint({
-     name: "authentication",
-     summary: "Updated summary if needed",
-     content: updatedContent
-   });
+   ```
+   # Read current content, modify as needed, write back
+   Write("blueprints/authentication.md", updated_content_with_frontmatter)
    ```
 
 4. **Remove stale content** - outdated docs mislead
@@ -154,7 +152,7 @@ When reviewing blueprints:
 
 ### Tooling Support
 
-The hashi-blueprints hooks automatically:
+The blueprints hooks automatically:
 
 - Remind you to check docs (UserPromptSubmit)
 - Verify docs match changes (Stop hook)

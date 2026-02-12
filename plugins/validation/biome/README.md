@@ -15,9 +15,9 @@ This plugin provides the following skills:
 Skills can be invoked using the Skill tool:
 
 ```javascript
-Skill("jutsu-biome:biome-configuration")
-Skill("jutsu-biome:biome-linting")
-Skill("jutsu-biome:biome-formatting")
+Skill("biome:biome-configuration")
+Skill("biome:biome-linting")
+Skill("biome:biome-formatting")
 ```
 
 Each skill provides specialized knowledge and patterns for Biome development.
@@ -38,8 +38,6 @@ This ensures all packages in your monorepo pass Biome validation before work is 
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install jutsu-biome
+han plugin install biome
 ```

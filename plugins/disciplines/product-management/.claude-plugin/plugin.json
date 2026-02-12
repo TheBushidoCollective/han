@@ -1,0 +1,18 @@
+{
+  "name": "product-management",
+  "version": "1.1.2",
+  "description": "Agents specialized in product vision and strategy. Focuses on product direction, market positioning, and strategic planning.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "product",
+    "strategy",
+    "vision",
+    "planning"
+  ]
+}

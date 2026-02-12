@@ -7,7 +7,7 @@ description: Create a new merge request in a GitLab project
 
 ## Name
 
-hashi-gitlab:create-mr - Create a new merge request in a GitLab project
+gitlab:create-mr - Create a new merge request in a GitLab project
 
 ## Synopsis
 

@@ -1,5 +1,6 @@
 ---
 name: ink-component-patterns
+user-invocable: false
 description: Use when building terminal UIs with Ink component patterns for React-based CLI applications.
 allowed-tools: []
 ---

@@ -1,5 +1,6 @@
 ---
 name: crystal-concurrency
+user-invocable: false
 description: Use when implementing concurrent programming in Crystal using fibers, channels, and parallel execution patterns for high-performance, non-blocking applications.
 allowed-tools: [Bash, Read]
 ---

@@ -1,5 +1,6 @@
 ---
 name: ansible-inventory
+user-invocable: false
 description: Use when managing hosts and groups in Ansible inventory for organizing infrastructure and applying configurations across environments.
 allowed-tools: [Bash, Read]
 ---

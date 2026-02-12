@@ -48,7 +48,7 @@ import { ModelUsageChart } from "./ModelUsageChart.tsx";
 import { SessionEffectivenessCard } from "./SessionEffectivenessCard.tsx";
 import { SubagentUsageChart } from "./SubagentUsageChart.tsx";
 import { TimeOfDayChart } from "./TimeOfDayChart.tsx";
-import { TokenUsageCard } from "./TokenUsageCard.tsx";
+
 import { ToolUsageChart } from "./ToolUsageChart.tsx";
 
 /**
@@ -161,7 +161,6 @@ export function DashboardContent({
 			(s): s is NonNullable<typeof s> & { id: string } =>
 				s !== null && s !== undefined && typeof s.id === "string",
 		);
-	const pluginCategories = data.pluginCategories ?? [];
 	const frustrationRate = metrics.significantFrustrationRate ?? 0;
 
 	// Normalize activity data with defaults for nullable fields from GraphQL
@@ -211,6 +210,7 @@ export function DashboardContent({
 			cacheReadTokens: Number(m?.cacheReadTokens ?? 0),
 			cacheCreationTokens: Number(m?.cacheCreationTokens ?? 0),
 			totalTokens: Number(m?.totalTokens ?? 0),
+			costUsd: m?.costUsd ?? 0,
 		})),
 		totalSessions: rawActivity?.totalSessions ?? 0,
 		totalMessages: rawActivity?.totalMessages ?? 0,
@@ -280,6 +280,9 @@ export function DashboardContent({
 		})),
 		costAnalysis: {
 			estimatedCostUsd: rawAnalytics?.costAnalysis?.estimatedCostUsd ?? 0,
+			isEstimated: rawAnalytics?.costAnalysis?.isEstimated ?? true,
+			billingType: rawAnalytics?.costAnalysis?.billingType ?? null,
+			cacheSavingsUsd: rawAnalytics?.costAnalysis?.cacheSavingsUsd ?? 0,
 			maxSubscriptionCostUsd:
 				rawAnalytics?.costAnalysis?.maxSubscriptionCostUsd ?? 200,
 			costUtilizationPercent:
@@ -328,6 +331,55 @@ export function DashboardContent({
 				recommendation: c?.recommendation ?? "overkill",
 			})),
 			breakEvenDailySpend: rawAnalytics?.costAnalysis?.breakEvenDailySpend ?? 0,
+			configDirBreakdowns: (
+				rawAnalytics?.costAnalysis?.configDirBreakdowns ?? []
+			).map((d) => ({
+				configDirId: d?.configDirId ?? "",
+				configDirName: d?.configDirName ?? "",
+				estimatedCostUsd: d?.estimatedCostUsd ?? 0,
+				isEstimated: d?.isEstimated ?? false,
+				cacheSavingsUsd: d?.cacheSavingsUsd ?? 0,
+				totalSessions: d?.totalSessions ?? 0,
+				totalMessages: d?.totalMessages ?? 0,
+				modelCount: d?.modelCount ?? 0,
+				costPerSession: d?.costPerSession ?? 0,
+				cacheHitRate: d?.cacheHitRate ?? 0,
+				potentialSavingsUsd: d?.potentialSavingsUsd ?? 0,
+				costUtilizationPercent: d?.costUtilizationPercent ?? 0,
+				dailyCostTrend: (d?.dailyCostTrend ?? []).map((day) => ({
+					date: day?.date ?? "",
+					costUsd: day?.costUsd ?? 0,
+					sessionCount: day?.sessionCount ?? 0,
+				})),
+				weeklyCostTrend: (d?.weeklyCostTrend ?? []).map((w) => ({
+					weekStart: w?.weekStart ?? "",
+					weekLabel: w?.weekLabel ?? "",
+					costUsd: w?.costUsd ?? 0,
+					sessionCount: w?.sessionCount ?? 0,
+					avgDailyCost: w?.avgDailyCost ?? 0,
+				})),
+				subscriptionComparisons: (d?.subscriptionComparisons ?? []).map(
+					(c) => ({
+						tierName: c?.tierName ?? "",
+						monthlyCostUsd: c?.monthlyCostUsd ?? 0,
+						apiCreditCostUsd: c?.apiCreditCostUsd ?? 0,
+						savingsUsd: c?.savingsUsd ?? 0,
+						savingsPercent: c?.savingsPercent ?? 0,
+						recommendation: c?.recommendation ?? "overkill",
+					}),
+				),
+				breakEvenDailySpend: d?.breakEvenDailySpend ?? 0,
+				topSessionsByCost: (d?.topSessionsByCost ?? []).map((s) => ({
+					sessionId: s?.sessionId ?? "",
+					slug: s?.slug ?? null,
+					costUsd: s?.costUsd ?? 0,
+					inputTokens: s?.inputTokens ?? 0,
+					outputTokens: s?.outputTokens ?? 0,
+					cacheReadTokens: s?.cacheReadTokens ?? 0,
+					messageCount: s?.messageCount ?? 0,
+					startedAt: s?.startedAt ?? null,
+				})),
+			})),
 		},
 	};
 
@@ -438,66 +490,147 @@ export function DashboardContent({
 				/>
 			</Box>
 
-			{/* Activity Heatmap - full width */}
-			<SectionCard title="Activity">
-				{activityLoaded ? (
-					<ActivityHeatmap
-						dailyActivity={activity.dailyActivity}
-						streakDays={activity.streakDays}
-						totalActiveDays={activity.totalActiveDays}
-					/>
-				) : (
-					<Box
-						style={{
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							minHeight: "200px",
-						}}
-					>
-						<Text color="muted">Loading activity data...</Text>
-					</Box>
-				)}
-			</SectionCard>
+			{/* Activity Heatmap and Code Changes - side by side */}
+			<HStack gap="lg" style={{ alignItems: "stretch" }}>
+				<Box style={{ flex: 1 }}>
+					<SectionCard title="Activity" style={{ height: "100%" }}>
+						{activityLoaded ? (
+							<ActivityHeatmap
+								dailyActivity={activity.dailyActivity}
+								firstSessionDate={activity.firstSessionDate}
+								streakDays={activity.streakDays}
+								totalActiveDays={activity.totalActiveDays}
+							/>
+						) : (
+							<Box
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									minHeight: "200px",
+								}}
+							>
+								<Text color="muted">Loading activity data...</Text>
+							</Box>
+						)}
+					</SectionCard>
+				</Box>
+				<Box style={{ flex: 1 }}>
+					<SectionCard title="Code Changes" style={{ height: "100%" }}>
+						{activityLoaded ? (
+							<LineChangesChart
+								dailyActivity={activity.dailyActivity}
+								firstSessionDate={activity.firstSessionDate}
+							/>
+						) : (
+							<Box
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									minHeight: "200px",
+								}}
+							>
+								<Text color="muted">Loading chart data...</Text>
+							</Box>
+						)}
+					</SectionCard>
+				</Box>
+			</HStack>
 
-			{/* Line Changes Chart - full width */}
-			<SectionCard title="Code Changes">
-				{activityLoaded ? (
-					<LineChangesChart dailyActivity={activity.dailyActivity} />
-				) : (
-					<Box
-						style={{
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							minHeight: "200px",
-						}}
+			{/* Model Usage and Time of Day - side by side */}
+			<HStack gap="lg" style={{ alignItems: "stretch" }}>
+				<Box style={{ flex: 1 }}>
+					<SectionCard
+						title="Model Usage (from Claude Code stats)"
+						style={{ height: "100%" }}
 					>
-						<Text color="muted">Loading chart data...</Text>
-					</Box>
-				)}
-			</SectionCard>
+						{activityLoaded ? (
+							<ModelUsageChart
+								dailyModelTokens={activity.dailyModelTokens}
+								modelUsage={activity.modelUsage}
+							/>
+						) : (
+							<Box
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									minHeight: "200px",
+								}}
+							>
+								<Text color="muted">Loading chart data...</Text>
+							</Box>
+						)}
+					</SectionCard>
+				</Box>
+				<Box style={{ flex: 1 }}>
+					<SectionCard title="Time of Day" style={{ height: "100%" }}>
+						{activityLoaded ? (
+							<TimeOfDayChart hourlyActivity={activity.hourlyActivity} />
+						) : (
+							<Box
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									minHeight: "200px",
+								}}
+							>
+								<Text color="muted">Loading chart data...</Text>
+							</Box>
+						)}
+					</SectionCard>
+				</Box>
+			</HStack>
 
-			{/* Model Usage Chart - full width */}
-			<SectionCard title="Model Usage (from Claude Code stats)">
-				{activityLoaded ? (
-					<ModelUsageChart
-						dailyModelTokens={activity.dailyModelTokens}
-						modelUsage={activity.modelUsage}
-					/>
-				) : (
-					<Box
-						style={{
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							minHeight: "200px",
-						}}
-					>
-						<Text color="muted">Loading chart data...</Text>
-					</Box>
-				)}
-			</SectionCard>
+			{/* Cost Analysis (flex:3) with Compaction Health on right (flex:2) */}
+			<HStack gap="lg" style={{ alignItems: "stretch" }}>
+				<Box style={{ flex: 3 }}>
+					<SectionCard title="Cost Analysis" style={{ height: "100%" }}>
+						{analyticsLoaded ? (
+							<CostAnalysisCard
+								costAnalysis={analytics.costAnalysis}
+								tokenUsage={activityLoaded ? activity.tokenUsage : undefined}
+								onSessionClick={(sessionId) =>
+									navigate(`/sessions/${sessionId}`)
+								}
+							/>
+						) : (
+							<Box
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									minHeight: "200px",
+								}}
+							>
+								<Text color="muted">Loading cost data...</Text>
+							</Box>
+						)}
+					</SectionCard>
+				</Box>
+				<Box style={{ flex: 2 }}>
+					<SectionCard title="Compaction Health" style={{ height: "100%" }}>
+						{analyticsLoaded ? (
+							<CompactionHealthCard
+								compactionStats={analytics.compactionStats}
+							/>
+						) : (
+							<Box
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									minHeight: "120px",
+								}}
+							>
+								<Text color="muted">Loading compaction data...</Text>
+							</Box>
+						)}
+					</SectionCard>
+				</Box>
+			</HStack>
 
 			{/* Session Effectiveness - full width */}
 			<SectionCard title="Session Effectiveness (30 days)">
@@ -521,57 +654,10 @@ export function DashboardContent({
 				)}
 			</SectionCard>
 
-			{/* Cost Analysis and Compaction Health - side by side */}
-			<HStack gap="lg" style={{ alignItems: "flex-start" }}>
+			{/* Subagent Usage and Tool Usage - matched height */}
+			<HStack gap="lg" style={{ alignItems: "stretch" }}>
 				<Box style={{ flex: 1 }}>
-					<SectionCard title="Cost Analysis">
-						{analyticsLoaded ? (
-							<CostAnalysisCard
-								costAnalysis={analytics.costAnalysis}
-								onSessionClick={(sessionId) =>
-									navigate(`/sessions/${sessionId}`)
-								}
-							/>
-						) : (
-							<Box
-								style={{
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "center",
-									minHeight: "200px",
-								}}
-							>
-								<Text color="muted">Loading cost data...</Text>
-							</Box>
-						)}
-					</SectionCard>
-				</Box>
-				<Box style={{ flex: 1 }}>
-					<SectionCard title="Compaction Health">
-						{analyticsLoaded ? (
-							<CompactionHealthCard
-								compactionStats={analytics.compactionStats}
-							/>
-						) : (
-							<Box
-								style={{
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "center",
-									minHeight: "200px",
-								}}
-							>
-								<Text color="muted">Loading compaction data...</Text>
-							</Box>
-						)}
-					</SectionCard>
-				</Box>
-			</HStack>
-
-			{/* Subagent Usage and Tool Usage - side by side */}
-			<HStack gap="lg" style={{ alignItems: "flex-start" }}>
-				<Box style={{ flex: 1 }}>
-					<SectionCard title="Subagent Usage">
+					<SectionCard title="Subagent Usage" style={{ height: "100%" }}>
 						{analyticsLoaded ? (
 							<SubagentUsageChart subagentUsage={analytics.subagentUsage} />
 						) : (
@@ -589,7 +675,7 @@ export function DashboardContent({
 					</SectionCard>
 				</Box>
 				<Box style={{ flex: 1 }}>
-					<SectionCard title="Tool Usage">
+					<SectionCard title="Tool Usage" style={{ height: "100%" }}>
 						{analyticsLoaded ? (
 							<ToolUsageChart toolUsage={analytics.toolUsage} />
 						) : (
@@ -608,93 +694,28 @@ export function DashboardContent({
 				</Box>
 			</HStack>
 
-			{/* Token Usage and Time of Day - side by side */}
-			<HStack gap="lg" style={{ alignItems: "flex-start" }}>
+			{/* Hook Health and Agent Health - side by side */}
+			<HStack gap="lg" style={{ alignItems: "stretch" }}>
 				<Box style={{ flex: 1 }}>
-					<SectionCard title="Token Usage (30 days)">
-						{activityLoaded ? (
-							<TokenUsageCard tokenUsage={activity.tokenUsage} />
+					<SectionCard title="Hook Health" style={{ height: "100%" }}>
+						{analyticsLoaded ? (
+							<HookHealthCard hookHealth={analytics.hookHealth} />
 						) : (
 							<Box
 								style={{
 									display: "flex",
 									alignItems: "center",
 									justifyContent: "center",
-									minHeight: "200px",
+									minHeight: "120px",
 								}}
 							>
-								<Text color="muted">Loading token data...</Text>
+								<Text color="muted">Loading hook data...</Text>
 							</Box>
 						)}
 					</SectionCard>
 				</Box>
 				<Box style={{ flex: 1 }}>
-					<SectionCard title="Time of Day">
-						{activityLoaded ? (
-							<TimeOfDayChart hourlyActivity={activity.hourlyActivity} />
-						) : (
-							<Box
-								style={{
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "center",
-									minHeight: "200px",
-								}}
-							>
-								<Text color="muted">Loading chart data...</Text>
-							</Box>
-						)}
-					</SectionCard>
-				</Box>
-			</HStack>
-
-			{/* Recent Sessions - full width */}
-			<SectionCard
-				title={isProjectView ? "Project Sessions" : "Recent Sessions"}
-				onViewAll={() =>
-					navigate(isProjectView ? `/repos/${repoId}/sessions` : "/sessions")
-				}
-			>
-				{sessions.length > 0 ? (
-					<VStack style={{ gap: 0 }}>
-						{sessions.map((session) => (
-							<SessionListItem
-								key={session.id}
-								session={session}
-								connectionId={data.sessions?.__id}
-							/>
-						))}
-					</VStack>
-				) : (
-					<Text color="muted" size="sm">
-						No recent sessions
-					</Text>
-				)}
-			</SectionCard>
-
-			{/* Hook Health - full width */}
-			<SectionCard title="Hook Health">
-				{analyticsLoaded ? (
-					<HookHealthCard hookHealth={analytics.hookHealth} />
-				) : (
-					<Box
-						style={{
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							minHeight: "120px",
-						}}
-					>
-						<Text color="muted">Loading hook data...</Text>
-					</Box>
-				)}
-			</SectionCard>
-
-			{/* Bottom row - Agent Health and Plugin Categories side by side */}
-			<HStack gap="lg" style={{ alignItems: "flex-start" }}>
-				{/* Agent Health */}
-				<Box style={{ flex: 1 }}>
-					<SectionCard title="Agent Health">
+					<SectionCard title="Agent Health" style={{ height: "100%" }}>
 						<VStack gap="md">
 							<VStack gap="xs">
 								<Text color="secondary" size="xs">
@@ -728,34 +749,31 @@ export function DashboardContent({
 						</VStack>
 					</SectionCard>
 				</Box>
-
-				{/* Plugin Categories */}
-				<Box style={{ flex: 1 }}>
-					<SectionCard
-						title="Plugin Categories"
-						onViewAll={() =>
-							navigate(isProjectView ? `/repos/${repoId}/plugins` : "/plugins")
-						}
-					>
-						{pluginCategories.length > 0 ? (
-							<VStack gap="sm">
-								{pluginCategories.map((cat) => (
-									<HStack key={cat.category} justify="space-between">
-										<Text color="secondary" size="sm">
-											{cat.category}
-										</Text>
-										<Badge>{cat.count}</Badge>
-									</HStack>
-								))}
-							</VStack>
-						) : (
-							<Text color="muted" size="sm">
-								No plugins installed
-							</Text>
-						)}
-					</SectionCard>
-				</Box>
 			</HStack>
+
+			{/* Recent Sessions - full width */}
+			<SectionCard
+				title={isProjectView ? "Project Sessions" : "Recent Sessions"}
+				onViewAll={() =>
+					navigate(isProjectView ? `/repos/${repoId}/sessions` : "/sessions")
+				}
+			>
+				{sessions.length > 0 ? (
+					<VStack style={{ gap: 0 }}>
+						{sessions.map((session) => (
+							<SessionListItem
+								key={session.id}
+								session={session}
+								connectionId={data.sessions?.__id}
+							/>
+						))}
+					</VStack>
+				) : (
+					<Text color="muted" size="sm">
+						No recent sessions
+					</Text>
+				)}
+			</SectionCard>
 
 			{/* Project Quick Access - only shown in project view */}
 			{isProjectView && (

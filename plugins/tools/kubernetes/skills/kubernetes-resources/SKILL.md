@@ -1,5 +1,6 @@
 ---
 name: kubernetes-resources
+user-invocable: false
 description: Use when managing Kubernetes resources including deployments, services, configmaps, and secrets.
 allowed-tools: []
 ---

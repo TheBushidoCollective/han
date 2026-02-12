@@ -1,5 +1,6 @@
 ---
 name: pylint-checkers
+user-invocable: false
 description: Use when pylint checkers including built-in checkers, custom checkers, and checker development.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

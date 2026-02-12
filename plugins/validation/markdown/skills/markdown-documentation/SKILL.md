@@ -1,5 +1,6 @@
 ---
 name: markdown-documentation
+user-invocable: false
 description: Use when writing technical documentation, READMEs, or project documentation in markdown. Covers structure, conventions, and best practices.
 allowed-tools:
   - Read

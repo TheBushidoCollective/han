@@ -7,7 +7,7 @@ description: Investigate recent errors and exceptions in your Sentry projects
 
 ## Name
 
-hashi-sentry:investigate-errors - Investigate recent errors and exceptions in your Sentry projects
+sentry:investigate-errors - Investigate recent errors and exceptions in your Sentry projects
 
 ## Synopsis
 

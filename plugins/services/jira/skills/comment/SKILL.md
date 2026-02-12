@@ -7,7 +7,7 @@ description: Add a comment to a Jira ticket
 
 ## Name
 
-hashi-jira:comment - Add a comment to a Jira ticket
+jira:comment - Add a comment to a Jira ticket
 
 ## Synopsis
 

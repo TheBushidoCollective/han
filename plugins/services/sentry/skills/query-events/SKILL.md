@@ -1,5 +1,6 @@
 ---
 name: query-events
+user-invocable: false
 description: Run custom queries on Sentry events and issues with advanced filtering
 ---
 
@@ -7,7 +8,7 @@ description: Run custom queries on Sentry events and issues with advanced filter
 
 ## Name
 
-hashi-sentry:query-events - Run custom queries on Sentry events and issues with advanced filtering
+sentry:query-events - Run custom queries on Sentry events and issues with advanced filtering
 
 ## Synopsis
 

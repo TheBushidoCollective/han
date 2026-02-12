@@ -1,7 +1,8 @@
 ---
 name: blueprints-writing
-description: Use when creating or updating technical blueprint documentation for new features, API changes, or architectural modifications. Always use search_blueprints first to avoid duplication, then write_blueprint with proper structure.
-allowed-tools: [Read, Write, Edit, Grep, Glob, mcp__plugin_hashi-blueprints_blueprints__search_blueprints, mcp__plugin_hashi-blueprints_blueprints__read_blueprint, mcp__plugin_hashi-blueprints_blueprints__write_blueprint]
+user-invocable: false
+description: Use when creating or updating technical blueprint documentation for new features, API changes, or architectural modifications. Always search existing blueprints first to avoid duplication, then write with proper structure.
+allowed-tools: [Read, Write, Edit, Grep, Glob]
 ---
 
 # Writing Technical Blueprints
@@ -28,30 +29,41 @@ Skip blueprints for:
 
 ## Creating Blueprints
 
-**IMPORTANT:** Always use the `write_blueprint` MCP tool to create or update blueprints. This automatically adds the required frontmatter.
+**IMPORTANT:** Always check for existing blueprints before creating new ones, and use the proper frontmatter format.
 
-```typescript
-// Before writing, search for existing blueprints
-const existing = await search_blueprints({ keyword: "auth" });
+```
+# 1. List existing blueprints
+Glob("blueprints/*.md")
 
-// Read existing blueprint if updating
-const current = await read_blueprint({ name: "authentication" });
+# 2. Search for related blueprints by keyword
+Grep("keyword", path: "blueprints/", output_mode: "files_with_matches")
 
-// Write or update the blueprint
-await write_blueprint({
-  name: "system-name",
-  summary: "Brief one-line description",
-  content: "# System Name\n\n## Overview\n..."
-});
+# 3. Read existing blueprint if updating
+Read("blueprints/authentication.md")
+
+# 4. Write the blueprint with frontmatter
+Write("blueprints/system-name.md", content_with_frontmatter)
 ```
 
-The MCP tool handles frontmatter automatically - you just provide the content.
+The frontmatter format is:
+
+```yaml
+---
+name: system-name
+summary: Brief one-line description
+---
+```
 
 ## Blueprint File Structure
 
-When writing blueprint content (passed to `write_blueprint`), use this structure:
+Use this structure for blueprint content:
 
 ```markdown
+---
+name: system-name
+summary: One-line description of what this system does.
+---
+
 # System Name
 
 One-line description of what this system does.
@@ -147,7 +159,6 @@ Example format:
 ```markdown
 - [Related System](./related-system.md) - How they interact
 ```
-
 ```
 
 ## Writing Style

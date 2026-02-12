@@ -1,5 +1,6 @@
 ---
 name: phoenix-routing
+user-invocable: false
 description: Define routes and URL helpers in Phoenix applications including resources, scopes, pipelines, and verified routes
 allowed-tools: [Bash, Read]
 ---

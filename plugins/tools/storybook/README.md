@@ -1,8 +1,8 @@
-# Jutsu: Storybook
+# Storybook
 
 Validation and quality enforcement for Storybook projects, ensuring stories always build and render correctly.
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Validation Hooks
 
@@ -12,7 +12,7 @@ Validation and quality enforcement for Storybook projects, ensuring stories alwa
 
 ### Skills
 
-This jutsu provides comprehensive Storybook expertise across five key areas:
+This plugin provides comprehensive Storybook expertise across five key areas:
 
 - **storybook-story-writing**: Creating well-structured stories using CSF3 format, showcasing component variations, and following best practices
 - **storybook-args-controls**: Configuring interactive controls and args for dynamic component exploration with proper type constraints
@@ -22,22 +22,13 @@ This jutsu provides comprehensive Storybook expertise across five key areas:
 
 ## Installation
 
-Install via the Han marketplace:
-
 ```bash
-han plugin install jutsu-storybook
-```
-
-Or install manually:
-
-```bash
-claude plugin marketplace add thebushidocollective/han
-claude plugin install jutsu-storybook@han
+han plugin install storybook
 ```
 
 ## Usage
 
-Once installed, this jutsu automatically validates your Storybook build:
+Once installed, this plugin automatically validates your Storybook build:
 
 - When you finish a conversation with Claude Code (Stop hook)
 - When Claude Code agents complete their work (SubagentStop hook)
@@ -99,7 +90,7 @@ Ensure your project has a `build-storybook` script:
 
 ## Supported Frameworks
 
-This jutsu works with all Storybook-supported frameworks:
+This plugin works with all Storybook-supported frameworks:
 
 - React (Vite, Webpack, Next.js)
 - Vue 3 (Vite, Webpack)
@@ -159,7 +150,7 @@ If you use a custom build script, create a `han-config.yml` in your project root
 
 ```yaml
 plugins:
-  jutsu-storybook:
+  storybook:
     hooks:
       storybook-build-validation:
         command: "npm run custom-storybook-build"
@@ -171,7 +162,7 @@ In a monorepo, disable validation for specific packages:
 
 ```yaml
 plugins:
-  jutsu-storybook:
+  storybook:
     hooks:
       storybook-build-validation:
         enabled: false

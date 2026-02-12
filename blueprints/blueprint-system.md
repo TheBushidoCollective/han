@@ -1,118 +1,75 @@
 ---
 name: blueprint-system
-summary: MCP-based blueprint management with frontmatter metadata
+summary: Skills-based blueprint management with frontmatter metadata
 ---
 
 # Blueprint System
 
-MCP-based blueprint management system providing programmatic access to technical documentation.
+Skills-based blueprint management system using native Claude Code tools for technical documentation.
 
 ## Overview
 
-The blueprint system is provided by:
-
-1. **hashi-blueprints** - Unified MCP server, skills, and documentation for blueprint management
-
-Blueprints are stored as markdown files in `blueprints/` at the repository root, with YAML frontmatter containing metadata for programmatic access.
+The blueprint system is provided by the **blueprints** plugin, which includes skills, hooks, and auto-generated index files. Blueprints are stored as markdown files in `blueprints/` at the repository root, with YAML frontmatter containing metadata for discovery and indexing.
 
 ## Architecture
 
 ### Components
 
-- **MCP Server** (`packages/han/lib/commands/mcp/blueprints.ts`) - JSON-RPC server exposing blueprint tools
 - **Blueprint Files** (`blueprints/*.md`) - Markdown files with frontmatter metadata
-- **Frontmatter Parser** - Extracts `name` and `summary` from YAML frontmatter
-- **File System Operations** - Search, read, and write blueprint files
+- **Skills** (`plugins/tools/blueprints/skills/`) - Guidelines for writing, maintaining, and organizing blueprints
+- **Hooks** (`plugins/tools/blueprints/hooks/`) - SessionStart hook for index generation
+- **Sync-Index CLI** (`packages/han/lib/commands/blueprints/index.ts`) - Generates `.claude/rules/blueprints/blueprints-index.md`
+- **Frontmatter Parser** (`packages/han/lib/commands/mcp/blueprints.ts`) - Extracts `name` and `summary` from YAML frontmatter
 
 ### Data Flow
 
-1. Claude Code invokes MCP tool (e.g., `search_blueprints`)
-2. MCP server receives JSON-RPC request over stdio
-3. Server parses frontmatter from all blueprint files
-4. Results filtered by keyword (if provided)
-5. Metadata returned as JSON to Claude Code
+1. SessionStart hook runs `han blueprints sync-index`
+2. CLI reads all `blueprints/*.md` files and parses frontmatter
+3. Generates index at `.claude/rules/blueprints/blueprints-index.md`
+4. Index is auto-loaded into Claude Code context as a rules file
+5. Agent uses native tools (Glob, Grep, Read, Write) to interact with blueprints
 
 ## API / Interface
 
-### MCP Tools
+### Native Tool Patterns
 
-#### `search_blueprints`
+#### List all blueprints
 
-List all blueprints with optional keyword filtering.
-
-**Parameters:**
-
-- `keyword` (optional) - Filter by name or summary
-
-**Returns:**
-
-```typescript
-{
-  blueprints: Array<{
-    name: string;
-    summary: string;
-  }>
-}
+```
+Glob("blueprints/*.md")
 ```
 
-**Example:**
+Returns all blueprint file paths.
 
-```typescript
-await search_blueprints({ keyword: "mcp" });
-// Returns: [{ name: "mcp-server", summary: "Model Context Protocol..." }]
+#### Search by keyword
+
+```
+Grep("keyword", path: "blueprints/", output_mode: "files_with_matches")
 ```
 
-#### `read_blueprint`
+Searches blueprint content and frontmatter for matching files.
 
-Read full blueprint content by name.
+#### Read a blueprint
 
-**Parameters:**
-
-- `name` (required) - Blueprint name without .md extension
-
-**Returns:**
-
-```typescript
-{
-  name: string;
-  summary: string;
-  content: string;  // Markdown without frontmatter
-}
+```
+Read("blueprints/system-name.md")
 ```
 
-**Example:**
+Returns the full file content including frontmatter.
 
-```typescript
-await read_blueprint({ name: "mcp-server" });
+#### Write a blueprint
+
+```
+Write("blueprints/system-name.md", content_with_frontmatter)
 ```
 
-#### `write_blueprint`
+Creates or updates a blueprint. Content MUST include frontmatter:
 
-Create or update a blueprint with frontmatter.
-
-**Parameters:**
-
-- `name` (required) - Blueprint name (without .md)
-- `summary` (required) - One-line summary
-- `content` (required) - Markdown content (frontmatter added automatically)
-
-**Returns:**
-
-```typescript
-{
-  success: boolean;
-  message: string;
-}
-```
-
-**Example:**
-
-```typescript
-await write_blueprint({
-  name: "new-system",
-  summary: "Description of new system",
-  content: "# New System\n\n## Overview\n..."
-});
+```yaml
+---
+name: system-name
+summary: Brief one-line description
+---
 ```
 
 ### Blueprint File Format
@@ -130,17 +87,15 @@ Rules:
 
 - `name` must match filename (without .md)
 - `summary` used for search and discovery
-- Frontmatter required for MCP integration
+- Frontmatter required for index generation
 
 ## Behavior
 
 ### Blueprint Discovery
 
-1. Server scans `blueprints/` directory at repository root
-2. Reads all `.md` files except `README.md`
-3. Parses frontmatter from each file
-4. Builds in-memory index of metadata
-5. Returns filtered/sorted results
+The auto-generated index at `.claude/rules/blueprints/blueprints-index.md` provides a table of all blueprints with their names and summaries. This is loaded into context at session start, giving the agent immediate awareness of available documentation.
+
+For deeper searches, agents use `Glob` and `Grep` directly on the `blueprints/` directory.
 
 ### Frontmatter Parsing
 
@@ -159,62 +114,25 @@ for (const line of lines) {
 
 ### Error Handling
 
-- **Missing blueprints directory** - Returns empty array
-- **Missing frontmatter** - Returns placeholder summary
-- **Invalid name** - Throws error with clear message
-- **Write errors** - Propagates filesystem errors
+- **Missing blueprints directory** - Sync-index returns count 0
+- **Missing frontmatter** - File listed with placeholder summary
+- **Write errors** - Propagated by the Write tool
 
 ## Files
 
-- `hashi/hashi-blueprints/.claude-plugin/plugin.json` - Plugin metadata and MCP server config
-- `hashi/hashi-blueprints/README.md` - Plugin documentation
-- `packages/han/lib/commands/mcp/blueprints.ts` - MCP server implementation
-- `packages/han/lib/commands/mcp/index.ts` - Command registration
-- `hashi/hashi-blueprints/hooks/ensure-blueprints.md` - Blueprint documentation requirements
+- `plugins/tools/blueprints/.claude-plugin/plugin.json` - Plugin metadata
+- `plugins/tools/blueprints/han-plugin.yml` - Plugin configuration
+- `plugins/tools/blueprints/hooks/hooks.json` - SessionStart hook for sync-index
+- `plugins/tools/blueprints/hooks/ensure-blueprints.md` - Documentation requirements
+- `plugins/tools/blueprints/hooks/blueprint-system-info.md` - Tool usage reference
+- `plugins/tools/blueprints/skills/` - Skill definitions
+- `plugins/tools/blueprints/README.md` - Plugin documentation
+- `packages/han/lib/commands/mcp/blueprints.ts` - Sync-index implementation
+- `packages/han/lib/commands/blueprints/index.ts` - CLI command registration
 - `blueprints/*.md` - Blueprint files with frontmatter
 
 ## Related Systems
 
-- [MCP Server](./mcp-server.md) - JSON-RPC protocol implementation
-- [Plugin Installation](./plugin-installation.md) - Installing hashi-blueprints
-- [CLI Architecture](./cli-architecture.md) - MCP command structure
-
-## Installation
-
-```bash
-han plugin install hashi-blueprints@han
-```
-
-This adds the MCP server to Claude Code settings:
-
-```json
-{
-  "mcpServers": {
-    "blueprints": {
-      "command": "han",
-      "args": ["mcp", "blueprints"]
-    }
-  }
-}
-```
-
-## Migration from README-based System
-
-Previous system:
-
-- Central `blueprints/README.md` with manual index
-- No structured metadata
-- Prompt injection for discovery
-
-New system:
-
-- Frontmatter metadata in each blueprint
-- MCP tools for programmatic access
-- No README.md required (optional for humans)
-
-Migration steps:
-
-1. Add frontmatter to existing blueprints
-2. Install hashi-blueprints plugin
-3. Update hashi-blueprints documentation
-4. Remove or simplify README.md (optional)
+- [CLI Architecture](./cli-architecture.md) - CLI command structure
+- [Hook System](./hook-system.md) - SessionStart hook execution
+- [Plugin Installation](./plugin-installation.md) - Installing blueprints plugin

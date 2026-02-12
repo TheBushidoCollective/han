@@ -3,33 +3,20 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { minimatch } from 'minimatch';
+import {
+  buildCommandWithFiles,
+  extractFilePath,
+  fileMatchesIfChanged,
+  findMatchingDirectory,
+  HAN_FILES_TEMPLATE,
+} from '../lib/hook-runner.ts';
 
 /**
  * Tests for async hook functionality in han hook run --async
  * Tests the matching logic and output format for PostToolUse hooks
  */
 
-// Test the extractFilePath logic (mimics the function)
-function extractFilePath(payload: {
-  tool_name?: string;
-  tool_input?: Record<string, unknown>;
-}): string | null {
-  const toolInput = payload.tool_input;
-  if (!toolInput) return null;
-
-  switch (payload.tool_name) {
-    case 'Edit':
-    case 'Write':
-    case 'Read':
-      return (toolInput.file_path as string) || null;
-    case 'NotebookEdit':
-      return (toolInput.notebook_path as string) || null;
-    default:
-      return null;
-  }
-}
-
-// Test the matchesFileFilter logic (mimics the function)
+// Test the matchesFileFilter logic (uses minimatch like the test originally did)
 function matchesFileFilter(
   filePath: string,
   fileFilter: string[] | undefined,
@@ -129,6 +116,110 @@ describe('extractFilePath', () => {
       const payload = { tool_input: { file_path: '/path/to/file.ts' } };
       expect(extractFilePath(payload)).toBe(null);
     });
+  });
+});
+
+describe('fileMatchesIfChanged', () => {
+  it('matches when no patterns specified', () => {
+    expect(fileMatchesIfChanged('/dir/src/file.ts', '/dir', undefined)).toBe(
+      true
+    );
+    expect(fileMatchesIfChanged('/dir/src/file.ts', '/dir', [])).toBe(true);
+  });
+
+  it('matches .ts files against TypeScript patterns', () => {
+    const patterns = ['**/*.ts', '**/*.tsx'];
+    expect(fileMatchesIfChanged('/dir/src/index.ts', '/dir', patterns)).toBe(
+      true
+    );
+    expect(fileMatchesIfChanged('/dir/src/app.tsx', '/dir', patterns)).toBe(
+      true
+    );
+  });
+
+  it('does not match unrelated files', () => {
+    const patterns = ['**/*.ts', '**/*.tsx'];
+    expect(fileMatchesIfChanged('/dir/src/style.css', '/dir', patterns)).toBe(
+      false
+    );
+    expect(fileMatchesIfChanged('/dir/README.md', '/dir', patterns)).toBe(
+      false
+    );
+  });
+
+  it('matches deeply nested files', () => {
+    const patterns = ['**/*.ts'];
+    expect(
+      fileMatchesIfChanged('/dir/src/a/b/c/deep.ts', '/dir', patterns)
+    ).toBe(true);
+  });
+});
+
+describe('findMatchingDirectory', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = join(tmpdir(), `han-test-${Date.now()}`);
+    mkdirSync(tempDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('returns project root when no dirsWith specified', () => {
+    const hookDef = { command: 'test' };
+    const result = findMatchingDirectory(
+      join(tempDir, 'src/file.ts'),
+      hookDef,
+      tempDir
+    );
+    expect(result).toBe(tempDir);
+  });
+
+  it('finds directory with marker file', () => {
+    // Create nested structure: tempDir/packages/app/biome.json
+    const appDir = join(tempDir, 'packages', 'app');
+    mkdirSync(appDir, { recursive: true });
+    writeFileSync(join(appDir, 'biome.json'), '{}');
+    mkdirSync(join(appDir, 'src'), { recursive: true });
+    writeFileSync(join(appDir, 'src', 'index.ts'), '');
+
+    const hookDef = { command: 'test', dirsWith: ['biome.json'] };
+    const result = findMatchingDirectory(
+      join(appDir, 'src', 'index.ts'),
+      hookDef,
+      tempDir
+    );
+    expect(result).toBe(appDir);
+  });
+
+  it('returns null when no matching directory found', () => {
+    mkdirSync(join(tempDir, 'src'), { recursive: true });
+    writeFileSync(join(tempDir, 'src', 'file.ts'), '');
+
+    const hookDef = { command: 'test', dirsWith: ['biome.json'] };
+    const result = findMatchingDirectory(
+      join(tempDir, 'src', 'file.ts'),
+      hookDef,
+      tempDir
+    );
+    expect(result).toBe(null);
+  });
+
+  it('walks up directories to find marker', () => {
+    // Marker at root, file deeply nested
+    writeFileSync(join(tempDir, 'package.json'), '{}');
+    mkdirSync(join(tempDir, 'src', 'deep', 'nested'), { recursive: true });
+    writeFileSync(join(tempDir, 'src', 'deep', 'nested', 'file.ts'), '');
+
+    const hookDef = { command: 'test', dirsWith: ['package.json'] };
+    const result = findMatchingDirectory(
+      join(tempDir, 'src', 'deep', 'nested', 'file.ts'),
+      hookDef,
+      tempDir
+    );
+    expect(result).toBe(tempDir);
   });
 });
 
@@ -320,18 +411,28 @@ describe('Async Hook Output Format', () => {
   interface AsyncHookOutput {
     systemMessage?: string;
     additionalContext?: string;
+    decision?: string;
+    hookSpecificOutput?: { hookEventName: string };
   }
 
-  it('generates correct failure output structure', () => {
-    const pluginName = 'jutsu-biome';
-    const hookName = 'lint-async';
+  it('generates correct failure output with raw tool command', () => {
+    const pluginName = 'biome';
+    const hookName = 'lint';
     const relativeDir = 'packages/app';
-    const fileInfo = ' (src/index.ts)';
+    const relPath = 'src/index.ts';
     const errorSummary = 'Error: Unexpected token';
 
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal shell placeholder string
+    const rawCommand = 'npx -y @biomejs/biome check --write ${HAN_FILES}';
+    const rawToolCommand = buildCommandWithFiles(rawCommand, [relPath]);
+
     const output: AsyncHookOutput = {
-      systemMessage: `❌ ${pluginName}/${hookName} failed in ${relativeDir}${fileInfo}:\n\n${errorSummary}`,
-      additionalContext: `REQUIREMENT: Fix the ${hookName} errors shown above before proceeding. The validation hook "${pluginName}/${hookName}" failed. You must address these issues.\n\nAfter fixing, run \`han hook run ${pluginName} ${hookName}\` to verify the fix (this will use caching to avoid re-running if already passing).`,
+      systemMessage: `❌ ${pluginName}/${hookName} failed in ${relativeDir} (${relPath}):\n\n${errorSummary}`,
+      additionalContext:
+        `REQUIREMENT: Fix the ${hookName} errors shown above before proceeding.\n\n` +
+        `Verify with: cd ${relativeDir} && ${rawToolCommand}`,
+      decision: 'block',
+      hookSpecificOutput: { hookEventName: 'PostToolUse' },
     };
 
     expect(output.systemMessage).toContain('❌');
@@ -341,22 +442,33 @@ describe('Async Hook Output Format', () => {
     expect(output.systemMessage).toContain(errorSummary);
 
     expect(output.additionalContext).toContain('REQUIREMENT');
-    expect(output.additionalContext).toContain('han hook run');
-    expect(output.additionalContext).toContain(pluginName);
-    expect(output.additionalContext).toContain(hookName);
+    // additionalContext should contain the raw tool command, not han hook run
+    expect(output.additionalContext).toContain(
+      'npx -y @biomejs/biome check --write src/index.ts'
+    );
+    expect(output.additionalContext).not.toContain('han hook run');
     expect(output.additionalContext).not.toContain('--async');
+
+    expect(output.decision).toBe('block');
+    expect(output.hookSpecificOutput?.hookEventName).toBe('PostToolUse');
   });
 
-  it('additionalContext instructs rerun without --async flag', () => {
-    const pluginName = 'jutsu-typescript';
-    const hookName = 'typecheck-async';
+  it('additionalContext uses raw tool command not han hook run', () => {
+    const relPath = 'src/app.tsx';
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal shell placeholder string
+    const rawCommand = 'npx -y @biomejs/biome check --write ${HAN_FILES}';
+    const rawToolCommand = buildCommandWithFiles(rawCommand, [relPath]);
 
-    const additionalContext = `REQUIREMENT: Fix the ${hookName} errors shown above before proceeding. The validation hook "${pluginName}/${hookName}" failed. You must address these issues.\n\nAfter fixing, run \`han hook run ${pluginName} ${hookName}\` to verify the fix (this will use caching to avoid re-running if already passing).`;
+    const additionalContext =
+      `REQUIREMENT: Fix the lint errors shown above before proceeding.\n\n` +
+      `Verify with: ${rawToolCommand}`;
 
-    // The key requirement: rerun command should NOT have --async
+    // The key requirement: should contain the raw tool command
     expect(additionalContext).toContain(
-      'han hook run jutsu-typescript typecheck-async'
+      'npx -y @biomejs/biome check --write src/app.tsx'
     );
+    // Should NOT contain han hook run
+    expect(additionalContext).not.toContain('han hook run');
     expect(additionalContext).not.toContain('--async');
   });
 
@@ -499,41 +611,51 @@ describe('HAN_FILES Environment Variable', () => {
   });
 });
 
-describe('Command Building', () => {
-  // Test buildCommandWithFiles behavior
-  // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal shell placeholder string
-  const HAN_FILES_PLACEHOLDER = '${HAN_FILES}';
-  function buildCommandWithFiles(command: string, files: string[]): string {
-    if (command.includes(HAN_FILES_PLACEHOLDER)) {
-      return command.replace(HAN_FILES_PLACEHOLDER, files.join(' '));
-    }
-    return command;
-  }
-
+describe('Command Building (real implementation)', () => {
   it('replaces HAN_FILES placeholder', () => {
     // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal shell placeholder string
     const command = 'biome check ${HAN_FILES}';
-    const files = ['/path/to/file.ts'];
+    const files = ['src/index.ts'];
     expect(buildCommandWithFiles(command, files)).toBe(
-      'biome check /path/to/file.ts'
+      'biome check src/index.ts'
     );
   });
 
   it('handles multiple files', () => {
     // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal shell placeholder string
     const command = 'eslint ${HAN_FILES}';
-    const files = ['/path/to/a.ts', '/path/to/b.ts'];
+    const files = ['src/a.ts', 'src/b.ts'];
     expect(buildCommandWithFiles(command, files)).toBe(
-      'eslint /path/to/a.ts /path/to/b.ts'
+      'eslint src/a.ts src/b.ts'
     );
   });
 
   it('preserves command without placeholder', () => {
     const command = 'mix format --check-formatted';
-    const files = ['/path/to/file.ex'];
+    const files = ['lib/file.ex'];
     expect(buildCommandWithFiles(command, files)).toBe(
       'mix format --check-formatted'
     );
+  });
+
+  it('replaces with "." when no files', () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal shell placeholder string
+    const command = 'biome check ${HAN_FILES}';
+    expect(buildCommandWithFiles(command, [])).toBe('biome check .');
+  });
+
+  it('escapes file paths with spaces', () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal shell placeholder string
+    const command = 'biome check ${HAN_FILES}';
+    const files = ['src/my file.ts'];
+    expect(buildCommandWithFiles(command, files)).toBe(
+      "biome check 'src/my file.ts'"
+    );
+  });
+
+  it('HAN_FILES_TEMPLATE constant matches expected value', () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: Testing literal shell placeholder string
+    expect(HAN_FILES_TEMPLATE).toBe('${HAN_FILES}');
   });
 });
 

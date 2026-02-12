@@ -1,5 +1,6 @@
 ---
 name: cpp-smart-pointers
+user-invocable: false
 description: Use when managing memory safely in C++ with smart pointers including unique_ptr, shared_ptr, weak_ptr, and RAII patterns.
 allowed-tools:
   - Bash

@@ -1,5 +1,6 @@
 ---
 name: relay-fragments-patterns
+user-invocable: false
 description: Use when relay fragment composition, data masking, colocation, and container patterns for React applications.
 allowed-tools:
   - Read

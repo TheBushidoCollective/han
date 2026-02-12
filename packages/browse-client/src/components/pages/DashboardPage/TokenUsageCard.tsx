@@ -24,6 +24,7 @@ interface TokenUsageStats {
 
 interface TokenUsageCardProps {
 	tokenUsage: TokenUsageStats;
+	cacheSavingsUsd?: number;
 }
 
 /**
@@ -92,6 +93,7 @@ function TokenStat({
 
 export function TokenUsageCard({
 	tokenUsage,
+	cacheSavingsUsd,
 }: TokenUsageCardProps): React.ReactElement {
 	// Calculate percentages for the bar
 	const total =
@@ -219,7 +221,7 @@ export function TokenUsageCard({
 			</HStack>
 
 			{/* Savings callout */}
-			{tokenUsage.totalCachedTokens > 0 && (
+			{(cacheSavingsUsd ?? 0) > 0 && (
 				<Box
 					style={{
 						padding: theme.spacing.sm,
@@ -229,9 +231,8 @@ export function TokenUsageCard({
 					}}
 				>
 					<Text size="sm" color="secondary">
-						Cache savings: ~
-						{formatCost((tokenUsage.totalCachedTokens / 1_000_000) * 2.7)} saved
-						by using cached tokens instead of full input tokens
+						Cache savings: ~{formatCost(cacheSavingsUsd ?? 0)} saved by using
+						cached tokens instead of full input tokens
 					</Text>
 				</Box>
 			)}

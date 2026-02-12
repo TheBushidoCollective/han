@@ -1,4 +1,4 @@
-# jutsu-han-plugins
+# Han Plugins
 
 Validates Han plugin structure and configuration files.
 
@@ -9,7 +9,7 @@ Provides validation hooks that ensure Han plugins follow the correct structure a
 ## Installation
 
 ```bash
-han plugin install jutsu-han-plugins
+han plugin install han-plugins
 ```
 
 ## Features

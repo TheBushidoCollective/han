@@ -7,7 +7,7 @@ description: Sync design system components between Figma and code using Code Con
 
 ## Name
 
-hashi-figma:figma-sync-design-system - Sync design system components between Figma and code
+figma:figma-sync-design-system - Sync design system components between Figma and code
 
 ## Synopsis
 

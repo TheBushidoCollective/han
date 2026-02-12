@@ -9,7 +9,7 @@ export function registerBlueprintsCommands(program: Command): void {
   blueprintsCommand
     .command('sync-index')
     .description(
-      'Sync blueprints index to .claude/rules/hashi-blueprints/blueprints-index.md\n' +
+      'Sync blueprints index to .claude/rules/blueprints/blueprints-index.md\n' +
         'This generates a lightweight index for session context injection.'
     )
     .action(() => {
@@ -19,7 +19,7 @@ export function registerBlueprintsCommands(program: Command): void {
           console.log('No blueprints found to index.');
         } else {
           console.log(
-            `Synced ${result.count} blueprints to .claude/rules/hashi-blueprints/blueprints-index.md`
+            `Synced ${result.count} blueprints to .claude/rules/blueprints/blueprints-index.md`
           );
         }
       } else {

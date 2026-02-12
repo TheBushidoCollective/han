@@ -1,5 +1,6 @@
 ---
 name: Kotlin Null Safety
+user-invocable: false
 description: Use when kotlin's null safety system including nullable types, safe calls, Elvis operator, smart casts, and patterns for eliminating NullPointerExceptions while maintaining code expressiveness and clarity.
 allowed-tools: []
 ---

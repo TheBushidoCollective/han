@@ -1,5 +1,6 @@
 ---
 name: clippy-custom
+user-invocable: false
 description: Use when developing custom Clippy lints, implementing lint passes, and contributing to Clippy for Rust code standards.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

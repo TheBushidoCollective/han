@@ -1,5 +1,6 @@
 ---
 name: svelteflow-fundamentals
+user-invocable: false
 description: Use when building node-based UIs, flow diagrams, workflow editors, or interactive graphs with Svelte Flow. Covers setup, nodes, edges, controls, and interactivity.
 allowed-tools:
   - Bash

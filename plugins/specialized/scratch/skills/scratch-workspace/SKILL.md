@@ -1,5 +1,6 @@
 ---
 name: scratch-workspace
+user-invocable: false
 description: Use when creating temporary files, drafts, experiments, or any content that should not be committed to version control. Ensures proper placement in .claude/.scratch with gitignore configuration.
 allowed-tools:
   - Read

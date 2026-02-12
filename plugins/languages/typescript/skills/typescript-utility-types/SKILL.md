@@ -1,5 +1,6 @@
 ---
 name: typescript-utility-types
+user-invocable: false
 description: Use when typeScript utility types, mapped types, and advanced type manipulation. Use when creating flexible, type-safe TypeScript code.
 allowed-tools:
   - Bash

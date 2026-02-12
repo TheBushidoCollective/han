@@ -1,14 +1,14 @@
-# Hashi: Sentry
+# Sentry
 
 Connect Claude Code to Sentry for AI-native error tracking, performance monitoring, and incident response in your engineering workflows.
 
 **OAuth Enabled**: Seamlessly authenticate with your Sentry organization using OAuth - no manual token management required!
 
-## What This Hashi Provides
+## What This Plugin Provides
 
 ### MCP Server: sentry
 
-This hashi uses the official [Sentry MCP Server](https://github.com/getsentry/sentry-mcp-stdio) to provide direct access to Sentry's observability platform with 16+ tools for:
+This plugin uses the official [Sentry MCP Server](https://github.com/getsentry/sentry-mcp-stdio) to provide direct access to Sentry's observability platform with 16+ tools for:
 
 - **Error Tracking**: Search, investigate, and resolve errors and exceptions
 - **Performance Monitoring**: Analyze transaction performance and identify bottlenecks
@@ -54,8 +54,6 @@ Once installed, Claude Code gains access to these tool categories:
 - `seer_analyze`: Use Sentry's Seer AI for automated root cause analysis and suggested fixes
 
 ## Installation
-
-Install with npx (no installation required):
 
 ```bash
 han plugin install sentry
@@ -286,7 +284,7 @@ Would you like me to:
 
 ## Integration with SDLC
 
-The hashi-sentry plugin supports the **Deploy & Maintain** phase:
+The sentry plugin supports the **Deploy & Maintain** phase:
 
 - **Monitoring**: Continuous error and performance tracking
 - **Alerting**: Proactive incident detection
@@ -341,6 +339,5 @@ The hashi-sentry plugin supports the **Deploy & Maintain** phase:
 
 ## Related Plugins
 
-- **hashi-github**: Integrate error tracking with code and PRs
-- **hashi-datadog**: Complementary APM and infrastructure monitoring
+- **github**: Integrate error tracking with code and PRs
 - **bushido**: Quality principles for incident response and monitoring

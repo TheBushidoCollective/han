@@ -1,19 +1,6 @@
 # blueprints plugin configuration
-# Blueprint tools are provided by Han's built-in blueprints MCP server
+# Blueprint tools use native Claude Code tools (Glob, Grep, Read, Write)
 #
-# Hooks are defined in .claude-plugin/hooks.json for direct Claude Code integration
-# MCP servers are defined in .mcp.json for direct Claude Code integration
+# Hooks are defined in hooks/hooks.json for direct Claude Code integration
 
 hooks: {}
-
-# Memory provider config - defines which tools the Memory Agent can use
-memory:
-  allowed_tools:
-    - mcp__blueprints__list_blueprints
-    - mcp__blueprints__search_blueprints
-    - mcp__blueprints__read_blueprint
-  system_prompt: |
-    Search project blueprints for architectural decisions and system documentation.
-    Use list_blueprints to see all available blueprints, search_blueprints to filter by keyword,
-    then read_blueprint for detailed content.
-    Focus on architectural patterns, API designs, and system behaviors.

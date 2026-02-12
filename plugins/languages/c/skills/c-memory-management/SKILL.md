@@ -1,5 +1,6 @@
 ---
 name: c-memory-management
+user-invocable: false
 description: Use when managing memory in C programs with malloc/free, pointers, and avoiding common memory safety pitfalls.
 allowed-tools:
   - Read

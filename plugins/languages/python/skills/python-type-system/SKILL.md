@@ -1,5 +1,6 @@
 ---
 name: python-type-system
+user-invocable: false
 description: Use when Python's type system including type hints, mypy, Protocol, TypedDict, and Generics. Use when working with Python type annotations.
 allowed-tools:
   - Bash

@@ -1,5 +1,6 @@
 ---
 name: mise-task-configuration
+user-invocable: false
 description: Use when defining and configuring Mise tasks in mise.toml. Covers task definitions, dependencies, file tasks, and parallel execution.
 allowed-tools:
   - Read

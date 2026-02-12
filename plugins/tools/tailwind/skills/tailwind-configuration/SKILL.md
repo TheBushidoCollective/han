@@ -1,5 +1,6 @@
 ---
 name: tailwind-configuration
+user-invocable: false
 description: Use when setting up or customizing Tailwind CSS configuration, theme customization, plugins, and build setup. Covers tailwind.config.js setup and content paths.
 allowed-tools:
   - Read

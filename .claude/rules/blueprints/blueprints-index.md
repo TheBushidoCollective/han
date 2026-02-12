@@ -4,7 +4,7 @@ Technical documentation for this project's architecture and systems.
 
 ## When to Consult Blueprints
 
-Before modifying system architecture, use `search_blueprints` and `read_blueprint` to understand:
+Before modifying system architecture, use Glob and Read on the `blueprints/` directory to understand:
 - Current design decisions and rationale
 - Integration points and dependencies
 - Established patterns to follow
@@ -21,7 +21,7 @@ Consult blueprints when working on:
 
 ## After Modifications
 
-Update blueprints via `write_blueprint` when you:
+Update blueprints using the Write tool on `blueprints/{name}.md` when you:
 - Add new systems or major features
 - Change architectural patterns
 - Discover undocumented conventions
@@ -31,7 +31,7 @@ Update blueprints via `write_blueprint` when you:
 <!-- AUTO-GENERATED INDEX - DO NOT EDIT BELOW THIS LINE -->
 | Blueprint | Summary |
 |-----------|---------|
-| blueprint-system | MCP-based blueprint management with frontmatter metadata |
+| blueprint-system | Skills-based blueprint management with frontmatter metadata |
 | browse-architecture | Han browse command architecture - GraphQL + Vite unified server |
 | build-deployment | CI/CD automation for releases and deployments |
 | checkpoint-system | Session and agent checkpoints for scoped hook execution |

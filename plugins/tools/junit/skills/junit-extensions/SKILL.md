@@ -1,5 +1,6 @@
 ---
 name: junit-extensions
+user-invocable: false
 description: Use when jUnit extensions including custom extensions, rules, and conditional test execution.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

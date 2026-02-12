@@ -1,5 +1,6 @@
 ---
 name: angular-rxjs-patterns
+user-invocable: false
 description: Use when handling async operations in Angular applications with observables, operators, and subjects.
 allowed-tools:
   - Bash

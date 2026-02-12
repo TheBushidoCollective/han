@@ -1,5 +1,6 @@
 ---
 name: dialyzer-configuration
+user-invocable: false
 description: Use when configuring Dialyzer for Erlang/Elixir type checking and static analysis.
 allowed-tools: []
 ---

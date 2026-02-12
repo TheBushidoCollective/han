@@ -936,21 +936,22 @@ export const sessionFileChanges = {
    * List all file changes for a session
    */
   async list(
-    sessionId: string
+    sessionId: string,
+    agentId?: string
   ): Promise<import('../../../han-native').SessionFileChange[]> {
     const dbPath = await ensureInitialized();
     const native = getNativeModule();
-    return native.getSessionFileChanges(dbPath, sessionId);
+    return native.getSessionFileChanges(dbPath, sessionId, agentId ?? null);
   },
 
   /**
    * Check if a session has any file changes
    * Useful for determining if hooks need to run
    */
-  async hasChanges(sessionId: string): Promise<boolean> {
+  async hasChanges(sessionId: string, agentId?: string): Promise<boolean> {
     const dbPath = await ensureInitialized();
     const native = getNativeModule();
-    return native.hasSessionChanges(dbPath, sessionId);
+    return native.hasSessionChanges(dbPath, sessionId, agentId ?? null);
   },
 };
 
@@ -1268,10 +1269,11 @@ export interface SessionModifiedFiles {
  * @returns Modified files grouped by action type
  */
 export async function getSessionModifiedFiles(
-  sessionId: string
+  sessionId: string,
+  agentId?: string
 ): Promise<SessionModifiedFiles> {
   try {
-    const changes = await sessionFileChanges.list(sessionId);
+    const changes = await sessionFileChanges.list(sessionId, agentId);
 
     const created: string[] = [];
     const modified: string[] = [];

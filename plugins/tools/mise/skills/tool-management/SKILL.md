@@ -1,5 +1,6 @@
 ---
 name: mise-tool-management
+user-invocable: false
 description: Use when managing development tool versions with Mise. Covers installing tools, version pinning, and replacing language-specific version managers.
 allowed-tools:
   - Read

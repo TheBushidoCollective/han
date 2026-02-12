@@ -1,5 +1,6 @@
 ---
 name: ruby-blocks-procs-lambdas
+user-invocable: false
 description: Use when working with Ruby blocks, procs, lambdas, and functional programming patterns including closures and higher-order functions.
 allowed-tools:
   - Bash

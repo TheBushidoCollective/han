@@ -13,7 +13,7 @@ allowed-tools:
   - Edit
   - Glob
   - Grep
-  - mcp__plugin_hashi-playwright-mcp_playwright__*
+  - mcp__plugin_playwright-mcp_playwright__*
 memory: project
 ---
 

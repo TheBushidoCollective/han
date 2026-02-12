@@ -1,5 +1,6 @@
 ---
 name: absinthe-subscriptions
+user-invocable: false
 description: Use when implementing real-time GraphQL subscriptions with Absinthe. Covers Phoenix channels, PubSub, and subscription patterns.
 ---
 

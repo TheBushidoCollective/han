@@ -1,5 +1,6 @@
 ---
 name: markdownlint-integration
+user-invocable: false
 description: Integrate markdownlint into development workflows including CLI usage, programmatic API, CI/CD pipelines, and editor integration.
 allowed-tools: [Bash, Read]
 ---
@@ -341,6 +342,7 @@ markdownlint(options, (err, result) => {
 
 ```yaml
 name: Markdownlint
+user-invocable: false
 
 on:
   push:
@@ -378,6 +380,7 @@ jobs:
 
 ```yaml
 name: Markdownlint
+user-invocable: false
 
 on: [push, pull_request]
 

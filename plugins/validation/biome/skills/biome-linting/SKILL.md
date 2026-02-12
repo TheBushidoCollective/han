@@ -1,5 +1,6 @@
 ---
 name: biome-linting
+user-invocable: false
 description: Use when applying Biome's linting capabilities, rule categories, and code quality enforcement to JavaScript/TypeScript projects.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

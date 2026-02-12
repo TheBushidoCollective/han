@@ -1,5 +1,6 @@
 ---
 name: react-native-web-core
+user-invocable: false
 description: Use when working with React Native Web projects. Provides core concepts, components, and cross-platform patterns for building web applications with React Native.
 allowed-tools:
   - Read

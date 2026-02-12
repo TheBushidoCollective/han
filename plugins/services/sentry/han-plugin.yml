@@ -17,9 +17,9 @@ learn_patterns:
 # Convention: provider name = plugin name, script = memory-provider.ts
 memory:
   allowed_tools:
-    - mcp__plugin_hashi-sentry_sentry__list_issues
-    - mcp__plugin_hashi-sentry_sentry__get_issue
-    - mcp__plugin_hashi-sentry_sentry__list_events
+    - mcp__plugin_sentry_sentry__list_issues
+    - mcp__plugin_sentry_sentry__get_issue
+    - mcp__plugin_sentry_sentry__list_events
   system_prompt: |
     Extract observations from Sentry error reports and issues. For each item, capture:
     - timestamp: when the error first/last occurred

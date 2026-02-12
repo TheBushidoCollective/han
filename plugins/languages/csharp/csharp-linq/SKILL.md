@@ -1,5 +1,6 @@
 ---
 name: csharp-linq
+user-invocable: false
 description: Use when lINQ (Language Integrated Query) with query and method syntax, deferred execution, expression trees, and performance optimization.
 allowed-tools:
   - Read

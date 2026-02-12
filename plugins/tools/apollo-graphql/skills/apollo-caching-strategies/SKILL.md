@@ -1,5 +1,6 @@
 ---
 name: apollo-caching-strategies
+user-invocable: false
 description: Use when implementing Apollo caching strategies including cache policies, optimistic UI, cache updates, and normalization.
 allowed-tools:
   - Read

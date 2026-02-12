@@ -363,6 +363,7 @@ CREATE TABLE IF NOT EXISTS session_file_changes (
     file_hash_before TEXT,
     file_hash_after TEXT,
     tool_name TEXT,  -- Which tool made the change (Edit, Write, Bash)
+    agent_id TEXT,   -- NULL for main conversation, agent ID for subagent changes
     recorded_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(session_id, file_path, recorded_at)
 );
@@ -370,6 +371,7 @@ CREATE TABLE IF NOT EXISTS session_file_changes (
 CREATE INDEX IF NOT EXISTS idx_file_changes_session ON session_file_changes(session_id);
 CREATE INDEX IF NOT EXISTS idx_file_changes_path ON session_file_changes(file_path);
 CREATE INDEX IF NOT EXISTS idx_file_changes_action ON session_file_changes(action);
+CREATE INDEX IF NOT EXISTS idx_file_changes_agent ON session_file_changes(session_id, agent_id);
 
 -- ============================================================================
 -- Session File Validations (track which hooks have validated which files)

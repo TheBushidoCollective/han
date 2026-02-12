@@ -1,5 +1,6 @@
 ---
 name: act-workflow-syntax
+user-invocable: false
 description: Use when creating or modifying GitHub Actions workflow files. Provides guidance on workflow syntax, triggers, jobs, steps, and expressions for creating valid GitHub Actions workflows that can be tested locally with act.
 allowed-tools:
   - Read
@@ -20,6 +21,7 @@ Every GitHub Actions workflow follows this basic structure:
 
 ```yaml
 name: Workflow Name
+user-invocable: false
 on: [push, pull_request]  # Triggers
 
 jobs:
@@ -352,6 +354,7 @@ act -s GITHUB_TOKEN=ghp_token -s API_KEY=key
 
 ```yaml
 name: CI
+user-invocable: false
 on: [push, pull_request]
 
 jobs:
@@ -372,6 +375,7 @@ jobs:
 
 ```yaml
 name: Deploy
+user-invocable: false
 on:
   push:
     tags:

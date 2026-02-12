@@ -1,5 +1,6 @@
 ---
 name: dialyzer-analysis
+user-invocable: false
 description: Use when analyzing and fixing Dialyzer warnings and type discrepancies in Erlang/Elixir code.
 allowed-tools: []
 ---

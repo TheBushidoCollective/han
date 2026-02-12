@@ -1,5 +1,6 @@
 ---
 name: playwright-bdd-configuration
+user-invocable: false
 description: Use when configuring Playwright BDD projects, setting up defineBddConfig(), configuring feature and step file paths, and integrating with Playwright config.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

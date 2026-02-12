@@ -485,6 +485,36 @@ fn run_migrations(conn: &Connection) -> Result<(), rusqlite::Error> {
         conn.execute("ALTER TABLE messages ADD COLUMN files_changed INTEGER", [])?;
     }
 
+    // Migration: Add agent_id column to session_file_changes table
+    let file_changes_exists: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM sqlite_master WHERE type='table' AND name='session_file_changes'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    if file_changes_exists {
+        let has_agent_id_col: bool = conn
+            .query_row(
+                "SELECT COUNT(*) > 0 FROM pragma_table_info('session_file_changes') WHERE name = 'agent_id'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_agent_id_col {
+            conn.execute(
+                "ALTER TABLE session_file_changes ADD COLUMN agent_id TEXT",
+                [],
+            )?;
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_file_changes_agent ON session_file_changes(session_id, agent_id)",
+                [],
+            )?;
+        }
+    }
+
     // Version tracking - check and update data version at end of migrations
     // This allows triggering reindex when new features require backfill
     check_and_update_data_version(conn)?;

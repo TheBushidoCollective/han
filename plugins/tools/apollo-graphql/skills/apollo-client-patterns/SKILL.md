@@ -1,5 +1,6 @@
 ---
 name: apollo-client-patterns
+user-invocable: false
 description: Use when implementing Apollo Client patterns for queries, mutations, cache management, and local state in React applications.
 allowed-tools:
   - Read

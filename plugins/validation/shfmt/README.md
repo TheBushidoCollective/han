@@ -1,8 +1,8 @@
-# Jutsu: shfmt
+# shfmt
 
 Validation and quality enforcement for shell scripts using [shfmt](https://github.com/mvdan/sh), the shell parser, formatter, and interpreter.
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Validation Hooks
 
@@ -13,7 +13,7 @@ Validation and quality enforcement for shell scripts using [shfmt](https://githu
 
 ### Skills
 
-This jutsu provides the following skills:
+This plugin provides the following skills:
 
 - **shfmt-configuration**: Configuration files, EditorConfig integration, and project setup
 - **shfmt-formatting**: Formatting patterns, shell dialect support, and editor integration
@@ -21,22 +21,13 @@ This jutsu provides the following skills:
 
 ## Installation
 
-Install via the Han marketplace:
-
 ```bash
-han plugin install jutsu-shfmt
-```
-
-Or install manually:
-
-```bash
-claude plugin marketplace add thebushidocollective/han
-claude plugin install jutsu-shfmt@han
+han plugin install shfmt
 ```
 
 ## Usage
 
-Once installed, this jutsu automatically validates your shell script formatting:
+Once installed, this plugin automatically validates your shell script formatting:
 
 - When you finish a conversation with Claude Code
 - When Claude Code agents complete their work
@@ -145,7 +136,7 @@ Create a `han-config.json` in directories where you want to customize behavior:
 ```json
 {
   "hooks": {
-    "jutsu-shfmt": {
+    "shfmt": {
       "format": {
         "enabled": false
       }
@@ -159,7 +150,7 @@ Or override the command:
 ```json
 {
   "hooks": {
-    "jutsu-shfmt": {
+    "shfmt": {
       "format": {
         "command": "shfmt -d -i 4 ."
       }

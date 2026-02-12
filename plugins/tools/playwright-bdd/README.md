@@ -19,9 +19,9 @@ This plugin provides the following skills:
 Skills can be invoked using the Skill tool:
 
 ```javascript
-Skill("jutsu-playwright-bdd:playwright-bdd-configuration")
-Skill("jutsu-playwright-bdd:playwright-bdd-step-definitions")
-Skill("jutsu-playwright-bdd:playwright-bdd-gherkin-syntax")
+Skill("playwright-bdd:playwright-bdd-configuration")
+Skill("playwright-bdd:playwright-bdd-step-definitions")
+Skill("playwright-bdd:playwright-bdd-gherkin-syntax")
 ```
 
 ## Quality Hooks
@@ -37,7 +37,7 @@ This plugin includes hooks that automatically regenerate Playwright test files f
 The hooks use `han hook run` to detect directories with `playwright.config.ts` or `playwright.config.js` and run `npx bddgen` to regenerate test files:
 
 ```bash
-han hook run jutsu-playwright-bdd generate
+han hook run playwright-bdd generate
 ```
 
 This ensures your generated test files stay synchronized with your feature files.
@@ -45,7 +45,7 @@ This ensures your generated test files stay synchronized with your feature files
 ## Installation
 
 ```bash
-han plugin install jutsu-playwright-bdd
+han plugin install playwright-bdd
 ```
 
 ## Requirements

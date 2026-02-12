@@ -8,7 +8,7 @@ hooks:
     if_changed:
       - "**/*.{js,ts}x?"
     depends_on:
-      - plugin: jutsu-playwright-bdd
+      - plugin: playwright-bdd
         hook: generate
         optional: true
 

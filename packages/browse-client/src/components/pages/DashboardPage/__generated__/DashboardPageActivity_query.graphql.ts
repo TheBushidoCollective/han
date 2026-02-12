@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<22480b7e4a077418c2d76d2407c3178f>>
+ * @generated SignedSource<<0da60e0c8710d79bcb57d48bc7cdf82d>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -41,6 +41,7 @@ export type DashboardPageActivity_query$data = {
     readonly modelUsage: ReadonlyArray<{
       readonly cacheCreationTokens: any | null | undefined;
       readonly cacheReadTokens: any | null | undefined;
+      readonly costUsd: number | null | undefined;
       readonly displayName: string | null | undefined;
       readonly inputTokens: any | null | undefined;
       readonly model: string | null | undefined;
@@ -310,7 +311,14 @@ return {
               "name": "cacheCreationTokens",
               "storageKey": null
             },
-            (v5/*: any*/)
+            (v5/*: any*/),
+            {
+              "alias": null,
+              "args": null,
+              "kind": "ScalarField",
+              "name": "costUsd",
+              "storageKey": null
+            }
           ],
           "storageKey": null
         },
@@ -358,6 +366,6 @@ return {
 };
 })();
 
-(node as any).hash = "1297a57bd97852b35113e57892b20ff3";
+(node as any).hash = "1fe5d2d27adc8a78f80ca329e6a8bf87";
 
 export default node;

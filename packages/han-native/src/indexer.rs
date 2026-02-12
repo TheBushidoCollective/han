@@ -937,7 +937,12 @@ fn extract_file_path_from_tool_input(tool_name: &str, tool_input: &str) -> Optio
 }
 
 /// Record a file change from a tool_use message
-fn record_file_change_from_tool(session_id: &str, tool_name: &str, tool_input: &str) {
+fn record_file_change_from_tool(
+    session_id: &str,
+    tool_name: &str,
+    tool_input: &str,
+    agent_id: Option<&str>,
+) {
     if let Some(raw_path) = extract_file_path_from_tool_input(tool_name, tool_input) {
         // Canonicalize the file path to normalize symlinks and mounts
         // (e.g., /Volumes/dev vs /Users/name/dev pointing to same location)
@@ -976,6 +981,7 @@ fn record_file_change_from_tool(session_id: &str, tool_name: &str, tool_input: &
             file_hash_before: None,
             file_hash_after,
             tool_name: Some(tool_name.to_string()),
+            agent_id: agent_id.map(|s| s.to_string()),
         };
 
         // Record to database (ignore errors - file tracking is best-effort)
@@ -1716,7 +1722,12 @@ pub fn index_session_file(
                     (&finalized.tool_name, &finalized.tool_input)
                 {
                     if is_file_modification_tool(tool_name) {
-                        record_file_change_from_tool(&session_id, tool_name, tool_input);
+                        record_file_change_from_tool(
+                            &session_id,
+                            tool_name,
+                            tool_input,
+                            finalized.agent_id.as_deref(),
+                        );
                     }
                     if tool_name == "TodoWrite" {
                         extract_and_save_todos(
@@ -1766,6 +1777,7 @@ pub fn index_session_file(
                                                 &session_id,
                                                 tool_name,
                                                 &input_str,
+                                                finalized.agent_id.as_deref(),
                                             );
                                         }
                                     }

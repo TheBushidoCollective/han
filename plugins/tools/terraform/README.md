@@ -1,4 +1,4 @@
-# Terraform Jutsu
+# Terraform
 
 Terraform configuration validation and infrastructure-as-code best practices.
 
@@ -34,8 +34,6 @@ Validates Terraform configurations in directories containing `.tf` files using `
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install jutsu-terraform
+han plugin install terraform
 ```

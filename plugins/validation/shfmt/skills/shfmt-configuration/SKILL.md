@@ -1,5 +1,6 @@
 ---
 name: shfmt-configuration
+user-invocable: false
 description: Use when configuring shfmt for shell script formatting including .shfmt.toml setup, EditorConfig integration, and project-specific settings.
 allowed-tools:
   - Read
@@ -393,6 +394,7 @@ keep-padding = false
 
 ```yaml
 name: Shell Format Check
+user-invocable: false
 on: [push, pull_request]
 jobs:
   shfmt:

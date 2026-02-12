@@ -1,5 +1,6 @@
 ---
 name: docker-compose-basics
+user-invocable: false
 description: Use when defining and running multi-container Docker applications with Docker Compose YAML configuration.
 allowed-tools: []
 ---

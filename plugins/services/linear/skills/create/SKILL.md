@@ -7,7 +7,7 @@ description: Create a new Linear issue interactively
 
 ## Name
 
-hashi-linear:create - Create a new Linear issue interactively
+linear:create - Create a new Linear issue interactively
 
 ## Synopsis
 

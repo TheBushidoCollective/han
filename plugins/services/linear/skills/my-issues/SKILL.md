@@ -7,7 +7,7 @@ description: Show all Linear issues assigned to you
 
 ## Name
 
-hashi-linear:my-issues - Show all Linear issues assigned to you
+linear:my-issues - Show all Linear issues assigned to you
 
 ## Synopsis
 

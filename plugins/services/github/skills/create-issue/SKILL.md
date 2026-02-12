@@ -7,7 +7,7 @@ description: Create a new issue in a GitHub repository
 
 ## Name
 
-hashi-github:create-issue - Create a new issue in a GitHub repository
+github:create-issue - Create a new issue in a GitHub repository
 
 ## Synopsis
 

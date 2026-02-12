@@ -7,7 +7,7 @@ description: View GitHub Actions workflow runs and status
 
 ## Name
 
-hashi-github:view-workflow - View GitHub Actions workflow runs and status
+github:view-workflow - View GitHub Actions workflow runs and status
 
 ## Synopsis
 

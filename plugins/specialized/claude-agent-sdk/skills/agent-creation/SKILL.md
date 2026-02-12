@@ -1,5 +1,6 @@
 ---
 name: claude-agent-sdk-agent-creation
+user-invocable: false
 description: Use when creating or configuring Claude AI agents using the Agent SDK. Covers agent initialization, configuration, and basic setup patterns.
 allowed-tools:
   - Read
@@ -88,8 +89,6 @@ project/
 │   ├── skills/
 │   │   └── my-skill/
 │   │       └── SKILL.md       # Skill definitions
-│   └── commands/
-│       └── my-command.md      # Slash commands
 └── src/
     └── index.ts               # Your code
 ```

@@ -1,5 +1,6 @@
 ---
 name: Kotlin DSL Patterns
+user-invocable: false
 description: Use when domain-specific language design in Kotlin using type-safe builders, infix functions, operator overloading, lambdas with receivers, and patterns for creating expressive, readable DSLs for configuration and domain modeling.
 allowed-tools: []
 ---

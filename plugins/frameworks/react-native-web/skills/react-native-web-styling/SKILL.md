@@ -1,5 +1,6 @@
 ---
 name: react-native-web-styling
+user-invocable: false
 description: Use when styling React Native Web components. Provides patterns for StyleSheet API, platform-specific styles, responsive design, and theming.
 allowed-tools:
   - Read

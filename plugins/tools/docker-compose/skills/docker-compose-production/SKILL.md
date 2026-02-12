@@ -1,5 +1,6 @@
 ---
 name: docker-compose-production
+user-invocable: false
 description: Use when deploying Docker Compose applications to production including security hardening, resource management, health checks, logging, monitoring, and high-availability patterns.
 allowed-tools: [Bash, Read]
 ---

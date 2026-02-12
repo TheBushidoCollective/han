@@ -1,5 +1,6 @@
 ---
 name: PHP Security Patterns
+user-invocable: false
 description: Use when essential PHP security patterns including input validation, SQL injection prevention, XSS protection, CSRF tokens, password hashing, secure session management, and defense-in-depth strategies for building secure PHP applications.
 allowed-tools: []
 ---

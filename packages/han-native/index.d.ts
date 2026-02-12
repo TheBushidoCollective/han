@@ -723,6 +723,7 @@ export interface SessionFileChange {
   fileHashBefore?: string;
   fileHashAfter?: string;
   toolName?: string;
+  agentId?: string;
   recordedAt?: string;
 }
 export interface SessionFileChangeInput {
@@ -732,6 +733,7 @@ export interface SessionFileChangeInput {
   fileHashBefore?: string;
   fileHashAfter?: string;
   toolName?: string;
+  agentId?: string;
 }
 export interface SessionFileValidation {
   id?: string;
@@ -1389,15 +1391,17 @@ export declare function recordFileChange(
   dbPath: string,
   input: SessionFileChangeInput
 ): SessionFileChange;
-/** Get file changes for a session */
+/** Get file changes for a session, optionally filtered by agent_id */
 export declare function getSessionFileChanges(
   dbPath: string,
-  sessionId: string
+  sessionId: string,
+  agentId?: string | undefined | null
 ): Array<SessionFileChange>;
-/** Check if a session has any file changes */
+/** Check if a session has any file changes, optionally filtered by agent_id */
 export declare function hasSessionChanges(
   dbPath: string,
-  sessionId: string
+  sessionId: string,
+  agentId?: string | undefined | null
 ): boolean;
 /** Record a file validation (upserts based on session/file/plugin/hook) */
 export declare function recordFileValidation(

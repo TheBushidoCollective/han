@@ -32,6 +32,7 @@ interface ModelUsageStats {
 	readonly cacheReadTokens: number;
 	readonly cacheCreationTokens: number;
 	readonly totalTokens: number;
+	readonly costUsd: number;
 }
 
 interface ModelUsageChartProps {
@@ -39,18 +40,11 @@ interface ModelUsageChartProps {
 	modelUsage: ReadonlyArray<ModelUsageStats>;
 }
 
-// Colors for different model families
-const MODEL_COLORS: Record<string, string> = {
-	"Opus 4.5": "#8b5cf6", // Purple
-	"Opus 4.1": "#a78bfa", // Lighter purple
-	"Opus 4": "#7c3aed", // Darker purple
-	"Opus 3": "#6d28d9", // Even darker purple
-	"Sonnet 4.5": "#3b82f6", // Blue
-	"Sonnet 4": "#2563eb", // Darker blue
-	"Sonnet 3.5": "#1d4ed8", // Even darker blue
-	"Haiku 4.5": "#10b981", // Green
-	"Haiku 4": "#059669", // Darker green
-	"Haiku 3.5": "#047857", // Even darker green
+// Base hues for model families (HSL hue values)
+const FAMILY_HUES: Record<string, number> = {
+	opus: 265, // Purple
+	sonnet: 217, // Blue
+	haiku: 160, // Green
 };
 
 const DEFAULT_COLOR = "#6b7280"; // Gray fallback
@@ -95,10 +89,20 @@ function formatDateRange(startStr: string, endStr: string): string {
 }
 
 /**
- * Get color for a model
+ * Get color for a model based on family hue and version.
+ * Higher minor versions produce darker shades.
  */
 function getModelColor(displayName: string): string {
-	return MODEL_COLORS[displayName] || DEFAULT_COLOR;
+	const family = displayName.split(" ")[0]?.toLowerCase() ?? "";
+	const hue = FAMILY_HUES[family];
+	if (hue === undefined) return DEFAULT_COLOR;
+
+	// Fixed hue per family, vary saturation + lightness by version
+	const versionMatch = displayName.match(/\d+(?:\.(\d+))?/);
+	const minor = versionMatch?.[1] ? Number.parseInt(versionMatch[1], 10) : 0;
+	const saturation = Math.min(40 + minor * 8, 90);
+	const lightness = Math.max(80 - minor * 8, 28);
+	return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
 
 /**
@@ -190,11 +194,14 @@ export function ModelUsageChart({
 		return max;
 	}, [weeks]);
 
-	// Calculate totals per model
+	// Calculate totals and costs per model
 	const totalsByModel = useMemo(() => {
-		const totals = new Map<string, number>();
+		const totals = new Map<string, { tokens: number; costUsd: number }>();
 		for (const m of modelUsage) {
-			totals.set(m.displayName, m.totalTokens);
+			totals.set(m.displayName, {
+				tokens: m.totalTokens,
+				costUsd: m.costUsd,
+			});
 		}
 		return totals;
 	}, [modelUsage]);
@@ -240,8 +247,13 @@ export function ModelUsageChart({
 							</Text>
 						</HStack>
 						<Text weight="semibold" size="sm">
-							{formatNumber(totalsByModel.get(modelName) || 0)}
+							{formatNumber(totalsByModel.get(modelName)?.tokens || 0)}
 						</Text>
+						{(totalsByModel.get(modelName)?.costUsd ?? 0) > 0 && (
+							<Text color="muted" size="xs">
+								${(totalsByModel.get(modelName)?.costUsd ?? 0).toFixed(2)}
+							</Text>
+						)}
 					</VStack>
 				))}
 			</HStack>
