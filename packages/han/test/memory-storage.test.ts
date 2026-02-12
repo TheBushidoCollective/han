@@ -10,32 +10,12 @@ import { join } from 'node:path';
 import {
   createMemoryStore,
   generateId,
-  getProjectIndexPath,
   type IndexedObservation,
   normalizeGitRemote,
   type RawObservation,
   type SessionSummary,
   setMemoryRoot,
 } from '../lib/memory/index.ts';
-
-/**
- * Clean up any existing observations for a gitRemote.
- * Re-asserts memoryRootOverride before cleanup to guard against
- * parallel tests racing on the shared global setMemoryRoot.
- */
-function cleanupGitRemote(gitRemote: string): void {
-  try {
-    // Re-assert our test's memory root in case a parallel test changed it
-    setMemoryRoot(testDir);
-    const indexPath = getProjectIndexPath(gitRemote);
-    const dataFile = `${indexPath}/observations.jsonl`;
-    if (existsSync(dataFile)) {
-      rmSync(dataFile);
-    }
-  } catch {
-    // Ignore cleanup errors
-  }
-}
 
 let testDir: string;
 
@@ -419,7 +399,7 @@ describe('Memory Storage', () => {
 
     test('merges metadata updates', () => {
       const gitRemote = 'git@github.com:test/meta-merge.git';
-      const store = createMemoryStore();
+      const store = createMemoryStore({ rootPath: testDir });
 
       // First update
       store.updateIndexMetadata(gitRemote, {
