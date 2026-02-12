@@ -791,6 +791,9 @@ export function registerHookDispatch(hookCommand: Command): void {
           options.cache === false,
           options.checkpoints === false
         );
+        // Explicitly exit after dispatch completes to avoid hanging on open handles
+        // (e.g., native module, event logger, telemetry timers)
+        process.exit(0);
       }
     );
 }

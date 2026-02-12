@@ -12,11 +12,9 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Skip these tests when subprocess spawning would hang
+// Skip these tests in CI or when native module is unavailable
 const SKIP_DISPATCH =
-  process.env.SKIP_NATIVE === 'true' ||
-  process.env.CI === 'true' ||
-  !process.stdout.isTTY;
+  process.env.SKIP_NATIVE === 'true' || process.env.CI === 'true';
 const describeDispatch = SKIP_DISPATCH ? describe.skip : describe;
 
 // Get the package root directory
