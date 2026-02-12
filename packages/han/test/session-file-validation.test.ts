@@ -14,7 +14,10 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { _resetDbState } from '../lib/db/index.ts';
+
+// Skip tests that require native module when SKIP_NATIVE is set
+const SKIP_NATIVE = process.env.SKIP_NATIVE === 'true';
+const describeWithNative = SKIP_NATIVE ? describe.skip : describe;
 
 // Save original environment
 const originalClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR;
@@ -27,7 +30,8 @@ const testDir = join(
 const configDir = join(testDir, 'config');
 const projectDir = join(testDir, 'project');
 
-beforeAll(() => {
+beforeAll(async () => {
+  const { _resetDbState } = await import('../lib/db/index.ts');
   // Reset database state to pick up new CLAUDE_CONFIG_DIR
   _resetDbState();
   // Create test directories
@@ -37,7 +41,8 @@ beforeAll(() => {
   process.env.CLAUDE_CONFIG_DIR = configDir;
 });
 
-afterAll(() => {
+afterAll(async () => {
+  const { _resetDbState } = await import('../lib/db/index.ts');
   // Reset database state before restoring environment
   _resetDbState();
   // Restore original environment
@@ -76,7 +81,7 @@ async function createTestSession(sessionId: string) {
   });
 }
 
-describe('Session File Validation System', () => {
+describeWithNative('Session File Validation System', () => {
   describe('sessionFileChanges', () => {
     test('records file change for a session', async () => {
       const { sessionFileChanges } = await import('../lib/db/index.ts');
