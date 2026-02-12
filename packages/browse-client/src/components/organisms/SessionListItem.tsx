@@ -32,6 +32,12 @@ export const SessionListItemFragment = graphql`
     messageCount
     startedAt
     updatedAt
+    owner {
+      id
+      name
+      email
+      avatarUrl
+    }
     currentTodo {
       content
       activeForm

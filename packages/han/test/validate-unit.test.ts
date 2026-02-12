@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 // Import the modules under test
+// Import directly from hook-config.ts to avoid loading hook-cache.ts which uses native module
 import {
   getHookConfigs,
   getHookDefinition,
@@ -17,6 +18,10 @@ import {
   loadUserConfig,
 } from '../lib/hooks/index.ts';
 import { getPluginNameFromRoot } from '../lib/shared/index.ts';
+
+// Check if native module is available for tests that require it
+const SKIP_NATIVE = process.env.SKIP_NATIVE === "true";
+const testWithNative = SKIP_NATIVE ? test.skip : test;
 
 let testDir: string;
 let pluginDir: string;

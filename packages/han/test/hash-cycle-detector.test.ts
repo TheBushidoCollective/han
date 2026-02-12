@@ -1,6 +1,9 @@
 /**
  * Unit tests for hash-cycle-detector.ts
  * Tests hash cycle detection for hook recursion prevention
+ *
+ * Note: These tests require the native module for findFilesWithGlob.
+ * They are skipped in CI when SKIP_NATIVE=true.
  */
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -11,6 +14,10 @@ import {
   type CycleDetectionResult,
   HashCycleDetector,
 } from '../lib/hooks/index.ts';
+
+// Skip tests that require native module when SKIP_NATIVE is set
+const SKIP_NATIVE = process.env.SKIP_NATIVE === "true";
+const testWithNative = SKIP_NATIVE ? test.skip : test;
 
 let testDir: string;
 let projectDir: string;

@@ -1,0 +1,580 @@
+"""
+Information about the Han Team Server API including version and capabilities
+"""
+type ApiInfo {
+  """
+  Current deployment environment. Affects feature availability and error verbosity.
+  """
+  environment: String
+
+  """
+  List of enabled API features. Check before using optional capabilities.
+  """
+  features: [String!]
+
+  """
+  Whether GraphQL introspection is enabled. Disabled in production for security.
+  """
+  introspectionEnabled: Boolean
+
+  """
+  API version in semver format (e.g., '0.1.0'). Use for client compatibility checks.
+  """
+  version: String
+}
+
+"""Error related to authentication or authorization"""
+type AuthError {
+  """Authentication error code"""
+  code: ErrorCode
+
+  """Description of the authentication failure"""
+  message: String
+}
+
+"""Base error type for unexpected or server errors"""
+type BaseError {
+  """Machine-readable error code"""
+  code: ErrorCode
+
+  """Human-readable error message. May be shown to users directly."""
+  message: String
+}
+
+"""Subscription plan for an organization"""
+enum BillingPlan {
+  """Enterprise plan with SSO, audit logs, and unlimited retention"""
+  ENTERPRISE
+
+  """Free tier with limited features and session retention"""
+  FREE
+
+  """Team plan with full analytics and extended retention"""
+  TEAM
+}
+
+"""ISO 8601 formatted date-time string (e.g., '2025-01-31T12:00:00Z')"""
+scalar DateTime
+
+"""Result of deleting a team"""
+type DeleteTeamPayload {
+  """Whether the team was successfully deleted"""
+  success: Boolean
+
+  """ID of the deleted team"""
+  teamId: String
+}
+
+"""Machine-readable error codes for programmatic error handling"""
+enum ErrorCode {
+  """Resource with this identifier already exists (duplicate slug, etc.)"""
+  ALREADY_EXISTS
+
+  """User lacks required permissions for this action"""
+  INSUFFICIENT_PERMISSIONS
+
+  """Unexpected server error occurred"""
+  INTERNAL_ERROR
+
+  """Input format is invalid"""
+  INVALID_INPUT
+
+  """Authentication token is malformed or expired"""
+  INVALID_TOKEN
+
+  """Requested resource does not exist"""
+  NOT_FOUND
+
+  """Too many requests, please slow down"""
+  RATE_LIMITED
+
+  """Service is temporarily unavailable"""
+  SERVICE_UNAVAILABLE
+
+  """No valid authentication token provided"""
+  UNAUTHENTICATED
+
+  """Input validation failed (see message for details)"""
+  VALIDATION_ERROR
+}
+
+"""A validation error for a specific input field"""
+type FieldError {
+  """Name of the field that failed validation"""
+  field: String
+
+  """Validation error message for this field"""
+  message: String
+}
+
+"""Root mutation type for modifying team server data"""
+type Mutation {
+  """
+  Create a new team. The authenticated user becomes the team admin. Provisions encryption key for the team.
+  """
+  createTeam(
+    """Team name (1-255 characters)"""
+    name: String!
+  ): Team
+
+  """
+  Create an invite code for the team. Valid for 24 hours. Only team admins can create invites.
+  """
+  createTeamInvite(
+    """Team ID to create invite for"""
+    teamId: String!
+  ): TeamInvite
+
+  """
+  Soft-delete a team. Only team admins can delete teams. Sessions are preserved but unlinked.
+  """
+  deleteTeam(
+    """Team ID to delete"""
+    id: String!
+  ): DeleteTeamPayload
+
+  """
+  Join a team using an invite code. The code must be valid (not expired or used).
+  """
+  joinTeam(
+    """8-character invite code"""
+    code: String!
+  ): Team
+
+  """Remove a member from the team. Only team admins can remove members."""
+  removeTeamMember(
+    """Team ID"""
+    teamId: String!
+
+    """User ID to remove"""
+    userId: String!
+  ): RemoveMemberPayload
+
+  """Update the authenticated user's profile (display name)."""
+  updateProfile(
+    """New display name (null to keep current)"""
+    displayName: String
+  ): User
+
+  """
+  Update session visibility. Only the session owner can modify. Deprecated: use updateSessionSharing instead.
+  """
+  updateSessionVisibility(
+    """ID of the session to update"""
+    sessionId: String!
+
+    """New visibility setting for the session"""
+    visibility: SessionVisibility!
+  ): Session @deprecated(reason: "Use updateSessionSharing for granular team-level sharing control")
+
+  """Update team name. Only team admins can update team settings."""
+  updateTeam(
+    """Team ID to update"""
+    id: String!
+
+    """New team name"""
+    name: String!
+  ): Team
+
+  """Update a team member's role. Only team admins can change member roles."""
+  updateTeamMember(
+    """New role for the user"""
+    role: TeamRole!
+
+    """Team ID"""
+    teamId: String!
+
+    """User ID to update"""
+    userId: String!
+  ): TeamMember
+}
+
+"""A user's membership in an organization with their role and join date"""
+type OrgMember {
+  """Unique membership identifier"""
+  id: ID
+
+  """Timestamp when the user joined the organization"""
+  joinedAt: DateTime
+
+  """ID of the organization the user belongs to"""
+  orgId: String
+
+  """User's role within this organization"""
+  role: OrgMemberRole
+
+  """The user who is a member of this organization"""
+  user: User
+
+  """ID of the user who is a member"""
+  userId: String
+}
+
+"""Role of a user within an organization, determining their permissions"""
+enum OrgMemberRole {
+  """Organization administrator who can manage teams and members"""
+  ADMIN
+
+  """Standard organization member"""
+  MEMBER
+
+  """Organization owner with billing access and full administrative control"""
+  OWNER
+
+  """Read-only access to organization resources"""
+  VIEWER
+}
+
+"""
+An organization (tenant) in the Han Team Platform containing teams and shared sessions
+"""
+type Organization {
+  """Timestamp when the organization was created"""
+  createdAt: DateTime
+
+  """Unique organization identifier (UUID format)"""
+  id: ID
+
+  """URL to organization logo image"""
+  logoUrl: String
+
+  """Organization display name"""
+  name: String
+
+  """Current billing plan for the organization"""
+  plan: BillingPlan
+
+  """URL-safe organization slug (e.g., 'acme-corp'), globally unique"""
+  slug: String
+}
+
+type PageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+}
+
+"""Root query type for the Han Team Server GraphQL API"""
+type Query {
+  """
+  Get API metadata including version, environment, and available features. No authentication required.
+  """
+  apiInfo: ApiInfo
+
+  """
+  Get the currently authenticated user. Throws if not authenticated. Returns user with team memberships.
+  """
+  me: User
+
+  """
+  Get an organization by ID. Requires authentication and organization membership.
+  """
+  organization(
+    """Organization ID (UUID format)"""
+    id: String!
+  ): Organization
+
+  """
+  Get a session by ID. Requires authentication and view permission (owner, team member, or org member based on visibility).
+  """
+  session(
+    """Session ID (UUID format, matches local session ID)"""
+    id: String!
+  ): Session
+
+  """Get a team by ID. Requires authentication and team membership."""
+  team(
+    """Team ID (UUID format)"""
+    id: String!
+  ): Team
+
+  """
+  Get teams the authenticated user belongs to. Returns a Relay connection.
+  """
+  teams(after: String, before: String, first: Int, last: Int): QueryTeamsConnection
+}
+
+type QueryTeamsConnection {
+  edges: [QueryTeamsConnectionEdge]
+  pageInfo: PageInfo!
+}
+
+type QueryTeamsConnectionEdge {
+  cursor: String!
+  node: Team
+}
+
+"""Result of removing a member from a team"""
+type RemoveMemberPayload {
+  """Whether the member was successfully removed"""
+  success: Boolean
+
+  """ID of the team the member was removed from"""
+  teamId: String
+
+  """ID of the removed user"""
+  userId: String
+}
+
+"""
+A Claude Code session synced to the team server for sharing and analytics
+"""
+type Session {
+  """Git branch name at the time of the session"""
+  branchName: String
+
+  """Unique session identifier (UUID format, matches local session ID)"""
+  id: ID
+
+  """Total input tokens consumed (for cost tracking)"""
+  inputTokens: Int
+
+  """Total number of messages in the session"""
+  messageCount: Int
+
+  """Human-readable session name (slug format like 'snug-dreaming-knuth')"""
+  name: String
+
+  """ID of the organization this session belongs to"""
+  orgId: String
+
+  """Total output tokens generated (for cost tracking)"""
+  outputTokens: Int
+
+  """The user who owns this session"""
+  owner: User
+
+  """ID of the user who owns this session"""
+  ownerId: String
+
+  """Filesystem path to the project on the user's machine (for context)"""
+  projectPath: String
+
+  """Git remote URL if the session was in a git repository"""
+  repoUrl: String
+
+  """Timestamp when the session was started locally"""
+  startedAt: DateTime
+
+  """Current state of the session (active, completed, abandoned)"""
+  status: SessionStatus
+
+  """AI-generated summary of the session (created on completion)"""
+  summary: String
+
+  """Timestamp when the session was last synced to the server"""
+  syncedAt: DateTime
+
+  """Timestamp when the session was last updated (locally or on server)"""
+  updatedAt: DateTime
+
+  """Who can view this session"""
+  visibility: SessionVisibility
+}
+
+"""Current state of a session"""
+enum SessionStatus {
+  """
+  Session timed out without explicit completion (no activity for extended period)
+  """
+  ABANDONED
+
+  """Session is currently in progress (user may still be working)"""
+  ACTIVE
+
+  """Session was explicitly ended by the user"""
+  COMPLETED
+}
+
+"""Who can view this session"""
+enum SessionVisibility {
+  """Visible to all members of the organization"""
+  ORG
+
+  """Only the session owner can view"""
+  PRIVATE
+
+  """Visible to selected teams (see sharedWithTeams)"""
+  TEAM
+}
+
+"""A team within an organization for grouping users and sharing sessions"""
+type Team {
+  """Timestamp when the team was created"""
+  createdAt: DateTime
+
+  """Optional team description explaining its purpose"""
+  description: String
+
+  """Unique team identifier (UUID format)"""
+  id: ID
+
+  """Members of this team with their roles"""
+  members(after: String, before: String, first: Int, last: Int): TeamMembersConnection
+
+  """The current user's role in this team"""
+  myRole: TeamRole
+
+  """Team display name shown in the UI"""
+  name: String
+
+  """Sessions shared with this team"""
+  sessions(after: String, before: String, first: Int, last: Int): TeamSessionsConnection
+
+  """URL-safe team slug for use in URLs (e.g., 'engineering-core')"""
+  slug: String
+}
+
+"""
+An invitation code for joining a team. Valid for 24 hours after creation.
+"""
+type TeamInvite {
+  """8-character alphanumeric invite code to share with potential members"""
+  code: String
+
+  """Timestamp when the invite was created"""
+  createdAt: DateTime
+
+  """ID of the user who created this invite"""
+  createdBy: String
+
+  """Timestamp when the invite expires (24 hours from creation)"""
+  expiresAt: DateTime
+
+  """Unique invite identifier (UUID format)"""
+  id: ID
+
+  """ID of the team this invite is for"""
+  teamId: String
+}
+
+"""A user's membership in a team with their role and join date"""
+type TeamMember {
+  """Timestamp when the user joined the team"""
+  joinedAt: DateTime
+
+  """User's role within this team"""
+  role: TeamRole
+
+  """The user who is a member of this team"""
+  user: User
+}
+
+"""Role of a user within a team, determining their permissions (legacy)"""
+enum TeamMemberRole {
+  """Team administrator who can manage members and settings"""
+  ADMIN
+
+  """Standard team member with access to shared sessions"""
+  MEMBER
+
+  """Team owner with full administrative control"""
+  OWNER
+}
+
+type TeamMembersConnection {
+  edges: [TeamMembersConnectionEdge]
+  pageInfo: PageInfo!
+}
+
+type TeamMembersConnectionEdge {
+  cursor: String!
+  node: TeamMember
+}
+
+"""A user's membership in a team"""
+type TeamMembership {
+  """When the user joined the team"""
+  joinedAt: DateTime
+
+  """User's role in the team"""
+  role: String
+
+  """ID of the team"""
+  teamId: String
+
+  """Name of the team"""
+  teamName: String
+}
+
+"""Role of a user within a team, determining their permissions"""
+enum TeamRole {
+  """Team administrator who can manage members, settings, and invites"""
+  ADMIN
+
+  """Standard team member with access to shared sessions"""
+  MEMBER
+}
+
+type TeamSessionsConnection {
+  edges: [TeamSessionsConnectionEdge]
+  pageInfo: PageInfo!
+}
+
+type TeamSessionsConnectionEdge {
+  cursor: String!
+  node: Session
+}
+
+"""
+A user account in the Han Team Platform. Users authenticate via OAuth or magic link and can view sessions shared within their teams.
+"""
+type User {
+  """URL to user's avatar image, typically from OAuth provider or Gravatar"""
+  avatarUrl: String
+
+  """Timestamp when the user account was created"""
+  createdAt: DateTime
+
+  """User's custom display name (alias for name field)"""
+  displayName: String
+
+  """User's email address, used for authentication and notifications"""
+  email: String
+
+  """User's GitHub username if authenticated via GitHub OAuth"""
+  githubUsername: String
+
+  """Unique user identifier (UUID format)"""
+  id: ID
+
+  """Timestamp of the user's most recent login, null if never logged in"""
+  lastLoginAt: DateTime
+
+  """User's display name shown in the UI"""
+  name: String
+
+  """Teams the user belongs to with their roles"""
+  teams: [TeamMembership!]
+
+  """User's subscription tier"""
+  tier: UserTier
+}
+
+"""Subscription tier for a user account"""
+enum UserTier {
+  """Enterprise tier with full features"""
+  ENTERPRISE
+
+  """Free tier with limited features"""
+  FREE
+
+  """Pro tier with extended features"""
+  PRO
+
+  """Team tier with collaboration features"""
+  TEAM
+}
+
+"""Input validation error with field-level details"""
+type ValidationError {
+  """Validation error code"""
+  code: ErrorCode
+
+  """List of fields that failed validation with specific errors"""
+  fields: [FieldError!]
+
+  """Overall validation error message"""
+  message: String
+}

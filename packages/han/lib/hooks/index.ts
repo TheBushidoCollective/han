@@ -5,6 +5,12 @@
  *
  * @example
  * import { testHooks, loadPluginConfig, checkForChanges } from './hooks';
+ *
+ * NOTE: UI components (HookExplainUI, HookTestUI) that use ink are NOT exported here
+ * because ink can hang during import in non-TTY environments.
+ * Import these directly from their respective files when needed:
+ * - HookExplainUI: import from '../hook-explain-ui.tsx'
+ * - HookTestUI: import from './hook-test-ui.tsx'
  */
 
 // UI Components

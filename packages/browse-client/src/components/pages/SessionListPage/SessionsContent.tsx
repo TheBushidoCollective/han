@@ -3,6 +3,7 @@
  *
  * Displays sessions list with pagination using usePaginationFragment.
  * Uses usePreloadedQuery to read from the preloaded query reference.
+ * In hosted mode, shows team filter and view toggle components.
  */
 
 import type React from "react";
@@ -33,6 +34,7 @@ const SessionsConnectionFragment = graphql`
     after: { type: "String" }
     projectId: { type: "String" }
     worktreeName: { type: "String" }
+    userId: { type: "String" }
   )
   @refetchable(queryName: "SessionsContentPaginationQuery") {
     sessions(
@@ -40,6 +42,7 @@ const SessionsConnectionFragment = graphql`
       after: $after
       projectId: $projectId
       worktreeName: $worktreeName
+      userId: $userId
     ) @connection(key: "SessionsContent_sessions") {
       __id
       edges {

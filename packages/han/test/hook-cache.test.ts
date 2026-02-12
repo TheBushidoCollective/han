@@ -1,6 +1,8 @@
 /**
  * Unit tests for hook-cache.ts
  * Tests file caching, manifest operations, and directory scanning
+ *
+ * NOTE: These tests require the native module for git operations.
  */
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';

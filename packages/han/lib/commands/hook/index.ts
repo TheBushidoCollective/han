@@ -11,6 +11,14 @@ import { registerHookTest } from './test.tsx';
 import { registerWrapSubagentContext } from './wrap-subagent-context.ts';
 
 /**
+ * Check if we're in a TTY environment where ink-based commands can work.
+ * ink can hang during import in non-TTY environments (CI, piped processes, etc.)
+ */
+function isTTY(): boolean {
+  return Boolean(process.stdout.isTTY);
+}
+
+/**
  * Register all hook-related commands under `han hook`
  */
 export function registerHookCommands(program: Command): void {

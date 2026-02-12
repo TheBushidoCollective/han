@@ -2,6 +2,7 @@
  * Sidebar Template
  *
  * Main navigation sidebar with app branding and nav items.
+ * Shows org selector in hosted mode.
  */
 
 import type React from "react";

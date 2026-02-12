@@ -43,6 +43,17 @@ export function decodeCursor(cursor: string): {
 }
 
 /**
+ * Maximum page size to prevent memory exhaustion attacks.
+ * Clients requesting more than this will be capped to this limit.
+ */
+export const MAX_PAGE_SIZE = 100;
+
+/**
+ * Default page size when not specified
+ */
+export const DEFAULT_PAGE_SIZE = 25;
+
+/**
  * Connection arguments for pagination
  */
 export interface ConnectionArgs {

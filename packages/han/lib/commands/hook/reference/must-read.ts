@@ -49,7 +49,8 @@ export function createReferenceCommand(): Command {
             true,
             Date.now() - startTime
           );
-          return;
+          eventLogger?.flush();
+          process.exit(0);
         }
 
         if (options.mustReadFirst) {
@@ -67,6 +68,7 @@ export function createReferenceCommand(): Command {
             true,
             Date.now() - startTime
           );
+          eventLogger?.flush();
         } else {
           // Future: support other reference types
           console.log(filePath);
@@ -80,7 +82,9 @@ export function createReferenceCommand(): Command {
             true,
             Date.now() - startTime
           );
+          eventLogger?.flush();
         }
+        process.exit(0);
       }
     );
 

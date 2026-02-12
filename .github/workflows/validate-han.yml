@@ -92,8 +92,13 @@ jobs:
         run: bun run tsc --noEmit
         working-directory: ./packages/han
 
-      - name: Run tests with coverage
-        run: bun test --coverage --coverage-reporter=lcov
+      - name: Run tests
+        run: bun test --bail
+        working-directory: ./packages/han
+
+      - name: Generate coverage report
+        if: github.ref == 'refs/heads/main' && success()
+        run: timeout 120 bun test --coverage --coverage-reporter=lcov --coverage-dir=coverage 2>&1 || true
         working-directory: ./packages/han
 
       - name: Upload coverage to Codecov

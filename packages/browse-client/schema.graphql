@@ -67,6 +67,21 @@ type ActivityData {
   totalSessions: Int
 }
 
+"""Single data point in the activity timeline"""
+type ActivityTimelineEntry {
+  """Messages exchanged in this period"""
+  messageCount: Int
+
+  """Time period label"""
+  period: String
+
+  """Sessions started in this period"""
+  sessionCount: Int
+
+  """Tasks created in this period"""
+  taskCount: Int
+}
+
 """A subagent task spawned by a Task tool call"""
 type AgentTask {
   """Unique ID of the agent task"""
@@ -152,6 +167,66 @@ type AssistantMessage implements Message {
   uuid: String
 }
 
+"""Result of an authentication operation"""
+type AuthResult {
+  """Error message (if failed)"""
+  error: String
+
+  """Whether the authentication succeeded"""
+  success: Boolean
+
+  """JWT tokens (if successful)"""
+  tokens: TokenPair
+
+  """The authenticated user (if successful)"""
+  user: AuthUser
+}
+
+"""An active user session"""
+type AuthSession {
+  """When this session was created"""
+  createdAt: DateTime
+
+  """Device information (browser, platform)"""
+  deviceInfo: String
+
+  """When this session expires"""
+  expiresAt: DateTime
+
+  """Unique session identifier"""
+  id: ID
+
+  """IP address of the session"""
+  ipAddress: String
+
+  """Whether this session is still active"""
+  isActive: Boolean
+
+  """The user this session belongs to"""
+  user: AuthUser
+}
+
+"""An authenticated user"""
+type AuthUser {
+  """URL to user's avatar image"""
+  avatarUrl: String
+
+  """When the user account was created"""
+  createdAt: DateTime
+
+  """User's display name"""
+  displayName: String
+
+  """User's email address"""
+  email: String
+
+  """Unique user identifier"""
+  id: ID
+
+  """Number of active sessions"""
+  sessionCount: Int
+}
+
 scalar BigInt
 
 """A cached hook run entry"""
@@ -212,6 +287,18 @@ type Citation {
 
   """Timestamp if known"""
   timestamp: DateTime
+}
+
+"""Visibility level for a citation"""
+enum CitationVisibility {
+  """Only visible to the session owner"""
+  PRIVATE
+
+  """Safe to share broadly within the org"""
+  PUBLIC
+
+  """Visible to team members with repo access"""
+  TEAM
 }
 
 """Summary of Claude user settings"""
@@ -409,6 +496,24 @@ enum ContentBlockType {
   THINKING
   TOOL_RESULT
   TOOL_USE
+}
+
+"""Anonymized metrics for a contributor"""
+type ContributorMetrics {
+  """Anonymized contributor identifier"""
+  contributorId: String
+
+  """Display name (e.g., 'Project A', 'Workstation 1')"""
+  displayName: String
+
+  """Total sessions by this contributor"""
+  sessionCount: Int
+
+  """Task success rate (0-1)"""
+  successRate: Float
+
+  """Total tasks by this contributor"""
+  taskCount: Int
 }
 
 type CoordinatorStatus {
@@ -831,6 +936,13 @@ type FrustrationSummary {
 
   """Total messages analyzed for sentiment"""
   totalAnalyzed: Int
+}
+
+"""Time period granularity for aggregation"""
+enum Granularity {
+  DAY
+  MONTH
+  WEEK
 }
 
 """Summary of Han user configuration"""
@@ -1524,6 +1636,27 @@ type InterruptUserMessage implements Message & UserMessage {
   uuid: String
 }
 
+"""Result of linking an OAuth provider to an account"""
+type LinkResult {
+  """The new OAuth connection (if successful)"""
+  connection: OAuthConnection
+
+  """Error message (if failed)"""
+  error: String
+
+  """Whether the linking succeeded"""
+  success: Boolean
+}
+
+"""Result of requesting a magic link"""
+type MagicLinkResult {
+  """Status message or error"""
+  message: String
+
+  """Whether the magic link was sent"""
+  success: Boolean
+}
+
 """An MCP server configuration"""
 type McpServer {
   """Number of command arguments"""
@@ -1760,6 +1893,21 @@ enum MemoryLayer {
   TRANSCRIPTS
 }
 
+"""Information about a memory layer available to the user"""
+type MemoryLayerInfo {
+  """Whether this layer is available to the user"""
+  available: Boolean
+
+  """Human-readable description"""
+  description: String
+
+  """Layer name (personal, project, team, org)"""
+  name: String
+
+  """Number of sessions accessible in this layer"""
+  sessionCount: Int
+}
+
 """A memory learn event"""
 type MemoryLearnMessage implements Message {
   """
@@ -1873,6 +2021,21 @@ type MemoryQueryStartResult {
 
   """Whether the query was started successfully"""
   success: Boolean
+}
+
+"""Memory access scope levels"""
+enum MemoryScope {
+  """Aggregated learnings only (no raw data)"""
+  ORG
+
+  """User's own sessions (always accessible)"""
+  PERSONAL
+
+  """Sessions in projects user belongs to"""
+  PROJECT
+
+  """Sessions visible via repo permissions"""
+  TEAM
 }
 
 """Result from memory search"""
@@ -2097,10 +2260,22 @@ type Mutation {
   """
   acquireSlot(hookName: String!, pid: Int!, pluginName: String, sessionId: String!): SlotAcquireResult
 
+  """Complete OAuth flow after user authorization"""
+  completeOAuth(code: String!, codeVerifier: String!, provider: OAuthProvider!, state: String!): AuthResult
+
   """
   Trigger full indexing of all Claude Code sessions. WARNING: This is a blocking operation that can take many seconds for large session counts. Prefer spawning indexing in a subprocess from CLI commands.
   """
   indexSessions: IndexingResult
+
+  """Initiate OAuth flow with a provider. Returns URL to redirect user to."""
+  initiateOAuth(provider: OAuthProvider!): OAuthInitiateResult
+
+  """Link an OAuth provider to the current user's account"""
+  linkOAuthProvider(code: String!, codeVerifier: String!, provider: OAuthProvider!, state: String!): LinkResult
+
+  """Refresh an existing session using a refresh token"""
+  refreshSession(refreshToken: String!): AuthResult
 
   """Register a config directory for multi-environment session indexing"""
   registerConfigDir(
@@ -2120,6 +2295,15 @@ type Mutation {
   """Remove a plugin from settings"""
   removePlugin(marketplace: String!, name: String!, scope: PluginScope!): PluginMutationResult
 
+  """Request a magic link to be sent to the specified email"""
+  requestMagicLink(email: String!): MagicLinkResult
+
+  """Revoke all sessions for the current user"""
+  revokeAllSessions: Boolean
+
+  """Revoke a specific session"""
+  revokeSession(sessionId: ID!): Boolean
+
   """
   Start a memory query with streaming. Returns a session ID to subscribe to progress updates.
   """
@@ -2136,11 +2320,17 @@ type Mutation {
   """Enable or disable a plugin"""
   togglePlugin(enabled: Boolean!, marketplace: String!, name: String!, scope: PluginScope!): PluginMutationResult
 
+  """Remove an OAuth provider connection from the current user's account"""
+  unlinkOAuthProvider(connectionId: ID!): Boolean
+
   """Unregister a config directory"""
   unregisterConfigDir(
     """Path of the config directory to unregister"""
     path: String!
   ): ConfigDirMutationResult
+
+  """Verify a magic link token and create a session"""
+  verifyMagicLink(token: String!): AuthResult
 }
 
 """A task from Claude Code's built-in task management system"""
@@ -2213,6 +2403,105 @@ type NodeUpdatedPayload {
   typename: String
 }
 
+"""A connection between a user and an OAuth provider"""
+type OAuthConnection {
+  """When this provider was connected"""
+  connectedAt: DateTime
+
+  """Whether the stored token is still valid"""
+  hasValidToken: Boolean
+
+  """Unique connection identifier"""
+  id: ID
+
+  """The OAuth provider (GITHUB, GITLAB)"""
+  provider: OAuthProvider
+
+  """Email from the OAuth provider"""
+  providerEmail: String
+
+  """Username on the OAuth provider"""
+  providerUsername: String
+
+  """OAuth scopes granted to this connection"""
+  scopes: [String!]
+}
+
+"""Result of initiating an OAuth flow"""
+type OAuthInitiateResult {
+  """URL to redirect the user to for authorization"""
+  authorizationUrl: String
+
+  """PKCE code verifier (store securely and send with token exchange)"""
+  codeVerifier: String
+
+  """State parameter for CSRF protection (store and verify on callback)"""
+  state: String
+}
+
+"""Supported OAuth providers"""
+enum OAuthProvider {
+  GITHUB
+  GITLAB
+}
+
+"""An organization that users belong to"""
+type Org {
+  """Organization ID"""
+  id: ID
+
+  """URL to organization logo image"""
+  logoUrl: String
+
+  """Organization name"""
+  name: String
+
+  """URL-safe organization slug"""
+  slug: String
+}
+
+"""Aggregated learning/pattern detected across organization sessions"""
+type OrgLearning {
+  """Confidence level based on consistency"""
+  confidence: Confidence
+
+  """Domain/category (e.g., api, testing, database)"""
+  domain: String
+
+  """How many sessions exhibited this pattern"""
+  frequency: Int
+
+  """When this pattern was last observed"""
+  lastSeen: DateTime
+
+  """Pattern or convention observed"""
+  pattern: String
+}
+
+"""Result of org learnings query"""
+type OrgLearningsResult {
+  """Whether result was served from cache"""
+  cached: Boolean
+
+  """Aggregated learnings"""
+  learnings: [OrgLearning!]
+
+  """Total sessions analyzed"""
+  sessionsAnalyzed: Int
+
+  """Time range of analysis"""
+  timeRange: OrgLearningsTimeRange
+}
+
+"""Time range of analysis"""
+type OrgLearningsTimeRange {
+  """End of analysis period"""
+  end: DateTime
+
+  """Start of analysis period"""
+  start: DateTime
+}
+
 """Pagination information for a connection"""
 type PageInfo {
   """Cursor of the last item in the current page"""
@@ -2226,6 +2515,21 @@ type PageInfo {
 
   """Cursor of the first item in the current page"""
   startCursor: String
+}
+
+"""Session count aggregated by time period"""
+type PeriodSessionCount {
+  """Time period label (e.g., '2026-01-30' or '2026-W05')"""
+  period: String
+
+  """Number of sessions in this period"""
+  sessionCount: Int
+
+  """Number of tasks in this period"""
+  taskCount: Int
+
+  """Total tokens used in this period"""
+  tokenUsage: Int
 }
 
 """Claude permissions configuration"""
@@ -2363,6 +2667,24 @@ type ProjectAddedPayload {
   projectId: String
 }
 
+"""Session and task metrics aggregated by project"""
+type ProjectSessionCount {
+  """Unique project identifier"""
+  projectId: String
+
+  """Human-readable project name"""
+  projectName: String
+
+  """Number of sessions in this project"""
+  sessionCount: Int
+
+  """Task success rate (0-1)"""
+  successRate: Float
+
+  """Number of tasks in this project"""
+  taskCount: Int
+}
+
 type Query {
   """Activity data for dashboard visualizations"""
   activity(days: Int = 365): ActivityData
@@ -2387,6 +2709,15 @@ type Query {
     clientVersion: String
   ): CoordinatorStatus
 
+  """Current organization context (only available in hosted team mode)"""
+  currentOrg: Org
+
+  """The current authentication session, or null if not authenticated"""
+  currentSession: AuthSession
+
+  """Current authenticated user (only available in hosted team mode)"""
+  currentUser: User
+
   """Aggregated analytics for the enhanced dashboard"""
   dashboardAnalytics(days: Int = 30, subscriptionTier: Int = 200): DashboardAnalytics
 
@@ -2399,9 +2730,20 @@ type Query {
   """Task metrics for a time period"""
   metrics(period: MetricsPeriod): MetricsData
 
+  """All active sessions for the current user"""
+  mySessions: [AuthSession!]
+
   """Fetch any node by its global ID"""
   node(id: ID!): Node
   nodes(ids: [ID!]!): [Node]!
+
+  """Members of an organization (only available in hosted team mode)"""
+  orgMembers(orgId: String!): [TeamMember!]
+
+  """
+  Organizations the current user belongs to (only available in hosted team mode)
+  """
+  orgs: [Org!]
 
   """Plugin counts by category"""
   pluginCategories: [PluginCategory!]
@@ -2444,6 +2786,9 @@ type Query {
     """Filter by project ID (groups all worktrees)"""
     projectId: String
 
+    """Filter by user ID (only in hosted team mode)"""
+    userId: String
+
     """Filter by worktree name/path"""
     worktreeName: String
   ): SessionConnection
@@ -2453,6 +2798,24 @@ type Query {
 
   """Global slot pool status for cross-session resource management"""
   slots: SlotStatus
+
+  """Team-level aggregate metrics for dashboard"""
+  teamMetrics(
+    """End date (ISO format)"""
+    endDate: String
+
+    """Time grouping"""
+    granularity: Granularity
+
+    """Filter by project IDs"""
+    projectIds: [String!]
+
+    """Start date (ISO format)"""
+    startDate: String
+  ): TeamMetrics
+
+  """The currently authenticated user, or null if not authenticated"""
+  viewer: AuthUser
 }
 
 """A queue state change operation"""
@@ -2812,6 +3175,12 @@ type Session implements Node {
   Tasks from Claude Code's built-in task system (TaskCreate/TaskUpdate tools)
   """
   nativeTasks: [NativeTask!]
+
+  """Organization ID (only populated in hosted team mode)"""
+  orgId: String
+
+  """Session owner (only populated in hosted team mode)"""
+  owner: User
 
   """The project this session belongs to"""
   project: Project
@@ -3377,6 +3746,30 @@ type Task {
   type: TaskType
 }
 
+"""Aggregate task completion statistics"""
+type TaskCompletionMetrics {
+  """Average confidence score (0-1)"""
+  averageConfidence: Float
+
+  """Tasks completed with failure outcome"""
+  failureCount: Int
+
+  """Tasks completed with partial outcome"""
+  partialCount: Int
+
+  """Tasks completed with success outcome"""
+  successCount: Int
+
+  """Success rate (0-1)"""
+  successRate: Float
+
+  """Total tasks completed (any outcome)"""
+  totalCompleted: Int
+
+  """Total tasks created"""
+  totalCreated: Int
+}
+
 """A paginated list of tasks"""
 type TaskConnection {
   """List of task edges"""
@@ -3430,6 +3823,126 @@ enum TaskType {
 type TaskTypeCount {
   count: Int
   type: TaskType
+}
+
+"""Citation from team memory with visibility metadata"""
+type TeamCitation {
+  """Author if known"""
+  author: String
+
+  """Relevant excerpt (sanitized for privacy)"""
+  excerpt: String
+
+  """Session ID if from a session"""
+  sessionId: String
+
+  """Source identifier (e.g., transcript:sessionId:msgId)"""
+  source: String
+
+  """Timestamp if known"""
+  timestamp: DateTime
+
+  """Visibility level of the source"""
+  visibility: CitationVisibility
+}
+
+"""A member of an organization"""
+type TeamMember {
+  """Team member ID"""
+  id: ID
+
+  """Organization ID"""
+  orgId: String
+
+  """Role within the organization"""
+  role: TeamMemberRole
+
+  """The user"""
+  user: User
+
+  """User ID"""
+  userId: String
+}
+
+"""Role of a team member within an organization"""
+enum TeamMemberRole {
+  """Organization administrator"""
+  ADMIN
+
+  """Full team member"""
+  MEMBER
+
+  """Read-only viewer"""
+  VIEWER
+}
+
+"""Result of a team memory query"""
+type TeamMemoryResult {
+  """Synthesized answer based on team memory"""
+  answer: String
+
+  """Whether result was served from cache"""
+  cached: Boolean
+
+  """Citations with visibility metadata"""
+  citations: [TeamCitation!]
+
+  """Confidence level based on source quality"""
+  confidence: Confidence
+
+  """Number of sessions searched"""
+  sessionsSearched: Int
+
+  """Search statistics"""
+  stats: TeamMemoryStats
+}
+
+"""Statistics from team memory search"""
+type TeamMemoryStats {
+  """Sessions user has permission to access"""
+  permittedSessions: Int
+
+  """Number of results filtered out by permissions"""
+  resultsFiltered: Int
+
+  """Number of results found"""
+  resultsFound: Int
+
+  """Total sessions available"""
+  totalSessions: Int
+}
+
+"""Aggregate team-level metrics for dashboard"""
+type TeamMetrics {
+  """Activity over time"""
+  activityTimeline: [ActivityTimelineEntry!]
+
+  """Estimated total cost in USD"""
+  estimatedCostUsd: Float
+
+  """Sessions grouped by time period"""
+  sessionsByPeriod: [PeriodSessionCount!]
+
+  """Sessions grouped by project"""
+  sessionsByProject: [ProjectSessionCount!]
+
+  """Task completion statistics"""
+  taskCompletionMetrics: TaskCompletionMetrics
+
+  """Token usage aggregation"""
+  tokenUsageAggregation: TokenUsageAggregation
+
+  """Top contributors (anonymized)"""
+  topContributors: [ContributorMetrics!]
+
+  """Total number of sessions"""
+  totalSessions: Int
+
+  """Total number of tasks"""
+  totalTasks: Int
+
+  """Total tokens used"""
+  totalTokens: Int
 }
 
 """Regular text content"""
@@ -3508,6 +4021,39 @@ enum TodoStatus {
   COMPLETED
   IN_PROGRESS
   PENDING
+}
+
+"""JWT token pair for authentication"""
+type TokenPair {
+  """Short-lived access token (1 hour)"""
+  accessToken: String
+
+  """When the access token expires"""
+  accessTokenExpiresAt: DateTime
+
+  """Long-lived refresh token (7 days)"""
+  refreshToken: String
+
+  """When the refresh token expires"""
+  refreshTokenExpiresAt: DateTime
+}
+
+"""Aggregated token usage statistics"""
+type TokenUsageAggregation {
+  """Estimated cost in USD"""
+  estimatedCostUsd: Float
+
+  """Total cached tokens used"""
+  totalCachedTokens: Int
+
+  """Total input tokens consumed"""
+  totalInputTokens: Int
+
+  """Total output tokens generated"""
+  totalOutputTokens: Int
+
+  """Total tokens (input + output)"""
+  totalTokens: Int
 }
 
 """Aggregate token usage statistics"""
@@ -3710,6 +4256,21 @@ type UnknownEventMessage implements Message {
   Raw message UUID. Use this for URLs and links instead of the global ID.
   """
   uuid: String
+}
+
+"""A user in the team platform"""
+type User {
+  """URL to user avatar image"""
+  avatarUrl: String
+
+  """User email address"""
+  email: String
+
+  """User ID"""
+  id: ID
+
+  """User display name"""
+  name: String
 }
 
 """

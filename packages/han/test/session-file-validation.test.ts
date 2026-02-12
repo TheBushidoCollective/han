@@ -6,6 +6,8 @@
  * 1. File changes per session (session_file_changes)
  * 2. File validation status per hook (session_file_validations)
  * 3. Stale detection when files are modified by another session
+ *
+ * NOTE: These tests require the native module for database access.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';

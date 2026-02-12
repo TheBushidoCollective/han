@@ -251,6 +251,7 @@ export function tryGetNativeModule(): NativeModule | null {
 
 /**
  * Get the git remote URL for a directory
+ * Returns null if native module is not available
  */
 export function getGitRemoteUrl(dir: string): string | null {
   return getNativeModule().getGitRemoteUrl(dir);
@@ -258,6 +259,7 @@ export function getGitRemoteUrl(dir: string): string | null {
 
 /**
  * Get the current git branch for a directory
+ * Returns null if native module is not available
  */
 export function getGitBranch(dir: string): string | null {
   return getNativeModule().getGitBranch(dir);
@@ -265,6 +267,7 @@ export function getGitBranch(dir: string): string | null {
 
 /**
  * Get the git root directory
+ * Returns null if native module is not available
  */
 export function getGitRoot(dir: string): string | null {
   return getNativeModule().getGitRoot(dir);
@@ -272,6 +275,7 @@ export function getGitRoot(dir: string): string | null {
 
 /**
  * Get the git common directory (for worktrees)
+ * Returns null if native module is not available
  */
 export function getGitCommonDir(dir: string): string | null {
   return getNativeModule().getGitCommonDir(dir);
@@ -279,6 +283,7 @@ export function getGitCommonDir(dir: string): string | null {
 
 /**
  * List files tracked by git in a directory
+ * Returns empty array if native module is not available
  */
 export function gitLsFiles(dir: string): string[] {
   return getNativeModule().gitLsFiles(dir);

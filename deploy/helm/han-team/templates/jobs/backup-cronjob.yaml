@@ -1,0 +1,57 @@
+{{- if and .Values.postgresql.enabled .Values.backup.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "han-team.fullname" . }}-backup
+  labels:
+    {{- include "han-team.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.schedule | default "0 2 * * *" | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: backup
+              image: postgres:16-alpine
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  BACKUP_FILE="/backup/han_team_${TIMESTAMP}.sql.gz"
+
+                  echo "Starting backup at $(date)"
+                  pg_dump "$DATABASE_URL" | gzip > "$BACKUP_FILE"
+                  echo "Backup completed: $BACKUP_FILE"
+
+                  # List backups
+                  ls -lh /backup/
+
+                  # Cleanup old backups (keep last 7)
+                  ls -t /backup/*.sql.gz | tail -n +8 | xargs -r rm
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "han-team.postgresql.secretName" . }}
+                      key: password
+                - name: DATABASE_URL
+                  value: {{ include "han-team.databaseUrl" . | quote }}
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: {{ include "han-team.fullname" . }}-backup
+{{- end }}

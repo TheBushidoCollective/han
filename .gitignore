@@ -30,3 +30,15 @@ plugins/**/dist/
 # Google Cloud credentials
 gcloud-credentials.json
 *-credentials.json
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform/
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json

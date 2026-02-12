@@ -9,6 +9,8 @@
  * - Layer 5: Team Memory (git history) - Commits, PRs, decisions
  *
  * Plus multi-layer racing, auto-promotion, and integration tests.
+ *
+ * NOTE: Many tests require the native module for database access.
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';

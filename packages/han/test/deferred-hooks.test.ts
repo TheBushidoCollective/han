@@ -3,12 +3,17 @@
  *
  * Tests the database layer (hookAttempts, deferredHooks), MCP tools
  * (hook_wait, increase_max_attempts), and coordinator background processing.
+ *
+ * NOTE: These tests require the native module for database access.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { _resetDbState } from '../lib/db/index.ts';
+
+// Skip tests that require native module when SKIP_NATIVE is set
+const SKIP_NATIVE = process.env.SKIP_NATIVE === 'true';
 
 // Save original environment
 const originalClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR;
@@ -45,6 +50,9 @@ afterAll(() => {
     // Ignore cleanup errors
   }
 });
+
+// Skip describe blocks when native module not available
+const describeWithNative = SKIP_NATIVE ? describe.skip : describe;
 
 // Helper to create a test session
 async function createTestSession(sessionId: string) {

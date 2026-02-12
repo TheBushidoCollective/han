@@ -61,6 +61,10 @@ export type {
   Message,
   MessageBatch,
   MessageInput,
+  // Native tasks (Claude Code built-in tasks)
+  NativeTask,
+  NativeTaskInput,
+  NativeTaskUpdate,
   // Pending hook operations
   PendingHookInput,
   Project,

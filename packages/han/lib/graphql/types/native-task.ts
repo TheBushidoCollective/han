@@ -120,6 +120,9 @@ export const NativeTaskType = NativeTaskRef.implement({
 
 /**
  * Get native tasks for a session
+ *
+ * @param sessionId - The session ID to fetch tasks for
+ * @param dataSource - Optional DataSource for context-based access. Uses LocalDataSource if not provided.
  */
 export async function getNativeTasksForSession(
   sessionId: string

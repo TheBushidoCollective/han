@@ -36,6 +36,31 @@ import { registerWorktreeCommands } from './commands/worktree/index.ts';
 import { getMergedHanConfig } from './config/han-settings.ts';
 import { initTelemetry, shutdownTelemetry } from './telemetry/index.ts';
 
+// Commands that use ink are loaded lazily to avoid hanging in non-TTY environments
+// (ink can block on import when there's no TTY)
+let _registerPluginCommands:
+  | typeof import('./commands/plugin/index.ts').registerPluginCommands
+  | null = null;
+let _registerCreateCommands:
+  | typeof import('./commands/create/index.ts').registerCreateCommands
+  | null = null;
+
+async function _getPluginCommands() {
+  if (!_registerPluginCommands) {
+    const mod = await import('./commands/plugin/index.ts');
+    _registerPluginCommands = mod.registerPluginCommands;
+  }
+  return _registerPluginCommands;
+}
+
+async function _getCreateCommands() {
+  if (!_registerCreateCommands) {
+    const mod = await import('./commands/create/index.ts');
+    _registerCreateCommands = mod.registerCreateCommands;
+  }
+  return _registerCreateCommands;
+}
+
 /**
  * Get extended version information including binary location and config status.
  */

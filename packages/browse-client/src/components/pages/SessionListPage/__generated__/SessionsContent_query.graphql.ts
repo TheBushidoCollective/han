@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<70ec646c643f90a65751622a6e3329e6>>
+ * @generated SignedSource<<0f760c76cfa5bcb794b304d60aba9a57>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -66,6 +66,11 @@ return {
     {
       "defaultValue": null,
       "kind": "LocalArgument",
+      "name": "userId"
+    },
+    {
+      "defaultValue": null,
+      "kind": "LocalArgument",
       "name": "worktreeName"
     }
   ],
@@ -101,6 +106,11 @@ return {
           "kind": "Variable",
           "name": "projectId",
           "variableName": "projectId"
+        },
+        {
+          "kind": "Variable",
+          "name": "userId",
+          "variableName": "userId"
         },
         {
           "kind": "Variable",
@@ -263,6 +273,6 @@ return {
 };
 })();
 
-(node as any).hash = "ebd12c3104a5b2b59fdd22be4e683259";
+(node as any).hash = "421589093331250115eacff340eb2ee7";
 
 export default node;

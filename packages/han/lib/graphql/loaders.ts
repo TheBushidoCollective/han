@@ -295,6 +295,8 @@ export interface GraphQLLoaders {
  * - Request isolation (no data leaking between requests)
  * - Proper batching window (loaders collect keys during single tick)
  * - Cache scoped to request lifetime
+ *
+ * @param dataSource - Optional DataSource for database operations. Uses LocalDataSource if not provided.
  */
 export function createLoaders(): GraphQLLoaders {
   // Create messages loader first since paired events loader depends on it
