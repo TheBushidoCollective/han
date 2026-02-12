@@ -9,7 +9,7 @@ Multi-scope settings handling with precedence rules.
 
 ## Overview
 
-Han manages Claude Code settings across four scopes with well-defined precedence. Higher priority settings override lower ones, allowing user customization while respecting enterprise policies.
+Han manages Claude Code settings across three scopes with well-defined precedence. Higher priority settings override lower ones, allowing user customization while respecting team settings.
 
 ## Architecture
 
@@ -19,8 +19,9 @@ Han manages Claude Code settings across four scopes with well-defined precedence
 |----------|-------|----------|---------|
 | 1 (lowest) | User | `~/.claude/settings.json` | Personal global settings |
 | 2 | Project | `.claude/settings.json` | Team-shared project settings |
-| 3 | Local | `.claude/settings.local.json` | Personal project-specific (gitignored) |
-| 4 (highest) | Enterprise | `~/.claude/managed-settings.json` | Cannot be overridden |
+| 3 (highest) | Local | `.claude/settings.local.json` | Personal project-specific (gitignored) |
+
+Note: Enterprise scope (`~/.claude/managed-settings.json`) exists in Claude Code but is not currently used by Han.
 
 ### Data Structures
 
@@ -98,30 +99,38 @@ Given these settings:
 {
   "enabledPlugins": {
     "bushido@han": true,
-    "jutsu-biome@han": true
+    "biome@han": true
   }
 }
 
 // .claude/settings.local.json (local)
 {
   "enabledPlugins": {
-    "jutsu-biome@han": false
+    "biome@han": false
   }
 }
 ```
 
-Result: `bushido` enabled, `jutsu-biome` disabled (local override).
+Result: `bushido` enabled, `biome` disabled (local override).
 
 ### Environment Variables
 
 - `CLAUDE_CONFIG_DIR` - Override config directory location
 - `CLAUDE_PROJECT_DIR` - Override project directory (default: cwd)
 
+## Plugin Naming
+
+Plugins use short identifiers without category prefixes:
+
+- `typescript` (not `jutsu-typescript`)
+- `biome` (not `jutsu-biome`)
+- `github` (not `hashi-github`)
+- `frontend-development` (not `do-frontend-development`)
+
 ## Files
 
-- `lib/claude-settings.ts` - All settings management functions
-- `lib/commands/hook/dispatch.ts:215-220` - Uses merged settings for hook dispatch
-- `lib/commands/mcp/tools.ts:153-160` - Uses merged settings for tool discovery
+- `lib/config/claude-settings.ts` - All settings management functions
+- `lib/config/han-settings.ts` - Han-specific configuration (han.yml)
 
 ## Related Systems
 

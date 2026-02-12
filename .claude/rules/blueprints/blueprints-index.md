@@ -32,26 +32,25 @@ Update blueprints using the Write tool on `blueprints/{name}.md` when you:
 | Blueprint | Summary |
 |-----------|---------|
 | blueprint-system | Skills-based blueprint management with frontmatter metadata |
-| browse-architecture | Han browse command architecture - GraphQL + Vite unified server |
-| build-deployment | CI/CD automation for releases and deployments |
-| checkpoint-system | Session and agent checkpoints for scoped hook execution |
+| browse-architecture | Han browse command architecture - remote dashboard with local GraphQL coordinator |
+| build-deployment | CI/CD with auto-versioning, cross-platform builds from Linux, npm OIDC publishing, and Railway deployment |
 | cli-architecture | Entry point, command structure, and CLI framework |
-| cli-interface | Interactive CLI with AI-powered plugin discovery |
-| coordinator-daemon | Coordinator daemon architecture with GraphQL server, lazy startup, and unified data access |
-| coordinator-data-layer | Single-coordinator pattern for indexing JSONL transcripts to SQLite database |
-| distribution-architecture | NPM wrapper + platform-specific Bun binaries distribution model |
+| cli-interface | Interactive CLI with Commander.js, Ink UI, and AI-powered plugin discovery via Agent SDK |
+| coordinator-daemon | Coordinator daemon with GraphQL server, lazy startup, file watching, and unified data access via han-native |
+| coordinator-data-layer | JSONL transcript indexing to SQLite via han-native with FTS5 search and DataLoader-compatible batch queries |
+| distribution-architecture | NPM wrapper with platform-specific Bun binaries, curl installer, and Homebrew distribution |
 | han-events-logging | Session-scoped logging of Han events (hooks, MCP calls) to JSONL files indexed into SQLite for Browse UI visibility |
-| han-memory-system | Complete architecture and implementation of Han Memory - five-layer semantic memory with synthesis via Agent SDK, streaming output, and citation-backed answers |
+| han-memory-system | Memory system with Agent SDK synthesis, multi-strategy search (FTS/Vector/Hybrid), plugin-discovered MCP providers, and read-only Memory Agent for autonomous research |
 | hook-result-parent-linkage | Hook result messages need parent_id linkage to hook run messages |
-| hook-system | Complete hook lifecycle from definition to execution with centralized orchestration, checkpoint filtering, and cross-plugin dependencies |
-| marketplace | Central plugin registry and distribution |
-| mcp-server | Model Context Protocol server exposing plugin tools |
-| metrics-system | Self-reporting agent performance tracking with validation |
-| native-module | High-performance Rust bindings for hook operations |
-| plugin-directory | Filesystem organization and naming conventions |
-| plugin-installation | Installation flow and marketplace integration |
-| plugin-types | Bushido, Jutsu, Do, and Hashi plugin categories |
-| rust-graphql-migration | Migration plan for tight DB-GraphQL coupling with Seaography, Relay connections, and sqlite3_update_hook subscriptions |
+| hook-system | Direct plugin hook execution via Claude Code with no centralized orchestration |
+| marketplace | Central plugin registry with canonical names, backward-compatible aliases, and category-based organization |
+| mcp-server | MCP tool exposure via direct plugin registration and dynamic han_workflow orchestrator |
+| metrics-system | Automatic task tracking via Claude Code native TaskCreate/TaskUpdate indexed from JSONL transcripts |
+| native-module | Rust NAPI-RS bindings providing complete database layer, JSONL indexing, FTS search, and coordinator management |
+| plugin-directory | Filesystem organization with category-based directories and short plugin identifiers |
+| plugin-installation | Multi-scope plugin installation with auto-detection, three-tier UX fallback, and npm distribution |
+| plugin-types | Plugin categories organized by function: core, languages, validation, services, tools, frameworks, disciplines |
+| rust-graphql-migration | [PROPOSAL] Migration plan for tight DB-GraphQL coupling with Seaography, Relay connections, and sqlite3_update_hook subscriptions |
 | sdlc-coverage | AI-native engineering workflow alignment with OpenAI's framework |
 | settings-management | Multi-scope settings with precedence rules |
 | validation | Configuration validation and schema enforcement |

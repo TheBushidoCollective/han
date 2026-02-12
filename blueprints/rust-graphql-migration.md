@@ -1,9 +1,15 @@
 ---
 name: rust-graphql-migration
-summary: Migration plan for tight DB-GraphQL coupling with Seaography, Relay connections, and sqlite3_update_hook subscriptions
+summary: [PROPOSAL] Migration plan for tight DB-GraphQL coupling with Seaography, Relay connections, and sqlite3_update_hook subscriptions
 ---
 
 # Rust GraphQL Migration
+
+**Status: Proposal / Future Plan**
+
+This document describes a **proposed** migration of the GraphQL coordinator from TypeScript to Rust. This is **not** the current architecture. The current implementation is documented in [Coordinator Data Layer](./coordinator-data-layer.md) and [Coordinator Daemon](./coordinator-daemon.md).
+
+---
 
 Migration plan to move the GraphQL coordinator from TypeScript to Rust, achieving tight DB-GraphQL coupling with SQL-like queryability and Relay-compliant connections.
 
@@ -34,7 +40,7 @@ Migration plan to move the GraphQL coordinator from TypeScript to Rust, achievin
 │  │  │  • Message          │  │  • Aggregation resolvers                │  │ │
 │  │  │  • Task             │  │  • Settings (from YAML)                 │  │ │
 │  │  │  • HookExecution    │  │  • Slot management (runtime)            │  │ │
-│  │  └─────────────────────┘  └─────────────────────────────────────────┘  │ │
+│  │  │  └─────────────────┘  └─────────────────────────────────────────┘  │ │
 │  │                                                                         │ │
 │  │  ┌─────────────────────────────────────────────────────────────────┐   │ │
 │  │  │              Relay Connection Layer                              │   │ │
@@ -503,7 +509,7 @@ fn parse_block(block: &Value) -> Option<ContentBlock> {
     match block_type {
         "text" => Some(ContentBlock::Text(TextBlock {
             block_type: ContentBlockType::Text,
-            text: block.get("text")?.as_str()?.to_string(),
+            text: block.get("text\")?.as_str()?.to_string(),
         })),
         "thinking" => Some(ContentBlock::Thinking(ThinkingBlock {
             block_type: ContentBlockType::Thinking,
@@ -530,7 +536,7 @@ Messages are typed by `message_type` column:
 ```rust
 #[derive(Interface)]
 #[graphql(
-    field(name = "id", ty = "ID"),
+    field(name = "id\", ty = "ID"),
     field(name = "timestamp", ty = "DateTime"),
     field(name = "session_id", ty = "String"),
 )]
