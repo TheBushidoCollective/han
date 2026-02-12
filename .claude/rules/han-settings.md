@@ -26,7 +26,7 @@ metrics:
   enabled: true       # Enable task metrics tracking
 
 plugins:
-  jutsu-biome:
+  biome:
     hooks:
       lint:
         enabled: true

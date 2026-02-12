@@ -112,9 +112,9 @@ claude plugin validate /path/to/plugin
 ## Conventions
 
 - Use `npx biome format --write .` for formatting
-- Plugin names follow patterns: `jutsu-*`, `do-*`, `hashi-*`
+- Plugin names use short identifiers matching their directory name (e.g., `typescript`, `github`, `frontend-development`)
 - Always include `bushido` as a dependency in recommendations
-- MCP servers in hashi plugins should use HTTP transport with OAuth when available
+- MCP servers in bridge/service plugins should use HTTP transport with OAuth when available
 
 ## Plugin Installation
 
@@ -145,10 +145,10 @@ By default, plugins install to user settings (`~/.claude/settings.json`) which a
 
 ```bash
 # User scope (default) - shared across all projects
-han plugin install hashi-playwright-mcp
+han plugin install playwright-mcp
 
 # Project scope - only for current project (.claude/settings.json)
-han plugin install jutsu-typescript --scope project
+han plugin install typescript --scope project
 
 # Local scope - gitignored project settings (.claude/settings.local.json)
 han plugin install --scope local
@@ -156,8 +156,8 @@ han plugin install --scope local
 
 **Scope recommendations:**
 
-- **user** (default): MCP servers, general-purpose plugins (hashi-*, do-*)
-- **project**: Project-specific validation hooks (jutsu-* with hooks)
+- **user** (default): MCP servers, general-purpose plugins (services, disciplines)
+- **project**: Project-specific validation hooks (validation plugins with hooks)
 - **local**: Personal preferences not shared with team
 
 Global installation via Homebrew or install.sh is optional but provides faster execution for frequent CLI usage.
