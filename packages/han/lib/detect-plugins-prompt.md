@@ -16,9 +16,9 @@ The available plugins from the marketplace are provided below. ONLY recommend pl
 
 ## Plugin Categories
 
-- **jutsu-\*** (武器 weapons): Skills for specific technologies and frameworks
-- **do-\*** (道 disciplines): Specialized agents for development practices and workflows
-- **hashi-\*** (先生 teachers): MCP servers for external integrations
+- **Languages/Frameworks/Tools/Validation**: Skills for specific technologies and frameworks
+- **Disciplines**: Specialized agents for development practices and workflows
+- **Services/Bridges**: MCP servers for external integrations
 - **bushido**: Core quality principles (ALWAYS recommend this)
 
 ## Your Analysis Process
@@ -28,14 +28,14 @@ The available plugins from the marketplace are provided below. ONLY recommend pl
 - Check if CURRENTLY INSTALLED PLUGINS section is provided in the prompt
 - If provided, you should:
   - **Understand why each plugin was likely added**: Look at plugin descriptions and infer original use case
-    - Example: `jutsu-typescript` suggests TypeScript development
-    - Example: `hashi-github` suggests GitHub integration needs
-    - Example: `do-frontend-development` suggests frontend focus
+    - Example: `typescript` suggests TypeScript development
+    - Example: `github` suggests GitHub integration needs
+    - Example: `frontend-development` suggests frontend focus
   - **Determine if each plugin is still relevant**:
     - Use the codebase statistics and configuration files to verify if the technology/practice is still in use
     - A plugin is still relevant if its associated technology/practice is actively used in the codebase
     - A plugin may be irrelevant if:
-      - The technology was removed (e.g., no more .ts files but jutsu-typescript is installed)
+      - The technology was removed (e.g., no more .ts files but typescript is installed)
       - The project migrated to a different platform (e.g., moved from GitHub to GitLab)
       - The framework changed (e.g., migrated from React to Vue)
   - **Keep relevant plugins in your recommendations**: If a plugin is still relevant, include it in your final list
@@ -45,8 +45,8 @@ The available plugins from the marketplace are provided below. ONLY recommend pl
 
 - Check if GIT REPOSITORY section is provided in the prompt
 - If provided, examine the remote URL to determine the hosting platform:
-  - URLs containing `github.com` → recommend `hashi-github`
-  - URLs containing `gitlab.com` or other GitLab instances → recommend `hashi-gitlab`
+  - URLs containing `github.com` → recommend `github`
+  - URLs containing `gitlab.com` or other GitLab instances → recommend `gitlab`
   - This helps integrate Claude Code with the project's issue tracking, PRs/MRs, and CI/CD
 
 ### STEP 3: Review pre-computed codebase statistics (if provided)
@@ -94,9 +94,9 @@ The available plugins from the marketplace are provided below. ONLY recommend pl
 ### STEP 6: Match findings to available plugins
 
 - Look at the plugin descriptions and keywords below
-- Cross-reference detected technologies with available jutsu-\* plugins
-- Cross-reference development practices with available do-\* plugins
-- Cross-reference integrations with available hashi-\* plugins
+- Cross-reference detected technologies with available language/framework/tool plugins
+- Cross-reference development practices with available discipline plugins
+- Cross-reference integrations with available service/bridge plugins
 - ONLY recommend plugins from the list provided
 - Aim for 3-8 total plugins that best match the codebase
 - Always include "bushido" as it's the core plugin
@@ -106,7 +106,7 @@ The available plugins from the marketplace are provided below. ONLY recommend pl
 Return ONLY a JSON array of recommended plugin names from the available plugins list:
 
 ```json
-["bushido", "jutsu-typescript", "jutsu-react", "do-frontend-development"]
+["bushido", "typescript", "react", "frontend-development"]
 ```
 
 **CRITICAL**: Only recommend plugins that appear in the AVAILABLE PLUGINS list below. Never recommend plugins not in the list.

@@ -14,7 +14,7 @@ If no topic provided, ask the user what angle they want to cover.
 
 ## MCP Server Required
 
-This command requires the `hashi-reddit` MCP server to be installed and running.
+This command requires the `reddit` MCP server to be installed and running.
 
 ## Phase 1: Research Reddit Discussions
 
