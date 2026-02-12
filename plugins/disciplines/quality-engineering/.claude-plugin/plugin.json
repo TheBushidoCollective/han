@@ -1,7 +1,7 @@
 {
-  "name": "claude-plugin-development",
-  "version": "1.3.0",
-  "description": "Specialized agents for developing, testing, and maintaining Claude Code plugins with quality enforcement hooks.",
+  "name": "quality-engineering",
+  "version": "2.0.0",
+  "description": "Agents specialized in quality assurance, testing strategies, and test architecture. Focuses on ensuring code quality and reliability.",
   "author": {
     "name": "The Bushido Collective",
     "url": "https://thebushido.co"
@@ -10,9 +10,9 @@
   "repository": "https://github.com/thebushidocollective/han",
   "license": "Apache-2.0",
   "keywords": [
-    "plugin",
-    "development",
-    "claude-code",
-    "quality"
+    "quality",
+    "testing",
+    "qa",
+    "reliability"
   ]
 }

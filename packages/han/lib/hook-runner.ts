@@ -9,7 +9,8 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
+import micromatch from 'micromatch';
 import {
   getClaudeConfigDir,
   getMergedPluginsAndMarketplaces,
@@ -19,6 +20,7 @@ import {
   isCacheEnabled,
   isFailFastEnabled,
 } from './config/han-settings.ts';
+import { getSessionModifiedFiles, sessionFileValidations } from './db/index.ts';
 import { getEventLogger } from './events/logger.ts';
 import {
   checkFailureSignal,
@@ -40,9 +42,17 @@ import {
 import {
   getHookConfigs,
   getHookDefinition,
+  type PluginHookDefinition,
   type ResolvedHookConfig,
 } from './hooks/hook-config.ts';
+import {
+  buildCommandWithFiles,
+  HAN_FILES_TEMPLATE,
+} from './hooks/transcript-filter.ts';
 import { getPluginNameFromRoot, isDebugMode } from './shared.ts';
+
+// Re-export for tests
+export { HAN_FILES_TEMPLATE, buildCommandWithFiles };
 
 /**
  * Compute SHA256 hash of a command string.
@@ -750,6 +760,11 @@ export interface RunConfiguredHookOptions {
    * Required for hooks to be cached properly.
    */
   sessionId?: string;
+  /**
+   * Enable ${HAN_FILES} substitution from session-modified files.
+   * For Stop hooks: substitutes with session-modified files filtered by hook rules.
+   */
+  async?: boolean;
 }
 
 /**
@@ -1124,10 +1139,26 @@ export async function runConfiguredHook(
       }
     }
 
+    // Substitute ${HAN_FILES} with session-modified files when --async is set
+    let commandToRun = config.command;
+    if (options.async && config.command.includes(HAN_FILES_TEMPLATE)) {
+      const substitution = await substituteHanFilesForStop(
+        config.command,
+        config,
+        sessionId,
+        projectRoot
+      );
+      if (substitution.skipped) {
+        skippedCount++;
+        continue;
+      }
+      commandToRun = substitution.command;
+    }
+
     // In verbose mode, show what we're running
     if (verbose) {
       console.log(`\n[${pluginName}/${hookName}] Running in ${relativePath}:`);
-      console.log(`  $ ${config.command}\n`);
+      console.log(`  $ ${commandToRun}\n`);
     }
 
     // Log hook run event (start)
@@ -1145,7 +1176,7 @@ export async function runConfiguredHook(
     const result = await withGlobalSlot(hookName, pluginName, async () => {
       return runCommand({
         dir: config.directory,
-        cmd: config.command,
+        cmd: commandToRun,
         verbose,
         idleTimeout: config.idleTimeout,
         hookName,
@@ -1342,4 +1373,389 @@ export async function runConfiguredHook(
     `\n✅ All ${ranCount} director${ranCount === 1 ? 'y' : 'ies'} passed`
   );
   process.exit(0);
+}
+
+// ============================================
+// Async PostToolUse Hook Support
+// ============================================
+
+/**
+ * Extract file path from a PostToolUse stdin payload.
+ * Returns null if the tool doesn't operate on a file.
+ */
+export function extractFilePath(payload: {
+  tool_name?: string;
+  tool_input?: Record<string, unknown>;
+}): string | null {
+  const toolInput = payload.tool_input;
+  if (!toolInput) return null;
+
+  switch (payload.tool_name) {
+    case 'Edit':
+    case 'Write':
+    case 'Read':
+      return (toolInput.file_path as string) || null;
+    case 'NotebookEdit':
+      return (toolInput.notebook_path as string) || null;
+    default:
+      return null;
+  }
+}
+
+/**
+ * Walk up from a file's directory to the project root, checking for
+ * dirs_with markers and dir_test at each level.
+ * Returns the first matching directory, or null if none match.
+ */
+export function findMatchingDirectory(
+  filePath: string,
+  hookDef: PluginHookDefinition,
+  projectRoot: string
+): string | null {
+  if (!hookDef.dirsWith || hookDef.dirsWith.length === 0) {
+    // No dirsWith = project root is the target
+    return projectRoot;
+  }
+
+  let current = dirname(filePath);
+
+  // Walk up until we hit or pass the project root
+  while (current.startsWith(projectRoot)) {
+    // Check if all markers exist in this directory
+    const allMarkersPresent = hookDef.dirsWith.every((marker) =>
+      existsSync(join(current, marker))
+    );
+
+    if (allMarkersPresent) {
+      // Check dir_test if specified
+      if (hookDef.dirTest) {
+        try {
+          execSync(hookDef.dirTest, {
+            cwd: current,
+            stdio: ['ignore', 'ignore', 'ignore'],
+            encoding: 'utf8',
+            shell: '/bin/bash',
+          });
+        } catch {
+          // dir_test failed, try parent
+          const parent = dirname(current);
+          if (parent === current) break;
+          current = parent;
+          continue;
+        }
+      }
+      return current;
+    }
+
+    const parent = dirname(current);
+    if (parent === current) break; // Reached filesystem root
+    current = parent;
+  }
+
+  return null;
+}
+
+/**
+ * Check if a file matches the ifChanged patterns of a hook.
+ * @param filePath - Absolute file path
+ * @param matchedDir - The directory that matched dirs_with
+ * @param patterns - ifChanged glob patterns from hook config
+ * @returns true if the file matches (or if no patterns = match all)
+ */
+export function fileMatchesIfChanged(
+  filePath: string,
+  matchedDir: string,
+  patterns: string[] | undefined
+): boolean {
+  if (!patterns || patterns.length === 0) {
+    return true; // No patterns = match everything
+  }
+
+  const relPath = relative(matchedDir, filePath);
+  return micromatch.isMatch(relPath, patterns, { dot: true });
+}
+
+/**
+ * Options for running an async PostToolUse hook
+ */
+export interface RunAsyncPostToolUseOptions {
+  pluginName: string;
+  hookName: string;
+  payload: {
+    session_id?: string;
+    tool_name?: string;
+    tool_input?: Record<string, unknown>;
+    cwd?: string;
+  };
+  verbose?: boolean;
+}
+
+/**
+ * Async hook output format per Claude Code protocol.
+ * Output as JSON to stdout with exit code 0.
+ */
+interface AsyncHookOutput {
+  /** Error context shown to the agent */
+  systemMessage: string;
+  /** Instructions for fixing, including raw command */
+  additionalContext: string;
+  /** Optional: block the agent from continuing */
+  decision?: string;
+  /** Optional: hook-specific output for PostToolUse */
+  hookSpecificOutput?: {
+    hookEventName: string;
+  };
+}
+
+/**
+ * Run a PostToolUse hook asynchronously for a single file.
+ *
+ * This implements per-file validation: extract the file from the tool payload,
+ * check if it matches the hook's directory markers and file patterns,
+ * check the per-file cache, and run the hook command with ${HAN_FILES}
+ * substituted for just the one file.
+ */
+export async function runAsyncPostToolUse(
+  options: RunAsyncPostToolUseOptions
+): Promise<void> {
+  const { pluginName, hookName, payload, verbose } = options;
+
+  // a) Extract file path from payload
+  const filePath = extractFilePath(payload);
+  if (!filePath) {
+    process.exit(0);
+  }
+
+  // File must exist on disk
+  if (!existsSync(filePath)) {
+    process.exit(0);
+  }
+
+  // b) Resolve plugin root
+  let pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
+  if (!pluginRoot) {
+    const discovered = discoverPluginRoot(pluginName);
+    if (!discovered) {
+      if (isDebugMode()) {
+        console.error(
+          `[han hook run --async] Plugin "${pluginName}" not found, skipping`
+        );
+      }
+      process.exit(0);
+    }
+    pluginRoot = discovered;
+  }
+
+  const rawProjectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  const projectRoot = existsSync(rawProjectRoot)
+    ? realpathSync(rawProjectRoot)
+    : rawProjectRoot;
+
+  // c) Load hook definition
+  const hookDef = getHookDefinition(pluginRoot, hookName);
+  if (!hookDef) {
+    if (isDebugMode()) {
+      console.error(
+        `[han hook run --async] Hook "${hookName}" not found in plugin "${pluginName}"`
+      );
+    }
+    process.exit(0);
+  }
+
+  // d) Validate ${HAN_FILES} is in command
+  if (!hookDef.command.includes(HAN_FILES_TEMPLATE)) {
+    console.error(
+      `Error: PostToolUse async hooks MUST include ${HAN_FILES_TEMPLATE} in their command.\n` +
+        `Hook "${pluginName}/${hookName}" command: ${hookDef.command}`
+    );
+    process.exit(1);
+  }
+
+  // e) Find matching directory by walking up from file
+  const matchedDir = findMatchingDirectory(filePath, hookDef, projectRoot);
+  if (!matchedDir) {
+    // File is not in a directory that matches this hook's dirs_with
+    process.exit(0);
+  }
+
+  // f) Check file against ifChanged patterns
+  if (!fileMatchesIfChanged(filePath, matchedDir, hookDef.ifChanged)) {
+    process.exit(0);
+  }
+
+  // File path relative to the matched directory
+  const relPath = relative(matchedDir, filePath);
+  const relDir =
+    matchedDir === projectRoot
+      ? '.'
+      : matchedDir.replace(`${projectRoot}/`, '');
+
+  // g) Check per-file cache
+  const sessionId =
+    payload.session_id || process.env.CLAUDE_SESSION_ID || undefined;
+  const commandHash = computeCommandHash(hookDef.command);
+
+  if (sessionId) {
+    try {
+      const existing = await sessionFileValidations.get(
+        sessionId,
+        filePath,
+        pluginName,
+        hookName,
+        matchedDir
+      );
+
+      if (existing) {
+        // Check if file hash is still the same
+        const currentHash = computeFileHash(filePath);
+        if (
+          existing.fileHash === currentHash &&
+          existing.commandHash === commandHash
+        ) {
+          // Cache hit - file hasn't changed since last validation
+          if (isDebugMode()) {
+            console.error(
+              `[han hook run --async] Cache hit for ${relPath} in ${relDir}`
+            );
+          }
+          process.exit(0);
+        }
+      }
+    } catch {
+      // Cache check failed, proceed with validation
+    }
+  }
+
+  // h) Build command with single file
+  // Get user overrides for the command
+  const hookSettings = getPluginHookSettings(pluginName, hookName, matchedDir);
+  const rawCommand = hookSettings?.command || hookDef.command;
+  const command = buildCommandWithFiles(rawCommand, [relPath]);
+
+  if (verbose) {
+    console.log(`\n[${pluginName}/${hookName}] Async check in ${relDir}:`);
+    console.log(`  $ ${command}\n`);
+  }
+
+  // i) Execute command (no slot acquisition for PostToolUse)
+  const result = await runCommand({
+    dir: matchedDir,
+    cmd: command,
+    verbose,
+    hookName,
+    pluginRoot,
+    idleTimeout: hookDef.idleTimeout,
+  });
+
+  // j) On success - record validation and exit silently
+  if (result.success) {
+    if (sessionId) {
+      try {
+        const fileHash = computeFileHash(filePath);
+        await sessionFileValidations.record({
+          sessionId,
+          filePath,
+          fileHash,
+          pluginName,
+          hookName,
+          directory: matchedDir,
+          commandHash,
+        });
+      } catch {
+        // Cache write failed, non-fatal
+      }
+    }
+    process.exit(0);
+  }
+
+  // k) On failure - output Claude Code async hook JSON payload
+  const errorOutput = result.output?.trim() || '(no output captured)';
+  const truncatedError = errorOutput.slice(0, 2000);
+
+  // Build the raw tool command for the agent to run directly
+  const rawToolCommand = buildCommandWithFiles(rawCommand, [relPath]);
+  const cdPrefix = relDir === '.' ? '' : `cd ${relDir} && `;
+
+  const output: AsyncHookOutput = {
+    systemMessage: `❌ ${pluginName}/${hookName} failed in ${relDir} (${relPath}):\n\n${truncatedError}`,
+    additionalContext:
+      `REQUIREMENT: Fix the ${hookName} errors shown above before proceeding.\n\n` +
+      `Verify with: ${cdPrefix}${rawToolCommand}`,
+    decision: 'block',
+    hookSpecificOutput: {
+      hookEventName: 'PostToolUse',
+    },
+  };
+
+  // Output JSON to stdout and exit 0 (per async hook protocol)
+  console.log(JSON.stringify(output));
+  process.exit(0);
+}
+
+// ============================================
+// ${HAN_FILES} Substitution for Stop Hooks
+// ============================================
+
+/**
+ * Substitute ${HAN_FILES} in a Stop hook command using session-modified files.
+ *
+ * Gets session-modified files, filters them to the config's directory and
+ * ifChanged patterns, and substitutes the template variable.
+ *
+ * @returns The modified command, or null if no matching files exist (skip this config)
+ */
+export async function substituteHanFilesForStop(
+  command: string,
+  config: ResolvedHookConfig,
+  sessionId: string | undefined,
+  _projectRoot: string
+): Promise<{ command: string; skipped: boolean }> {
+  if (!command.includes(HAN_FILES_TEMPLATE)) {
+    return { command, skipped: false };
+  }
+
+  if (!sessionId) {
+    // No session ID - fall back to "." (check all files)
+    return { command: buildCommandWithFiles(command, []), skipped: false };
+  }
+
+  try {
+    const sessionFiles = await getSessionModifiedFiles(sessionId);
+
+    if (!sessionFiles.success || sessionFiles.allModified.length === 0) {
+      // No session files or query failed - replace with "."
+      return { command: buildCommandWithFiles(command, []), skipped: false };
+    }
+
+    // Filter to files within this config's directory that still exist on disk
+    const relativeFiles = sessionFiles.allModified
+      .filter((absPath) => {
+        const inDirectory =
+          absPath.startsWith(`${config.directory}/`) ||
+          absPath === config.directory;
+        return inDirectory && existsSync(absPath);
+      })
+      .map((absPath) => relative(config.directory, absPath));
+
+    // Further filter by ifChanged patterns if present
+    let filteredFiles = relativeFiles;
+    if (config.ifChanged && config.ifChanged.length > 0) {
+      filteredFiles = relativeFiles.filter((relFile) =>
+        micromatch.isMatch(relFile, config.ifChanged as string[], { dot: true })
+      );
+    }
+
+    if (filteredFiles.length === 0) {
+      // No matching session files for this directory - skip
+      return { command, skipped: true };
+    }
+
+    return {
+      command: buildCommandWithFiles(command, filteredFiles),
+      skipped: false,
+    };
+  } catch {
+    // Error getting session files - fall back to "."
+    return { command: buildCommandWithFiles(command, []), skipped: false };
+  }
 }

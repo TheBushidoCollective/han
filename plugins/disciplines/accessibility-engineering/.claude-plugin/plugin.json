@@ -1,7 +1,7 @@
 {
-  "name": "claude-plugin-development",
-  "version": "1.3.0",
-  "description": "Specialized agents for developing, testing, and maintaining Claude Code plugins with quality enforcement hooks.",
+  "name": "accessibility-engineering",
+  "version": "1.1.2",
+  "description": "Accessibility engineering agents providing expertise in WCAG, ARIA, and inclusive design",
   "author": {
     "name": "The Bushido Collective",
     "url": "https://thebushido.co"
@@ -10,9 +10,8 @@
   "repository": "https://github.com/thebushidocollective/han",
   "license": "Apache-2.0",
   "keywords": [
-    "plugin",
-    "development",
-    "claude-code",
-    "quality"
+    "accessibility",
+    "wcag",
+    "inclusive-design"
   ]
 }
