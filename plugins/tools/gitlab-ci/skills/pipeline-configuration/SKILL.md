@@ -1,5 +1,6 @@
 ---
 name: gitlab-ci-pipeline-configuration
+user-invocable: false
 description: Use when configuring GitLab CI/CD pipelines, defining stages, or setting up workflow rules. Covers pipeline structure, stage ordering, and execution flow.
 allowed-tools:
   - Read

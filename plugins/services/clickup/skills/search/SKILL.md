@@ -7,7 +7,7 @@ description: Search for ClickUp tasks
 
 ## Name
 
-hashi-clickup:search - Search for ClickUp tasks
+clickup:search - Search for ClickUp tasks
 
 ## Synopsis
 

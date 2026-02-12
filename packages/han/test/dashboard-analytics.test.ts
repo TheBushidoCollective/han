@@ -7,7 +7,6 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
-  calculateCost,
   classifyCompactionType,
   computeSentimentTrend,
   formatWeekLabel,
@@ -15,6 +14,7 @@ import {
   parseTokensFromRawJson,
   round,
 } from '../lib/graphql/types/dashboard-analytics.ts';
+import { calculateDefaultCost as calculateCost } from '../lib/pricing/model-pricing.ts';
 
 describe('round', () => {
   test('rounds to 2 decimal places', () => {

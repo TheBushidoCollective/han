@@ -14,9 +14,9 @@ learn_patterns:
 # Convention: provider name = plugin name, script = memory-provider.ts
 memory:
   allowed_tools:
-    - mcp__plugin_hashi-gitlab_gitlab__list_merge_requests
-    - mcp__plugin_hashi-gitlab_gitlab__get_merge_request
-    - mcp__plugin_hashi-gitlab_gitlab__list_issues
+    - mcp__plugin_gitlab_gitlab__list_merge_requests
+    - mcp__plugin_gitlab_gitlab__get_merge_request
+    - mcp__plugin_gitlab_gitlab__list_issues
   system_prompt: |
     Extract observations from GitLab merge requests and issues. For each item, capture:
     - author: GitLab username

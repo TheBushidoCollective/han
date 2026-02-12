@@ -1,5 +1,6 @@
 ---
 name: cocoapods-podspec-fundamentals
+user-invocable: false
 description: Use when creating or modifying CocoaPods podspec files. Covers required attributes, file patterns, dependencies, and platform specifications for iOS, macOS, tvOS, watchOS, and visionOS projects.
 allowed-tools:
   - Read

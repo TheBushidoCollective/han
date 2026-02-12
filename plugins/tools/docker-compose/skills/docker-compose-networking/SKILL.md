@@ -1,5 +1,6 @@
 ---
 name: docker-compose-networking
+user-invocable: false
 description: Use when configuring networks and service communication in Docker Compose including bridge networks, overlay networks, service discovery, and inter-service communication.
 allowed-tools: [Bash, Read]
 ---

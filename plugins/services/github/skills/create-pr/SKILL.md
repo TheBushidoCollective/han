@@ -7,7 +7,7 @@ description: Create a new pull request in a GitHub repository
 
 ## Name
 
-hashi-github:create-pr - Create a new pull request in a GitHub repository
+github:create-pr - Create a new pull request in a GitHub repository
 
 ## Synopsis
 

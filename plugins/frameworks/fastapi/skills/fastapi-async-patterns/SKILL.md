@@ -1,5 +1,6 @@
 ---
 name: fastapi-async-patterns
+user-invocable: false
 description: Use when FastAPI async patterns for building high-performance APIs. Use when handling concurrent requests and async operations.
 allowed-tools:
   - Bash

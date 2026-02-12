@@ -1,4 +1,4 @@
-# jutsu-webpack
+# Webpack
 
 Webpack build validation with automatic package manager detection.
 
@@ -9,7 +9,7 @@ Provides Stop hooks that validate Webpack builds complete successfully before al
 ## Installation
 
 ```bash
-han plugin install jutsu-webpack
+han plugin install webpack
 ```
 
 ## Features

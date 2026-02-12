@@ -1,5 +1,6 @@
 ---
 name: kustomize-overlays
+user-invocable: false
 description: Use when managing environment-specific Kubernetes configurations with Kustomize overlays and patches.
 allowed-tools: [Bash, Read]
 ---

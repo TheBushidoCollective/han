@@ -1,5 +1,6 @@
 ---
 name: effect-core-patterns
+user-invocable: false
 description: Use when Effect core patterns including Effect<A, E, R> type, succeed, fail, sync, promise, and Effect.gen for composing effects. Use for basic Effect operations.
 allowed-tools:
   - Bash

@@ -7,7 +7,7 @@ description: Add a comment to a ClickUp task
 
 ## Name
 
-hashi-clickup:comment - Add a comment to a ClickUp task
+clickup:comment - Add a comment to a ClickUp task
 
 ## Synopsis
 

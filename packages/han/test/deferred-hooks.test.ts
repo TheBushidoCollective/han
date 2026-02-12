@@ -12,6 +12,9 @@ import { mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { _resetDbState } from '../lib/db/index.ts';
 
+// Skip tests that require native module when SKIP_NATIVE is set
+const SKIP_NATIVE = process.env.SKIP_NATIVE === 'true';
+
 // Save original environment
 const originalClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR;
 

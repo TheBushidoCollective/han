@@ -549,7 +549,7 @@ Discipline plugins provide specialized AI agents for complex, multi-phase workfl
 ### Structure
 
 ```
-disciplines/frontend/
+disciplines/frontend-development/
 ├── .claude-plugin/
 │   └── plugin.json
 ├── agents/

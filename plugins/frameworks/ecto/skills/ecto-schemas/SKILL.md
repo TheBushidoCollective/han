@@ -1,5 +1,6 @@
 ---
 name: ecto-schemas
+user-invocable: false
 description: Use when defining and working with Ecto schemas including field types, associations, and embedded schemas. Use when modeling database entities in Elixir.
 allowed-tools:
   - Bash

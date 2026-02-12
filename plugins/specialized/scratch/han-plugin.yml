@@ -1,4 +1,4 @@
-# jutsu-scratch plugin configuration
+# scratch plugin configuration
 # Enforces scratch workspace usage for exploratory development
 #
 # Hooks are defined in .claude-plugin/hooks.json for direct Claude Code integration

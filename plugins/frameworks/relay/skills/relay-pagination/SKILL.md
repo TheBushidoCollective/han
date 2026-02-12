@@ -1,5 +1,6 @@
 ---
 name: relay-pagination
+user-invocable: false
 description: Use when relay pagination with cursor-based pagination, infinite scroll, load more patterns, and connection protocols.
 allowed-tools:
   - Read

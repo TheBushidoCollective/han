@@ -136,8 +136,8 @@ describe('migrateSettingsFile', () => {
     // Verify file was updated
     const updated = JSON.parse(readFileSync(settingsPath, 'utf-8'));
     expect(updated.permissions.allow).toContain('typescript@han');
-    // do-frontend-development maps to disciplines/frontend, so short name is "frontend"
-    expect(updated.permissions.allow).toContain('frontend@han');
+    // do-frontend-development maps to disciplines/frontend-development, so short name is "frontend-development"
+    expect(updated.permissions.allow).toContain('frontend-development@han');
     expect(updated.permissions.allow).toContain('some-other-tool');
     expect(updated.permissions.allow).not.toContain('jutsu-typescript@han');
   });
@@ -330,11 +330,13 @@ describe('migration integration', () => {
     expect(userUpdated.enabledPlugins['typescript@han']).toBe(true);
 
     // Verify project settings
-    // do-frontend-development maps to disciplines/frontend, so short name is "frontend"
+    // do-frontend-development maps to disciplines/frontend-development, so short name is "frontend-development"
     const projectUpdated = JSON.parse(
       readFileSync(projectSettingsPath, 'utf-8')
     );
-    expect(projectUpdated.enabledPlugins['frontend@han']).toBe(true);
+    expect(projectUpdated.enabledPlugins['frontend-development@han']).toBe(
+      true
+    );
   });
 
   test('should handle empty settings files gracefully', () => {

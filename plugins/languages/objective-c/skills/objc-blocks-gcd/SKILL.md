@@ -1,5 +1,6 @@
 ---
 name: Objective-C Blocks and GCD
+user-invocable: false
 description: Use when blocks (closures) and Grand Central Dispatch in Objective-C for concurrent programming including block syntax, capture semantics, dispatch queues, dispatch groups, and patterns for thread-safe asynchronous code.
 allowed-tools: []
 ---

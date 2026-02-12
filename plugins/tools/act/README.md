@@ -1,10 +1,10 @@
-# Jutsu-Act
+# Act
 
 Validation and quality enforcement for GitHub Actions workflows with act local testing.
 
 ## Overview
 
-Jutsu-Act is a Han plugin that brings GitHub Actions workflow validation and local testing capabilities directly into your Claude Code workflow. Using [act](https://github.com/nektos/act), this plugin enables you to test GitHub Actions workflows locally using Docker, catch issues before pushing to GitHub, and iterate rapidly on CI/CD configurations.
+Act is a Han plugin that brings GitHub Actions workflow validation and local testing capabilities directly into your Claude Code workflow. Using [act](https://github.com/nektos/act), this plugin enables you to test GitHub Actions workflows locally using Docker, catch issues before pushing to GitHub, and iterate rapidly on CI/CD configurations.
 
 ## Features
 
@@ -59,10 +59,8 @@ Docker configuration for act:
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install jutsu-act
+han plugin install act
 ```
 
 ## Requirements
@@ -90,7 +88,7 @@ han plugin install jutsu-act
 
 ### Automatic Validation
 
-Jutsu-Act automatically validates workflows when:
+This plugin automatically validates workflows when:
 
 1. **You stop Claude Code** - Ensures workflows are valid before ending session
 2. **Agents complete tasks** - Validates after automated changes
@@ -274,7 +272,7 @@ act --container-options "--user $(id -u):$(id -g)"
 
 ## Philosophy
 
-Jutsu-Act follows Han's validation and quality enforcement philosophy:
+This plugin follows Han's validation and quality enforcement philosophy:
 
 1. **Validate Early** - Catch issues before they reach GitHub
 2. **Local-First** - Test workflows on your machine, not in CI

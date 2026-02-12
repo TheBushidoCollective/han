@@ -7,23 +7,19 @@
  * decision/reason/systemMessage fields.
  */
 
-import type { HookResult } from "./types"
-import type { GeminiHookOutput } from "./types"
+import type { GeminiHookOutput, HookResult } from './types';
 
 /**
  * Format a single hook result as a text block.
  */
 function formatSingleResult(result: HookResult): string {
-  const { hook, exitCode, stdout, stderr } = result
-  const status = exitCode === 0 ? "passed" : "failed"
-  const output = (stdout || stderr).trim()
+  const { hook, exitCode, stdout, stderr } = result;
+  const status = exitCode === 0 ? 'passed' : 'failed';
+  const output = (stdout || stderr).trim();
 
-  if (!output) return ""
+  if (!output) return '';
 
-  return [
-    `[${hook.pluginName}/${hook.name}] ${status}:`,
-    output,
-  ].join("\n")
+  return [`[${hook.pluginName}/${hook.name}] ${status}:`, output].join('\n');
 }
 
 /**
@@ -32,26 +28,26 @@ function formatSingleResult(result: HookResult): string {
  * Returns a GeminiHookOutput with validation results as systemMessage.
  * If all hooks pass, returns null (empty response).
  */
-export function formatAfterToolResults(results: HookResult[]): GeminiHookOutput | null {
-  const failures = results.filter(
-    (r) => !r.skipped && r.exitCode !== 0,
-  )
+export function formatAfterToolResults(
+  results: HookResult[]
+): GeminiHookOutput | null {
+  const failures = results.filter((r) => !r.skipped && r.exitCode !== 0);
 
-  if (failures.length === 0) return null
+  if (failures.length === 0) return null;
 
-  const blocks = failures.map(formatSingleResult).filter(Boolean)
-  if (blocks.length === 0) return null
+  const blocks = failures.map(formatSingleResult).filter(Boolean);
+  if (blocks.length === 0) return null;
 
   const message = [
-    "Han validation hooks found issues after your last edit.",
-    "Please fix these issues before continuing:",
-    "",
+    'Han validation hooks found issues after your last edit.',
+    'Please fix these issues before continuing:',
+    '',
     ...blocks,
-  ].join("\n")
+  ].join('\n');
 
   return {
     systemMessage: message,
-  }
+  };
 }
 
 /**
@@ -60,27 +56,27 @@ export function formatAfterToolResults(results: HookResult[]): GeminiHookOutput 
  * If validation fails, returns decision: "block" to force the agent
  * to continue and fix the issues.
  */
-export function formatAfterAgentResults(results: HookResult[]): GeminiHookOutput | null {
-  const failures = results.filter(
-    (r) => !r.skipped && r.exitCode !== 0,
-  )
+export function formatAfterAgentResults(
+  results: HookResult[]
+): GeminiHookOutput | null {
+  const failures = results.filter((r) => !r.skipped && r.exitCode !== 0);
 
-  if (failures.length === 0) return null
+  if (failures.length === 0) return null;
 
-  const blocks = failures.map(formatSingleResult).filter(Boolean)
-  if (blocks.length === 0) return null
+  const blocks = failures.map(formatSingleResult).filter(Boolean);
+  if (blocks.length === 0) return null;
 
   const reason = [
-    "Han validation hooks found issues that need to be fixed:",
-    "",
+    'Han validation hooks found issues that need to be fixed:',
+    '',
     ...blocks,
-  ].join("\n")
+  ].join('\n');
 
   return {
-    decision: "block",
+    decision: 'block',
     reason,
-    systemMessage: "Validation failed - fixing issues before completing.",
-  }
+    systemMessage: 'Validation failed - fixing issues before completing.',
+  };
 }
 
 /**
@@ -88,24 +84,20 @@ export function formatAfterAgentResults(results: HookResult[]): GeminiHookOutput
  *
  * If any hook fails, returns decision: "deny" to block the tool execution.
  */
-export function formatBeforeToolResults(results: HookResult[]): GeminiHookOutput | null {
-  const failures = results.filter(
-    (r) => !r.skipped && r.exitCode !== 0,
-  )
+export function formatBeforeToolResults(
+  results: HookResult[]
+): GeminiHookOutput | null {
+  const failures = results.filter((r) => !r.skipped && r.exitCode !== 0);
 
-  if (failures.length === 0) return null
+  if (failures.length === 0) return null;
 
-  const blocks = failures.map(formatSingleResult).filter(Boolean)
-  if (blocks.length === 0) return null
+  const blocks = failures.map(formatSingleResult).filter(Boolean);
+  if (blocks.length === 0) return null;
 
-  const reason = [
-    "Han pre-tool validation failed:",
-    "",
-    ...blocks,
-  ].join("\n")
+  const reason = ['Han pre-tool validation failed:', '', ...blocks].join('\n');
 
   return {
-    decision: "deny",
+    decision: 'deny',
     reason,
-  }
+  };
 }

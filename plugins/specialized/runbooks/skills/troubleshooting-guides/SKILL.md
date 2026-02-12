@@ -1,5 +1,6 @@
 ---
 name: runbooks-troubleshooting-guides
+user-invocable: false
 description: Use when creating troubleshooting guides and diagnostic procedures for operational issues. Covers problem diagnosis, root cause analysis, and systematic debugging.
 allowed-tools:
   - Read

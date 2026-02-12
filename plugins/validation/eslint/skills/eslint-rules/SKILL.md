@@ -1,5 +1,6 @@
 ---
 name: eslint-rules
+user-invocable: false
 description: Use when eSLint built-in rules including rule configuration, severity levels, and disabling strategies.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

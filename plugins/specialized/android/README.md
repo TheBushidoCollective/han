@@ -1,4 +1,4 @@
-# jutsu-android
+# Android
 
 Android development validation with Gradle build hooks for Claude Code.
 
@@ -11,7 +11,7 @@ Android development validation with Gradle build hooks for Claude Code.
 ## Installation
 
 ```bash
-han plugin install jutsu-android
+han plugin install android
 ```
 
 ## Hooks
@@ -30,7 +30,7 @@ Automatically runs when you stop Claude Code to ensure the Android project build
 You can customize the hook behavior in your project's `han-config.yml`:
 
 ```yaml
-jutsu-android:
+android:
   hooks:
     build:
       enabled: true
@@ -41,7 +41,7 @@ jutsu-android:
 To disable the hook for a specific project:
 
 ```yaml
-jutsu-android:
+android:
   hooks:
     build:
       enabled: false
@@ -61,6 +61,6 @@ jutsu-android:
 
 ## Related Plugins
 
-- **jutsu-kotlin**: Kotlin language skills
-- **jutsu-java**: Java language skills
-- **jutsu-expo**: React Native with Expo
+- **kotlin**: Kotlin language skills
+- **java**: Java language skills
+- **expo**: React Native with Expo

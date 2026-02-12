@@ -16,9 +16,9 @@ learn_patterns:
 # Convention: provider name = plugin name, script = memory-provider.ts
 memory:
   allowed_tools:
-    - mcp__plugin_hashi-jira_atlassian__search_issues
-    - mcp__plugin_hashi-jira_atlassian__get_issue
-    - mcp__plugin_hashi-jira_atlassian__list_projects
+    - mcp__plugin_jira_atlassian__search_issues
+    - mcp__plugin_jira_atlassian__get_issue
+    - mcp__plugin_jira_atlassian__list_projects
   system_prompt: |
     Extract observations from Jira tickets and projects. For each item, capture:
     - author: Jira user (reporter or assignee)

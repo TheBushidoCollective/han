@@ -40,8 +40,6 @@ work is marked complete.
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install jutsu-rspec
+han plugin install rspec
 ```

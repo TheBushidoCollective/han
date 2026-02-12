@@ -328,13 +328,18 @@ export function gitCreateBranch(dir: string, branch: string): void {
 }
 
 /**
- * Get session file changes
+ * Get session file changes, optionally filtered by agent_id
  */
 export function getSessionFileChanges(
   dbPath: string,
-  sessionId: string
+  sessionId: string,
+  agentId?: string | null
 ): ReturnType<NativeModule['getSessionFileChanges']> {
-  return getNativeModule().getSessionFileChanges(dbPath, sessionId);
+  return getNativeModule().getSessionFileChanges(
+    dbPath,
+    sessionId,
+    agentId ?? null
+  );
 }
 
 // ============================================================================

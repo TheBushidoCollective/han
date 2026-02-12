@@ -1,5 +1,6 @@
 ---
 name: rspec-fundamentals
+user-invocable: false
 description: Use when rSpec fundamentals including describe, context, it blocks, let, and basic matchers for BDD testing.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

@@ -1,5 +1,6 @@
 ---
 name: structural-design-principles
+user-invocable: false
 description: Use when designing modules and components requiring Composition Over Inheritance, Law of Demeter, Tell Don't Ask, and Encapsulation principles that transcend programming paradigms.
 allowed-tools:
   - Read

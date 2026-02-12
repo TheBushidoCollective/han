@@ -1,5 +1,6 @@
 ---
 name: ruby-gems-bundler
+user-invocable: false
 description: Use when working with Ruby gems, Bundler for dependency management, creating gemspecs, and publishing gems to RubyGems.
 allowed-tools:
   - Bash

@@ -7,7 +7,7 @@ description: Create a new Standard Operating Procedure (SOP) file with proper st
 
 ## Name
 
-hashi-agent-sop:create-sop - Create a new Standard Operating Procedure file
+agent-sop:create-sop - Create a new Standard Operating Procedure file
 
 ## Synopsis
 

@@ -1,5 +1,6 @@
 ---
 name: cocoapods-test-specs
+user-invocable: false
 description: Use when adding automated tests to CocoaPods libraries using test specs. Covers test spec configuration, app host requirements, and testing patterns that integrate with pod lib lint validation.
 allowed-tools:
   - Read

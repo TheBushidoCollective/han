@@ -11,6 +11,8 @@
 
 import SchemaBuilder from '@pothos/core';
 import RelayPlugin from '@pothos/plugin-relay';
+import type { AuthContext } from '../auth/types.ts';
+import type { PermissionService } from '../permissions/index.ts';
 import type { GraphQLLoaders } from './loaders.ts';
 import {
   decodeGlobalId,
@@ -50,6 +52,14 @@ export interface GraphQLContext {
   request?: Request;
   /** DataLoaders for batching database access */
   loaders: GraphQLLoaders;
+  /** Authenticated user context (hosted mode) */
+  user?: UserContext;
+  /** Auth context with user and session (hosted mode) */
+  auth?: AuthContext;
+  /** Permission service for access control (hosted mode) */
+  permissions?: PermissionService;
+  /** Operating mode: 'local' or 'hosted' */
+  mode?: 'local' | 'hosted';
 }
 
 /**

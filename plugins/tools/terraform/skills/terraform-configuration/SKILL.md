@@ -1,5 +1,6 @@
 ---
 name: terraform-configuration
+user-invocable: false
 description: Use when writing and organizing Terraform infrastructure-as-code configurations for cloud resource provisioning.
 allowed-tools: []
 ---

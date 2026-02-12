@@ -1,5 +1,6 @@
 ---
 name: pulumi-basics
+user-invocable: false
 description: Use when writing infrastructure-as-code with Pulumi using programming languages for cloud resource provisioning.
 allowed-tools: []
 ---
@@ -22,6 +23,7 @@ my-infrastructure/
 
 ```yaml
 name: my-infrastructure
+user-invocable: false
 runtime: nodejs
 description: My infrastructure project
 ```

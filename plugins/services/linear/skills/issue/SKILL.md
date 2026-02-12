@@ -7,7 +7,7 @@ description: Get detailed information about a specific Linear issue
 
 ## Name
 
-hashi-linear:issue - Get detailed information about a specific Linear issue
+linear:issue - Get detailed information about a specific Linear issue
 
 ## Synopsis
 

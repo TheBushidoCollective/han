@@ -21,6 +21,7 @@ interface DailyActivity {
 
 interface LineChangesChartProps {
 	dailyActivity: ReadonlyArray<DailyActivity>;
+	firstSessionDate?: string | null;
 }
 
 // GitHub-style colors for line changes
@@ -80,22 +81,32 @@ function aggregateToWeeks(dailyActivity: ReadonlyArray<DailyActivity>): Array<{
 
 export function LineChangesChart({
 	dailyActivity,
+	firstSessionDate,
 }: LineChangesChartProps): React.ReactElement {
+	// Trim activity to start from the first session date
+	const trimmedActivity = useMemo(() => {
+		if (!firstSessionDate) return dailyActivity;
+		return dailyActivity.filter((d) => d.date >= firstSessionDate);
+	}, [dailyActivity, firstSessionDate]);
+
 	// Aggregate into weeks for cleaner visualization
-	const weeks = useMemo(() => aggregateToWeeks(dailyActivity), [dailyActivity]);
+	const weeks = useMemo(
+		() => aggregateToWeeks(trimmedActivity),
+		[trimmedActivity],
+	);
 
 	// Calculate totals
 	const totals = useMemo(() => {
 		let added = 0;
 		let removed = 0;
 		let files = 0;
-		for (const d of dailyActivity) {
+		for (const d of trimmedActivity) {
 			added += d.linesAdded;
 			removed += d.linesRemoved;
 			files += d.filesChanged;
 		}
 		return { added, removed, files };
-	}, [dailyActivity]);
+	}, [trimmedActivity]);
 
 	// Calculate max for scaling
 	const maxChange = useMemo(() => {
@@ -208,6 +219,32 @@ export function LineChangesChart({
 					})}
 				</HStack>
 			</VStack>
+
+			{/* Date labels */}
+			<HStack style={{ width: "100%" }}>
+				{weeks.map((w, idx) => {
+					const date = new Date(w.startDate);
+					const prevWeek = weeks[idx - 1];
+					const isNewMonth =
+						!prevWeek ||
+						new Date(prevWeek.startDate).getMonth() !== date.getMonth();
+					return (
+						<Box
+							key={`date-${w.startDate}`}
+							style={{ flex: 1, overflow: "visible" }}
+						>
+							{isNewMonth ? (
+								<Text color="muted" size="xs" style={{ whiteSpace: "nowrap" }}>
+									{date.toLocaleDateString("en-US", {
+										month: "short",
+										day: "numeric",
+									})}
+								</Text>
+							) : null}
+						</Box>
+					);
+				})}
+			</HStack>
 
 			{/* Legend */}
 			<HStack gap="md" align="center">

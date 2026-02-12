@@ -1,5 +1,6 @@
 ---
 name: zustand-store-patterns
+user-invocable: false
 description: Use when creating and managing Zustand stores for React state management. Covers store creation, selectors, actions, and basic usage patterns.
 allowed-tools:
   - Read

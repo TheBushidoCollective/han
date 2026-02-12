@@ -1,5 +1,6 @@
 ---
 name: atomic-design-atoms
+user-invocable: false
 description: Use when creating atomic-level UI components like buttons, inputs, labels, and icons. The smallest building blocks of a design system.
 allowed-tools:
   - Bash

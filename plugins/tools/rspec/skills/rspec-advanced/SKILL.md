@@ -1,5 +1,6 @@
 ---
 name: rspec-advanced
+user-invocable: false
 description: Use when advanced RSpec features including custom matchers, shared examples, metadata, and hooks.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

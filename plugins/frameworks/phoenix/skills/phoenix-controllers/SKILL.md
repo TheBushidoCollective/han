@@ -1,5 +1,6 @@
 ---
 name: phoenix-controllers
+user-invocable: false
 description: Handle HTTP requests with Phoenix controllers including actions, parameters, rendering, flash messages, and redirects
 allowed-tools: [Bash, Read]
 ---

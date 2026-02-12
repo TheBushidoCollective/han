@@ -1,5 +1,6 @@
 ---
 name: phoenix-views-templates
+user-invocable: false
 description: Render views and templates in Phoenix using HEEx templates, function components, slots, and assigns
 allowed-tools: [Bash, Read]
 ---

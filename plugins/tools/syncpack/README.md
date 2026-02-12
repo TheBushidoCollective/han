@@ -1,4 +1,4 @@
-# jutsu-syncpack
+# Syncpack
 
 Syncpack validation and auto-fix for consistent dependency versions in JavaScript monorepos.
 
@@ -12,7 +12,7 @@ Syncpack validation and auto-fix for consistent dependency versions in JavaScrip
 ## Installation
 
 ```bash
-han plugin install jutsu-syncpack
+han plugin install syncpack
 ```
 
 ## Hooks
@@ -31,7 +31,7 @@ Formats package.json files consistently across the monorepo:
 
 - Sorts dependencies alphabetically
 - Applies consistent key ordering
-- Can be triggered manually via `han hook run jutsu-syncpack format`
+- Can be triggered manually via `han hook run syncpack format`
 
 ## Syncpack Configuration
 
@@ -125,9 +125,9 @@ Add to your CI pipeline:
 
 ## Related Plugins
 
-- **jutsu-lerna**: For Lerna-based monorepos
-- **jutsu-npm**: For npm workspace management
-- **jutsu-yarn**: For Yarn workspace management
+- **lerna**: For Lerna-based monorepos
+- **npm**: For npm workspace management
+- **yarn**: For Yarn workspace management
 
 ## Note
 

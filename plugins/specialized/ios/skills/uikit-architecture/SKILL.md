@@ -1,5 +1,6 @@
 ---
 name: ios-uikit-architecture
+user-invocable: false
 description: Use when building iOS apps with UIKit, implementing MVVM/MVC/Coordinator patterns, or integrating UIKit with SwiftUI.
 allowed-tools:
   - Read

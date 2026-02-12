@@ -90,6 +90,28 @@ export interface HanConfig {
   plugins?: {
     [pluginName: string]: PluginSettings;
   };
+  /**
+   * Sync configuration for team data synchronization.
+   * All fields are optional in config; resolved at runtime.
+   */
+  sync?: SyncConfig;
+}
+
+/**
+ * Sync configuration structure (stored in han.yml)
+ * The resolved runtime version lives in sync/types.ts
+ */
+export interface SyncConfig {
+  enabled?: boolean;
+  endpoint?: string;
+  apiKey?: string;
+  interval?: number;
+  batchSize?: number;
+  includePersonal?: boolean;
+  forceInclude?: string[];
+  forceExclude?: string[];
+  includeContent?: boolean;
+  compression?: boolean;
 }
 
 /**

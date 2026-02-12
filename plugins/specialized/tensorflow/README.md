@@ -1,4 +1,4 @@
-# TensorFlow Jutsu
+# TensorFlow
 
 TensorFlow machine learning and deep learning framework skills.
 
@@ -13,5 +13,5 @@ TensorFlow machine learning and deep learning framework skills.
 Install with npx (no installation required):
 
 ```bash
-han plugin install jutsu-tensorflow
+han plugin install tensorflow
 ```

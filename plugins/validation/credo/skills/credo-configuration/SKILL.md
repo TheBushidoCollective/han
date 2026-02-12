@@ -1,5 +1,6 @@
 ---
 name: credo-configuration
+user-invocable: false
 description: Use when configuring Credo static analysis for Elixir projects requiring customized code quality rules and settings.
 allowed-tools: []
 ---

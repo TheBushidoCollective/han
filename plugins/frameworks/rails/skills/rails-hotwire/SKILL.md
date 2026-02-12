@@ -1,5 +1,6 @@
 ---
 name: rails-hotwire
+user-invocable: false
 description: Use when hotwire (Turbo and Stimulus) for building modern reactive Rails applications without complex JavaScript frameworks.
 allowed-tools:
   - Read

@@ -1,5 +1,6 @@
 ---
 name: review
+user-invocable: false
 description: Multi-agent code review with confidence-based filtering
 ---
 
@@ -71,7 +72,7 @@ Launches multiple independent agents **in parallel** (single message, multiple T
 
 #### Security Reviewer (Always Runs)
 
-- **Agent**: `do-security-engineering:security-engineer`
+- **Agent**: `security:security-engineer`
 - **Focus**: Security vulnerabilities, auth patterns, input validation
 - **Checks**: SQL injection, XSS, CSRF, auth bypass, secrets exposure
 - **Output**: Security issues with severity and confidence scores
@@ -82,11 +83,11 @@ Launches multiple independent agents **in parallel** (single message, multiple T
 
 | File Pattern | Agent | Focus |
 |-------------|-------|-------|
-| `*.tsx`, `*.jsx`, `*.css` | `do-frontend-development:presentation-engineer` | UI/UX, accessibility, responsiveness |
-| `**/api/**`, `**/controllers/**` | `do-backend-development:backend-architect` | API design, scalability, error handling |
-| `**/db/**`, `**/*schema*` | `do-database-engineering:database-designer` | Query optimization, migrations, indexes |
-| `**/test/**`, `**/*.test.*` | `do-quality-assurance:test-architect` | Test quality, coverage, patterns |
-| `**/infra/**`, `*.tf` | `do-infrastructure:devops-engineer` | Infrastructure, deployment, configuration |
+| `*.tsx`, `*.jsx`, `*.css` | `frontend:presentation-engineer` | UI/UX, accessibility, responsiveness |
+| `**/api/**`, `**/controllers/**` | `backend:backend-architect` | API design, scalability, error handling |
+| `**/db/**`, `**/*schema*` | `databases:database-designer` | Query optimization, migrations, indexes |
+| `**/test/**`, `**/*.test.*` | `quality:test-architect` | Test quality, coverage, patterns |
+| `**/infra/**`, `*.tf` | `infrastructure:devops-engineer` | Infrastructure, deployment, configuration |
 
 **Manual override**: Specify agent explicitly if auto-detection is incorrect.
 
@@ -235,7 +236,7 @@ All findings include confidence scores to reduce noise:
 - Tests commented out or skipped
 - No tests for new functionality
 
-### Security Reviewer (do-security-engineering:security-engineer)
+### Security Reviewer (security:security-engineer)
 
 **Focus areas**:
 
@@ -255,7 +256,7 @@ All findings include confidence scores to reduce noise:
 
 ### Discipline-Specific Reviewers
 
-Each Dō agent brings specialized expertise:
+Each specialized agent brings domain expertise:
 
 **Frontend** (presentation-engineer):
 
@@ -379,9 +380,9 @@ Uses pre-defined team from `.claude/review-teams.json`:
 {
   "security-critical": [
     "han-core:code-reviewer",
-    "do-security-engineering:security-engineer",
-    "do-security-engineering:security-engineer", // redundant
-    "do-infrastructure:devops-engineer"
+    "security:security-engineer",
+    "security:security-engineer", // redundant
+    "infrastructure:devops-engineer"
   ]
 }
 ```
@@ -480,4 +481,4 @@ Review agents check these files for project standards:
 - `/feature-dev` - Full feature development workflow (includes review)
 - `/commit` - Smart commit after review passes
 - `han-core:code-reviewer` - Core review skill documentation
-- `do-security-engineering` - Security agent details
+- `security` - Security agent details

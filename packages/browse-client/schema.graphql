@@ -350,6 +350,30 @@ type CommandUserMessage implements Message & UserMessage {
   uuid: String
 }
 
+"""Context compaction statistics"""
+type CompactionStats {
+  """Number of automatic compactions"""
+  autoCompactCount: Int
+
+  """Average compactions per session"""
+  avgCompactionsPerSession: Float
+
+  """Number of continuation-type compactions"""
+  continuationCount: Int
+
+  """Number of manual compactions"""
+  manualCompactCount: Int
+
+  """Number of sessions that had at least one compaction"""
+  sessionsWithCompactions: Int
+
+  """Number of sessions with no compactions"""
+  sessionsWithoutCompactions: Int
+
+  """Total number of compaction events"""
+  totalCompactions: Int
+}
+
 """Confidence level in search results"""
 enum Confidence {
   HIGH
@@ -379,6 +403,60 @@ type ConfigDir {
 
   """Number of sessions from this config directory"""
   sessionCount: Int
+}
+
+"""Per-config-dir cost breakdown (matches CostAnalysis shape)"""
+type ConfigDirCostBreakdown {
+  """Daily API spend at which the subscription breaks even"""
+  breakEvenDailySpend: Float
+
+  """Cache hit rate (0 to 1) for this config directory"""
+  cacheHitRate: Float
+
+  """Cache savings in USD for this config directory"""
+  cacheSavingsUsd: Float
+
+  """Unique identifier for the config directory"""
+  configDirId: String
+
+  """Display name for the config directory (e.g., "Default", "Claude Work")"""
+  configDirName: String
+
+  """Average cost per session in this config directory"""
+  costPerSession: Float
+
+  """Percentage of subscription cost utilized by this config dir"""
+  costUtilizationPercent: Float
+
+  """Daily cost breakdown for this config directory"""
+  dailyCostTrend: [DailyCost!]
+
+  """Estimated cost in USD for this config directory"""
+  estimatedCostUsd: Float
+
+  """Whether cost is estimated (always false for per-dir stats)"""
+  isEstimated: Boolean
+
+  """Number of distinct models used in this config directory"""
+  modelCount: Int
+
+  """Potential savings if cache hit rate were optimal"""
+  potentialSavingsUsd: Float
+
+  """Per-tier comparison scoped to this config dir cost"""
+  subscriptionComparisons: [SubscriptionComparison!]
+
+  """Top sessions by cost (empty for per-dir view)"""
+  topSessionsByCost: [SessionCost!]
+
+  """Total messages in this config directory"""
+  totalMessages: Int
+
+  """Total sessions in this config directory"""
+  totalSessions: Int
+
+  """Weekly cost aggregation for this config directory"""
+  weeklyCostTrend: [WeeklyCost!]
 }
 
 """Result of a config directory mutation"""
@@ -426,6 +504,69 @@ type ContributorMetrics {
   taskCount: Int
 }
 
+type CoordinatorStatus {
+  """Whether a restart is pending due to newer client version detected"""
+  needsRestart: Boolean
+
+  """Current coordinator version"""
+  version: String
+}
+
+"""Cost analysis with subscription context"""
+type CostAnalysis {
+  """Billing type from ~/.claude.json (e.g., "stripe_subscription")"""
+  billingType: String
+
+  """Daily API spend at which the current subscription breaks even"""
+  breakEvenDailySpend: Float
+
+  """Cache hit rate (0 to 1)"""
+  cacheHitRate: Float
+
+  """Actual cache savings in USD based on per-model pricing difference"""
+  cacheSavingsUsd: Float
+
+  """Per-config-dir cost breakdowns"""
+  configDirBreakdowns: [ConfigDirCostBreakdown!]
+
+  """Average cost per completed task"""
+  costPerCompletedTask: Float
+
+  """Average cost per session"""
+  costPerSession: Float
+
+  """Percentage of subscription cost utilized"""
+  costUtilizationPercent: Float
+
+  """Daily cost breakdown"""
+  dailyCostTrend: [DailyCost!]
+
+  """Total estimated cost in USD (API credit equivalent)"""
+  estimatedCostUsd: Float
+
+  """
+  Whether cost is estimated (true = Sonnet-class fallback, false = per-model pricing)
+  """
+  isEstimated: Boolean
+
+  """
+  Current subscription tier cost (e.g., $200 for Max 20x, $100 for Max 5x)
+  """
+  maxSubscriptionCostUsd: Float
+
+  """Potential savings if cache hit rate were optimal"""
+  potentialSavingsUsd: Float
+
+  """Per-tier comparison of subscription cost vs API credit equivalent"""
+  subscriptionComparisons: [SubscriptionComparison!]
+
+  """Top 10 most expensive sessions"""
+  topSessionsByCost: [SessionCost!]
+
+  """Weekly cost aggregation"""
+  weeklyCostTrend: [WeeklyCost!]
+}
+
 """Activity metrics for a single day"""
 type DailyActivity {
   """Total cached tokens used"""
@@ -456,6 +597,18 @@ type DailyActivity {
   sessionCount: Int
 }
 
+"""Daily cost data point"""
+type DailyCost {
+  """Estimated cost in USD for this day"""
+  costUsd: Float
+
+  """Date in YYYY-MM-DD format"""
+  date: String
+
+  """Number of sessions on this day"""
+  sessionCount: Int
+}
+
 """Daily token usage broken down by model"""
 type DailyModelTokens {
   """Date in YYYY-MM-DD format"""
@@ -466,6 +619,30 @@ type DailyModelTokens {
 
   """Total tokens across all models for this day"""
   totalTokens: BigInt
+}
+
+"""Aggregated dashboard analytics data"""
+type DashboardAnalytics {
+  """Lowest-scoring sessions by effectiveness"""
+  bottomSessions: [SessionEffectiveness!]
+
+  """Context compaction statistics"""
+  compactionStats: CompactionStats
+
+  """Cost analysis with subscription context"""
+  costAnalysis: CostAnalysis
+
+  """Hook health and pass/fail rates"""
+  hookHealth: [HookHealthStats!]
+
+  """Subagent type usage breakdown"""
+  subagentUsage: [SubagentUsageStats!]
+
+  """Tool usage frequency breakdown"""
+  toolUsage: [ToolUsageStats!]
+
+  """Top-scoring sessions by effectiveness"""
+  topSessions: [SessionEffectiveness!]
 }
 
 scalar DateTime
@@ -975,6 +1152,27 @@ type HookFileChangeMessage implements Message {
   Raw message UUID. Use this for URLs and links instead of the global ID.
   """
   uuid: String
+}
+
+"""Hook health and pass/fail statistics"""
+type HookHealthStats {
+  """Average execution duration in milliseconds"""
+  avgDurationMs: Float
+
+  """Number of failed executions"""
+  failCount: Int
+
+  """Name of the hook"""
+  hookName: String
+
+  """Number of successful executions"""
+  passCount: Int
+
+  """Pass rate (0 to 1)"""
+  passRate: Float
+
+  """Total number of executions"""
+  totalRuns: Int
 }
 
 """A hook reference injection event (must-read-first files)"""
@@ -1995,6 +2193,9 @@ type ModelUsageStats {
   """Total cache read tokens"""
   cacheReadTokens: BigInt
 
+  """Estimated cost in USD using per-model pricing"""
+  costUsd: Float
+
   """Human-readable model name"""
   displayName: String
 
@@ -2020,7 +2221,9 @@ type Mutation {
   """Complete OAuth flow after user authorization"""
   completeOAuth(code: String!, codeVerifier: String!, provider: OAuthProvider!, state: String!): AuthResult
 
-  """Trigger full indexing of all Claude Code sessions from JSONL files"""
+  """
+  Trigger full indexing of all Claude Code sessions. WARNING: This is a blocking operation that can take many seconds for large session counts. Prefer spawning indexing in a subprocess from CLI commands.
+  """
   indexSessions: IndexingResult
 
   """Initiate OAuth flow with a provider. Returns URL to redirect user to."""
@@ -2414,6 +2617,14 @@ type Query {
   """All registered config directories for multi-environment indexing"""
   configDirs: [ConfigDir!]
 
+  """
+  Get coordinator status and optionally report client version for upgrade detection
+  """
+  coordinatorStatus(
+    """Client version to report - if newer, coordinator will restart"""
+    clientVersion: String
+  ): CoordinatorStatus
+
   """Current organization context (only available in hosted team mode)"""
   currentOrg: Org
 
@@ -2422,6 +2633,9 @@ type Query {
 
   """Current authenticated user (only available in hosted team mode)"""
   currentUser: User
+
+  """Aggregated analytics for the enhanced dashboard"""
+  dashboardAnalytics(days: Int = 30, subscriptionTier: Int = 200): DashboardAnalytics
 
   """Memory query interface"""
   memory: MemoryQuery
@@ -2996,6 +3210,33 @@ type SessionConnection {
   totalCount: Int
 }
 
+"""Per-session cost breakdown"""
+type SessionCost {
+  """Tokens served from cache"""
+  cacheReadTokens: Int
+
+  """Estimated cost for this session"""
+  costUsd: Float
+
+  """Total input tokens consumed"""
+  inputTokens: Int
+
+  """Total messages in session"""
+  messageCount: Int
+
+  """Total output tokens generated"""
+  outputTokens: Int
+
+  """Session identifier"""
+  sessionId: String
+
+  """Human-readable session slug"""
+  slug: String
+
+  """Session start timestamp"""
+  startedAt: String
+}
+
 """An edge in a session connection"""
 type SessionEdge {
   """Cursor for this edge"""
@@ -3003,6 +3244,42 @@ type SessionEdge {
 
   """The session at this edge"""
   node: Session
+}
+
+"""Composite effectiveness score for a session"""
+type SessionEffectiveness {
+  """Average sentiment score (-5 to +5)"""
+  avgSentimentScore: Float
+
+  """Number of compactions in this session"""
+  compactionCount: Int
+
+  """Focus score (0 to 1, fewer unique tools = more focused)"""
+  focusScore: Float
+
+  """Composite score (0-100)"""
+  score: Float
+
+  """Sentiment trend ("improving", "declining", "stable", "neutral")"""
+  sentimentTrend: String
+
+  """Session identifier"""
+  sessionId: String
+
+  """Human-readable session slug"""
+  slug: String
+
+  """Session start timestamp"""
+  startedAt: String
+
+  """Generated session summary text"""
+  summary: String
+
+  """Task completion rate (0 to 1)"""
+  taskCompletionRate: Float
+
+  """Number of conversation turns"""
+  turnCount: Int
 }
 
 """Payload for session files changed events"""
@@ -3136,6 +3413,15 @@ type SlotStatus {
   total: Int
 }
 
+"""Subagent type usage statistics"""
+type SubagentUsageStats {
+  """Number of times this subagent type was used"""
+  count: Int
+
+  """Subagent type name (e.g., "Explore", "Plan", "general-purpose")"""
+  subagentType: String
+}
+
 """A subdirectory within a worktree"""
 type Subdir {
   """Full path to subdirectory"""
@@ -3226,6 +3512,31 @@ type Subscription {
     """Call ID to watch for result"""
     callId: String!
   ): ToolResultAddedPayload
+}
+
+"""Comparison of a subscription tier vs API credits"""
+type SubscriptionComparison {
+  """Equivalent API credit cost for the same usage"""
+  apiCreditCostUsd: Float
+
+  """Monthly subscription cost in USD"""
+  monthlyCostUsd: Float
+
+  """
+  Plan recommendation: "recommended", "overkill", or "good_value"
+  """
+  recommendation: String
+
+  """Percentage saved vs API credits (positive = subscription cheaper)"""
+  savingsPercent: Float
+
+  """
+  Amount saved with subscription vs API (positive = subscription cheaper)
+  """
+  savingsUsd: Float
+
+  """Subscription tier name (e.g., "Max 5x", "Max 20x")"""
+  tierName: String
 }
 
 """A context summary message in a session"""
@@ -3723,6 +4034,15 @@ type ToolResultUserMessage implements Message & UserMessage {
   uuid: String
 }
 
+"""Tool usage frequency statistics"""
+type ToolUsageStats {
+  """Number of times the tool was used"""
+  count: Int
+
+  """Name of the tool"""
+  toolName: String
+}
+
 """A tool use request from Claude"""
 type ToolUseBlock implements ContentBlock {
   """For Task tool calls, the spawned agent task with details"""
@@ -3853,6 +4173,24 @@ interface UserMessage implements Message {
   Raw message UUID. Use this for URLs and links instead of the global ID.
   """
   uuid: String
+}
+
+"""Weekly cost aggregation"""
+type WeeklyCost {
+  """Average daily cost this week"""
+  avgDailyCost: Float
+
+  """Total estimated cost for this week"""
+  costUsd: Float
+
+  """Number of sessions this week"""
+  sessionCount: Int
+
+  """Human-readable week label (e.g., "Jan 27 - Feb 2")"""
+  weekLabel: String
+
+  """Monday of the week (YYYY-MM-DD)"""
+  weekStart: String
 }
 
 """A git worktree within a project"""

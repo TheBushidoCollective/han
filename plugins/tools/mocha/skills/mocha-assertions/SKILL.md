@@ -1,5 +1,6 @@
 ---
 name: mocha-assertions
+user-invocable: false
 description: Use when assertion libraries for Mocha including Chai with expect, should, and assert styles.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

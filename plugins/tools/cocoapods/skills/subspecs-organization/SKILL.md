@@ -1,5 +1,6 @@
 ---
 name: cocoapods-subspecs-organization
+user-invocable: false
 description: Use when organizing complex CocoaPods libraries into subspecs. Covers modular architecture, dependency management between subspecs, and default subspecs patterns for better code organization and optional features.
 allowed-tools:
   - Read

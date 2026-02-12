@@ -1,12 +1,10 @@
-# Jutsu: React Native
+# React Native
 
 Validation and quality enforcement for React Native mobile applications.
 
-## What This Jutsu Provides
+## Skills
 
-### Skills
-
-This jutsu provides the following skills:
+This plugin provides the following skills:
 
 - **react-native-components**: Building UI components with core components (View, Text, Image, FlatList) and component composition patterns
 - **react-native-navigation**: Implementing navigation with React Navigation including stack, tab, drawer navigation, and deep linking
@@ -17,10 +15,10 @@ This jutsu provides the following skills:
 
 ## Installation
 
-Install with npx (no installation required):
+Install via the han CLI:
 
 ```bash
-han plugin install jutsu-react-native
+han plugin install react-native
 ```
 
 ## Requirements
@@ -186,7 +184,7 @@ const styles = StyleSheet.create({
 
 ## Common Libraries
 
-This jutsu works well with popular React Native libraries:
+This plugin works well with popular React Native libraries:
 
 - **React Navigation**: Navigation library (covered in skills)
 - **React Native Reanimated**: Smooth animations

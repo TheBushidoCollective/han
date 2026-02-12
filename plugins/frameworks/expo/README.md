@@ -1,12 +1,10 @@
-# Jutsu: Expo
+# Expo
 
 Validation and quality enforcement for Expo React Native projects.
 
-## What This Jutsu Provides
+## Skills
 
-### Skills
-
-This jutsu provides the following skills:
+This plugin provides the following skills:
 
 - **expo-config**: Configuring Expo apps with app.json, app.config.js/ts, and EAS configuration including plugins, build settings, and environment variables
 - **expo-router**: Implementing file-based routing with Expo Router including layouts, dynamic routes, navigation, and deep linking
@@ -16,10 +14,10 @@ This jutsu provides the following skills:
 
 ## Installation
 
-Install with npx (no installation required):
+Install via the han CLI:
 
 ```bash
-han plugin install jutsu-expo
+han plugin install expo
 ```
 
 ## Requirements

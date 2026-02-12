@@ -95,10 +95,10 @@ describe('plugin alias integration', () => {
     });
 
     test('disciplines category resolves to do', () => {
-      expect(resolvePluginName('disciplines/frontend')).toBe(
+      expect(resolvePluginName('disciplines/frontend-development')).toBe(
         'do-frontend-development'
       );
-      expect(resolvePluginName('disciplines/backend')).toBe(
+      expect(resolvePluginName('disciplines/backend-development')).toBe(
         'do-backend-development'
       );
     });
@@ -131,7 +131,7 @@ describe('plugin alias integration', () => {
       const testCases = [
         'languages/typescript',
         'frameworks/react',
-        'disciplines/frontend',
+        'disciplines/frontend-development',
         'services/github',
       ];
 

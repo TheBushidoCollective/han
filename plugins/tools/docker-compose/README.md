@@ -1,4 +1,4 @@
-# Docker Compose Jutsu
+# Docker Compose
 
 Docker Compose configuration validation for container orchestration.
 
@@ -29,8 +29,6 @@ Validates Docker Compose files (docker-compose.*.yaml, compose.*.yaml) using `do
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install jutsu-docker-compose
+han plugin install docker-compose
 ```

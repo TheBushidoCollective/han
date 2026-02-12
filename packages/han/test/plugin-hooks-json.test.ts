@@ -176,7 +176,7 @@ describe('Multi-Hook Plugins', () => {
     expect(commands?.some((c) => c.includes('format'))).toBe(true);
   });
 
-  it('languages/elixir has format, build, and test-changed async PostToolUse hooks', () => {
+  it('languages/elixir has format and test-changed async PostToolUse hooks (build is Stop-only)', () => {
     const hooksPath = join(
       repoRoot,
       'plugins',
@@ -192,7 +192,8 @@ describe('Multi-Hook Plugins', () => {
     );
 
     expect(commands?.some((c) => c.includes('format'))).toBe(true);
-    expect(commands?.some((c) => c.includes('build'))).toBe(true);
     expect(commands?.some((c) => c.includes('test-changed'))).toBe(true);
+    // build is intentionally NOT in PostToolUse - it doesn't use HAN_FILES
+    expect(commands?.some((c) => c.includes('build'))).toBe(false);
   });
 });

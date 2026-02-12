@@ -7,7 +7,7 @@ description: Validate acceptance criteria for a Linear issue without changing st
 
 ## Name
 
-hashi-linear:validate - Validate acceptance criteria for a Linear issue without changing status
+linear:validate - Validate acceptance criteria for a Linear issue without changing status
 
 ## Synopsis
 

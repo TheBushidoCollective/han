@@ -1,5 +1,6 @@
 ---
 name: credo-checks
+user-invocable: false
 description: Use when understanding and fixing common Credo check issues for Elixir code quality and consistency.
 allowed-tools: []
 ---

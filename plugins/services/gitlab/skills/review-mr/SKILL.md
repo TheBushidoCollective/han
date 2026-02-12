@@ -7,7 +7,7 @@ description: Get comprehensive review of a GitLab merge request
 
 ## Name
 
-hashi-gitlab:review-mr - Get comprehensive review of a GitLab merge request
+gitlab:review-mr - Get comprehensive review of a GitLab merge request
 
 ## Synopsis
 

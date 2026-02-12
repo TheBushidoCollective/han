@@ -1,5 +1,6 @@
 ---
 name: fnox-security-best-practices
+user-invocable: false
 description: Use when implementing secure secrets management with Fnox. Covers encryption, key management, access control, and security hardening.
 allowed-tools:
   - Read

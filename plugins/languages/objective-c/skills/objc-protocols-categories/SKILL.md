@@ -1,5 +1,6 @@
 ---
 name: Objective-C Protocols and Categories
+user-invocable: false
 description: Use when objective-C protocols for defining interfaces and categories for extending classes, including formal protocols, optional methods, class extensions, and patterns for modular, reusable code design.
 allowed-tools: []
 ---

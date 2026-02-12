@@ -1,5 +1,6 @@
 ---
 name: graphql-inspector-diff
+user-invocable: false
 description: Use when detecting breaking changes between GraphQL schema versions, comparing schemas across branches, or validating schema migrations.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---
@@ -150,6 +151,7 @@ new: ./**/*.graphql
 
 ```yaml
 name: Schema Diff
+user-invocable: false
 on:
   pull_request:
     paths:

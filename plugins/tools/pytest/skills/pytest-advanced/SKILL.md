@@ -1,5 +1,6 @@
 ---
 name: pytest-advanced
+user-invocable: false
 description: Use when advanced Pytest features including markers, custom assertions, hooks, and coverage configuration.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

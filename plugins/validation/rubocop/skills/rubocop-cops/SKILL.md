@@ -1,5 +1,6 @@
 ---
 name: rubocop-cops
+user-invocable: false
 description: Use when ruboCop cops including built-in cops, configuration, auto-correction, and development.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

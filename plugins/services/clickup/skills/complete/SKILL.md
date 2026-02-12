@@ -7,7 +7,7 @@ description: Mark a ClickUp task as complete after validating checklist
 
 ## Name
 
-hashi-clickup:complete - Mark a ClickUp task as complete after validating checklist
+clickup:complete - Mark a ClickUp task as complete after validating checklist
 
 ## Synopsis
 

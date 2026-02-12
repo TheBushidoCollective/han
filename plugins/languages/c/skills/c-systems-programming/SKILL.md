@@ -1,5 +1,6 @@
 ---
 name: c-systems-programming
+user-invocable: false
 description: Use when writing low-level system software in C requiring file I/O, process management, signals, and system calls.
 allowed-tools:
   - Bash

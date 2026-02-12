@@ -290,7 +290,7 @@ Ensure your plugin is discoverable:
 
 ### Naming Conventions
 
-- **Plugin names**: Kebab-case, prefixed by category (e.g., `do-tdd`, `use-react`)
+- **Plugin names**: Kebab-case, name of the framework (e.g., `tdd`, `react`)
 - **Agent names**: Kebab-case, descriptive (e.g., `test-driven-developer`)
 - **File names**: Match entity names exactly
 - **Directories**: Plural for collections (`agents/`, `skills/`, `hooks/`)

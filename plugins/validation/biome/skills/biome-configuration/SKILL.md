@@ -1,5 +1,6 @@
 ---
 name: biome-configuration
+user-invocable: false
 description: Use when biome configuration including biome.json setup, schema versions, VCS integration, and project organization.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

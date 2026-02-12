@@ -1,5 +1,6 @@
 ---
 name: nestjs-dependency-injection
+user-invocable: false
 description: Use when nestJS dependency injection with providers, modules, and decorators. Use when building modular NestJS applications.
 allowed-tools:
   - Bash

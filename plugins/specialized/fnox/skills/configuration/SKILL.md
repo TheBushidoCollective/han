@@ -1,5 +1,6 @@
 ---
 name: fnox-configuration
+user-invocable: false
 description: Use when configuring Fnox secrets management with fnox.toml. Covers file structure, secrets definition, profiles, and hierarchical configurations.
 allowed-tools:
   - Read

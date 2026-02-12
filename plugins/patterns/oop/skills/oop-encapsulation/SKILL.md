@@ -1,5 +1,6 @@
 ---
 name: oop-encapsulation
+user-invocable: false
 description: Use when applying encapsulation and information hiding principles in object-oriented design. Use when controlling access to object state and behavior.
 allowed-tools:
   - Bash

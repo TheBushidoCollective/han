@@ -1,5 +1,6 @@
 ---
 name: PHP Modern Features
+user-invocable: false
 description: Use when modern PHP features including typed properties, union types, match expressions, named arguments, attributes, enums, and patterns for writing type-safe, expressive PHP code with latest language improvements.
 allowed-tools: []
 ---

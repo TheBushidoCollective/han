@@ -1,5 +1,6 @@
 ---
 name: vitest-testing-patterns
+user-invocable: false
 description: Use when vitest testing patterns including unit tests, mocks, spies, and browser mode testing.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

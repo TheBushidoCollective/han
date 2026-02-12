@@ -1,5 +1,6 @@
 ---
 name: ios-swiftui-patterns
+user-invocable: false
 description: Use when building SwiftUI views, managing state with @State/@Binding/@ObservableObject, or implementing declarative UI patterns in iOS apps.
 allowed-tools:
   - Read

@@ -1132,19 +1132,24 @@ pub fn record_file_change(
     crud::record_file_change(input)
 }
 
-/// Get file changes for a session
+/// Get file changes for a session, optionally filtered by agent_id
 #[napi]
 pub fn get_session_file_changes(
     _db_path: String,
     session_id: String,
+    agent_id: Option<String>,
 ) -> napi::Result<Vec<SessionFileChange>> {
-    crud::get_session_file_changes(&session_id)
+    crud::get_session_file_changes(&session_id, agent_id.as_deref())
 }
 
-/// Check if a session has any file changes
+/// Check if a session has any file changes, optionally filtered by agent_id
 #[napi]
-pub fn has_session_changes(_db_path: String, session_id: String) -> napi::Result<bool> {
-    crud::has_session_changes(&session_id)
+pub fn has_session_changes(
+    _db_path: String,
+    session_id: String,
+    agent_id: Option<String>,
+) -> napi::Result<bool> {
+    crud::has_session_changes(&session_id, agent_id.as_deref())
 }
 
 // ============================================================================

@@ -1,5 +1,6 @@
 ---
 name: fastapi-validation
+user-invocable: false
 description: Use when FastAPI validation with Pydantic models. Use when building type-safe APIs with robust request/response validation.
 allowed-tools:
   - Bash

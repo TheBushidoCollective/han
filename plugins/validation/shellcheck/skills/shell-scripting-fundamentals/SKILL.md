@@ -1,5 +1,6 @@
 ---
 name: shell-scripting-fundamentals
+user-invocable: false
 description: Use when writing or modifying Bash/shell scripts. Covers script structure, variables, quoting, conditionals, and loops with modern best practices.
 allowed-tools:
   - Read

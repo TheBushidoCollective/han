@@ -1,5 +1,6 @@
 ---
 name: testng-fundamentals
+user-invocable: false
 description: Use when working with TestNG annotations, assertions, test lifecycle, and configuration for Java testing.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

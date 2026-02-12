@@ -1,5 +1,6 @@
 ---
 name: tailwind-components
+user-invocable: false
 description: Use when building reusable component patterns with Tailwind CSS. Covers component extraction, @apply directive, and composable design patterns.
 allowed-tools:
   - Read

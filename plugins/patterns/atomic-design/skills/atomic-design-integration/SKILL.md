@@ -1,5 +1,6 @@
 ---
 name: atomic-design-integration
+user-invocable: false
 description: Use when integrating Atomic Design methodology with React, Vue, Angular, or other frameworks. Framework-specific implementation patterns.
 allowed-tools:
   - Bash

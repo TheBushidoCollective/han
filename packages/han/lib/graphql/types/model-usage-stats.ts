@@ -17,6 +17,7 @@ export interface ModelUsageStats {
   cacheReadTokens: number;
   cacheCreationTokens: number;
   totalTokens: number;
+  costUsd: number;
 }
 
 /**
@@ -61,6 +62,9 @@ export const ModelUsageStatsType = ModelUsageStatsRef.implement({
       type: 'BigInt',
       description: 'Total tokens (input + output)',
       resolve: (data) => data.totalTokens,
+    }),
+    costUsd: t.exposeFloat('costUsd', {
+      description: 'Estimated cost in USD using per-model pricing',
     }),
   }),
 });

@@ -25,5 +25,5 @@ Once enabled, Claude will automatically apply these skills when working with rel
 Install with npx (no installation required):
 
 ```bash
-han plugin install jutsu-monorepo
+han plugin install monorepo
 ```

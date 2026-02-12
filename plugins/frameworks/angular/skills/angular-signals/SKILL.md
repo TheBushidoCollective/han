@@ -1,5 +1,6 @@
 ---
 name: angular-signals
+user-invocable: false
 description: Use when building Angular 16+ applications requiring fine-grained reactive state management and zone-less change detection.
 allowed-tools:
   - Bash

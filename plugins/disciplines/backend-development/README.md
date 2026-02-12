@@ -1,0 +1,29 @@
+# Backend
+
+Agents specialized in backend development, API design, and system architecture.
+Focuses on scalable server-side solutions and data management.
+
+## Agents
+
+This plugin provides the following specialized agents:
+
+- **Api Designer**
+- **Backend Architect**
+
+## Usage
+
+Agents can be invoked using the Task tool with the appropriate subagent_type or through
+natural conversation:
+
+```text
+Use the Api Designer to analyze...
+```
+
+Each agent brings specialized expertise and perspective
+to their domain.
+
+## Installation
+
+```bash
+han plugin install backend
+```

@@ -1,5 +1,6 @@
 ---
 name: c-data-structures
+user-invocable: false
 description: Use when implementing data structures in C including arrays, linked lists, trees, and hash tables with manual memory management.
 allowed-tools:
   - Bash

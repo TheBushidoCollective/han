@@ -1,5 +1,6 @@
 ---
 name: effect-schema
+user-invocable: false
 description: Use when @effect/schema patterns including schema definition, validation, parsing, encoding, and transformations. Use for type-safe data validation in Effect applications.
 allowed-tools:
   - Bash

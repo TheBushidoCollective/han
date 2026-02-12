@@ -1,5 +1,6 @@
 ---
 name: django-rest-framework
+user-invocable: false
 description: Use when Django REST Framework for building APIs with serializers, viewsets, and authentication. Use when creating RESTful APIs.
 allowed-tools:
   - Bash

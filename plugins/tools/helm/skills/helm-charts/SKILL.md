@@ -1,5 +1,6 @@
 ---
 name: helm-charts
+user-invocable: false
 description: Use when understanding and creating Helm charts for packaging and deploying Kubernetes applications.
 allowed-tools: []
 ---
@@ -29,6 +30,7 @@ mychart/
 ```yaml
 apiVersion: v2
 name: my-app
+user-invocable: false
 description: A Helm chart for my application
 type: application
 version: 1.0.0

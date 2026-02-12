@@ -7,7 +7,7 @@ description: Create a new Jira ticket interactively
 
 ## Name
 
-hashi-jira:create - Create a new Jira ticket interactively
+jira:create - Create a new Jira ticket interactively
 
 ## Synopsis
 

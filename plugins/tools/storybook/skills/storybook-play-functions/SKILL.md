@@ -1,5 +1,6 @@
 ---
 name: storybook-play-functions
+user-invocable: false
 description: Use when adding interaction testing to Storybook stories. Enables automated testing of component behavior, user interactions, and state changes directly in stories.
 allowed-tools:
   - Read

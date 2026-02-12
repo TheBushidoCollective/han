@@ -1,5 +1,6 @@
 ---
 name: proof-of-work
+user-invocable: false
 description: Use automatically during development workflows when making claims about tests, builds, verification, or code quality requiring concrete evidence to ensure trust through transparency.
 allowed-tools:
   - Write

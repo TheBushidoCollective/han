@@ -1,5 +1,6 @@
 ---
 name: oop-polymorphism
+user-invocable: false
 description: Use when implementing polymorphism and interfaces in object-oriented design. Use when creating flexible, extensible systems with interchangeable components.
 allowed-tools:
   - Bash

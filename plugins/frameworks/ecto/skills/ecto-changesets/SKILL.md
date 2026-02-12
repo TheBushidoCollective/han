@@ -1,5 +1,6 @@
 ---
 name: ecto-changesets
+user-invocable: false
 description: Use when validating and casting data with Ecto changesets including field validation, constraints, nested changesets, and data transformation. Use for ensuring data integrity before database operations.
 allowed-tools:
   - Bash

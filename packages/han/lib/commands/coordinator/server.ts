@@ -20,6 +20,7 @@ import {
   hookAttempts,
   type IndexResult,
   initDb,
+  listConfigDirs,
   messages,
   watcher,
 } from '../../db/index.ts';
@@ -683,6 +684,23 @@ export async function startServer(
       void onDataIndexed(result);
     });
     log.info('Event-driven updates enabled');
+
+    // Add watch paths for registered config directories (multi-environment support)
+    try {
+      const configDirs = await listConfigDirs();
+      for (const configDir of configDirs) {
+        if (configDir.isDefault) continue;
+        const projectsPath = `${configDir.path}/projects`;
+        const added = watcher.addWatchPath(configDir.path, projectsPath);
+        if (added) {
+          log.info(
+            `Added watch path: ${projectsPath} (${configDir.name || configDir.path})`
+          );
+        }
+      }
+    } catch (e) {
+      log.warn('Failed to add config dir watch paths:', e);
+    }
   } else {
     log.error('Failed to start file watcher');
   }

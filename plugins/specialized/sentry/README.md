@@ -1,8 +1,8 @@
-# Jutsu: Sentry
+# Sentry
 
 Best practices and patterns for Sentry error monitoring and observability.
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Validation Hooks
 
@@ -10,7 +10,7 @@ Best practices and patterns for Sentry error monitoring and observability.
 
 ### Skills
 
-This jutsu provides the following skills:
+This plugin provides the following skills:
 
 - **SDK Configuration**: Initialization, integrations, sampling, filtering
 - **Error Capturing**: Exception handling, context, breadcrumbs, fingerprinting
@@ -23,12 +23,12 @@ This jutsu provides the following skills:
 Install via the Han marketplace:
 
 ```bash
-han plugin install jutsu-sentry
+han plugin install sentry
 ```
 
 ## Usage
 
-Once installed, this jutsu provides skills for Sentry best practices. The validation hook verifies your sentry-cli configuration is correct.
+Once installed, this plugin provides skills for Sentry best practices. The validation hook verifies your sentry-cli configuration is correct.
 
 ## Requirements
 

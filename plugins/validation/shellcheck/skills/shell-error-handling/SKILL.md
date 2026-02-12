@@ -1,5 +1,6 @@
 ---
 name: shell-error-handling
+user-invocable: false
 description: Use when implementing error handling, cleanup routines, or debugging in shell scripts. Covers traps, exit codes, and robust error patterns.
 allowed-tools:
   - Read

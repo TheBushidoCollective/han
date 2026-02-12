@@ -4,10 +4,12 @@
  * Complete activity data for dashboard visualizations.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import { queryActivityAggregates } from '../../db/index.ts';
+import {
+  calculateDefaultCost,
+  calculateModelCost,
+} from '../../pricing/model-pricing.ts';
+import { getAggregatedStats } from '../../pricing/stats-reader.ts';
 import { builder } from '../builder.ts';
 import { type DailyActivity, DailyActivityType } from './daily-activity.ts';
 import {
@@ -50,17 +52,15 @@ const ActivityDataRef = builder.objectRef<ActivityData>('ActivityData');
  * Convert model ID to human-readable display name
  */
 function getModelDisplayName(modelId: string): string {
-  if (modelId.includes('opus-4-5')) return 'Opus 4.5';
-  if (modelId.includes('opus-4-1')) return 'Opus 4.1';
-  if (modelId.includes('opus-4-')) return 'Opus 4';
-  if (modelId.includes('sonnet-4-5')) return 'Sonnet 4.5';
-  if (modelId.includes('sonnet-4-')) return 'Sonnet 4';
-  if (modelId.includes('haiku-4-5')) return 'Haiku 4.5';
-  if (modelId.includes('haiku-4-')) return 'Haiku 4';
-  if (modelId.includes('sonnet-3-5')) return 'Sonnet 3.5';
-  if (modelId.includes('haiku-3-5')) return 'Haiku 3.5';
-  if (modelId.includes('opus-3')) return 'Opus 3';
-  // Fallback: extract model family from ID
+  // Parse: claude-{family}-{major}[-{minor}][-{date}]
+  const match = modelId.match(/claude-(\w+)-(\d+)(?:-(\d+))?(?:-\d{8})?$/);
+  if (match) {
+    const family = match[1].charAt(0).toUpperCase() + match[1].slice(1);
+    const major = match[2];
+    const minor = match[3];
+    return minor ? `${family} ${major}.${minor}` : `${family} ${major}`;
+  }
+  // Fallback: capitalize second segment
   const parts = modelId.split('-');
   if (parts.length >= 2) {
     return parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
@@ -137,77 +137,6 @@ export const ActivityDataType = ActivityDataRef.implement({
 // =============================================================================
 // Helper Functions
 // =============================================================================
-
-/**
- * Stats cache data structure from ~/.claude/stats-cache.json
- */
-interface StatsCache {
-  version: number;
-  lastComputedDate: string;
-  dailyActivity: Array<{
-    date: string;
-    messageCount: number;
-    sessionCount: number;
-    toolCallCount: number;
-  }>;
-  dailyModelTokens: Array<{
-    date: string;
-    tokensByModel: Record<string, number>;
-  }>;
-  modelUsage: Record<
-    string,
-    {
-      inputTokens: number;
-      outputTokens: number;
-      cacheReadInputTokens: number;
-      cacheCreationInputTokens: number;
-      webSearchRequests: number;
-      costUSD: number;
-      contextWindow: number;
-    }
-  >;
-  totalSessions: number;
-  totalMessages: number;
-  longestSession?: {
-    sessionId: string;
-    duration: number;
-    messageCount: number;
-    timestamp: string;
-  };
-  firstSessionDate?: string;
-  hourCounts?: Record<string, number>;
-}
-
-/**
- * Read and parse stats-cache.json from ~/.claude/
- */
-function readStatsCache(): StatsCache | null {
-  try {
-    const statsPath = join(homedir(), '.claude', 'stats-cache.json');
-    if (!existsSync(statsPath)) {
-      return null;
-    }
-    const content = readFileSync(statsPath, 'utf-8');
-    return JSON.parse(content) as StatsCache;
-  } catch (error) {
-    console.error('Error reading stats-cache.json:', error);
-    return null;
-  }
-}
-
-/**
- * Calculate estimated cost based on Claude pricing
- */
-function calculateCost(
-  inputTokens: number,
-  outputTokens: number,
-  cachedTokens: number
-): number {
-  const inputCost = (inputTokens / 1_000_000) * 3.0;
-  const outputCost = (outputTokens / 1_000_000) * 15.0;
-  const cacheCost = (cachedTokens / 1_000_000) * 0.3;
-  return inputCost + outputCost + cacheCost;
-}
 
 /**
  * Calculate streak days (consecutive days with activity)
@@ -325,7 +254,7 @@ export async function queryActivityData(days = 365): Promise<ActivityData> {
     totalOutputTokens: agg.totalOutputTokens,
     totalCachedTokens: agg.totalCacheReadTokens,
     totalTokens: agg.totalInputTokens + agg.totalOutputTokens,
-    estimatedCostUsd: calculateCost(
+    estimatedCostUsd: calculateDefaultCost(
       agg.totalInputTokens,
       agg.totalOutputTokens,
       agg.totalCacheReadTokens
@@ -339,22 +268,28 @@ export async function queryActivityData(days = 365): Promise<ActivityData> {
     (d) => d.messageCount > 0
   ).length;
 
-  // Read stats-cache.json for model usage data (survives session cleanup)
-  const statsCache = readStatsCache();
+  // Read stats-cache.json from ALL registered config dirs (multi-environment)
+  const aggregatedStats = await getAggregatedStats();
 
-  const dailyModelTokens: DailyModelTokens[] =
-    statsCache?.dailyModelTokens ?? [];
-  const modelUsage: ModelUsageStats[] = statsCache?.modelUsage
-    ? Object.entries(statsCache.modelUsage).map(([model, usage]) => ({
-        model,
-        displayName: getModelDisplayName(model),
-        inputTokens: usage.inputTokens,
-        outputTokens: usage.outputTokens,
-        cacheReadTokens: usage.cacheReadInputTokens,
-        cacheCreationTokens: usage.cacheCreationInputTokens,
-        totalTokens: usage.inputTokens + usage.outputTokens,
-      }))
-    : [];
+  const dailyModelTokens: DailyModelTokens[] = aggregatedStats.dailyModelTokens;
+  const modelUsage: ModelUsageStats[] = Object.entries(
+    aggregatedStats.modelUsage
+  ).map(([model, usage]) => ({
+    model,
+    displayName: getModelDisplayName(model),
+    inputTokens: usage.inputTokens,
+    outputTokens: usage.outputTokens,
+    cacheReadTokens: usage.cacheReadInputTokens,
+    cacheCreationTokens: usage.cacheCreationInputTokens,
+    totalTokens: usage.inputTokens + usage.outputTokens,
+    costUsd: calculateModelCost(
+      model,
+      usage.inputTokens,
+      usage.outputTokens,
+      usage.cacheReadInputTokens,
+      usage.cacheCreationInputTokens
+    ),
+  }));
 
   const result: ActivityData = {
     dailyActivity,
@@ -364,9 +299,13 @@ export async function queryActivityData(days = 365): Promise<ActivityData> {
     totalActiveDays,
     dailyModelTokens,
     modelUsage,
-    totalSessions: statsCache?.totalSessions ?? agg.totalSessions,
-    totalMessages: statsCache?.totalMessages ?? agg.totalMessages,
-    firstSessionDate: statsCache?.firstSessionDate ?? null,
+    totalSessions: aggregatedStats.hasStatsCacheData
+      ? aggregatedStats.totalSessions
+      : agg.totalSessions,
+    totalMessages: aggregatedStats.hasStatsCacheData
+      ? aggregatedStats.totalMessages
+      : agg.totalMessages,
+    firstSessionDate: aggregatedStats.firstSessionDate,
   };
 
   activityCache.set(cacheKey, {

@@ -5,9 +5,9 @@
  * to find hooks that apply to this specific tool execution.
  */
 
-import { existsSync } from "node:fs"
-import { join, relative } from "node:path"
-import type { HookDefinition } from "./types"
+import { existsSync } from 'node:fs';
+import { join, relative } from 'node:path';
+import type { HookDefinition } from './types';
 
 /**
  * Test if a file path matches a glob-like pattern.
@@ -20,21 +20,21 @@ import type { HookDefinition } from "./types"
 function matchGlob(pattern: string, filePath: string): boolean {
   // Expand brace alternatives: "*.{js,ts}" -> regex with alternation
   let regexStr = pattern
-    .replace(/\./g, "\\.")
+    .replace(/\./g, '\\.')
     .replace(/\{([^}]+)\}/g, (_match, group: string) => {
-      const alts = group.split(",").map((s: string) => s.trim())
-      return `(${alts.join("|")})`
+      const alts = group.split(',').map((s: string) => s.trim());
+      return `(${alts.join('|')})`;
     })
-    .replace(/\*\*/g, "<<<GLOBSTAR>>>")
-    .replace(/\*/g, "[^/]*")
-    .replace(/<<<GLOBSTAR>>>/g, ".*")
+    .replace(/\*\*/g, '<<<GLOBSTAR>>>')
+    .replace(/\*/g, '[^/]*')
+    .replace(/<<<GLOBSTAR>>>/g, '.*');
 
-  regexStr = `^${regexStr}$`
+  regexStr = `^${regexStr}$`;
 
   try {
-    return new RegExp(regexStr).test(filePath)
+    return new RegExp(regexStr).test(filePath);
   } catch {
-    return false
+    return false;
   }
 }
 
@@ -42,15 +42,12 @@ function matchGlob(pattern: string, filePath: string): boolean {
  * Check if a hook's dirsWith requirement is met for the given project directory.
  * dirsWith specifies files/dirs that must exist for the hook to apply.
  */
-function checkDirsWith(
-  hook: HookDefinition,
-  projectDir: string,
-): boolean {
-  if (!hook.dirsWith || hook.dirsWith.length === 0) return true
+function checkDirsWith(hook: HookDefinition, projectDir: string): boolean {
+  if (!hook.dirsWith || hook.dirsWith.length === 0) return true;
 
   return hook.dirsWith.some((requiredFile) =>
-    existsSync(join(projectDir, requiredFile)),
-  )
+    existsSync(join(projectDir, requiredFile))
+  );
 }
 
 /**
@@ -59,16 +56,16 @@ function checkDirsWith(
 function checkFileFilter(
   hook: HookDefinition,
   filePath: string,
-  projectDir: string,
+  projectDir: string
 ): boolean {
-  if (!hook.fileFilter || hook.fileFilter.length === 0) return true
+  if (!hook.fileFilter || hook.fileFilter.length === 0) return true;
 
   // Use relative path for glob matching
-  const relPath = relative(projectDir, filePath)
+  const relPath = relative(projectDir, filePath);
 
   return hook.fileFilter.some(
-    (pattern) => matchGlob(pattern, relPath) || matchGlob(pattern, filePath),
-  )
+    (pattern) => matchGlob(pattern, relPath) || matchGlob(pattern, filePath)
+  );
 }
 
 /**
@@ -76,10 +73,10 @@ function checkFileFilter(
  */
 function checkToolFilter(
   hook: HookDefinition,
-  claudeToolName: string,
+  claudeToolName: string
 ): boolean {
-  if (!hook.toolFilter || hook.toolFilter.length === 0) return true
-  return hook.toolFilter.includes(claudeToolName)
+  if (!hook.toolFilter || hook.toolFilter.length === 0) return true;
+  return hook.toolFilter.includes(claudeToolName);
 }
 
 /**
@@ -95,14 +92,14 @@ export function matchPostToolUseHooks(
   hooks: HookDefinition[],
   claudeToolName: string,
   filePath: string,
-  projectDir: string,
+  projectDir: string
 ): HookDefinition[] {
   return hooks.filter((hook) => {
-    if (!checkToolFilter(hook, claudeToolName)) return false
-    if (!checkDirsWith(hook, projectDir)) return false
-    if (!checkFileFilter(hook, filePath, projectDir)) return false
-    return true
-  })
+    if (!checkToolFilter(hook, claudeToolName)) return false;
+    if (!checkDirsWith(hook, projectDir)) return false;
+    if (!checkFileFilter(hook, filePath, projectDir)) return false;
+    return true;
+  });
 }
 
 /**
@@ -114,7 +111,7 @@ export function matchPostToolUseHooks(
  */
 export function matchStopHooks(
   hooks: HookDefinition[],
-  projectDir: string,
+  projectDir: string
 ): HookDefinition[] {
-  return hooks.filter((hook) => checkDirsWith(hook, projectDir))
+  return hooks.filter((hook) => checkDirsWith(hook, projectDir));
 }

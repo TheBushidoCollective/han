@@ -1,5 +1,6 @@
 ---
 name: typescript-async-patterns
+user-invocable: false
 description: Use when typeScript async patterns including Promises, async/await, and async iterators with proper typing. Use when writing asynchronous TypeScript code.
 allowed-tools:
   - Bash

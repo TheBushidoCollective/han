@@ -11,7 +11,7 @@
 import { useDeferStream } from '@graphql-yoga/plugin-defer-stream';
 import { makeServer } from 'graphql-ws';
 import { createYoga } from 'graphql-yoga';
-import type { GraphQLContext } from './builder.ts';
+import type { GraphQLContext, UserContext, UserRole } from './builder.ts';
 import { createLoaders } from './loaders.ts';
 import { schema } from './schema.ts';
 
@@ -19,7 +19,7 @@ import { schema } from './schema.ts';
  * Extract user context from request headers
  * In production, this would validate JWT tokens or session cookies
  */
-function extractUserContext(request: Request): UserContext | undefined {
+function _extractUserContext(request: Request): UserContext | undefined {
   // Check for user ID header (set by auth middleware in production)
   const userId = request.headers.get('x-user-id');
   if (!userId) {

@@ -1,5 +1,6 @@
 ---
 name: nestjs-guards-interceptors
+user-invocable: false
 description: Use when nestJS guards and interceptors for auth, logging, and transformation. Use when implementing cross-cutting concerns.
 allowed-tools:
   - Bash

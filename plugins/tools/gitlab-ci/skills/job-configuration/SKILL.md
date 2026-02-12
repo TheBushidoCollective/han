@@ -1,5 +1,6 @@
 ---
 name: gitlab-ci-job-configuration
+user-invocable: false
 description: Use when defining GitLab CI jobs, configuring scripts, setting up environments, or managing job dependencies. Covers job structure and execution options.
 allowed-tools:
   - Read

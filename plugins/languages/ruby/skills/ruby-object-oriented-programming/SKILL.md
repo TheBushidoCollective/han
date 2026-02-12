@@ -1,5 +1,6 @@
 ---
 name: ruby-oop
+user-invocable: false
 description: Use when working with Ruby's object-oriented programming features including classes, modules, inheritance, mixins, and method visibility.
 allowed-tools:
   - Bash

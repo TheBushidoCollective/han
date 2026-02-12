@@ -1,5 +1,6 @@
 ---
 name: mocha-fundamentals
+user-invocable: false
 description: Use when mocha test structure, hooks, and async testing patterns for JavaScript testing.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

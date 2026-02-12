@@ -1,5 +1,6 @@
 ---
 name: syncpack-configuration
+user-invocable: false
 description: Use when setting up or configuring syncpack for a monorepo. Covers configuration files, workspace detection, and custom rule definitions for dependency version management.
 allowed-tools:
   - Read

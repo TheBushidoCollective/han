@@ -1,5 +1,6 @@
 ---
 name: zustand-advanced-patterns
+user-invocable: false
 description: Use when implementing advanced Zustand patterns including transient updates, subscriptions with selectors, store composition, and performance optimization techniques.
 allowed-tools:
   - Read

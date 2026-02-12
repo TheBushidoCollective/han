@@ -1,5 +1,6 @@
 ---
 name: ansible-playbooks
+user-invocable: false
 description: Use when writing and organizing Ansible playbooks for automated configuration management and infrastructure orchestration.
 allowed-tools: []
 ---

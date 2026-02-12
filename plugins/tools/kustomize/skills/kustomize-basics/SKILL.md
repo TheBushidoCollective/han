@@ -1,5 +1,6 @@
 ---
 name: kustomize-basics
+user-invocable: false
 description: Use when customizing Kubernetes configurations without templates using Kustomize overlays and patches.
 allowed-tools: []
 ---

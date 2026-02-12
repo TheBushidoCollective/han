@@ -1,5 +1,6 @@
 ---
 name: cocoapods-publishing-workflow
+user-invocable: false
 description: Use when publishing CocoaPods libraries to CocoaPods Trunk. Covers pod trunk registration, podspec validation, version management, and publishing best practices for successful library distribution.
 allowed-tools:
   - Read

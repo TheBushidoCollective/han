@@ -1,7 +1,7 @@
 ---
 name: test
 description: Write tests for code using test-driven development principles
-disable-model-invocation: false
+
 ---
 
 # test
@@ -26,7 +26,7 @@ Write tests for the specified code or feature using test-driven development (TDD
 
 ## Process
 
-Use the test-driven-development skill from bushido to:
+Follow TDD methodology:
 
 1. **Understand the requirement**: Clarify what needs to be tested
 2. **Write failing test first**: Create a test that fails because the feature doesn't exist yet
@@ -54,7 +54,7 @@ When the user says:
 
 ## Notes
 
-- Use TodoWrite to track progress through TDD cycles
+- Use TaskCreate to track progress through TDD cycles
 - Run full test suite before considering work complete
 - Tests should be clear enough to serve as documentation
 - Follow existing test patterns in the codebase

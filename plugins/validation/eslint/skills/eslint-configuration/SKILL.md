@@ -1,5 +1,6 @@
 ---
 name: eslint-configuration
+user-invocable: false
 description: Use when eSLint configuration including config files, extends, plugins, and environment setup.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

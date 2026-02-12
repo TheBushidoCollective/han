@@ -13,7 +13,9 @@ import {
   readFileSync,
   writeFileSync,
 } from 'node:fs';
+import { join } from 'node:path';
 import {
+  ensureDir,
   ensureMemoryDirs,
   ensureProjectDirs,
   generateId,
@@ -23,6 +25,7 @@ import {
   getSessionFilePath,
   getSummariesPath,
   getSummaryFilePath,
+  normalizeGitRemote,
 } from './paths.ts';
 import type {
   IndexedObservation,
@@ -99,9 +102,40 @@ function stringifyYaml(obj: unknown): string {
 }
 
 /**
- * Create file-based memory store
+ * Options for creating a memory store
  */
-export function createMemoryStore(): MemoryStore {
+export interface CreateMemoryStoreOptions {
+  /**
+   * Override the memory root path. When provided, all path resolution
+   * uses this root directly instead of the global memoryRootOverride.
+   * This eliminates race conditions when multiple test files run in parallel.
+   */
+  rootPath?: string;
+}
+
+/**
+ * Resolve project paths using an explicit root (bypasses global state)
+ */
+function resolveProjectPaths(
+  rootPath: string,
+  gitRemote: string
+): { projectPath: string; indexPath: string; metaPath: string } {
+  const normalized = normalizeGitRemote(gitRemote);
+  const projectPath = join(rootPath, 'projects', normalized);
+  const indexPath = join(projectPath, '.index');
+  const metaPath = join(projectPath, 'meta.yaml');
+  return { projectPath, indexPath, metaPath };
+}
+
+/**
+ * Create file-based memory store
+ * @param options Optional configuration. Pass rootPath to avoid global state races in tests.
+ */
+export function createMemoryStore(
+  options?: CreateMemoryStoreOptions
+): MemoryStore {
+  const rootPath = options?.rootPath;
+
   return {
     /**
      * Append an observation to the session file
@@ -164,9 +198,17 @@ export function createMemoryStore(): MemoryStore {
       gitRemote: string,
       observations: IndexedObservation[]
     ): Promise<void> {
-      ensureProjectDirs(gitRemote);
-      const indexPath = getProjectIndexPath(gitRemote);
-      const dataFile = `${indexPath}/observations.jsonl`;
+      let dataFile: string;
+      if (rootPath) {
+        const paths = resolveProjectPaths(rootPath, gitRemote);
+        ensureDir(paths.projectPath);
+        ensureDir(paths.indexPath);
+        dataFile = `${paths.indexPath}/observations.jsonl`;
+      } else {
+        ensureProjectDirs(gitRemote);
+        const indexPath = getProjectIndexPath(gitRemote);
+        dataFile = `${indexPath}/observations.jsonl`;
+      }
 
       // Append new observations
       for (const obs of observations) {
@@ -184,8 +226,14 @@ export function createMemoryStore(): MemoryStore {
       query: string,
       filters?: SearchFilters
     ): Promise<SearchResult[]> {
-      const indexPath = getProjectIndexPath(gitRemote);
-      const dataFile = `${indexPath}/observations.jsonl`;
+      let dataFile: string;
+      if (rootPath) {
+        const paths = resolveProjectPaths(rootPath, gitRemote);
+        dataFile = `${paths.indexPath}/observations.jsonl`;
+      } else {
+        const indexPath = getProjectIndexPath(gitRemote);
+        dataFile = `${indexPath}/observations.jsonl`;
+      }
 
       if (!existsSync(dataFile)) {
         return [];
@@ -239,7 +287,12 @@ export function createMemoryStore(): MemoryStore {
      * Get index metadata for a project
      */
     getIndexMetadata(gitRemote: string): IndexMetadata | null {
-      const metaPath = getProjectMetaPath(gitRemote);
+      let metaPath: string;
+      if (rootPath) {
+        metaPath = resolveProjectPaths(rootPath, gitRemote).metaPath;
+      } else {
+        metaPath = getProjectMetaPath(gitRemote);
+      }
       return parseYaml<IndexMetadata>(metaPath);
     },
 
@@ -247,10 +300,21 @@ export function createMemoryStore(): MemoryStore {
      * Update index metadata
      */
     updateIndexMetadata(gitRemote: string, meta: Partial<IndexMetadata>): void {
-      ensureProjectDirs(gitRemote);
-      const metaPath = getProjectMetaPath(gitRemote);
+      let metaPath: string;
+      let projectPath: string;
+      if (rootPath) {
+        const paths = resolveProjectPaths(rootPath, gitRemote);
+        metaPath = paths.metaPath;
+        projectPath = paths.projectPath;
+        ensureDir(paths.projectPath);
+        ensureDir(paths.indexPath);
+      } else {
+        ensureProjectDirs(gitRemote);
+        metaPath = getProjectMetaPath(gitRemote);
+        projectPath = getProjectMemoryPath(gitRemote);
+      }
       const existing = this.getIndexMetadata(gitRemote) || {
-        project_path: getProjectMemoryPath(gitRemote),
+        project_path: projectPath,
         created_at: Date.now(),
         updated_at: Date.now(),
         sources: {},

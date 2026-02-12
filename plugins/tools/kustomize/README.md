@@ -1,4 +1,4 @@
-# Kustomize Jutsu
+# Kustomize
 
 Kustomize configuration validation for Kubernetes customization.
 
@@ -29,8 +29,6 @@ Validates Kustomize configurations in directories containing `kustomization.yaml
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install jutsu-kustomize
+han plugin install kustomize
 ```

@@ -1,5 +1,6 @@
 ---
 name: gluestack-mcp-tools
+user-invocable: false
 description: Use when discovering, exploring, or retrieving gluestack-ui components via MCP tools. Provides access to component source code, variants, demos, and metadata.
 allowed-tools:
   - Read
@@ -184,7 +185,7 @@ export GLUESTACK_PATH="/path/to/gluestack-ui"
 
 ## Integration with Other Skills
 
-Combine MCP tools with other jutsu-gluestack skills:
+Combine MCP tools with other gluestack skills:
 
 - **gluestack-components**: After getting source code, use component skill for implementation patterns
 - **gluestack-theming**: Use with Themed variant components for design token integration

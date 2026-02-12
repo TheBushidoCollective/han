@@ -1,5 +1,6 @@
 ---
 name: markdownlint-configuration
+user-invocable: false
 description: Configure markdownlint rules and options including rule management, configuration files, inline comments, and style inheritance.
 allowed-tools: [Bash, Read]
 ---

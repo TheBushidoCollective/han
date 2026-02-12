@@ -1,17 +1,25 @@
 /**
  * Cost Analysis Card Component
  *
- * Cost tracking with subscription context. Shows utilization gauge,
- * cost metrics grid, and daily cost sparkline chart.
+ * Subscription-aware cost tracking. For subscription users, shows actual
+ * subscription cost as primary with API-equivalent as a comparison metric.
+ * Daily/weekly charts use proportional subscription cost, not raw API pricing.
+ * Includes token distribution (merged from former TokenUsageCard).
  */
 
 import type React from "react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { theme } from "@/components/atoms";
 import { Box } from "@/components/atoms/Box.tsx";
 import { HStack } from "@/components/atoms/HStack.tsx";
+import { Pressable } from "@/components/atoms/Pressable.tsx";
 import { Text } from "@/components/atoms/Text.tsx";
 import { VStack } from "@/components/atoms/VStack.tsx";
+import { SessionRow } from "@/components/molecules/SessionRow.tsx";
+
+// =============================================================================
+// Interfaces
+// =============================================================================
 
 interface DailyCost {
 	readonly date: string;
@@ -47,8 +55,31 @@ interface SessionCost {
 	readonly startedAt: string | null;
 }
 
+interface ConfigDirBreakdown {
+	readonly configDirId: string;
+	readonly configDirName: string;
+	readonly estimatedCostUsd: number;
+	readonly isEstimated: boolean;
+	readonly cacheSavingsUsd: number;
+	readonly totalSessions: number;
+	readonly totalMessages: number;
+	readonly modelCount: number;
+	readonly costPerSession: number;
+	readonly cacheHitRate: number;
+	readonly potentialSavingsUsd: number;
+	readonly costUtilizationPercent: number;
+	readonly dailyCostTrend: readonly DailyCost[];
+	readonly weeklyCostTrend: readonly WeeklyCost[];
+	readonly subscriptionComparisons: readonly SubscriptionComparison[];
+	readonly breakEvenDailySpend: number;
+	readonly topSessionsByCost: readonly SessionCost[];
+}
+
 interface CostAnalysis {
 	readonly estimatedCostUsd: number;
+	readonly isEstimated: boolean;
+	readonly billingType: string | null;
+	readonly cacheSavingsUsd: number;
 	readonly maxSubscriptionCostUsd: number;
 	readonly costUtilizationPercent: number;
 	readonly dailyCostTrend: readonly DailyCost[];
@@ -60,60 +91,98 @@ interface CostAnalysis {
 	readonly potentialSavingsUsd: number;
 	readonly subscriptionComparisons: readonly SubscriptionComparison[];
 	readonly breakEvenDailySpend: number;
+	readonly configDirBreakdowns: readonly ConfigDirBreakdown[];
+}
+
+interface CostViewData {
+	readonly estimatedCostUsd: number;
+	readonly isEstimated: boolean;
+	readonly billingType: string | null;
+	readonly cacheSavingsUsd: number;
+	readonly maxSubscriptionCostUsd: number;
+	readonly costUtilizationPercent: number;
+	readonly costPerSession: number;
+	readonly costPerCompletedTask: number;
+	readonly cacheHitRate: number;
+	readonly potentialSavingsUsd: number;
+	readonly dailyCostTrend: readonly DailyCost[];
+	readonly weeklyCostTrend: readonly WeeklyCost[];
+	readonly topSessionsByCost: readonly SessionCost[];
+	readonly subscriptionComparisons: readonly SubscriptionComparison[];
+	readonly breakEvenDailySpend: number;
+}
+
+export interface TokenUsageStats {
+	readonly totalInputTokens: number;
+	readonly totalOutputTokens: number;
+	readonly totalCachedTokens: number;
+	readonly totalTokens: number;
+	readonly sessionCount: number;
 }
 
 interface CostAnalysisCardProps {
 	costAnalysis: CostAnalysis;
+	tokenUsage?: TokenUsageStats;
 	onSessionClick?: (sessionId: string) => void;
 }
 
-/**
- * Format token count compactly (e.g., 1.2M, 450K)
- */
-function formatTokens(count: number): string {
-	if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
-	if (count >= 1_000) return `${(count / 1_000).toFixed(0)}K`;
-	return `${count}`;
-}
+// =============================================================================
+// Formatting Helpers (locale-aware)
+// =============================================================================
 
-/**
- * Format currency
- */
+const currencyFormatter = new Intl.NumberFormat(undefined, {
+	style: "currency",
+	currency: "USD",
+	minimumFractionDigits: 2,
+	maximumFractionDigits: 2,
+});
+
+const currencyFormatterWhole = new Intl.NumberFormat(undefined, {
+	style: "currency",
+	currency: "USD",
+	minimumFractionDigits: 0,
+	maximumFractionDigits: 0,
+});
+
+const numberFormatter = new Intl.NumberFormat();
+
 function formatCost(usd: number): string {
 	if (usd < 0.01) return "< $0.01";
-	if (usd < 1) return `$${usd.toFixed(2)}`;
-	if (usd < 100) return `$${usd.toFixed(2)}`;
-	return `$${usd.toFixed(0)}`;
+	if (usd >= 100) return currencyFormatterWhole.format(usd);
+	return currencyFormatter.format(usd);
 }
 
-/**
- * Format percentage
- */
 function formatPercent(value: number): string {
-	return `${value.toFixed(1)}%`;
+	return `${value.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 }
 
-/**
- * Get utilization color based on percentage
- */
+function formatNumber(value: number): string {
+	return numberFormatter.format(value);
+}
+
+function formatTokenCount(num: number): string {
+	if (num >= 1_000_000_000) return `${(num / 1_000_000_000).toFixed(1)}B`;
+	if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+	if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
+	return num.toLocaleString();
+}
+
+// =============================================================================
+// Style Helpers
+// =============================================================================
+
 function getUtilizationColor(percent: number): string {
-	if (percent < 60) return "#10b981"; // Green
-	if (percent <= 85) return "#f59e0b"; // Amber
-	return "#ef4444"; // Red
+	if (percent >= 80) return "#10b981";
+	if (percent >= 40) return "#f59e0b";
+	return "#ef4444";
 }
 
-/**
- * Get utilization background color
- */
 function getUtilizationBgColor(percent: number): string {
-	if (percent < 60) return "rgba(16, 185, 129, 0.15)";
-	if (percent <= 85) return "rgba(245, 158, 11, 0.15)";
+	if (percent >= 80) return "rgba(16, 185, 129, 0.15)";
+	if (percent >= 40) return "rgba(245, 158, 11, 0.15)";
 	return "rgba(239, 68, 68, 0.15)";
 }
 
-/**
- * Get recommendation badge styling
- */
 function getRecommendationStyle(recommendation: string): {
 	color: string;
 	bg: string;
@@ -141,9 +210,10 @@ function getRecommendationStyle(recommendation: string): {
 	}
 }
 
-/**
- * Single row for subscription tier comparison
- */
+// =============================================================================
+// Sub-Components
+// =============================================================================
+
 function TierComparisonRow({
 	comparison,
 }: {
@@ -162,7 +232,6 @@ function TierComparisonRow({
 				borderRadius: theme.radii.md,
 			}}
 		>
-			{/* Tier name */}
 			<VStack gap="xs" style={{ flex: 1, minWidth: 70 }}>
 				<Text weight="semibold" size="sm">
 					{comparison.tierName}
@@ -172,7 +241,6 @@ function TierComparisonRow({
 				</Text>
 			</VStack>
 
-			{/* Savings amount */}
 			<VStack gap="xs" align="center" style={{ flex: 1 }}>
 				<Text
 					weight="semibold"
@@ -189,7 +257,6 @@ function TierComparisonRow({
 				</Text>
 			</VStack>
 
-			{/* Recommendation badge */}
 			<Box
 				style={{
 					paddingHorizontal: theme.spacing.sm,
@@ -206,9 +273,6 @@ function TierComparisonRow({
 	);
 }
 
-/**
- * Cost metric item for the 2x2 grid
- */
 function CostMetric({
 	label,
 	value,
@@ -244,118 +308,416 @@ function CostMetric({
 	);
 }
 
-export function CostAnalysisCard({
-	costAnalysis,
+function TabButton({
+	label,
+	isActive,
+	onPress,
+}: {
+	label: string;
+	isActive: boolean;
+	onPress: () => void;
+}): React.ReactElement {
+	return (
+		<Pressable onPress={onPress}>
+			<Box
+				style={{
+					paddingHorizontal: theme.spacing.md,
+					paddingVertical: theme.spacing.xs,
+					backgroundColor: isActive
+						? theme.colors.accent.primary
+						: "transparent",
+					borderRadius: theme.radii.full,
+					borderWidth: isActive ? 0 : 1,
+					borderColor: theme.colors.border.default,
+				}}
+			>
+				<Text
+					size="xs"
+					weight={isActive ? "semibold" : "medium"}
+					style={{
+						color: isActive ? "#ffffff" : theme.colors.text.secondary,
+					}}
+				>
+					{label}
+				</Text>
+			</Box>
+		</Pressable>
+	);
+}
+
+function TokenStat({
+	label,
+	value,
+	color,
+	subValue,
+}: {
+	label: string;
+	value: string;
+	color: string;
+	subValue?: string;
+}): React.ReactElement {
+	return (
+		<VStack gap="xs" style={{ minWidth: 80 }}>
+			<HStack gap="xs" align="center">
+				<Box
+					style={{
+						width: 8,
+						height: 8,
+						borderRadius: 4,
+						backgroundColor: color,
+					}}
+				/>
+				<Text color="secondary" size="xs">
+					{label}
+				</Text>
+			</HStack>
+			<Text weight="semibold" size="sm">
+				{value}
+			</Text>
+			{subValue && (
+				<Text color="muted" size="xs">
+					{subValue}
+				</Text>
+			)}
+		</VStack>
+	);
+}
+
+// =============================================================================
+// Shared Cost Detail View (used by both "All" and per-config-dir tabs)
+// =============================================================================
+
+function CostDetailView({
+	data,
+	tokenUsage,
 	onSessionClick,
-}: CostAnalysisCardProps): React.ReactElement {
-	const utilizationColor = getUtilizationColor(
-		costAnalysis.costUtilizationPercent,
-	);
-	const utilizationBg = getUtilizationBgColor(
-		costAnalysis.costUtilizationPercent,
-	);
+}: {
+	data: CostViewData;
+	tokenUsage?: TokenUsageStats;
+	onSessionClick?: (sessionId: string) => void;
+}): React.ReactElement {
+	const isSubscription = data.billingType === "stripe_subscription";
+	const apiEquivalentCost = data.estimatedCostUsd;
+	const subscriptionCost = data.maxSubscriptionCostUsd;
 
-	// Daily budget line
-	const dailyBudget = useMemo(
-		() => costAnalysis.maxSubscriptionCostUsd / 30,
-		[costAnalysis.maxSubscriptionCostUsd],
-	);
+	// For subscription users, scale daily/weekly costs to proportional subscription cost
+	const costScale = useMemo(() => {
+		if (!isSubscription || apiEquivalentCost <= 0) return 1;
+		return subscriptionCost / apiEquivalentCost;
+	}, [isSubscription, apiEquivalentCost, subscriptionCost]);
 
-	// Max daily cost for sparkline scaling
+	// Value multiplier: how much more the API equivalent is vs subscription
+	const valueMultiplier = useMemo(() => {
+		if (!isSubscription || subscriptionCost <= 0) return 0;
+		return apiEquivalentCost / subscriptionCost;
+	}, [isSubscription, apiEquivalentCost, subscriptionCost]);
+
+	const utilizationColor = getUtilizationColor(data.costUtilizationPercent);
+	const utilizationBg = getUtilizationBgColor(data.costUtilizationPercent);
+
+	const dailyBudget = useMemo(() => subscriptionCost / 30, [subscriptionCost]);
+
+	// Scale daily costs for subscription users
+	const scaledDailyTrend = useMemo(() => {
+		return data.dailyCostTrend.map((day) => ({
+			...day,
+			displayCost: day.costUsd * costScale,
+		}));
+	}, [data.dailyCostTrend, costScale]);
+
 	const maxDailyCost = useMemo(() => {
-		const costs = costAnalysis.dailyCostTrend.map((d) => d.costUsd);
+		const costs = scaledDailyTrend.map((d) => d.displayCost);
 		return Math.max(...costs, dailyBudget, 0.01);
-	}, [costAnalysis.dailyCostTrend, dailyBudget]);
+	}, [scaledDailyTrend, dailyBudget]);
+
+	// Scale weekly costs
+	const scaledWeeklyTrend = useMemo(() => {
+		return data.weeklyCostTrend.map((week) => ({
+			...week,
+			displayCost: week.costUsd * costScale,
+		}));
+	}, [data.weeklyCostTrend, costScale]);
 
 	const sparklineHeight = 60;
 
-	// Clamp utilization to 100 for the bar width
-	const barPercent = Math.min(costAnalysis.costUtilizationPercent, 100);
+	// Token distribution percentages
+	const tokenTotal =
+		(tokenUsage?.totalInputTokens ?? 0) +
+		(tokenUsage?.totalOutputTokens ?? 0) +
+		(tokenUsage?.totalCachedTokens ?? 0);
+	const inputPercent =
+		tokenTotal > 0
+			? ((tokenUsage?.totalInputTokens ?? 0) / tokenTotal) * 100
+			: 0;
+	const outputPercent =
+		tokenTotal > 0
+			? ((tokenUsage?.totalOutputTokens ?? 0) / tokenTotal) * 100
+			: 0;
+	const cachedPercent =
+		tokenTotal > 0
+			? ((tokenUsage?.totalCachedTokens ?? 0) / tokenTotal) * 100
+			: 0;
 
 	return (
-		<VStack gap="md" style={{ width: "100%" }}>
-			{/* Subscription utilization gauge */}
-			<VStack gap="sm" style={{ width: "100%" }}>
-				<HStack justify="space-between" align="center">
-					<Text color="secondary" size="xs">
-						Subscription Utilization
-					</Text>
+		<>
+			{/* Badges row */}
+			<HStack gap="sm" align="center" wrap>
+				{data.isEstimated && (
 					<Box
 						style={{
 							paddingHorizontal: theme.spacing.sm,
 							paddingVertical: 2,
-							backgroundColor: utilizationBg,
+							backgroundColor: "rgba(245, 158, 11, 0.15)",
 							borderRadius: theme.radii.full,
 						}}
 					>
-						<Text
-							size="xs"
-							weight="semibold"
-							style={{ color: utilizationColor }}
-						>
-							{formatPercent(costAnalysis.costUtilizationPercent)}
+						<Text size="xs" weight="semibold" style={{ color: "#f59e0b" }}>
+							Estimated (Sonnet rates)
 						</Text>
 					</Box>
-				</HStack>
-
-				{/* Progress bar */}
-				<Box
-					style={{
-						width: "100%",
-						height: 12,
-						backgroundColor: theme.colors.bg.tertiary,
-						borderRadius: theme.radii.md,
-						overflow: "hidden",
-					}}
-				>
+				)}
+				{!data.isEstimated && (
 					<Box
 						style={{
-							width: `${barPercent}%`,
-							height: "100%",
-							backgroundColor: utilizationColor,
-							borderRadius: theme.radii.md,
+							paddingHorizontal: theme.spacing.sm,
+							paddingVertical: 2,
+							backgroundColor: "rgba(16, 185, 129, 0.15)",
+							borderRadius: theme.radii.full,
 						}}
-					/>
-				</Box>
+					>
+						<Text size="xs" weight="semibold" style={{ color: "#10b981" }}>
+							Per-model pricing
+						</Text>
+					</Box>
+				)}
+				{isSubscription && (
+					<Box
+						style={{
+							paddingHorizontal: theme.spacing.sm,
+							paddingVertical: 2,
+							backgroundColor: "rgba(99, 102, 241, 0.12)",
+							borderRadius: theme.radii.full,
+						}}
+					>
+						<Text size="xs" weight="semibold" style={{ color: "#6366f1" }}>
+							Max Plan
+						</Text>
+					</Box>
+				)}
+			</HStack>
 
-				{/* Usage text */}
-				<HStack justify="space-between" align="center">
-					<Text size="sm" weight="semibold">
-						{formatCost(costAnalysis.estimatedCostUsd)}
+			{/* Subscription: value multiplier + cost headline */}
+			{isSubscription ? (
+				<VStack gap="sm" style={{ width: "100%" }}>
+					<HStack justify="space-between" align="flex-end">
+						<VStack gap="xs">
+							<Text color="secondary" size="xs">
+								Your Plan
+							</Text>
+							<Text
+								weight="bold"
+								style={{
+									fontSize: 28,
+									color: theme.colors.accent.primary,
+								}}
+							>
+								{formatCost(subscriptionCost)}
+								<Text color="muted" size="sm">
+									/mo
+								</Text>
+							</Text>
+						</VStack>
+						{valueMultiplier > 1 && (
+							<VStack gap="xs" align="flex-end">
+								<Text color="secondary" size="xs">
+									Value Multiplier
+								</Text>
+								<Text
+									weight="bold"
+									style={{
+										fontSize: 28,
+										color: "#10b981",
+									}}
+								>
+									{valueMultiplier.toFixed(1)}x
+								</Text>
+							</VStack>
+						)}
+					</HStack>
+
+					{/* Utilization bar */}
+					<VStack gap="xs" style={{ width: "100%" }}>
+						<HStack justify="space-between" align="center">
+							<Text color="secondary" size="xs">
+								Subscription Utilization
+							</Text>
+							<Box
+								style={{
+									paddingHorizontal: theme.spacing.sm,
+									paddingVertical: 2,
+									backgroundColor: utilizationBg,
+									borderRadius: theme.radii.full,
+								}}
+							>
+								<Text
+									size="xs"
+									weight="semibold"
+									style={{ color: utilizationColor }}
+								>
+									{formatPercent(data.costUtilizationPercent)}
+								</Text>
+							</Box>
+						</HStack>
+						<Box
+							style={{
+								width: "100%",
+								height: 12,
+								backgroundColor: theme.colors.bg.tertiary,
+								borderRadius: theme.radii.md,
+								overflow: "hidden",
+							}}
+						>
+							<Box
+								style={{
+									width: `${Math.min(data.costUtilizationPercent, 100)}%`,
+									height: "100%",
+									backgroundColor: utilizationColor,
+									borderRadius: theme.radii.md,
+								}}
+							/>
+						</Box>
+						<Text color="muted" size="xs">
+							API-equivalent usage: {formatCost(apiEquivalentCost)} (
+							{formatCost(apiEquivalentCost - subscriptionCost)} saved vs API
+							pricing)
+						</Text>
+					</VStack>
+				</VStack>
+			) : (
+				/* Non-subscription: show API cost as primary */
+				<VStack gap="sm" style={{ width: "100%" }}>
+					<HStack justify="space-between" align="center">
+						<Text color="secondary" size="xs">
+							Estimated API Cost (30 days)
+						</Text>
+					</HStack>
+					<Text
+						weight="bold"
+						style={{
+							fontSize: 28,
+							color: theme.colors.accent.primary,
+						}}
+					>
+						{formatCost(apiEquivalentCost)}
 					</Text>
-					<Text color="muted" size="xs">
-						of {formatCost(costAnalysis.maxSubscriptionCostUsd)} used
-					</Text>
-				</HStack>
-			</VStack>
+				</VStack>
+			)}
 
 			{/* Cost metrics 2x2 grid */}
 			<VStack gap="sm" style={{ width: "100%" }}>
 				<HStack gap="sm" style={{ width: "100%" }}>
 					<CostMetric
-						label="Cost / Session"
-						value={formatCost(costAnalysis.costPerSession)}
+						label={
+							isSubscription ? "API-Equivalent / Session" : "Cost / Session"
+						}
+						value={formatCost(data.costPerSession)}
 					/>
 					<CostMetric
-						label="Cost / Task"
-						value={formatCost(costAnalysis.costPerCompletedTask)}
+						label={isSubscription ? "API-Equivalent / Task" : "Cost / Task"}
+						value={formatCost(data.costPerCompletedTask)}
 					/>
 				</HStack>
 				<HStack gap="sm" style={{ width: "100%" }}>
 					<CostMetric
 						label="Cache Hit Rate"
-						value={formatPercent(costAnalysis.cacheHitRate * 100)}
+						value={formatPercent(data.cacheHitRate * 100)}
+						subValue={
+							data.cacheSavingsUsd > 0
+								? `${formatCost(data.cacheSavingsUsd)} saved`
+								: undefined
+						}
 					/>
 					<CostMetric
 						label="Potential Savings"
-						value={formatCost(costAnalysis.potentialSavingsUsd)}
+						value={formatCost(data.potentialSavingsUsd)}
 						subValue="from optimizations"
 					/>
 				</HStack>
 			</VStack>
 
-			{/* Max vs API Credits comparison */}
-			{costAnalysis.subscriptionComparisons.length > 0 && (
+			{/* Token distribution (merged from TokenUsageCard) */}
+			{tokenUsage && tokenTotal > 0 && (
+				<VStack gap="sm" style={{ width: "100%" }}>
+					<Text color="secondary" size="xs">
+						Token Distribution
+					</Text>
+					<Box
+						style={{
+							height: 12,
+							borderRadius: 6,
+							overflow: "hidden",
+							backgroundColor: theme.colors.bg.tertiary,
+							flexDirection: "row",
+						}}
+					>
+						{inputPercent > 0 && (
+							<Box
+								style={{
+									width: `${inputPercent}%`,
+									height: "100%",
+									backgroundColor: "#3b82f6",
+								}}
+							/>
+						)}
+						{outputPercent > 0 && (
+							<Box
+								style={{
+									width: `${outputPercent}%`,
+									height: "100%",
+									backgroundColor: "#10b981",
+								}}
+							/>
+						)}
+						{cachedPercent > 0 && (
+							<Box
+								style={{
+									width: `${cachedPercent}%`,
+									height: "100%",
+									backgroundColor: "#8b5cf6",
+								}}
+							/>
+						)}
+					</Box>
+					<HStack gap="lg" wrap>
+						<TokenStat
+							label="Input"
+							value={formatTokenCount(tokenUsage.totalInputTokens)}
+							color="#3b82f6"
+							subValue={`${inputPercent.toFixed(0)}%`}
+						/>
+						<TokenStat
+							label="Output"
+							value={formatTokenCount(tokenUsage.totalOutputTokens)}
+							color="#10b981"
+							subValue={`${outputPercent.toFixed(0)}%`}
+						/>
+						<TokenStat
+							label="Cached"
+							value={formatTokenCount(tokenUsage.totalCachedTokens)}
+							color="#8b5cf6"
+							subValue={`${cachedPercent.toFixed(0)}%`}
+						/>
+						<TokenStat
+							label="Total"
+							value={formatTokenCount(tokenUsage.totalTokens)}
+							color={theme.colors.text.primary}
+						/>
+					</HStack>
+				</VStack>
+			)}
+
+			{/* Subscription vs API Credits comparison */}
+			{data.subscriptionComparisons.length > 0 && (
 				<VStack gap="sm" style={{ width: "100%" }}>
 					<HStack justify="space-between" align="center">
 						<Text color="secondary" size="xs">
@@ -364,14 +726,14 @@ export function CostAnalysisCard({
 						<Text color="muted" size="xs">
 							est.{" "}
 							{formatCost(
-								costAnalysis.subscriptionComparisons[0]?.apiCreditCostUsd ?? 0,
+								data.subscriptionComparisons[0]?.apiCreditCostUsd ?? 0,
 							)}
 							/mo on API
 						</Text>
 					</HStack>
 
 					<VStack gap="xs" style={{ width: "100%" }}>
-						{costAnalysis.subscriptionComparisons.map((comparison) => (
+						{data.subscriptionComparisons.map((comparison) => (
 							<TierComparisonRow
 								key={comparison.tierName}
 								comparison={comparison}
@@ -379,7 +741,6 @@ export function CostAnalysisCard({
 						))}
 					</VStack>
 
-					{/* Break-even insight */}
 					<Box
 						style={{
 							padding: theme.spacing.sm,
@@ -390,21 +751,22 @@ export function CostAnalysisCard({
 						}}
 					>
 						<Text color="muted" size="xs">
-							Your plan breaks even at{" "}
-							{formatCost(costAnalysis.breakEvenDailySpend)}/day in API credits
+							Your plan breaks even at {formatCost(data.breakEvenDailySpend)}
+							/day in API credits
 						</Text>
 					</Box>
 				</VStack>
 			)}
 
-			{/* Daily cost sparkline */}
-			{costAnalysis.dailyCostTrend.length > 0 && (
+			{/* Daily usage sparkline */}
+			{scaledDailyTrend.length > 0 && (
 				<VStack gap="sm" style={{ width: "100%" }}>
 					<Text color="secondary" size="xs">
-						Daily Cost (Last 30 Days)
+						{isSubscription
+							? "Daily Usage (Last 30 Days)"
+							: "Daily Cost (Last 30 Days)"}
 					</Text>
 
-					{/* Sparkline chart */}
 					<Box style={{ width: "100%", position: "relative" }}>
 						{/* Budget line */}
 						<Box
@@ -418,7 +780,6 @@ export function CostAnalysisCard({
 							}}
 						/>
 
-						{/* Bars */}
 						<HStack
 							align="flex-end"
 							style={{
@@ -426,12 +787,12 @@ export function CostAnalysisCard({
 								width: "100%",
 							}}
 						>
-							{costAnalysis.dailyCostTrend.map((day, idx) => {
+							{scaledDailyTrend.map((day, idx) => {
 								const barHeight = Math.max(
-									(day.costUsd / maxDailyCost) * sparklineHeight,
-									day.costUsd > 0 ? 2 : 1,
+									(day.displayCost / maxDailyCost) * sparklineHeight,
+									day.displayCost > 0 ? 2 : 1,
 								);
-								const overBudget = day.costUsd > dailyBudget;
+								const overBudget = day.displayCost > dailyBudget;
 
 								return (
 									<Box
@@ -443,7 +804,7 @@ export function CostAnalysisCard({
 												? "#ef4444"
 												: theme.colors.accent.primary,
 											borderRadius: 1,
-											opacity: day.costUsd > 0 ? 1 : 0.2,
+											opacity: day.displayCost > 0 ? 1 : 0.2,
 											marginHorizontal: 0.5,
 										}}
 									/>
@@ -452,7 +813,6 @@ export function CostAnalysisCard({
 						</HStack>
 					</Box>
 
-					{/* Budget line legend */}
 					<HStack gap="md" align="center">
 						<HStack gap="xs" align="center">
 							<Box
@@ -469,9 +829,9 @@ export function CostAnalysisCard({
 						<HStack gap="xs" align="center">
 							<Box
 								style={{
-									width: "10px",
-									height: "10px",
-									borderRadius: "2px",
+									width: 10,
+									height: 10,
+									borderRadius: 2,
 									backgroundColor: "#ef4444",
 								}}
 							/>
@@ -484,19 +844,19 @@ export function CostAnalysisCard({
 			)}
 
 			{/* Weekly cost trend */}
-			{costAnalysis.weeklyCostTrend.length > 0 && (
+			{scaledWeeklyTrend.length > 0 && (
 				<VStack gap="sm" style={{ width: "100%" }}>
 					<Text color="secondary" size="xs">
-						Weekly Cost
+						{isSubscription ? "Weekly Usage" : "Weekly Cost"}
 					</Text>
 
 					<VStack gap="xs" style={{ width: "100%" }}>
-						{costAnalysis.weeklyCostTrend.map((week) => {
-							const weeklyBudget = costAnalysis.maxSubscriptionCostUsd / 4.33;
-							const overBudget = week.costUsd > weeklyBudget;
+						{scaledWeeklyTrend.map((week) => {
+							const weeklyBudget = subscriptionCost / 4.33;
+							const overBudget = week.displayCost > weeklyBudget;
 							const barWidth =
 								weeklyBudget > 0
-									? Math.min((week.costUsd / weeklyBudget) * 100, 100)
+									? Math.min((week.displayCost / weeklyBudget) * 100, 100)
 									: 0;
 
 							return (
@@ -523,10 +883,10 @@ export function CostAnalysisCard({
 														: theme.colors.text.primary,
 												}}
 											>
-												{formatCost(week.costUsd)}
+												{formatCost(week.displayCost)}
 											</Text>
 											<Text color="muted" size="xs">
-												{week.sessionCount} sessions
+												{formatNumber(week.sessionCount)} sessions
 											</Text>
 										</HStack>
 									</HStack>
@@ -558,63 +918,120 @@ export function CostAnalysisCard({
 			)}
 
 			{/* Top sessions by cost */}
-			{costAnalysis.topSessionsByCost.length > 0 && (
+			{data.topSessionsByCost.length > 0 && (
 				<VStack gap="sm" style={{ width: "100%" }}>
 					<Text color="secondary" size="xs">
 						Most Expensive Sessions
 					</Text>
 
 					<VStack gap="xs" style={{ width: "100%" }}>
-						{costAnalysis.topSessionsByCost.map((session, idx) => (
-							<Box
+						{data.topSessionsByCost.map((session, idx) => (
+							<SessionRow
 								key={session.sessionId}
-								onClick={() => onSessionClick?.(session.sessionId)}
-								style={{
-									padding: theme.spacing.sm,
-									backgroundColor: theme.colors.bg.tertiary,
-									borderRadius: theme.radii.md,
-									cursor: onSessionClick ? "pointer" : "default",
-								}}
-							>
-								<HStack justify="space-between" align="center">
-									<HStack
-										gap="sm"
-										align="center"
-										style={{ flex: 1, minWidth: 0 }}
-									>
-										<Text
-											color="muted"
-											size="xs"
-											style={{ width: 18, textAlign: "right" }}
-										>
-											{idx + 1}.
-										</Text>
-										<VStack gap="xs" style={{ flex: 1, minWidth: 0 }}>
-											<Text size="sm" weight="medium" numberOfLines={1}>
-												{session.slug || session.sessionId.slice(0, 8)}
-											</Text>
-											<HStack gap="sm">
-												<Text color="muted" size="xs">
-													{session.messageCount} msgs
-												</Text>
-												<Text color="muted" size="xs">
-													{formatTokens(
-														session.inputTokens + session.outputTokens,
-													)}{" "}
-													tokens
-												</Text>
-											</HStack>
-										</VStack>
-									</HStack>
-									<Text weight="semibold" size="sm">
-										{formatCost(session.costUsd)}
-									</Text>
-								</HStack>
-							</Box>
+								label={session.slug || session.sessionId.slice(0, 8)}
+								rank={idx + 1}
+								messageCount={session.messageCount}
+								tokenCount={session.inputTokens + session.outputTokens}
+								costUsd={session.costUsd * costScale}
+								onPress={
+									onSessionClick
+										? () => onSessionClick(session.sessionId)
+										: undefined
+								}
+							/>
 						))}
 					</VStack>
 				</VStack>
 			)}
+		</>
+	);
+}
+
+// =============================================================================
+// Main Component
+// =============================================================================
+
+export function CostAnalysisCard({
+	costAnalysis,
+	tokenUsage,
+	onSessionClick,
+}: CostAnalysisCardProps): React.ReactElement {
+	const [activeTab, setActiveTab] = useState<string>("all");
+
+	const hasMultipleDirs = costAnalysis.configDirBreakdowns.length > 1;
+
+	const activeBreakdown =
+		activeTab !== "all"
+			? costAnalysis.configDirBreakdowns.find(
+					(d) => d.configDirId === activeTab,
+				)
+			: null;
+
+	const viewData: CostViewData = useMemo(() => {
+		if (activeBreakdown) {
+			return {
+				estimatedCostUsd: activeBreakdown.estimatedCostUsd,
+				isEstimated: activeBreakdown.isEstimated,
+				billingType: costAnalysis.billingType,
+				cacheSavingsUsd: activeBreakdown.cacheSavingsUsd,
+				maxSubscriptionCostUsd: costAnalysis.maxSubscriptionCostUsd,
+				costUtilizationPercent: activeBreakdown.costUtilizationPercent,
+				costPerSession: activeBreakdown.costPerSession,
+				costPerCompletedTask: 0,
+				cacheHitRate: activeBreakdown.cacheHitRate,
+				potentialSavingsUsd: activeBreakdown.potentialSavingsUsd,
+				dailyCostTrend: activeBreakdown.dailyCostTrend,
+				weeklyCostTrend: activeBreakdown.weeklyCostTrend,
+				topSessionsByCost: activeBreakdown.topSessionsByCost,
+				subscriptionComparisons: activeBreakdown.subscriptionComparisons,
+				breakEvenDailySpend: activeBreakdown.breakEvenDailySpend,
+			};
+		}
+		return {
+			estimatedCostUsd: costAnalysis.estimatedCostUsd,
+			isEstimated: costAnalysis.isEstimated,
+			billingType: costAnalysis.billingType,
+			cacheSavingsUsd: costAnalysis.cacheSavingsUsd,
+			maxSubscriptionCostUsd: costAnalysis.maxSubscriptionCostUsd,
+			costUtilizationPercent: costAnalysis.costUtilizationPercent,
+			costPerSession: costAnalysis.costPerSession,
+			costPerCompletedTask: costAnalysis.costPerCompletedTask,
+			cacheHitRate: costAnalysis.cacheHitRate,
+			potentialSavingsUsd: costAnalysis.potentialSavingsUsd,
+			dailyCostTrend: costAnalysis.dailyCostTrend,
+			weeklyCostTrend: costAnalysis.weeklyCostTrend,
+			topSessionsByCost: costAnalysis.topSessionsByCost,
+			subscriptionComparisons: costAnalysis.subscriptionComparisons,
+			breakEvenDailySpend: costAnalysis.breakEvenDailySpend,
+		};
+	}, [costAnalysis, activeBreakdown]);
+
+	return (
+		<VStack gap="md" style={{ width: "100%" }}>
+			{/* Config dir tabs */}
+			{hasMultipleDirs && (
+				<HStack gap="xs" align="center" style={{ flexWrap: "wrap" }}>
+					<TabButton
+						label="All"
+						isActive={activeTab === "all"}
+						onPress={() => setActiveTab("all")}
+					/>
+					{costAnalysis.configDirBreakdowns.map((dir) => (
+						<TabButton
+							key={dir.configDirId}
+							label={dir.configDirName}
+							isActive={activeTab === dir.configDirId}
+							onPress={() => setActiveTab(dir.configDirId)}
+						/>
+					))}
+				</HStack>
+			)}
+
+			<CostDetailView
+				data={viewData}
+				tokenUsage={tokenUsage}
+				onSessionClick={onSessionClick}
+			/>
 		</VStack>
 	);
 }

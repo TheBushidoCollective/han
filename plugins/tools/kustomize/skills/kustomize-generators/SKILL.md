@@ -1,5 +1,6 @@
 ---
 name: kustomize-generators
+user-invocable: false
 description: Use when generating ConfigMaps and Secrets with Kustomize for Kubernetes configuration management.
 allowed-tools: [Bash, Read]
 ---

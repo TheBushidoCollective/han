@@ -2,11 +2,12 @@
 
 This project uses technical blueprints for system documentation.
 
-**MCP Tools:**
+**Tool Usage:**
 
-- search_blueprints - Find existing blueprints (use BEFORE creating)
-- read_blueprint - Read current documentation (use BEFORE modifying)
-- write_blueprint - Update documentation (use AFTER implementation)
+- `Glob("blueprints/*.md")` - List all existing blueprints
+- `Grep("keyword", path: "blueprints/")` - Search blueprints by keyword
+- `Read("blueprints/{name}.md")` - Read a blueprint before modifying
+- `Write("blueprints/{name}.md", content)` - Create or update a blueprint
 
 **When to use:** New features, API changes, architectural modifications, behavior changes.
 

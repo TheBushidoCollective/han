@@ -1,5 +1,6 @@
 ---
 name: graphql-schema-design
+user-invocable: false
 description: Use when designing GraphQL schemas with type system, SDL patterns, field design, pagination, directives, and versioning strategies for maintainable and scalable APIs.
 allowed-tools: []
 ---

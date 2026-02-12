@@ -7,7 +7,6 @@ hooks:
     if_changed:
       - "**/*.md"
       - ".claude-plugin/**"
-      - "commands/**"
       - "skills/**"
   config-sync:
     command: "cd packages/han && bun run lint:config-sync"

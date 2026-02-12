@@ -1,5 +1,6 @@
 ---
 name: prettier-integration
+user-invocable: false
 description: Use when prettier integration with editors, pre-commit hooks, ESLint, and CI/CD pipelines.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

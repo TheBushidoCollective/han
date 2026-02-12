@@ -1,5 +1,6 @@
 ---
 name: rust-error-handling
+user-invocable: false
 description: Use when Rust error handling with Result, Option, custom errors, thiserror, and anyhow. Use when handling errors in Rust applications.
 allowed-tools:
   - Bash

@@ -1,5 +1,6 @@
 ---
 name: vue-composition-api
+user-invocable: false
 description: Use when Vue 3 Composition API with reactive refs, computed, and composables. Use when building modern Vue 3 applications.
 allowed-tools:
   - Bash

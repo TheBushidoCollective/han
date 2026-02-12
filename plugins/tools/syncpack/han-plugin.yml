@@ -1,4 +1,4 @@
-# jutsu-syncpack plugin configuration
+# syncpack plugin configuration
 # Provides validation and auto-fix hooks for consistent dependency versions in monorepos
 
 hooks:

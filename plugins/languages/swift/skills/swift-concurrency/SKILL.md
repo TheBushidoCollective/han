@@ -1,5 +1,6 @@
 ---
 name: Swift Concurrency
+user-invocable: false
 description: Use when swift's modern concurrency model including async/await, actors, task groups, structured concurrency, and async sequences for building safe, performant concurrent code without data races or callback pyramids.
 allowed-tools: []
 ---

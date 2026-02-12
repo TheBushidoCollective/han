@@ -1,8 +1,8 @@
-# Jutsu: GitLab CI
+# GitLab CI
 
 Validation and quality enforcement for GitLab CI/CD pipeline configurations.
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Validation Hooks
 
@@ -10,7 +10,7 @@ Validation and quality enforcement for GitLab CI/CD pipeline configurations.
 
 ### Skills
 
-This jutsu provides the following skills:
+This plugin provides the following skills:
 
 - **Pipeline Configuration**: Stages, workflow rules, DAG pipelines, includes
 - **Job Configuration**: Scripts, environments, rules, parallel execution
@@ -20,15 +20,13 @@ This jutsu provides the following skills:
 
 ## Installation
 
-Install via the Han marketplace:
-
 ```bash
-han plugin install jutsu-gitlab-ci
+han plugin install gitlab-ci
 ```
 
 ## Usage
 
-Once installed, this jutsu automatically validates your GitLab CI configuration:
+Once installed, this plugin automatically validates your GitLab CI configuration:
 
 - When you finish a conversation with Claude Code
 - When Claude Code agents complete their work

@@ -1,5 +1,6 @@
 ---
 name: playwright-page-object-model
+user-invocable: false
 description: Use when creating page objects or refactoring Playwright tests for better maintainability with Page Object Model patterns.
 allowed-tools:
   - Bash

@@ -1,4 +1,4 @@
-# Kubernetes Jutsu
+# Kubernetes
 
 Kubernetes manifest validation and best practices for cloud-native deployments.
 
@@ -15,8 +15,6 @@ Kubernetes manifest validation and best practices for cloud-native deployments.
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install jutsu-kubernetes
+han plugin install kubernetes
 ```

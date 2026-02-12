@@ -7,7 +7,7 @@ description: Show all ClickUp tasks assigned to you
 
 ## Name
 
-hashi-clickup:my-tasks - Show all ClickUp tasks assigned to you
+clickup:my-tasks - Show all ClickUp tasks assigned to you
 
 ## Synopsis
 

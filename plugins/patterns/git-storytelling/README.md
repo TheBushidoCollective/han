@@ -1,12 +1,12 @@
-# Jutsu: Git Storytelling
+# Git Storytelling
 
 Provides guidance on git storytelling practices - committing work to tell the story of your development process.
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Git Storytelling Guidance
 
-This jutsu provides a **Stop hook** that reminds Claude about git storytelling best practices at the end of each session:
+This plugin provides a **Stop hook** that reminds Claude about git storytelling best practices at the end of each session:
 
 - Consider committing meaningful work to preserve progress
 - Use commits to tell the story of how code evolved
@@ -22,7 +22,7 @@ The guidance is **suggestive, not enforcing**:
 
 ### Skills
 
-This jutsu provides the following skill:
+This plugin provides the following skill:
 
 - **commit-strategy**: Comprehensive guide on when to commit, commit message patterns, and git storytelling best practices
 
@@ -31,12 +31,12 @@ This jutsu provides the following skill:
 Install with npx (no installation required):
 
 ```bash
-han plugin install jutsu-git-storytelling
+han plugin install git-storytelling
 ```
 
 ## Usage
 
-Once installed, this jutsu provides guidance at session end:
+Once installed, this plugin provides guidance at session end:
 
 - **At Stop**: Claude receives git storytelling best practices
 - **Judgment-based**: Claude decides if commits are appropriate
@@ -142,7 +142,7 @@ If you want to disable auto-commits for a specific project, add to `.claude/sett
 ```json
 {
   "enabledPlugins": {
-    "jutsu-git-storytelling@han": false
+    "git-storytelling@han": false
   }
 }
 ```

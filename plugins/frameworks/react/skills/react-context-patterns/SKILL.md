@@ -1,5 +1,6 @@
 ---
 name: react-context-patterns
+user-invocable: false
 description: Use when React Context patterns for state management. Use when sharing state across component trees without prop drilling.
 allowed-tools:
   - Bash

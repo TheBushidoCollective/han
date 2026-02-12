@@ -1,5 +1,6 @@
 ---
 name: java-concurrency
+user-invocable: false
 description: Use when Java concurrency with ExecutorService, CompletableFuture, and virtual threads. Use when building concurrent applications.
 allowed-tools:
   - Bash

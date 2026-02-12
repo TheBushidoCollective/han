@@ -7,7 +7,7 @@ description: Start work on a ClickUp task (transition to In Progress)
 
 ## Name
 
-hashi-clickup:start - Start work on a ClickUp task (transition to In Progress)
+clickup:start - Start work on a ClickUp task (transition to In Progress)
 
 ## Synopsis
 

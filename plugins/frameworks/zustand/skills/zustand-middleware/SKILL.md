@@ -1,5 +1,6 @@
 ---
 name: zustand-middleware
+user-invocable: false
 description: Use when implementing Zustand middleware for persistence, dev tools, immutability, and other enhanced store functionality. Covers persist, devtools, immer, and custom middleware.
 allowed-tools:
   - Read

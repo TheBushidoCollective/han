@@ -1,5 +1,6 @@
 ---
 name: rails-action-controller-patterns
+user-invocable: false
 description: Use when action Controller patterns including routing, filters, strong parameters, and REST conventions.
 allowed-tools:
   - Read

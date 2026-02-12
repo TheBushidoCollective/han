@@ -1,5 +1,6 @@
 ---
 name: android-jetpack-compose
+user-invocable: false
 description: Use when building Android UIs with Jetpack Compose, managing state with remember/mutableStateOf, or implementing declarative UI patterns.
 allowed-tools:
   - Read

@@ -1,5 +1,6 @@
 ---
 name: shell-best-practices
+user-invocable: false
 description: Use when writing shell scripts following modern best practices. Covers portable scripting, Bash patterns, error handling, and secure coding.
 allowed-tools:
   - Read

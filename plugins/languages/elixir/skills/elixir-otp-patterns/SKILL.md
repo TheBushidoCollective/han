@@ -1,5 +1,6 @@
 ---
 name: elixir-otp-patterns
+user-invocable: false
 description: Use when Elixir OTP patterns including GenServer, Supervisor, Agent, and Task. Use when building concurrent, fault-tolerant Elixir applications.
 allowed-tools:
   - Bash

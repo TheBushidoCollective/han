@@ -1,4 +1,4 @@
-# Do Machine Learning Engineering
+# Machine Learning
 
 ML engineering agents providing expertise in MLOps, model deployment, and
 inference optimization
@@ -13,7 +13,7 @@ This plugin provides the following specialized agents:
 
 ## Usage
 
-Agents can be invoked using the Agent tool or through
+Agents can be invoked using the Task tool with the appropriate subagent_type or through
 natural conversation:
 
 ```text
@@ -25,8 +25,6 @@ to their domain.
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install do-machine-learning-engineering
+han plugin install machine-learning
 ```

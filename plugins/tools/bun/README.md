@@ -1,8 +1,8 @@
-# Jutsu: Bun
+# Bun
 
 Validation and quality enforcement for Bun.js projects.
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Validation Hooks
 
@@ -11,7 +11,7 @@ Validation and quality enforcement for Bun.js projects.
 
 ### Skills
 
-This jutsu provides the following skills:
+This plugin provides the following skills:
 
 - **bun-runtime**: Working with Bun's runtime APIs including file I/O, HTTP servers, WebSockets, and native APIs
 - **bun-testing**: Writing tests with Bun's built-in test runner, assertions, mocking, and snapshot testing
@@ -21,15 +21,13 @@ This jutsu provides the following skills:
 
 ## Installation
 
-Install with npx (no installation required):
-
 ```bash
-han plugin install jutsu-bun
+han plugin install bun
 ```
 
 ## Usage
 
-Once installed, this jutsu automatically validates your Bun code:
+Once installed, this plugin automatically validates your Bun code:
 
 - When you finish a conversation with Claude Code
 - When Claude Code agents complete their work

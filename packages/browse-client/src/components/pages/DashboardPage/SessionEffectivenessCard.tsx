@@ -9,9 +9,9 @@ import type React from "react";
 import { theme } from "@/components/atoms";
 import { Box } from "@/components/atoms/Box.tsx";
 import { HStack } from "@/components/atoms/HStack.tsx";
-import { Pressable } from "@/components/atoms/Pressable.tsx";
 import { Text } from "@/components/atoms/Text.tsx";
 import { VStack } from "@/components/atoms/VStack.tsx";
+import { SessionRow } from "@/components/molecules/SessionRow.tsx";
 
 interface SessionEffectiveness {
 	readonly sessionId: string;
@@ -33,173 +33,10 @@ interface SessionEffectivenessCardProps {
 	onSessionClick?: (sessionId: string) => void;
 }
 
-/**
- * Get color for score badge
- */
-function getScoreColor(score: number): string {
-	if (score > 70) return "#10b981"; // Green
-	if (score >= 40) return "#f59e0b"; // Amber
-	return "#ef4444"; // Red
-}
-
-/**
- * Get background color for score badge
- */
-function getScoreBgColor(score: number): string {
-	if (score > 70) return "rgba(16, 185, 129, 0.15)";
-	if (score >= 40) return "rgba(245, 158, 11, 0.15)";
-	return "rgba(239, 68, 68, 0.15)";
-}
-
-/**
- * Get trend arrow and color
- */
-function getTrendDisplay(trend: string): { arrow: string; color: string } {
-	switch (trend) {
-		case "improving":
-			return { arrow: "\u2191", color: "#10b981" }; // Up arrow, green
-		case "declining":
-			return { arrow: "\u2193", color: "#ef4444" }; // Down arrow, red
-		case "stable":
-			return { arrow: "\u2192", color: "#6b7280" }; // Right arrow, gray
-		default:
-			return { arrow: "\u2014", color: "#6b7280" }; // Em dash, gray
-	}
-}
-
-/**
- * Format date for display (relative or short date)
- */
-function formatSessionDate(dateStr: string | null): string {
-	if (!dateStr) return "";
-	const d = new Date(dateStr);
-	const now = new Date();
-	const diffMs = now.getTime() - d.getTime();
-	const diffDays = Math.floor(diffMs / 86400000);
-
-	if (diffDays === 0) return "Today";
-	if (diffDays === 1) return "Yesterday";
-	if (diffDays < 7) return `${diffDays}d ago`;
-	return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-/**
- * Get session display label - prefer summary over slug
- */
 function getSessionLabel(session: SessionEffectiveness): string {
 	if (session.summary) return session.summary;
 	if (session.slug) return session.slug;
 	return `${session.sessionId.slice(0, 12)}...`;
-}
-
-/**
- * A single session row with two-line layout
- */
-function SessionRow({
-	session,
-	onPress,
-}: {
-	session: SessionEffectiveness;
-	onPress?: () => void;
-}): React.ReactElement {
-	const scoreColor = getScoreColor(session.score);
-	const scoreBg = getScoreBgColor(session.score);
-	const trend = getTrendDisplay(session.sentimentTrend);
-	const hasSummary = !!session.summary;
-
-	const content = (
-		<HStack
-			gap="sm"
-			align="center"
-			style={{
-				width: "100%",
-				paddingVertical: theme.spacing.sm,
-				paddingHorizontal: theme.spacing.sm,
-				borderRadius: theme.radii.md,
-			}}
-		>
-			{/* Score badge */}
-			<Box
-				style={{
-					width: 38,
-					height: 26,
-					backgroundColor: scoreBg,
-					borderRadius: theme.radii.sm,
-					alignItems: "center",
-					justifyContent: "center",
-					display: "flex",
-					flexShrink: 0,
-				}}
-			>
-				<Text
-					size="xs"
-					weight="bold"
-					style={{ color: scoreColor, textAlign: "center" }}
-				>
-					{Math.round(session.score)}
-				</Text>
-			</Box>
-
-			{/* Session info - summary/slug + date */}
-			<VStack
-				gap="xs"
-				style={{
-					flex: 1,
-					minWidth: 0,
-				}}
-			>
-				<Text
-					size="sm"
-					style={{
-						overflow: "hidden",
-					}}
-					numberOfLines={1}
-				>
-					{getSessionLabel(session)}
-				</Text>
-				<HStack gap="sm" align="center">
-					{session.startedAt && (
-						<Text color="muted" size="xs">
-							{formatSessionDate(session.startedAt)}
-						</Text>
-					)}
-					{hasSummary && session.slug && (
-						<Text color="muted" size="xs" numberOfLines={1}>
-							{session.slug}
-						</Text>
-					)}
-				</HStack>
-			</VStack>
-
-			{/* Inline metrics */}
-			<HStack gap="sm" align="center" style={{ flexShrink: 0 }}>
-				{/* Turns */}
-				<Text color="muted" size="xs">
-					{session.turnCount}t
-				</Text>
-
-				{/* Sentiment trend */}
-				<Text size="xs" style={{ color: trend.color }}>
-					{trend.arrow}
-				</Text>
-
-				{/* Task completion */}
-				<Text color="muted" size="xs">
-					{Math.round(session.taskCompletionRate * 100)}%
-				</Text>
-			</HStack>
-		</HStack>
-	);
-
-	if (onPress) {
-		return (
-			<Pressable onPress={onPress} style={{ width: "100%" }}>
-				{content}
-			</Pressable>
-		);
-	}
-
-	return content;
 }
 
 export function SessionEffectivenessCard({
@@ -207,7 +44,6 @@ export function SessionEffectivenessCard({
 	bottomSessions,
 	onSessionClick,
 }: SessionEffectivenessCardProps): React.ReactElement {
-	// No data state
 	if (topSessions.length === 0 && bottomSessions.length === 0) {
 		return (
 			<VStack
@@ -245,7 +81,15 @@ export function SessionEffectivenessCard({
 						{topSessions.map((session) => (
 							<SessionRow
 								key={session.sessionId}
-								session={session}
+								label={getSessionLabel(session)}
+								sublabel={
+									session.summary && session.slug ? session.slug : undefined
+								}
+								startedAt={session.startedAt}
+								effectivenessScore={session.score}
+								sentimentTrend={session.sentimentTrend}
+								taskCompletionRate={session.taskCompletionRate}
+								turnCount={session.turnCount}
 								onPress={
 									onSessionClick
 										? () => onSessionClick(session.sessionId)
@@ -288,7 +132,15 @@ export function SessionEffectivenessCard({
 						{bottomSessions.map((session) => (
 							<SessionRow
 								key={session.sessionId}
-								session={session}
+								label={getSessionLabel(session)}
+								sublabel={
+									session.summary && session.slug ? session.slug : undefined
+								}
+								startedAt={session.startedAt}
+								effectivenessScore={session.score}
+								sentimentTrend={session.sentimentTrend}
+								taskCompletionRate={session.taskCompletionRate}
+								turnCount={session.turnCount}
 								onPress={
 									onSessionClick
 										? () => onSessionClick(session.sessionId)

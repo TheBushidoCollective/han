@@ -1,5 +1,6 @@
 ---
 name: shell-portability
+user-invocable: false
 description: Use when writing shell scripts that need to run across different systems, shells, or environments. Covers POSIX compatibility and platform differences.
 allowed-tools:
   - Read

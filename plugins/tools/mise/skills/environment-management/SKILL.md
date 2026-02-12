@@ -1,5 +1,6 @@
 ---
 name: mise-environment-management
+user-invocable: false
 description: Use when managing environment variables and project settings with Mise. Covers env configuration, direnv replacement, and per-directory settings.
 allowed-tools:
   - Read

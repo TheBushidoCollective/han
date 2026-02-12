@@ -10,10 +10,18 @@
  */
 
 import { type ChildProcess, spawn } from 'node:child_process';
-import { existsSync, readFileSync, watch, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  watch,
+  writeFileSync,
+} from 'node:fs';
 import { createServer } from 'node:http';
-import { platform } from 'node:os';
-import { dirname, extname, join } from 'node:path';
+import { platform, tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { fileURLToPath, parse } from 'node:url';
 import { isDevMode } from '../../shared.ts';
 import {
@@ -255,29 +263,21 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
     const coordinatorStatus = await ensureCoordinator(coordinatorPort);
     coordinatorRunning = coordinatorStatus.running;
     if (coordinatorRunning) {
-      // In local mode, always use HTTP (for offline scenarios like planes)
-      // Otherwise, detect HTTPS for remote dashboard
-      if (local) {
+      // Detect if coordinator is using HTTPS (TLS via coordinator.local.han.guru)
+      const { checkHealthHttps } = await import('../coordinator/health.ts');
+      const healthCheck = await checkHealthHttps(coordinatorStatus.port);
+      if (healthCheck) {
+        coordinatorProtocol = healthCheck.protocol;
+        coordinatorHost = healthCheck.host;
+        const tlsNote =
+          healthCheck.protocol === 'https' ? ' (TLS enabled)' : '';
+        console.log(
+          `[han] Coordinator ready at ${coordinatorProtocol}://${coordinatorHost}:${coordinatorStatus.port}/graphql${tlsNote}`
+        );
+      } else {
         console.log(
           `[han] Coordinator ready at http://127.0.0.1:${coordinatorStatus.port}/graphql`
         );
-      } else {
-        // Detect if coordinator is using HTTPS
-        const { checkHealthHttps } = await import('../coordinator/health.ts');
-        const healthCheck = await checkHealthHttps(coordinatorStatus.port);
-        if (healthCheck) {
-          coordinatorProtocol = healthCheck.protocol;
-          coordinatorHost = healthCheck.host;
-          const tlsNote =
-            healthCheck.protocol === 'https' ? ' (TLS enabled)' : '';
-          console.log(
-            `[han] Coordinator ready at ${coordinatorProtocol}://${coordinatorHost}:${coordinatorStatus.port}/graphql${tlsNote}`
-          );
-        } else {
-          console.log(
-            `[han] Coordinator ready at http://127.0.0.1:${coordinatorStatus.port}/graphql`
-          );
-        }
       }
     }
   } catch (error) {
@@ -295,14 +295,6 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
     return;
   }
 
-  // Local mode: Start local dev server
-  console.log(`[han] Starting browse server...`);
-  console.log(`[han] Mode: ${devMode ? 'development' : 'production'}`);
-
-  // Skip per-request coordinator checks in test environments
-  // The coordinator is verified at startup; per-request checks can timeout
-  const skipCoordinatorCheck = process.env.HAN_SKIP_COORDINATOR_CHECK === '1';
-
   const clientDir = getBrowseClientDir();
 
   // Check if browse-client exists
@@ -310,25 +302,103 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
     throw new Error(`browse-client not found at ${clientDir}`);
   }
 
-  // Create HTTP server
-  const server = createServer();
+  // Dev mode: spawn Vite dev server with HMR
+  if (devMode) {
+    console.log(`[han] Starting Vite dev server with HMR...`);
 
-  // Build output directory
+    // Start relay-compiler in watch mode alongside Vite
+    const relayProcess = startRelayCompiler(clientDir);
+
+    // Watch GraphQL type definitions and regenerate schema on change
+    const hanDir = getHanPackageDir();
+    const graphqlDir = join(hanDir, 'lib', 'graphql');
+    if (existsSync(graphqlDir)) {
+      let schemaTimeout: ReturnType<typeof setTimeout> | null = null;
+      watch(graphqlDir, { recursive: true }, (_event, filename) => {
+        if (!filename || !filename.endsWith('.ts')) return;
+        if (schemaTimeout) clearTimeout(schemaTimeout);
+        schemaTimeout = setTimeout(async () => {
+          console.log(
+            `\n[dev] GraphQL types changed (${filename}), regenerating schema...`
+          );
+          await regenerateSchema(clientDir);
+        }, 200);
+      });
+      console.log('[dev] Watching GraphQL types for schema changes');
+    }
+
+    // Spawn Vite dev server
+    const viteProcess = spawn(
+      'npx',
+      ['vite', '--port', String(port), '--open'],
+      {
+        cwd: clientDir,
+        stdio: 'inherit',
+        env: { ...process.env },
+      }
+    );
+
+    viteProcess.on('error', (err) => {
+      console.error('[vite] Failed to start:', err.message);
+      process.exit(1);
+    });
+
+    // Graceful shutdown
+    let isShuttingDown = false;
+    const shutdown = () => {
+      if (isShuttingDown) return;
+      isShuttingDown = true;
+      console.log('\nShutting down...');
+
+      if (relayProcess) {
+        try {
+          relayProcess.kill('SIGTERM');
+          setTimeout(() => {
+            if (relayProcess && !relayProcess.killed) {
+              relayProcess.kill('SIGKILL');
+            }
+          }, 2000);
+        } catch {
+          // Process already dead
+        }
+      }
+
+      try {
+        viteProcess.kill('SIGTERM');
+        setTimeout(() => {
+          if (!viteProcess.killed) viteProcess.kill('SIGKILL');
+        }, 2000);
+      } catch {
+        // Process already dead
+      }
+
+      process.exit(0);
+    };
+
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+
+    // Wait for Vite process to exit
+    await new Promise<void>((resolve) => {
+      viteProcess.on('exit', () => resolve());
+    });
+
+    return;
+  }
+
+  // Production mode: Bun.build() and serve static files
+  console.log(`[han] Starting production browse server...`);
+
+  // Skip per-request coordinator checks in test environments
+  const skipCoordinatorCheck = process.env.HAN_SKIP_COORDINATOR_CHECK === '1';
+
+  const server = createServer();
   const outDir = join(clientDir, '.browse-out');
 
-  // Connected clients for live reload (dev mode only)
-  const liveReloadClients = new Set<import('node:http').ServerResponse>();
-
-  // Build function - always uses Bun.build() with HTML entrypoint
+  // Build function - uses Bun.build() with HTML entrypoint
   async function buildBundle(): Promise<boolean> {
     try {
       const pagesDir = join(clientDir, 'src', 'pages');
-
-      // Verify client directory exists
-      if (!existsSync(clientDir)) {
-        console.error(`[bun] Client directory not found: ${clientDir}`);
-        return false;
-      }
 
       const { relayPlugin } = await import(
         join(clientDir, 'build', 'relay-plugin.ts')
@@ -340,28 +410,30 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
         join(clientDir, 'build', 'rnw-compat-plugin.ts')
       );
 
+      const tmpOut = mkdtempSync(join(tmpdir(), 'han-browse-'));
+
       const result = await Bun.build({
         entrypoints: [join(clientDir, 'index.html')],
-        outdir: outDir,
-        root: clientDir, // Resolve modules from browse-client directory
+        outdir: tmpOut,
+        root: clientDir,
         target: 'browser',
         splitting: true,
-        minify: !devMode,
-        sourcemap: devMode ? 'inline' : 'none',
+        minify: true,
+        sourcemap: 'none',
         publicPath: '/',
+        naming: {
+          chunk: 'chunk-[name]-[hash].[ext]',
+          entry: '[dir]/[name].[ext]',
+          asset: '[name]-[hash].[ext]',
+        },
         plugins: [
           rnwCompatPlugin(),
-          relayPlugin({ devMode }),
+          relayPlugin({ devMode: false }),
           pagesPlugin({ pagesDir, clientRoot: clientDir }),
         ],
         define: {
-          'process.env.NODE_ENV': JSON.stringify(
-            devMode ? 'development' : 'production'
-          ),
-          // Polyfill Node.js globals for React Native libraries
+          'process.env.NODE_ENV': JSON.stringify('production'),
           global: 'globalThis',
-          // Inject GraphQL URLs for the frontend to connect to coordinator
-          // Use detected protocol and host (https://coordinator.local.han.guru if TLS enabled, http://127.0.0.1 otherwise)
           __GRAPHQL_URL__: JSON.stringify(
             `${coordinatorProtocol}://${coordinatorHost}:${coordinatorPort}/graphql`
           ),
@@ -383,21 +455,18 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
 
       if (!result.success) {
         console.error('[bun] Build failed:');
-        if (result.logs.length === 0) {
-          console.error('  No build logs available - check for syntax errors');
-        }
         for (const log of result.logs) {
           console.error('  ', log.level, log.message);
-          if (log.position) {
-            console.error(
-              '    at',
-              log.position.file,
-              `line ${log.position.line}:${log.position.column}`
-            );
-          }
         }
+        rmSync(tmpOut, { recursive: true, force: true });
         return false;
       }
+
+      if (existsSync(outDir)) {
+        rmSync(outDir, { recursive: true, force: true });
+      }
+      cpSync(tmpOut, outDir, { recursive: true });
+      rmSync(tmpOut, { recursive: true, force: true });
       return true;
     } catch (error) {
       console.error('[bun] Build exception:', error);
@@ -405,7 +474,6 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
     }
   }
 
-  // Build on startup
   console.log('[bun] Building browse-client...');
   const buildStart = performance.now();
   if (!(await buildBundle())) {
@@ -415,79 +483,17 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
     `[bun] Built in ${(performance.now() - buildStart).toFixed(0)}ms`
   );
 
-  // Track child processes for cleanup
-  let relayProcess: ChildProcess | null = null;
-
-  // Check if we're in a test environment - don't start dev watchers in tests
-  // HAN_NO_DEV_WATCHERS is set explicitly for test runs
+  // Check if we're in a test environment
   const isTestEnvironment =
     process.env.HAN_NO_DEV_WATCHERS === '1' ||
     process.env.CI ||
     process.env.PLAYWRIGHT_TEST_BASE_URL ||
     process.env.TEST_WORKER_INDEX !== undefined;
 
-  // Dev mode: watch for changes and start supporting processes
-  // Skip in test environments to avoid interference with automated tests
-  if (devMode && isTestEnvironment) {
-    console.log('[dev] Skipping dev watchers in test environment');
-  } else if (devMode) {
-    const srcDir = join(clientDir, 'src');
-    const hanDir = getHanPackageDir();
-    const graphqlDir = join(hanDir, 'lib', 'graphql');
-
-    // Start relay-compiler in watch mode
-    relayProcess = startRelayCompiler(clientDir);
-
-    // Watch GraphQL type definitions and regenerate schema on change
-    if (existsSync(graphqlDir)) {
-      let schemaTimeout: ReturnType<typeof setTimeout> | null = null;
-      watch(graphqlDir, { recursive: true }, (_event, filename) => {
-        if (!filename || !filename.endsWith('.ts')) return;
-        if (schemaTimeout) clearTimeout(schemaTimeout);
-        schemaTimeout = setTimeout(async () => {
-          console.log(
-            `\n[dev] GraphQL types changed (${filename}), regenerating schema...`
-          );
-          await regenerateSchema(clientDir);
-          // Relay compiler in watch mode will pick up schema.graphql changes automatically
-        }, 200);
-      });
-      console.log('[dev] Watching GraphQL types for schema changes');
-    }
-
-    // Watch frontend source and rebuild
-    let buildTimeout: ReturnType<typeof setTimeout> | null = null;
-    watch(srcDir, { recursive: true }, (_event, filename) => {
-      if (!filename) return;
-      if (buildTimeout) clearTimeout(buildTimeout);
-      buildTimeout = setTimeout(async () => {
-        console.log(`\n[bun] Rebuilding (${filename} changed)...`);
-        const start = performance.now();
-        if (await buildBundle()) {
-          console.log(
-            `[bun] Rebuilt in ${(performance.now() - start).toFixed(0)}ms`
-          );
-          // Notify live reload clients
-          for (const client of liveReloadClients) {
-            try {
-              client.write('data: reload\n\n');
-            } catch {
-              liveReloadClients.delete(client);
-            }
-          }
-        }
-      }, 100);
-    });
-
-    console.log('[bun] Dev server ready with live reload');
-  }
-
-  // Add request handler to server
   server.on('request', async (req, res) => {
     const parsedUrl = parse(req.url || '/', true);
     const pathname = parsedUrl.pathname || '/';
 
-    // Health check - includes coordinator status
     if (pathname === '/api/health') {
       const coordRunning = await isCoordinatorRunning(coordinatorPort);
       res.setHeader('Content-Type', 'application/json');
@@ -501,92 +507,34 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
       return;
     }
 
-    // Check if coordinator is running for serving frontend
-    // Skip this check in test environments where coordinator is verified at startup
     const coordRunning =
       skipCoordinatorCheck ||
       coordinatorRunning ||
       (await isCoordinatorRunning(coordinatorPort));
 
-    // If coordinator is not running, show placeholder page
     if (!coordRunning && !pathname.startsWith('/api/')) {
       res.setHeader('Content-Type', 'text/html');
       res.end(COORDINATOR_UNAVAILABLE_HTML);
       return;
     }
 
-    // Live reload SSE endpoint (dev mode only)
-    if (devMode && pathname === '/__live_reload') {
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      liveReloadClients.add(res);
-      res.write('data: connected\n\n');
-      req.on('close', () => liveReloadClients.delete(res));
-      return;
-    }
-
-    // Serve from bundled output directory
     const hasExtension = pathname.includes('.') && !pathname.endsWith('/');
     const filePath = hasExtension
       ? join(outDir, pathname)
       : join(outDir, 'index.html');
 
     if (existsSync(filePath)) {
-      const ext = extname(filePath) || '.html';
-      let content = readFileSync(filePath);
-
-      // Inject live reload script into HTML (dev mode only)
-      if (devMode && ext === '.html') {
-        const html = content.toString('utf-8');
-        const liveReloadScript = `
-<script>
-(function() {
-  let es;
-  function connect() {
-    es = new EventSource('/__live_reload');
-    es.onmessage = (e) => { if (e.data === 'reload') location.reload(); };
-    es.onerror = () => { es.close(); setTimeout(connect, 2000); };
-  }
-  connect();
-})();
-</script>
-</body>`;
-        content = Buffer.from(html.replace('</body>', liveReloadScript));
-      }
-
       res.setHeader('Content-Type', getMimeType(filePath));
-      res.setHeader('Cache-Control', devMode ? 'no-cache' : 'max-age=31536000');
-      res.end(content);
+      res.setHeader('Cache-Control', 'max-age=31536000');
+      res.end(readFileSync(filePath));
       return;
     }
 
-    // SPA fallback
     const indexPath = join(outDir, 'index.html');
     if (existsSync(indexPath)) {
-      let html = readFileSync(indexPath, 'utf-8');
-
-      // Inject live reload script (dev mode only)
-      if (devMode) {
-        const liveReloadScript = `
-<script>
-(function() {
-  let es;
-  function connect() {
-    es = new EventSource('/__live_reload');
-    es.onmessage = (e) => { if (e.data === 'reload') location.reload(); };
-    es.onerror = () => { es.close(); setTimeout(connect, 2000); };
-  }
-  connect();
-})();
-</script>
-</body>`;
-        html = html.replace('</body>', liveReloadScript);
-      }
-
       res.setHeader('Content-Type', 'text/html');
       res.setHeader('Cache-Control', 'no-cache');
-      res.end(html);
+      res.end(readFileSync(indexPath));
       return;
     }
 
@@ -594,7 +542,6 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
     res.end('Not Found');
   });
 
-  // Start server
   server.listen(port, async () => {
     const serverUrl = `http://localhost:${port}`;
     console.log(`Han Browser running at ${serverUrl}`);
@@ -603,12 +550,8 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
         `GraphQL available at ${coordinatorProtocol}://${coordinatorHost}:${coordinatorPort}/graphql`
       );
     }
-    if (devMode) {
-      console.log('[dev] Bun live reload enabled');
-    }
     console.log('Press Ctrl+C to stop');
 
-    // Open browser (skip in test environments)
     if (!isTestEnvironment) {
       openBrowser(serverUrl).then((opened) => {
         if (opened) {
@@ -622,38 +565,11 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
     }
   });
 
-  // Setup graceful shutdown
   let isShuttingDown = false;
   const shutdown = () => {
-    if (isShuttingDown) return; // Prevent multiple calls
+    if (isShuttingDown) return;
     isShuttingDown = true;
     console.log('\nShutting down...');
-
-    // Kill relay-compiler if running
-    if (relayProcess) {
-      try {
-        relayProcess.kill('SIGTERM');
-        // Force kill after 2 seconds if still running
-        setTimeout(() => {
-          if (relayProcess && !relayProcess.killed) {
-            relayProcess.kill('SIGKILL');
-          }
-        }, 2000);
-      } catch {
-        // Process already dead
-      }
-    }
-
-    // Close live reload connections
-    for (const client of liveReloadClients) {
-      try {
-        client.end();
-      } catch {
-        // Ignore errors
-      }
-    }
-    liveReloadClients.clear();
-
     server.close();
     process.exit(0);
   };
@@ -661,14 +577,11 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
 
-  // Also handle uncaught exceptions gracefully
   process.on('uncaughtException', (error) => {
     console.error('[browse] Uncaught exception:', error);
     shutdown();
   });
 
-  // Keep the process running using a simple polling approach
-  // This properly responds to shutdown signals
   while (!isShuttingDown) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }

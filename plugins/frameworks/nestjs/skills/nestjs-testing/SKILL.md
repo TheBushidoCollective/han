@@ -1,5 +1,6 @@
 ---
 name: nestjs-testing
+user-invocable: false
 description: Use when nestJS testing with unit tests, integration tests, and e2e tests. Use when building well-tested NestJS applications.
 allowed-tools:
   - Bash
@@ -1380,6 +1381,7 @@ module.exports = {
 // GitHub Actions CI
 // .github/workflows/test.yml
 name: Tests
+user-invocable: false
 
 on: [push, pull_request]
 

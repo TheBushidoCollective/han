@@ -1,12 +1,12 @@
-# jutsu-absinthe-graphql
+# Absinthe GraphQL
 
 Absinthe GraphQL skills for Elixir projects with Claude Code.
 
-## What This Jutsu Provides
+## What This Plugin Provides
 
 ### Skills
 
-This jutsu provides the following skills for building GraphQL APIs with Absinthe:
+This plugin provides the following skills for building GraphQL APIs with Absinthe:
 
 - **absinthe-schema**: Type definitions, interfaces, unions, enums, and schema organization patterns
 - **absinthe-resolvers**: Resolver patterns, Dataloader integration, batching, and error handling
@@ -15,7 +15,7 @@ This jutsu provides the following skills for building GraphQL APIs with Absinthe
 ## Installation
 
 ```bash
-han plugin install jutsu-absinthe-graphql
+han plugin install absinthe-graphql
 ```
 
 ## Usage
@@ -38,7 +38,7 @@ Once installed, Claude Code will have access to Absinthe-specific knowledge when
 
 ## Related Plugins
 
-- **jutsu-elixir**: Core Elixir language skills
-- **jutsu-phoenix**: Phoenix framework patterns
-- **jutsu-ecto**: Database interactions with Ecto
-- **jutsu-graphql**: General GraphQL concepts
+- **elixir**: Core Elixir language skills
+- **phoenix**: Phoenix framework patterns
+- **ecto**: Database interactions with Ecto
+- **graphql**: General GraphQL concepts

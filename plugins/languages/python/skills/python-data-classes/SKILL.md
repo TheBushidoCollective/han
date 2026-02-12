@@ -1,5 +1,6 @@
 ---
 name: python-data-classes
+user-invocable: false
 description: Use when Python data modeling with dataclasses, attrs, and Pydantic. Use when creating data structures and models.
 allowed-tools:
   - Bash

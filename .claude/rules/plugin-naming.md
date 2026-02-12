@@ -25,6 +25,8 @@ Plugins are named by their short identifier only, matching their directory name:
 | Tools | `tools/vitest` | `vitest` |
 | Frameworks | `frameworks/relay` | `relay` |
 | Disciplines | `disciplines/frontend-development` | `frontend-development` |
+| Disciplines | `disciplines/api-engineering` | `api-engineering` |
+| Disciplines | `disciplines/security-engineering` | `security-engineering` |
 
 ## Installation Commands
 

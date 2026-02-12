@@ -1,5 +1,6 @@
 ---
 name: cypress-fundamentals
+user-invocable: false
 description: Use when cypress fundamentals including commands, assertions, fixtures, and E2E testing patterns.
 allowed-tools: [Read, Write, Edit, Bash, Glob, Grep]
 ---

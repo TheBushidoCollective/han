@@ -7,7 +7,7 @@ description: Analyze a Figma frame's structure, properties, and implementation c
 
 ## Name
 
-hashi-figma:figma-analyze-frame - Analyze Figma frame structure and implementation guidance
+figma:figma-analyze-frame - Analyze Figma frame structure and implementation guidance
 
 ## Synopsis
 

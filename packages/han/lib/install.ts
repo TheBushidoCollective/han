@@ -307,6 +307,9 @@ function showInstallResults(
     console.log('\n✓ No changes made');
   }
   console.log('\n⚠️  Please restart Claude Code to load the new plugins');
+  console.log(
+    '\nTip: To use Han with other agents (Codex, Kiro, Gemini CLI):\n  han setup'
+  );
 }
 
 /**
