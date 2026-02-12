@@ -80,12 +80,8 @@ jobs:
           fail_ci_if_error: false
 
       # ========================================
-      # Han CLI - coverage collected by validate-han.yml workflow
+      # Han CLI - Tests & Coverage
       # ========================================
-
-      # Han CLI tests + coverage run in the Validate Han CLI workflow.
-      # The native module is still built above for han-native coverage.
-      # Install han dependencies for browse-client E2E tests below.
       - name: Install han dependencies
         working-directory: ./packages/han
         run: bun install --frozen-lockfile
@@ -102,6 +98,27 @@ jobs:
           export const platform = "linux";
           export const arch = "x64";
           EOF
+
+      - name: Run han tests with coverage and JUnit output
+        working-directory: ./packages/han
+        run: |
+          bun test --coverage --coverage-reporter=lcov --reporter=junit > ../../test-results/han-junit.xml 2>&1 || true
+          bun test --coverage --coverage-reporter=lcov || true
+          if [ -f coverage/lcov.info ]; then
+            cp coverage/lcov.info ../../coverage/han-lcov.info
+          else
+            echo "Warning: coverage/lcov.info not generated (bun coverage writer may have hit output limits)"
+          fi
+
+      # Upload han CLI coverage
+      - name: Upload han CLI coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/han-lcov.info
+          flags: han-cli
+          name: han-cli-coverage
+          fail_ci_if_error: false
 
       # ========================================
       # Website - Tests & Coverage
@@ -177,7 +194,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: test-results/han-native-junit.xml,test-results/website-junit.xml,test-results/browse-client-junit.xml
+          files: test-results/han-native-junit.xml,test-results/han-junit.xml,test-results/website-junit.xml,test-results/browse-client-junit.xml
           report_type: test_results
           fail_ci_if_error: false
           verbose: true
