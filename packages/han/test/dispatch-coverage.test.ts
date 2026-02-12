@@ -4,7 +4,7 @@
  *
  * NOTE: These tests spawn subprocesses that load the full CLI.
  * The CLI uses ink for interactive UIs, which can hang in non-TTY environments.
- * These tests are skipped in CI and when SKIP_NATIVE is set.
+ * These tests are skipped in CI, when SKIP_NATIVE is set, or in non-TTY mode.
  */
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
@@ -12,12 +12,19 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// Skip these tests when subprocess spawning would hang
+const SKIP_DISPATCH =
+  process.env.SKIP_NATIVE === 'true' ||
+  process.env.CI === 'true' ||
+  !process.stdout.isTTY;
+const describeDispatch = SKIP_DISPATCH ? describe.skip : describe;
+
 // Get the package root directory
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packageRoot = join(__dirname, '..');
 
-describe('dispatch.ts coverage tests', () => {
+describeDispatch('dispatch.ts coverage tests', () => {
   const testDir = `/tmp/test-dispatch-coverage-${Date.now()}`;
   let configDir: string;
   let projectDir: string;
@@ -41,6 +48,7 @@ describe('dispatch.ts coverage tests', () => {
         ['run', 'lib/main.ts', 'hook', 'dispatch', 'SessionStart'],
         {
           encoding: 'utf-8',
+          input: '',
           timeout: 10000,
           cwd: packageRoot,
           env: {
@@ -61,6 +69,7 @@ describe('dispatch.ts coverage tests', () => {
         ['run', 'lib/main.ts', 'hook', 'dispatch', 'Stop'],
         {
           encoding: 'utf-8',
+          input: '',
           timeout: 10000,
           cwd: packageRoot,
           env: {
@@ -111,6 +120,7 @@ describe('dispatch.ts coverage tests', () => {
         ],
         {
           encoding: 'utf-8',
+          input: '',
           timeout: 15000,
           cwd: projectDir,
           env: {
@@ -161,6 +171,7 @@ describe('dispatch.ts coverage tests', () => {
         ],
         {
           encoding: 'utf-8',
+          input: '',
           timeout: 15000,
           cwd: projectDir,
           env: {
@@ -209,6 +220,7 @@ describe('dispatch.ts coverage tests', () => {
           ],
           {
             encoding: 'utf-8',
+            input: '',
             timeout: 15000,
             cwd: projectDir,
             env: {
@@ -240,6 +252,7 @@ describe('dispatch.ts coverage tests', () => {
         ],
         {
           encoding: 'utf-8',
+          input: '',
           timeout: 10000,
           cwd: projectDir,
           env: {
@@ -293,6 +306,7 @@ describe('dispatch.ts coverage tests', () => {
           ],
           {
             encoding: 'utf-8',
+            input: '',
             timeout: 15000,
             cwd: projectDir,
             env: {
@@ -369,6 +383,7 @@ describe('dispatch.ts coverage tests', () => {
         ],
         {
           encoding: 'utf-8',
+          input: '',
           timeout: 15000,
           cwd: projectDir,
           env: {
@@ -418,6 +433,7 @@ describe('dispatch.ts coverage tests', () => {
         ],
         {
           encoding: 'utf-8',
+          input: '',
           timeout: 10000,
           cwd: projectDir,
           env: {
@@ -483,6 +499,7 @@ describe('dispatch.ts coverage tests', () => {
         ['run', join(packageRoot, 'lib/main.ts'), 'hook', 'dispatch', 'Stop'],
         {
           encoding: 'utf-8',
+          input: '',
           timeout: 15000,
           cwd: projectDir,
           env: {
@@ -531,6 +548,7 @@ describe('dispatch.ts coverage tests', () => {
         ],
         {
           encoding: 'utf-8',
+          input: '',
           timeout: 15000,
           cwd: projectDir,
           env: {
@@ -582,6 +600,7 @@ describe('dispatch.ts coverage tests', () => {
         ],
         {
           encoding: 'utf-8',
+          input: '',
           timeout: 15000,
           cwd: projectDir,
           env: {
@@ -660,6 +679,7 @@ describe('dispatch.ts coverage tests', () => {
         ],
         {
           encoding: 'utf-8',
+          input: '',
           timeout: 15000,
           cwd: projectDir,
           env: {
@@ -714,6 +734,7 @@ describe('dispatch.ts coverage tests', () => {
         ],
         {
           encoding: 'utf-8',
+          input: '',
           timeout: 15000,
           cwd: projectDir,
           env: {
@@ -762,6 +783,7 @@ describe('dispatch.ts coverage tests', () => {
         ],
         {
           encoding: 'utf-8',
+          input: '',
           timeout: 15000,
           cwd: projectDir,
           env: {
@@ -815,6 +837,7 @@ describe('dispatch.ts coverage tests', () => {
         ],
         {
           encoding: 'utf-8',
+          input: '',
           timeout: 15000,
           cwd: projectDir,
           env: {
@@ -852,6 +875,7 @@ describe('dispatch.ts coverage tests', () => {
         ],
         {
           encoding: 'utf-8',
+          input: '',
           timeout: 10000,
           cwd: projectDir,
           env: {
