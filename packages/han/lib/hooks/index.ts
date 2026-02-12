@@ -60,13 +60,10 @@ export {
 // Locking
 export {
   acquireSlot,
-  checkFailureSignal,
   cleanupOwnedSlots,
-  clearFailureSignal,
   createLockManager,
   isLockingEnabled,
   releaseSlot,
-  signalFailure,
   withGlobalSlot,
   withSlot,
 } from './hook-lock.ts';

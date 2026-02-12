@@ -14,7 +14,6 @@ import {
   getMergedHanConfigForDirectory,
   getPluginHookSettings,
   isCacheEnabled,
-  isFailFastEnabled,
   isHooksEnabled,
   isMemoryEnabled,
   isMetricsEnabled,
@@ -416,54 +415,6 @@ describe.serial('han-settings.ts', () => {
     });
   });
 
-  describe('isFailFastEnabled', () => {
-    test('returns true by default when no config exists', () => {
-      expect(isFailFastEnabled()).toBe(true);
-    });
-
-    test('returns true when hooks.fail_fast is explicitly true', () => {
-      const configPath = join(tempUserDir, 'han.yml');
-      writeFileSync(configPath, 'hooks:\n  fail_fast: true\n');
-
-      expect(isFailFastEnabled()).toBe(true);
-    });
-
-    test('returns false when hooks.fail_fast is false', () => {
-      const configPath = join(tempUserDir, 'han.yml');
-      writeFileSync(configPath, 'hooks:\n  fail_fast: false\n');
-
-      expect(isFailFastEnabled()).toBe(false);
-    });
-
-    test('returns true when hooks section exists but fail_fast is undefined', () => {
-      const configPath = join(tempUserDir, 'han.yml');
-      writeFileSync(configPath, 'hooks:\n  enabled: true\n');
-
-      expect(isFailFastEnabled()).toBe(true);
-    });
-
-    test('respects config precedence (local overrides project)', () => {
-      const projectConfigPath = join(tempProjectDir, '.claude', 'han.yml');
-      const localConfigPath = join(tempProjectDir, '.claude', 'han.local.yml');
-
-      writeFileSync(projectConfigPath, 'hooks:\n  fail_fast: true\n');
-      writeFileSync(localConfigPath, 'hooks:\n  fail_fast: false\n');
-
-      expect(isFailFastEnabled()).toBe(false);
-    });
-
-    test('returns false when hooks are globally disabled', () => {
-      const configPath = join(tempUserDir, 'han.yml');
-      writeFileSync(
-        configPath,
-        'hooks:\n  enabled: false\n  fail_fast: true\n'
-      );
-
-      // When hooks are disabled globally, fail_fast should also be disabled
-      expect(isFailFastEnabled()).toBe(false);
-    });
-  });
-
   describe('getHanBinary', () => {
     test("returns 'han' by default when no config exists", () => {
       expect(getHanBinary()).toBe('han');
@@ -623,14 +574,13 @@ memory:
       );
       writeFileSync(projectConfigPath, 'hooks:\n  cache: false\n');
       writeFileSync(localConfigPath, 'hooks:\n  checkpoints: false\n');
-      writeFileSync(dirConfigPath, 'hooks:\n  fail_fast: false\n');
+      writeFileSync(dirConfigPath, 'hooks:\n  enabled: true\n');
 
       const merged = getMergedHanConfigForDirectory(subDir);
 
-      expect(merged.hooks?.enabled).toBe(true); // From user
+      expect(merged.hooks?.enabled).toBe(true); // From user and directory
       expect(merged.hooks?.cache).toBe(false); // From project
       expect(merged.hooks?.checkpoints).toBe(false); // From local
-      expect(merged.hooks?.fail_fast).toBe(false); // From directory
     });
 
     test('handles directory config for project root (same as getMergedHanConfig)', () => {
@@ -995,14 +945,14 @@ memory:
       const localConfigPath = join(tempProjectDir, '.claude', 'han.local.yml');
       const rootConfigPath = join(tempProjectDir, 'han.yml');
 
-      writeFileSync(userConfigPath, 'hooks:\n  fail_fast: false\n');
-      writeFileSync(projectConfigPath, 'hooks:\n  fail_fast: false\n');
-      writeFileSync(localConfigPath, 'hooks:\n  fail_fast: false\n');
-      writeFileSync(rootConfigPath, 'hooks:\n  fail_fast: true\n');
+      writeFileSync(userConfigPath, 'hooks:\n  cache: false\n');
+      writeFileSync(projectConfigPath, 'hooks:\n  cache: false\n');
+      writeFileSync(localConfigPath, 'hooks:\n  cache: false\n');
+      writeFileSync(rootConfigPath, 'hooks:\n  cache: true\n');
 
       const merged = getMergedHanConfig();
 
-      expect(merged.hooks?.fail_fast).toBe(true); // Root has highest precedence
+      expect(merged.hooks?.cache).toBe(true); // Root has highest precedence
     });
   });
 
@@ -1015,7 +965,6 @@ memory:
   enabled: true
   checkpoints: true
   cache: true
-  fail_fast: true
 memory:
   enabled: true
 metrics:
@@ -1033,7 +982,6 @@ plugins:
       expect(merged.hooks?.enabled).toBe(true);
       expect(merged.hooks?.checkpoints).toBe(true);
       expect(merged.hooks?.cache).toBe(true);
-      expect(merged.hooks?.fail_fast).toBe(true);
       expect(merged.memory?.enabled).toBe(true);
       expect(merged.metrics?.enabled).toBe(true);
       expect(merged.plugins?.['jutsu-biome']?.hooks?.lint?.enabled).toBe(true);

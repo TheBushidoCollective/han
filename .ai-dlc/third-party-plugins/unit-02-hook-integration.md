@@ -52,10 +52,10 @@ The han hook system already has partial support for external plugins through the
    - Reads `han-plugin.yml` from plugin root
    - Parses hook definitions with event bindings
 
-4. **Hook Orchestration** (`orchestrate.ts`):
-   - Iterates through all enabled plugins
-   - Loads their `han-plugin.yml` configs
-   - Executes hooks matching the event type
+4. **Hook Execution** (Claude Code direct):
+   - Claude Code discovers hooks from enabled plugins
+   - Each plugin's `hooks/hooks.json` is executed directly
+   - No centralized orchestration layer
 
 ### Gap Analysis
 
@@ -74,7 +74,7 @@ External plugin support largely already exists, but there are gaps:
 
 1. Create a test external plugin outside the han repo
 2. Test local path installation with `source: "directory"`
-3. Verify hook discovery with `han hook orchestrate Stop --verbose`
+3. Verify hook discovery with `han hook list`
 
 #### Phase 2: Implement Missing Functionality
 
@@ -111,13 +111,11 @@ Create test suite for external plugin integration:
 
 1. `packages/han/lib/commands/hook/index.ts` - Add hook list command registration
 2. Create `packages/han/lib/commands/hook/list.ts` - Implement hook listing
-3. `packages/han/lib/commands/hook/orchestrate.ts` - Verify external plugin handling
-4. `packages/han/lib/config/claude-settings.ts` - Verify marketplace resolution
-5. Create `packages/han/test/external-plugin-hooks.test.ts` - Add comprehensive tests
+3. `packages/han/lib/config/claude-settings.ts` - Verify marketplace resolution
+4. Create `packages/han/test/external-plugin-hooks.test.ts` - Add comprehensive tests
 
 ### Critical Files
 
-- `packages/han/lib/commands/hook/orchestrate.ts` - Core orchestration logic
 - `packages/han/lib/config/claude-settings.ts` - Plugin/marketplace resolution
 - `packages/han/lib/hooks/hook-config.ts` - Plugin config loading
 - `packages/han/lib/commands/hook/dispatch.ts` - Legacy dispatch
@@ -159,10 +157,9 @@ The existing architecture already supports external plugins correctly:
    - `source: "github"` - same as git pattern
    - Development mode - falls back to cwd if in marketplace repo
 
-3. **Hook Orchestration**: `orchestrate.ts` correctly:
-   - Sets `CLAUDE_PLUGIN_ROOT` to the resolved plugin directory
-   - Resolves dependencies across plugins
-   - Uses phase-based ordering (format -> lint -> typecheck -> test -> advisory)
+3. **Hook Execution**: Plugin hooks are executed directly by Claude Code:
+   - `CLAUDE_PLUGIN_ROOT` is set to the resolved plugin directory
+   - Each plugin's `hooks/hooks.json` defines hooks for Claude Code events
 
 4. **Hook Caching**: Cache keys include plugin name and directory, ensuring uniqueness
 

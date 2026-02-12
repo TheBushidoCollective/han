@@ -529,11 +529,6 @@ describe('Environment variable checks', () => {
     process.env = originalEnv;
   });
 
-  test('HAN_NO_FAIL_FAST environment variable', () => {
-    process.env.HAN_NO_FAIL_FAST = '1';
-    expect(process.env.HAN_NO_FAIL_FAST).toBe('1');
-  });
-
   test('HAN_NO_CACHE environment variable', () => {
     process.env.HAN_NO_CACHE = '1';
     expect(process.env.HAN_NO_CACHE).toBe('1');

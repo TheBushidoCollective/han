@@ -592,7 +592,6 @@ describe('validate.ts', () => {
   describe('ValidateOptions interface', () => {
     test('accepts valid options object', () => {
       interface ValidateOptions {
-        failFast: boolean;
         dirsWith: string | null;
         testDir?: string | null;
         command: string;
@@ -600,13 +599,11 @@ describe('validate.ts', () => {
       }
 
       const options: ValidateOptions = {
-        failFast: true,
         dirsWith: 'package.json',
         command: 'npm test',
         verbose: true,
       };
 
-      expect(options.failFast).toBe(true);
       expect(options.dirsWith).toBe('package.json');
       expect(options.command).toBe('npm test');
       expect(options.verbose).toBe(true);
@@ -614,7 +611,6 @@ describe('validate.ts', () => {
 
     test('accepts options with null dirsWith', () => {
       interface ValidateOptions {
-        failFast: boolean;
         dirsWith: string | null;
         testDir?: string | null;
         command: string;
@@ -622,7 +618,6 @@ describe('validate.ts', () => {
       }
 
       const options: ValidateOptions = {
-        failFast: false,
         dirsWith: null,
         command: 'npm run lint',
       };
@@ -676,7 +671,6 @@ describe('validate.ts', () => {
       interface RunConfiguredHookOptions {
         pluginName: string;
         hookName: string;
-        failFast: boolean;
         cache?: boolean;
         only?: string;
         verbose?: boolean;
@@ -685,19 +679,16 @@ describe('validate.ts', () => {
       const options: RunConfiguredHookOptions = {
         pluginName: 'jutsu-typescript',
         hookName: 'typecheck',
-        failFast: true,
       };
 
       expect(options.pluginName).toBe('jutsu-typescript');
       expect(options.hookName).toBe('typecheck');
-      expect(options.failFast).toBe(true);
     });
 
     test('accepts options with all fields', () => {
       interface RunConfiguredHookOptions {
         pluginName: string;
         hookName: string;
-        failFast: boolean;
         cache?: boolean;
         only?: string;
         verbose?: boolean;
@@ -706,7 +697,6 @@ describe('validate.ts', () => {
       const options: RunConfiguredHookOptions = {
         pluginName: 'jutsu-biome',
         hookName: 'lint',
-        failFast: false,
         cache: true,
         only: 'packages/core',
         verbose: true,

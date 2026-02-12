@@ -353,7 +353,7 @@ export const HookExplainUI: React.FC<HookExplainUIProps> = ({
               {hanHookCount !== 1 ? 's' : ''})
             </Text>
             <Text dimColor>
-              Orchestrated by han hook orchestrate with caching and dependencies
+              Executed directly by Claude Code with caching and dependencies
             </Text>
             <Text color="cyan" bold>
               {'═'.repeat(60)}

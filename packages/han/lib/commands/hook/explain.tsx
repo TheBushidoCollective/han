@@ -88,7 +88,7 @@ function parseLegacyHooksObject(
 
 /**
  * Get hooks from Claude Code plugin hooks.json files
- * These are the actual hooks that Claude Code executes (e.g., han hook orchestrate commands)
+ * These are the actual hooks that Claude Code executes directly
  */
 function getClaudePluginHooks(): HookSource[] {
   const sources: HookSource[] = [];

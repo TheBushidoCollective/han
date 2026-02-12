@@ -290,17 +290,6 @@ describe('dispatch.ts integration tests', () => {
   });
 
   describe('Environment variable propagation', () => {
-    test('sets HAN_NO_FAIL_FAST for subprocesses', () => {
-      const env = {
-        ...process.env,
-        CLAUDE_PLUGIN_ROOT: '/test/plugin',
-        CLAUDE_PROJECT_DIR: process.cwd(),
-        HAN_NO_FAIL_FAST: '1',
-      };
-
-      expect(env.HAN_NO_FAIL_FAST).toBe('1');
-    });
-
     test('sets HAN_NO_CACHE when noCache is true', () => {
       const noCache = true;
       const env = {

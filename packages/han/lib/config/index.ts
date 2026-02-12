@@ -40,7 +40,6 @@ export {
   type HanConfigScope,
   type HookOverride,
   isCacheEnabled,
-  isFailFastEnabled,
   isHooksEnabled,
   isMemoryEnabled,
   isMetricsEnabled,

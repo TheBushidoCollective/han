@@ -2,7 +2,7 @@
  * Shared plugin discovery utilities
  *
  * Provides consistent plugin directory resolution across all hook commands
- * (orchestrate, list, explain). Uses dynamic scanning for han-plugin.yml
+ * (list, explain, run). Uses dynamic scanning for han-plugin.yml
  * files to support flexible directory structures.
  */
 

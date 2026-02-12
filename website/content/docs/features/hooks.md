@@ -118,14 +118,6 @@ Skip hooks when files haven't changed:
 - Only re-validates modified files
 - Dramatically speeds up repeated runs
 
-### Fail-Fast
-
-Stop on first failure:
-
-- Don't waste time running all hooks
-- Get feedback immediately
-- Continue with `--no-fail-fast` when needed
-
 ### Checkpoint Filtering
 
 Only validate your work:
@@ -178,7 +170,7 @@ When transcript filtering is active:
 
 This prevents the scenario where Session A's lint error causes Session B's hook to also fail.
 
-All four smart behaviors are enabled by default. Disable with `--no-cache`, `--no-fail-fast`, `--no-checkpoints`, or configure `transcript_filter: false`.
+All smart behaviors are enabled by default. Disable with `--no-cache`, `--no-checkpoints`, or configure `transcript_filter: false`.
 
 ## Configuration
 
@@ -190,7 +182,6 @@ In `han.yml`:
 hooks:
   enabled: true       # Master switch
   cache: true         # Smart caching (default: true)
-  fail_fast: true     # Stop on first failure (default: true)
   checkpoints: true   # Session-scoped filtering (default: true)
 ```
 

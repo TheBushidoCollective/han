@@ -56,15 +56,17 @@ async function createTestSession(sessionId: string) {
   });
 }
 
-// Helper to create an orchestration for testing
+// Helper to create an orchestration for testing (uses centralized native loader)
 async function createTestOrchestration(sessionId?: string) {
-  const { orchestrations, initDb } = await import('../lib/db/index.ts');
+  const { initDb } = await import('../lib/db/index.ts');
   await initDb();
   // Create session first if sessionId provided (FK constraint)
   if (sessionId) {
     await createTestSession(sessionId);
   }
-  return orchestrations.create({
+  const { getNativeModule } = await import('../lib/native.ts');
+  const native = getNativeModule();
+  return native.createOrchestration({
     sessionId,
     hookType: 'Stop',
     projectRoot: '/test/project',

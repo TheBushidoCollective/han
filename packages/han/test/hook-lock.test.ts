@@ -17,13 +17,10 @@ import { join } from 'node:path';
 // Import the module under test
 import {
   acquireSlot,
-  checkFailureSignal,
   cleanupOwnedSlots,
-  clearFailureSignal,
   createLockManager,
   isLockingEnabled,
   releaseSlot,
-  signalFailure,
   withSlot,
 } from '../lib/hooks/index.ts';
 
@@ -331,79 +328,4 @@ describe('hook-lock.ts', () => {
     });
   });
 
-  describe('failure signaling', () => {
-    test('signalFailure creates failure sentinel file', () => {
-      process.env.HAN_SESSION_ID = 'test-signal-failure';
-      cleanupSession('test-signal-failure');
-      const manager = createLockManager();
-
-      signalFailure(manager, {
-        pluginName: 'test-plugin',
-        hookName: 'test-hook',
-        directory: 'test-dir',
-      });
-
-      const sentinelPath = join(manager.lockDir, 'failure.sentinel');
-      expect(existsSync(sentinelPath)).toBe(true);
-
-      const content = JSON.parse(readFileSync(sentinelPath, 'utf-8'));
-      expect(content.pluginName).toBe('test-plugin');
-      expect(content.hookName).toBe('test-hook');
-      expect(content.directory).toBe('test-dir');
-      expect(content.pid).toBe(process.pid);
-    });
-
-    test('checkFailureSignal returns null when no failure', () => {
-      process.env.HAN_SESSION_ID = 'test-no-failure';
-      cleanupSession('test-no-failure');
-      const manager = createLockManager();
-
-      const result = checkFailureSignal(manager);
-      expect(result).toBeNull();
-    });
-
-    test('checkFailureSignal returns failure info when signaled', () => {
-      process.env.HAN_SESSION_ID = 'test-check-failure';
-      cleanupSession('test-check-failure');
-      const manager = createLockManager();
-
-      signalFailure(manager, {
-        pluginName: 'failing-plugin',
-        hookName: 'failing-hook',
-      });
-
-      const result = checkFailureSignal(manager);
-      expect(result).not.toBeNull();
-      expect(result?.pluginName).toBe('failing-plugin');
-      expect(result?.hookName).toBe('failing-hook');
-    });
-
-    test('clearFailureSignal removes sentinel file', () => {
-      process.env.HAN_SESSION_ID = 'test-clear-failure';
-      cleanupSession('test-clear-failure');
-      const manager = createLockManager();
-
-      signalFailure(manager, { pluginName: 'test' });
-      expect(checkFailureSignal(manager)).not.toBeNull();
-
-      clearFailureSignal(manager);
-      expect(checkFailureSignal(manager)).toBeNull();
-    });
-
-    test('failure signal works across same session', () => {
-      process.env.HAN_SESSION_ID = 'test-shared-session';
-      cleanupSession('test-shared-session');
-
-      const manager1 = createLockManager();
-      const manager2 = createLockManager();
-
-      expect(manager1.sessionId).toBe(manager2.sessionId);
-
-      signalFailure(manager1, { pluginName: 'plugin1', hookName: 'hook1' });
-
-      const result = checkFailureSignal(manager2);
-      expect(result).not.toBeNull();
-      expect(result?.pluginName).toBe('plugin1');
-    });
-  });
 });

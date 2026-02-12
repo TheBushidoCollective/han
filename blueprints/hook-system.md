@@ -1,6 +1,6 @@
 ---
 name: hook-system
-summary: Complete hook lifecycle from definition to execution with centralized orchestration, checkpoint filtering, and cross-plugin dependencies
+summary: Complete hook lifecycle from definition to execution with direct plugin registration and cross-plugin dependencies
 ---
 
 # Hook System
@@ -9,41 +9,30 @@ Complete hook lifecycle from definition to execution.
 
 ## Overview
 
-The Han hook system integrates with Claude Code to execute hooks at specific lifecycle events. The system uses a **centralized orchestration** architecture where the core plugin handles all hook coordination.
+The Han hook system integrates with Claude Code to execute hooks at specific lifecycle events. Each plugin registers its own hooks directly with Claude Code via `hooks/hooks.json`. There is no centralized orchestration layer - Claude Code executes plugin hooks directly.
 
 ## Architecture
 
-### Orchestration Model
+### Direct Plugin Registration Model
 
 ```
-Claude Code fires Stop event
+Plugin defines hooks in hooks/hooks.json
     ↓
-core/hooks.json registers "han hook orchestrate Stop"
+Claude Code discovers hooks from enabled plugins
     ↓
-orchestrate.ts discovers all installed plugins
+Claude Code fires event (e.g., Stop)
     ↓
-Loads han-plugin.yml from each plugin
+Claude Code executes matching hooks directly
     ↓
-Filters hooks by event field
-    ↓
-Resolves dependencies (topological sort)
-    ↓
-Executes hooks with p-limit concurrency control
-    ↓
-Returns aggregated output
+Hook output returned to Claude Code
 ```
 
-**Key Benefits:**
-
-- Single coordination point (no distributed locking)
-- Intelligent scheduling with dependency resolution
-- Controlled parallelism via p-limit (CPU count / 2)
-- Consistent behavior across all event types
+**Key Principle:** Each plugin is responsible for its own hooks. No centralized orchestration.
 
 ### Hook Types (Claude Code Events)
 
 - `SessionStart` - When Claude Code session begins
-- `SessionEnd` - When session ends  
+- `SessionEnd` - When session ends
 - `UserPromptSubmit` - When user submits a prompt
 - `Stop` - When Claude completes a response
 - `SubagentStart` - When a subagent starts
@@ -55,15 +44,13 @@ Returns aggregated output
 ### Components
 
 ```
-core/hooks.json            Registers orchestrate for each event
+<plugin>/hooks/hooks.json    Plugin hook definitions for Claude Code
     ↓
-hook/orchestrate.ts        Central orchestration engine
+han-plugin.yml               Plugin metadata (skills, MCP servers, etc.)
     ↓
-han-plugin.yml             Plugin hook definitions with event binding
+validate.ts                  Execution with caching + checkpoint filtering
     ↓
-validate.ts                Execution with caching + checkpoint filtering
-    ↓
-checkpoint.ts              Session/agent checkpoint management
+checkpoint.ts                Session/agent checkpoint management
 ```
 
 ## Stdin Payload
@@ -82,47 +69,27 @@ interface HookPayload {
 
 ## Configuration
 
-### Plugin Hook Definition (han-plugin.yml)
+### Plugin Hook Definition (hooks/hooks.json)
 
-Hooks are defined in each plugin's `han-plugin.yml` with an `event` field specifying which Claude Code events trigger the hook:
+Hooks are defined in each plugin's `hooks/hooks.json`:
 
-```yaml
-hooks:
-  lint:
-    event: [Stop, SubagentStop]  # Runs on both main session and subagent stops
-    command: "npx -y biome check --write"
-    dirs_with:
-      - "biome.json"
-    if_changed:
-      - "**/*.{js,ts}"
-    tip: "Use the `jutsu_biome_lint` MCP tool before marking complete."
-
-  pre-edit-check:
-    event: PreToolUse
-    tool_filter: [Edit, Write]  # Only for Edit and Write tools
-    command: "han hook run core validate-edit"
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @biomejs/biome check --write .",
+            "timeout": 60000
+          }
+        ]
+      }
+    ]
+  }
+}
 ```
-
-**Event Field:**
-
-- Single event: `event: Stop`
-- Multiple events: `event: [Stop, SubagentStop]`
-- Default (if omitted): `[Stop, SubagentStop]` for backwards compatibility
-
-**Hook Properties:**
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `event` | string \| string[] | No | Claude Code event(s). Default: `[Stop, SubagentStop]` |
-| `command` | string | Yes | Shell command to execute |
-| `tool_filter` | string[] | No | For PreToolUse/PostToolUse, filter by tool names |
-| `dirs_with` | string[] | No | Marker files for target directories |
-| `dir_test` | string | No | Command to filter directories (exit 0 = include) |
-| `if_changed` | string[] | No | Glob patterns for cache-based execution |
-| `idle_timeout` | number | No | Max idle time before timeout (ms) |
-| `description` | string | No | Human-readable description |
-| `tip` | string | No | Guidance when hook fails repeatedly |
-| `depends_on` | HookDependency[] | No | Array of hook dependencies |
 
 ### User Settings Precedence
 
@@ -157,39 +124,7 @@ plugins:
         before_all: "npm run codegen"  # Runs once before all directories
 ```
 
-## Hook Dependencies
-
-Hooks can declare dependencies on other plugin hooks:
-
-```yaml
-hooks:
-  test:
-    event: [Stop, SubagentStop]
-    command: "npx playwright test"
-    dirs_with: ["playwright.config.ts"]
-    depends_on:
-      - plugin: jutsu-playwright-bdd
-        hook: generate
-        optional: true  # Don't fail if plugin not installed
-```
-
-**Resolution:**
-
-- Dependencies are resolved via topological sort (Kahn's algorithm)
-- Hooks are grouped into batches that can run in parallel
-- Each batch waits for the previous batch to complete
-- Circular dependencies are detected and reported as errors
-
 ## Execution Model
-
-### Concurrency
-
-The orchestrator uses `p-limit` for controlled parallelism:
-
-```typescript
-const concurrency = Math.max(1, Math.floor(cpus().length / 2));
-const limit = pLimit(concurrency);
-```
 
 ### Execution Flow per Hook
 
@@ -225,7 +160,7 @@ SessionStart:
   2. Hash all matching files
   3. Save checkpoint to checkpoints/session-{id}.json
 
-Stop/SubagentStop (via orchestrate):
+Stop/SubagentStop:
   1. Load session/agent checkpoint
   2. For each directory:
      - Check cache: changed since last hook run?
@@ -235,29 +170,12 @@ Stop/SubagentStop (via orchestrate):
 
 ## CLI Commands
 
-### `han hook orchestrate <eventType>`
-
-Central orchestration command called by Claude Code via core's hooks.json:
-
-```bash
-han hook orchestrate Stop
-han hook orchestrate SubagentStop
-han hook orchestrate PreToolUse
-```
-
-**Options:**
-
-- `--no-cache` - Disable caching, force all hooks to run
-- `--no-checkpoints` - Disable checkpoint filtering
-- `-v, --verbose` - Show detailed execution output
-
 ### `han hook run <plugin> <hook> [options]`
 
 Execute a single plugin hook (for manual/debugging use):
 
 **Options:**
 
-- `--fail-fast` - Stop on first failure
 - `--cached` - Only run if files changed
 - `--only <dir>` - Limit to specific directory
 - `--verbose` - Show detailed output
@@ -287,50 +205,11 @@ Legacy dispatch command (still works for backwards compatibility).
 
 ## Files
 
-- `lib/commands/hook/orchestrate.ts` - **Central orchestration engine**
 - `lib/commands/hook/dispatch.ts` - Legacy hook dispatch
 - `lib/commands/hook/run.ts` - Single hook execution command
 - `lib/hook-config.ts` - Configuration with event field support
 - `lib/validate.ts` - Core execution logic with checkpoint filtering
 - `lib/checkpoint.ts` - Checkpoint capture and comparison
-- `core/hooks/hooks.json` - Registers orchestrate for all event types
-
-## Migration from Distributed Hooks
-
-Previously, each plugin had a `hooks/hooks.json` that registered directly with Claude Code. The new architecture:
-
-1. **Core registers all event types** via its hooks.json
-2. **Plugins define hooks in han-plugin.yml** with an `event` field
-3. **Orchestrator discovers and coordinates** all plugins
-
-Benefits:
-
-- No distributed locking needed
-- Dependencies resolved upfront via topological sort
-- Single place for parallelism control (p-limit)
-- Consistent behavior across all event types
-
-### Migration Steps for Plugins
-
-To migrate a plugin from `hooks/hooks.json` to `han-plugin.yml`:
-
-1. **Create han-plugin.yml** at plugin root
-2. **Convert each hook**:
-
-   ```yaml
-   # Old: hooks/hooks.json
-   { "hooks": { "Stop": [{ "hooks": [{ "type": "command", "command": "..." }] }] } }
-   
-   # New: han-plugin.yml
-   hooks:
-     hook-name:
-       event: Stop
-       command: "..."
-   ```
-
-3. **Add metadata**: `description`, `tip`, `if_changed`
-4. **Set event field** explicitly for non-Stop hooks
-5. **Remove hooks/hooks.json** (no longer needed)
 
 ## Related Systems
 

@@ -65,7 +65,6 @@ export interface HanConfig {
     enabled?: boolean; // Master switch (default: true)
     checkpoints?: boolean; // Enable checkpoints for session-scoped filtering (default: true)
     cache?: boolean; // Enable caching (default: true)
-    fail_fast?: boolean; // Stop on first failure (default: true)
   };
   /**
    * Learn mode configuration for auto-detecting plugins.
@@ -434,22 +433,6 @@ export function isCacheEnabled(): boolean {
   }
 
   return config.hooks?.cache !== false;
-}
-
-/**
- * Check if fail-fast mode is enabled (default: true)
- * When enabled, hooks stop on first failure.
- * Note: If hooks are globally disabled, fail_fast setting is irrelevant
- */
-export function isFailFastEnabled(): boolean {
-  const config = getMergedHanConfig();
-
-  // If hooks are globally disabled, fail_fast setting doesn't matter
-  if (config.hooks?.enabled === false) {
-    return false;
-  }
-
-  return config.hooks?.fail_fast !== false;
 }
 
 /**

@@ -288,14 +288,12 @@ describe('dispatch.ts execution paths', () => {
         ...process.env,
         CLAUDE_PLUGIN_ROOT: pluginRoot,
         CLAUDE_PROJECT_DIR: process.cwd(),
-        HAN_NO_FAIL_FAST: '1',
         ...(noCache ? { HAN_NO_CACHE: '1' } : {}),
         ...(noCheckpoints ? { HAN_NO_CHECKPOINTS: '1' } : {}),
       };
 
       expect(env.CLAUDE_PLUGIN_ROOT).toBe(pluginRoot);
       expect(env.CLAUDE_PROJECT_DIR).toBe(process.cwd());
-      expect(env.HAN_NO_FAIL_FAST).toBe('1');
       expect(env.HAN_NO_CACHE).toBe('1');
       expect(env.HAN_NO_CHECKPOINTS).toBe('1');
     });
