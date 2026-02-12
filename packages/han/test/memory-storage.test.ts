@@ -19,11 +19,14 @@ import {
 } from '../lib/memory/index.ts';
 
 /**
- * Clean up any existing observations for a gitRemote
- * Needed because parallel tests can race on setMemoryRoot
+ * Clean up any existing observations for a gitRemote.
+ * Re-asserts memoryRootOverride before cleanup to guard against
+ * parallel tests racing on the shared global setMemoryRoot.
  */
 function cleanupGitRemote(gitRemote: string): void {
   try {
+    // Re-assert our test's memory root in case a parallel test changed it
+    setMemoryRoot(testDir);
     const indexPath = getProjectIndexPath(gitRemote);
     const dataFile = `${indexPath}/observations.jsonl`;
     if (existsSync(dataFile)) {
@@ -224,6 +227,8 @@ describe('Memory Storage', () => {
 
   describe('Team Memory', () => {
     test('indexes and searches observations', async () => {
+      // Re-assert memory root to guard against parallel test races
+      setMemoryRoot(testDir);
       const gitRemote = `git@github.com:test/search-repo-${generateId()}.git`;
       cleanupGitRemote(gitRemote);
       const store = createMemoryStore();
@@ -253,20 +258,25 @@ describe('Memory Storage', () => {
         },
       ];
 
+      setMemoryRoot(testDir);
       await store.indexObservations(gitRemote, observations);
 
       // Search for authentication
+      setMemoryRoot(testDir);
       const authResults = await store.search(gitRemote, 'authentication JWT');
       expect(authResults.length).toBeGreaterThan(0);
       expect(authResults[0].observation.author).toBe('alice');
 
       // Search for payments
+      setMemoryRoot(testDir);
       const paymentResults = await store.search(gitRemote, 'payment bug');
       expect(paymentResults.length).toBeGreaterThan(0);
       expect(paymentResults[0].observation.author).toBe('bob');
     });
 
     test('filters by author', async () => {
+      // Re-assert memory root to guard against parallel test races
+      setMemoryRoot(testDir);
       const gitRemote = `git@github.com:test/author-filter-${generateId()}.git`;
       cleanupGitRemote(gitRemote);
       const store = createMemoryStore();
@@ -296,8 +306,10 @@ describe('Memory Storage', () => {
         },
       ];
 
+      setMemoryRoot(testDir);
       await store.indexObservations(gitRemote, observations);
 
+      setMemoryRoot(testDir);
       const results = await store.search(gitRemote, 'feature', {
         authors: ['alice'],
       });
@@ -306,6 +318,8 @@ describe('Memory Storage', () => {
     });
 
     test('filters by type', async () => {
+      // Re-assert memory root to guard against parallel test races
+      setMemoryRoot(testDir);
       const gitRemote = `git@github.com:test/type-filter-${generateId()}.git`;
       cleanupGitRemote(gitRemote);
       const store = createMemoryStore();
@@ -335,8 +349,10 @@ describe('Memory Storage', () => {
         },
       ];
 
+      setMemoryRoot(testDir);
       await store.indexObservations(gitRemote, observations);
 
+      setMemoryRoot(testDir);
       const results = await store.search(gitRemote, 'details', {
         types: ['pr'],
       });
@@ -345,6 +361,8 @@ describe('Memory Storage', () => {
     });
 
     test('filters by timeframe', async () => {
+      // Re-assert memory root to guard against parallel test races
+      setMemoryRoot(testDir);
       const gitRemote = `git@github.com:test/timeframe-filter-${generateId()}.git`;
       cleanupGitRemote(gitRemote);
       const store = createMemoryStore();
@@ -375,8 +393,10 @@ describe('Memory Storage', () => {
         },
       ];
 
+      setMemoryRoot(testDir);
       await store.indexObservations(gitRemote, observations);
 
+      setMemoryRoot(testDir);
       const results = await store.search(gitRemote, 'commit', {
         timeframe: {
           start: now - 86400000 * 7, // Last 7 days

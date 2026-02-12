@@ -387,6 +387,8 @@ describe('dispatch stdin handling coverage', () => {
 
   describe('file stat checking patterns', () => {
     test('identifies regular files for stdin reading', () => {
+      // Ensure directory exists (may be deleted by parallel test teardown races)
+      mkdirSync(testDir, { recursive: true });
       // Create a test file
       const testFile = join(testDir, 'test.txt');
       writeFileSync(testFile, 'test data');
