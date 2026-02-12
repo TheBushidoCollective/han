@@ -1,490 +1,708 @@
 ---
 name: metrics-system
-summary: Self-reporting agent performance tracking with validation
+summary: Automatic task tracking via Claude Code native TaskCreate/TaskUpdate indexed from JSONL transcripts
 ---
 
 # Metrics System
 
-Self-reporting agent performance tracking with objective validation.
+Automatic task tracking leveraging Claude Code's native task system, indexed from JSONL transcripts for visibility in the Browse UI.
 
 ## Overview
 
-The metrics system enables agents to track their work progress and outcomes, which are then cross-validated against objective hook results. This creates a feedback loop for continuous improvement in agent performance, calibration accuracy, and success rates.
+Task tracking in Han is now **fully automatic**. There is no manual MCP server or self-reporting workflow. Instead, Han leverages Claude Code's built-in task tools (`TaskCreate`, `TaskUpdate`, `TaskList`, `TaskGet`) and automatically indexes these events from the JSONL transcript into SQLite for historical analysis and visualization in the Browse UI.
+
+This approach:
+- **Eliminates manual reporting overhead** - No MCP tool calls needed
+- **Provides immediate value** - Tasks are visible in Claude Code and Browse UI
+- **Ensures consistency** - Task state is single-source-of-truth from JSONL
+- **Enables historical analysis** - All task data indexed and queryable via GraphQL
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    SessionStart Hook                     │
-│         Injects metrics tracking instructions            │
-│         (han metrics session-context)                    │
-└──────────────────────┬──────────────────────────────────┘
-                       │
-                       ↓
-         ┌─────────────────────────────┐
-         │   Agent Begins Work         │
-         │   Calls start_task() with   │
-         │   session_id (required)     │
-         └──────────┬──────────────────┘
-                    │
-                    ↓
-         ┌─────────────────────────────┐
-         │   Agent Completes Work      │
-         │   Calls complete_task()     │
-         │   Self-assesses outcome     │
-         └──────────┬──────────────────┘
-                    │
-                    ↓
-┌─────────────────────────────────────────────────────────┐
-│                      Stop Hook                           │
-│   1. Run quality validation (tests, lints, types)       │
-│   2. Cross-validate with agent self-assessment          │
-│   3. Calculate calibration accuracy                     │
-└──────────────────────┬──────────────────────────────────┘
-                       │
-                       ↓
-              ┌────────────────┐
-              │ Metrics Database│
-              │  (JSONL files)  │
-              └────────────────┘
+Claude Code Session
+    ↓
+Agent uses TaskCreate({ subject, description, activeForm })
+    ↓
+Task created in Claude Code's task system
+    ↓
+Event written to {session-id}.jsonl transcript
+    ↓
+Han coordinator watches JSONL file
+    ↓
+Incremental indexer processes new lines
+    ↓
+TaskCreate event → native_tasks table (INSERT)
+    ↓
+Browse UI queries via GraphQL
+    ↓
+Tasks visible in sidebar "Tasks" tab
+    ↓
+Agent uses TaskUpdate({ taskId, status: "in_progress" })
+    ↓
+Event written to JSONL transcript
+    ↓
+Indexer updates native_tasks table
+    ↓
+Browse UI reflects updated status
+    ↓
+Agent completes work
+    ↓
+TaskUpdate({ taskId, status: "completed" })
+    ↓
+Task marked completed with timestamp
+    ↓
+Full task lifecycle tracked in database
 ```
-
-### Session Lifecycle
-
-Sessions are long-lived and don't have explicit start/end management. Instead:
-
-- **session_id** is a required parameter when calling `start_task()`
-- The session_id comes from Claude Code context and is passed explicitly
-- Tasks are grouped by session_id for analysis
-- No session-start or session-end hooks for metrics lifecycle
 
 ## Components
 
-### 1. MCP Server (hashi-han-metrics)
+### 1. Claude Code Native Task System
 
-**Location**: `hashi/hashi-han-metrics/`
+**Tools Available to Agents**:
 
-**Purpose**: Provides MCP tools for agents to self-report work progress
+```typescript
+// Create a new task
+TaskCreate({
+  subject: "Fix authentication bug in login flow",
+  description: "Users can't log in with special characters in password. Need to add proper escaping.",
+  activeForm: "Fixing authentication bug"  // Shown in spinner when in_progress
+})
 
-**Tools**:
+// Update task status or details
+TaskUpdate({
+  taskId: "1",
+  status: "in_progress"  // pending → in_progress → completed
+})
 
-- `start_task` - Begin tracking a new task
-- `update_task` - Log progress updates
-- `complete_task` - Mark task complete with self-assessment
-- `fail_task` - Record task failure with details
-- `query_metrics` - Query performance analytics
+TaskUpdate({
+  taskId: "1",
+  status: "completed"
+})
 
-**Storage**: SQLite database at `~/.claude/han/han.db`
+// List all tasks
+TaskList()  // Returns task summaries
 
-**Transport**: STDIO (subprocess)
+// Get task details
+TaskGet({ taskId: "1" })  // Returns full task with description
+```
 
-### 2. SessionStart Hook (hashi-han-metrics)
+**When to Use**:
 
-**Location**: `hashi-han-metrics/hooks/metrics-tracking.md`
+- Implementing features
+- Fixing bugs
+- Refactoring code
+- Research tasks
+- Any substantive work that benefits from tracking
 
-**Purpose**: Inject instructions at session start for how to use metrics tracking
+**When NOT to Use**:
 
-**Content**:
+- Reading files
+- Simple questions
+- Trivial operations
 
-- When to track tasks
-- How to use MCP tools
-- Confidence calibration guidelines
-- Example workflows
+### 2. JSONL Transcript Events
 
-**Integration**: Defined in `hashi-han-metrics/hooks/hooks.json` SessionStart event
+When Claude Code receives TaskCreate/TaskUpdate tool calls, it writes structured events to the session JSONL:
 
-### 3. Stop Hook (hashi-han-metrics)
+**TaskCreate Event**:
 
-**Location**: `hashi-han-metrics/hooks/validate-metrics.sh`
+```json
+{
+  "type": "tool_use",
+  "id": "msg_abc123",
+  "timestamp": "2026-02-12T10:30:00.000Z",
+  "role": "assistant",
+  "content": [{
+    "type": "tool_use",
+    "id": "toolu_xyz789",
+    "name": "TaskCreate",
+    "input": {
+      "subject": "Fix authentication bug",
+      "description": "Add proper escaping for special characters",
+      "activeForm": "Fixing authentication bug"
+    }
+  }]
+}
+```
 
-**Purpose**: Validate agent self-assessments against objective hook results
+**TaskUpdate Event**:
+
+```json
+{
+  "type": "tool_use",
+  "id": "msg_def456",
+  "timestamp": "2026-02-12T10:45:00.000Z",
+  "role": "assistant",
+  "content": [{
+    "type": "tool_use",
+    "id": "toolu_abc123",
+    "name": "TaskUpdate",
+    "input": {
+      "taskId": "1",
+      "status": "completed"
+    }
+  }]
+}
+```
+
+### 3. Han Native Module Indexer
+
+**Location**: `packages/han-native/src/indexer.rs`
+
+**Responsibility**: Watch JSONL files and incrementally index new events into SQLite
 
 **Process**:
 
-1. Query most recent in-progress task
-2. Collect hook results (tests, lints, types)
-3. Update task record with validation data
-4. Calculate calibration accuracy
-5. Report mismatches (agent said success, hooks failed)
+1. File watcher detects changes to `{session-id}.jsonl`
+2. Indexer reads lines after `last_indexed_line` (incremental)
+3. Parse JSON events and extract tool calls
+4. Detect TaskCreate/TaskUpdate tool calls
+5. Transform to `NativeTaskInput` or `NativeTaskUpdate` structures
+6. Insert/update `native_tasks` table
+7. Update `sessions.last_indexed_line` for next incremental run
 
-**Integration**: Defined in `hashi-han-metrics/hooks/hooks.json` Stop event
+**Database Schema** (`native_tasks` table):
 
-### 4. Storage Format
+```sql
+CREATE TABLE native_tasks (
+  id TEXT PRIMARY KEY,              -- Unique task ID (from TaskCreate)
+  session_id TEXT NOT NULL,         -- Which session created the task
+  message_id TEXT NOT NULL,         -- JSONL message ID that created/updated
+  subject TEXT NOT NULL,            -- Brief title
+  description TEXT,                 -- Detailed requirements
+  status TEXT NOT NULL,             -- pending | in_progress | completed | deleted
+  active_form TEXT,                 -- Present continuous form (e.g., "Fixing bug")
+  owner TEXT,                       -- Agent owner (for team tasks)
+  blocks TEXT,                      -- JSON array of task IDs this blocks
+  blocked_by TEXT,                  -- JSON array of task IDs blocking this
+  created_at TEXT NOT NULL,         -- ISO 8601 timestamp
+  updated_at TEXT NOT NULL,         -- Last update timestamp
+  completed_at TEXT,                -- Completion timestamp
+  line_number INTEGER NOT NULL      -- JSONL line where event occurred
+);
 
-**Location**: SQLite database at `~/.claude/han/han.db`
+CREATE INDEX idx_native_tasks_session ON native_tasks(session_id);
+CREATE INDEX idx_native_tasks_status ON native_tasks(status);
+```
 
-**Tables**: `tasks`, `frustration_events`, `hook_executions`
+**Incremental Indexing**:
 
-**Task Record Schema**:
+The indexer tracks `last_indexed_line` per session to avoid re-processing:
 
-```json
-{
-  "id": "task-1234567890-abc123",
-  "session_id": "session-1234567890-xyz789",
-  "description": "Fix authentication bug",
-  "type": "fix",
-  "estimated_complexity": "moderate",
-  "started_at": 1734300000000,
-  "completed_at": 1734300180000,
-  "status": "completed",
-  "outcome": "success",
-  "confidence": 0.85,
-  "files_modified": ["src/auth.ts"],
-  "tests_added": 3,
-  "notes": "All tests passing"
+```rust
+pub fn index_session_file(
+  db_path: &str,
+  file_path: &str,
+  source_config_dir: Option<&str>
+) -> IndexResult {
+  // 1. Get last indexed line from database
+  let last_line = crud::get_last_indexed_line(db_path, session_id)?;
+
+  // 2. Read only new lines
+  let new_lines = jsonl::read_page(file_path, last_line, BATCH_SIZE);
+
+  // 3. Process each line
+  for line in new_lines {
+    let json = parse_json(&line.content)?;
+
+    // 4. Extract tool calls
+    if let Some(tool_use) = extract_tool_use(&json) {
+      match tool_use.name.as_str() {
+        "TaskCreate" => {
+          let input = NativeTaskInput {
+            id: generate_task_id(),
+            session_id: session_id.clone(),
+            message_id: json["id"].as_str()?,
+            subject: tool_use.input["subject"].as_str()?,
+            description: tool_use.input.get("description"),
+            active_form: tool_use.input.get("activeForm"),
+            timestamp: json["timestamp"].as_str()?,
+            line_number: line.line_number,
+          };
+          crud::create_native_task(db_path, input)?;
+        }
+        "TaskUpdate" => {
+          let update = NativeTaskUpdate {
+            id: tool_use.input["taskId"].as_str()?,
+            session_id: session_id.clone(),
+            message_id: json["id"].as_str()?,
+            status: tool_use.input.get("status"),
+            subject: tool_use.input.get("subject"),
+            description: tool_use.input.get("description"),
+            active_form: tool_use.input.get("activeForm"),
+            owner: tool_use.input.get("owner"),
+            add_blocks: tool_use.input.get("addBlocks"),
+            add_blocked_by: tool_use.input.get("addBlockedBy"),
+            timestamp: json["timestamp"].as_str()?,
+            line_number: line.line_number,
+          };
+          crud::update_native_task(db_path, update)?;
+        }
+        _ => {}
+      }
+    }
+  }
+
+  // 5. Update last_indexed_line
+  crud::update_session_last_indexed(db_path, session_id, final_line)?;
 }
 ```
 
-**Hook Execution Record Schema**:
+### 4. GraphQL API
 
-```json
-{
-  "hook_name": "jutsu-biome_lint",
-  "plugin_name": "jutsu-biome",
-  "success": true,
-  "duration_ms": 1234,
-  "timestamp": 1734300000000,
-  "session_id": "session-1234567890-xyz789"
+**Location**: `packages/han/lib/graphql/types/native-task.ts`
+
+**Purpose**: Expose task data to Browse UI via GraphQL queries and subscriptions
+
+**Schema**:
+
+```graphql
+type NativeTask implements Node {
+  id: ID!
+  sessionId: String!
+  messageId: String!
+  subject: String!
+  description: String
+  status: TaskStatus!
+  activeForm: String
+  owner: String
+  blocks: [String!]
+  blockedBy: [String!]
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  completedAt: DateTime
+  lineNumber: Int!
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  DELETED
+}
+
+type Session {
+  # ...
+  tasks(
+    status: TaskStatus
+    first: Int
+    after: String
+  ): NativeTaskConnection!
+}
+
+type Query {
+  session(id: ID!): Session
+  nativeTask(sessionId: String!, taskId: String!): NativeTask
+}
+
+type Subscription {
+  taskCreated(sessionId: String!): NativeTask!
+  taskUpdated(sessionId: String!): NativeTask!
 }
 ```
 
-## Workflow
-
-### Agent Perspective
-
-**1. Task Start**
+**DataLoader Integration**:
 
 ```typescript
-// User asks: "Add user authentication"
-// session_id comes from Claude Code context
-const { task_id } = await start_task({
-  description: "Add JWT authentication",
-  type: "implementation",
-  estimated_complexity: "moderate",
-  session_id: "session-1234567890-xyz789"  // Required
+// packages/han/lib/graphql/loaders/native-task-loader.ts
+export const nativeTaskLoader = new DataLoader<
+  { sessionId: string },
+  NativeTask[]
+>(async (keys) => {
+  const sessionIds = keys.map(k => k.sessionId);
+  const tasks = await getSessionNativeTasks(dbPath, sessionIds);
+  return sessionIds.map(id => tasks.filter(t => t.sessionId === id));
 });
 ```
 
-**2. During Work** (optional)
+**Subscription Publishing**:
+
+The indexer publishes events to GraphQL pubsub when tasks are created/updated:
 
 ```typescript
-await update_task({
-  task_id,
-  notes: "Implemented token generation, working on validation"
+// After indexing new task events
+pubsub.publish(`task:created:${sessionId}`, task);
+pubsub.publish(`task:updated:${sessionId}`, task);
+```
+
+### 5. Browse UI Sidebar
+
+**Location**: `packages/browse-client/src/components/organisms/SessionSidebar.tsx`
+
+**Purpose**: Display tasks in session detail sidebar
+
+**Features**:
+
+- List all tasks for the session
+- Filter by status (pending, in_progress, completed)
+- Show task metadata (subject, status, timestamps)
+- Real-time updates via GraphQL subscriptions
+- Visual indicators for task state
+
+**Query**:
+
+```graphql
+query SessionTasks($sessionId: ID!) {
+  session(id: $sessionId) {
+    tasks(first: 50) {
+      edges {
+        node {
+          id
+          subject
+          description
+          status
+          activeForm
+          owner
+          createdAt
+          updatedAt
+          completedAt
+        }
+      }
+    }
+  }
+}
+```
+
+## Task Lifecycle
+
+### Example Workflow
+
+**1. User Request**
+
+> "Add JWT authentication to the API"
+
+**2. Agent Creates Task**
+
+```typescript
+const { data } = await TaskCreate({
+  subject: "Add JWT authentication",
+  description: "Implement JWT token generation and validation for API endpoints",
+  activeForm: "Adding JWT authentication"
+});
+// Returns: { taskId: "1" }
+```
+
+**3. Event Written to JSONL**
+
+```json
+{
+  "type": "tool_use",
+  "id": "msg_abc123",
+  "timestamp": "2026-02-12T10:30:00.000Z",
+  "content": [{
+    "type": "tool_use",
+    "name": "TaskCreate",
+    "input": {
+      "subject": "Add JWT authentication",
+      "description": "Implement JWT token generation...",
+      "activeForm": "Adding JWT authentication"
+    }
+  }]
+}
+```
+
+**4. Indexer Processes Event**
+
+```rust
+// Han coordinator detects new line in JSONL
+// Extracts TaskCreate tool use
+// Creates NativeTask in database with status="pending"
+```
+
+**5. Task Visible in Browse UI**
+
+```
+Session: snug-dreaming-knuth
+├─ Messages (145)
+└─ Tasks (1)
+   └─ Add JWT authentication [PENDING]
+      Created: 10:30 AM
+```
+
+**6. Agent Starts Work**
+
+```typescript
+await TaskUpdate({
+  taskId: "1",
+  status: "in_progress"
 });
 ```
 
-**3. Task Completion**
+**7. Database Updated**
+
+```sql
+UPDATE native_tasks
+SET status = 'in_progress',
+    updated_at = '2026-02-12T10:31:00.000Z'
+WHERE id = '1';
+```
+
+**8. UI Updates in Real-Time**
+
+```
+Tasks (1)
+└─ Add JWT authentication [IN PROGRESS]  🔄
+   Started: 10:31 AM
+```
+
+**9. Agent Completes Work**
 
 ```typescript
-// Agent assesses outcome
-await complete_task({
-  task_id,
-  outcome: "success",
-  confidence: 0.92,  // High confidence
-  files_modified: ["src/auth/jwt.ts", "tests/auth.test.ts"],
-  tests_added: 12,
-  notes: "All tests passing, types clean, rate limiting included"
+await TaskUpdate({
+  taskId: "1",
+  status: "completed"
 });
 ```
 
-### System Perspective
+**10. Final State**
 
-**Stop Hook Validation**:
-
-```bash
-# 1. Get agent self-assessment
-Agent outcome: "success"
-Agent confidence: 0.92
-
-# 2. Run objective validation
-jutsu-typescript: ✓ PASS
-jutsu-tdd: ✓ PASS (12 new tests)
-jutsu-biome: ✓ PASS
-
-# 3. Cross-validate
-hooks_passed: true
-Agent was correct: ✓
-
-# 4. Update database
-UPDATE tasks SET
-  hooks_passed = true,
-  completed_at = now(),
-  duration_seconds = 180
-WHERE id = 'task_123';
+```sql
+UPDATE native_tasks
+SET status = 'completed',
+    updated_at = '2026-02-12T10:45:00.000Z',
+    completed_at = '2026-02-12T10:45:00.000Z'
+WHERE id = '1';
 ```
 
-## Metrics Available
-
-### Success Metrics
-
-**Success Rate**:
-
-- Overall success rate
-- Success rate by task type (implementation, fix, refactor, research)
-- Success rate by complexity (simple, moderate, complex)
-
-**Duration**:
-
-- Average task duration
-- Duration by type and complexity
-- P50, P90, P99 latencies
-
-### Calibration Metrics
-
-**Core Metric**: Does agent confidence match reality?
-
 ```
-Calibration Score = |agent_confidence - actual_success| averaged
-
-Perfect calibration = 0.0
-Agent says 90% confidence → 90% actually succeed
-Agent says 70% confidence → 70% actually succeed
+Tasks (1)
+└─ Add JWT authentication [COMPLETED] ✓
+   Completed: 10:45 AM (15 minutes)
 ```
-
-**Calibration by Confidence Bucket**:
-
-```
-0.90-1.00: Agent says 95% avg → 93% succeed (well-calibrated)
-0.80-0.89: Agent says 85% avg → 87% succeed (well-calibrated)
-0.70-0.79: Agent says 75% avg → 65% succeed (overconfident)
-< 0.70:    Agent says 60% avg → 85% succeed (underconfident)
-```
-
-**Accuracy Types**:
-
-- **Correct Success**: Agent said success, hooks confirmed
-- **Correct Failure**: Agent said failure, hooks confirmed
-- **Overconfident**: Agent said success, hooks failed (false positive)
-- **Underconfident**: Agent said failure, hooks passed (false negative)
-
-### Outcome Metrics
-
-**By Outcome**:
-
-- Success count and rate
-- Partial success count and rate
-- Failure count and rate
-
-**By Task Type**:
-
-- Implementation success rate
-- Fix success rate
-- Refactor success rate
-- Research success rate
 
 ## Use Cases
 
-### 1. Agent Performance Tracking
+### 1. Real-Time Task Visibility
 
-**Question**: Is the agent improving over time?
+**Question**: What tasks is the agent working on right now?
 
-**Query**:
+**Solution**: Browse UI sidebar shows all tasks with real-time status updates
 
-```sql
-SELECT
-  DATE(completed_at) as date,
-  COUNT(*) as tasks,
-  ROUND(100.0 * SUM(CASE WHEN outcome = 'success' THEN 1 ELSE 0 END) / COUNT(*), 1) as success_rate,
-  ROUND(AVG(confidence), 2) as avg_confidence
-FROM tasks
-WHERE completed_at >= date('now', '-30 days')
-GROUP BY DATE(completed_at)
-ORDER BY date;
-```
+**Benefits**:
+- No need to ask the agent "what are you doing?"
+- Clear visibility into multi-step workflows
+- Task dependencies visible (blocks/blockedBy)
 
-**Insight**: Track success rate trends, identify improvement or regression
+### 2. Historical Task Analysis
 
-### 2. Calibration Analysis
-
-**Question**: Is the agent well-calibrated in its confidence?
+**Question**: How long did that refactoring take?
 
 **Query**:
 
-```sql
-SELECT
-  CASE
-    WHEN confidence >= 0.9 THEN '0.90-1.00'
-    WHEN confidence >= 0.8 THEN '0.80-0.89'
-    WHEN confidence >= 0.7 THEN '0.70-0.79'
-    ELSE '< 0.70'
-  END as confidence_bucket,
-  COUNT(*) as count,
-  ROUND(AVG(confidence), 2) as avg_confidence,
-  ROUND(100.0 * SUM(CASE WHEN hooks_passed THEN 1 ELSE 0 END) / COUNT(*), 1) as actual_success
-FROM tasks
-WHERE outcome IS NOT NULL AND hooks_passed IS NOT NULL
-GROUP BY confidence_bucket;
+```graphql
+query SessionTasks($sessionId: ID!) {
+  session(id: $sessionId) {
+    tasks(status: COMPLETED) {
+      edges {
+        node {
+          subject
+          createdAt
+          completedAt
+          # Calculate duration client-side
+        }
+      }
+    }
+  }
+}
 ```
 
-**Insight**: Identify overconfidence or underconfidence patterns
+**Insight**: Track time spent on tasks, identify patterns
 
-### 3. Task Type Performance
+### 3. Cross-Session Task Tracking
 
-**Question**: Which task types are most challenging?
+**Question**: Which sessions involved database schema changes?
 
 **Query**:
 
-```sql
-SELECT
-  type,
-  COUNT(*) as total,
-  ROUND(100.0 * SUM(CASE WHEN outcome = 'success' THEN 1 ELSE 0 END) / COUNT(*), 1) as success_rate,
-  ROUND(AVG(duration_seconds), 0) as avg_duration_sec
-FROM tasks
-WHERE outcome IS NOT NULL
-GROUP BY type
-ORDER BY success_rate DESC;
+```graphql
+query TaskSearch($keyword: String!) {
+  searchNativeTasks(query: $keyword) {
+    edges {
+      node {
+        subject
+        description
+        session {
+          id
+          slug
+          startedAt
+        }
+      }
+    }
+  }
+}
 ```
 
-**Insight**: Focus improvement efforts on weakest task types
+**Insight**: Find all sessions that touched specific areas of the codebase
 
-### 4. Failure Analysis
+### 4. Team Coordination
 
-**Question**: Why are tasks failing?
+**Question**: Which tasks are blocked on other work?
 
 **Query**:
 
-```sql
-SELECT
-  type,
-  failure_reason,
-  COUNT(*) as count
-FROM tasks
-WHERE outcome = 'failure'
-GROUP BY type, failure_reason
-ORDER BY count DESC
-LIMIT 10;
+```graphql
+query BlockedTasks($sessionId: ID!) {
+  session(id: $sessionId) {
+    tasks(first: 50) {
+      edges {
+        node {
+          subject
+          status
+          blockedBy  # Array of task IDs
+          blocks     # Array of task IDs
+        }
+      }
+    }
+  }
+}
 ```
 
-**Insight**: Identify common failure patterns, create targeted improvements
+**Insight**: Identify bottlenecks, unblock parallel work
+
+## Migration from Legacy Metrics
+
+The old `hashi-han-metrics` MCP server with manual `start_task` / `complete_task` calls has been **removed**. It is replaced by this automatic system.
+
+### What Changed
+
+| Old Approach | New Approach |
+|--------------|--------------|
+| Manual MCP tool calls | Automatic via native TaskCreate/Update |
+| Agent self-assessment (confidence, outcome) | Task state only (pending/in_progress/completed) |
+| Hook validation correlation | Not applicable (no self-assessment to validate) |
+| SQLite `tasks` table | SQLite `native_tasks` table |
+| SessionStart hook injecting instructions | No special hooks needed |
+| Stop hook validation | Not applicable |
+
+### Migration Path
+
+If you have old task data in the `tasks` table:
+
+1. Old data remains queryable for historical analysis
+2. New sessions use `native_tasks` table exclusively
+3. Browse UI shows native tasks only
+4. Old metrics queries still work against `tasks` table
+
+### Benefits of New Approach
+
+1. **Zero overhead** - No manual reporting, just use native tools
+2. **Immediate value** - Tasks visible in Claude Code UI immediately
+3. **Single source of truth** - JSONL is canonical, database is derived
+4. **No calibration needed** - No self-assessment, just state tracking
+5. **Simpler mental model** - Create task, update status, done
+
+## Performance Characteristics
+
+### Indexing Performance
+
+- **Incremental**: Only new JSONL lines processed
+- **Fast**: Rust implementation with mmap and SIMD
+- **Concurrent**: WAL mode allows reads during indexing
+- **Low latency**: Typically < 100ms for small increments
+
+### Query Performance
+
+- **Indexed**: `session_id` and `status` indexed for fast lookups
+- **Batch-friendly**: DataLoader batches requests efficiently
+- **Cached**: GraphQL layer caches task lists per session
+- **Subscription-based**: Real-time updates without polling
+
+### Storage
+
+- **Minimal**: ~500 bytes per task (subject, description, metadata)
+- **Append-only**: No updates to JSONL (source of truth)
+- **Compacted**: SQLite vacuums automatically
 
 ## Privacy & Security
 
 **Local-First**:
-
-- All data stored in SQLite at `~/.claude/han/han.db`
+- All data stored in SQLite at `~/.han/han.db`
 - No network calls
 - No external tracking
 
 **User-Owned**:
-
-- SQLite database is portable and easily queryable
-- Data can be exported, backed up, or deleted
+- Database is portable and queryable
+- Can export, backup, or delete
 - Full transparency
 
 **Minimal Data**:
-
-- Task descriptions (brief)
-- Outcome assessments
-- File paths (no content)
-- No PII, no user conversations
+- Task subjects and descriptions (user-controlled)
+- No PII unless user includes it
+- No conversation content
 
 ## Integration Points
 
-### With Hook System
+### With Coordinator Daemon
 
-Metrics validation runs as a Stop hook:
+Tasks are indexed by the coordinator:
 
-- Non-blocking (doesn't prevent Stop)
-- Lightweight (SQLite update only)
-- Silent (no user-visible output unless miscalibrated)
+- Single-process indexing (lock-based coordination)
+- Incremental updates on file changes
+- Publishes GraphQL subscription events
 
-See: [Hook System](./hook-system.md)
+See: [Coordinator Daemon](./coordinator-daemon.md)
 
-### With Quality Tools
+### With Browse UI
 
-Hook validation leverages existing quality tools:
+Tasks appear in the session sidebar:
 
-- jutsu-tdd (test results)
-- jutsu-typescript (type checking)
-- jutsu-biome (linting)
-- Any other configured hooks
+- Real-time updates via subscriptions
+- Filterable by status
+- Shows full task lifecycle
 
-Quality gates become calibration signals.
+See: [Browse Architecture](./browse-architecture.md)
 
-### With MCP Server
+### With JSONL Indexer
 
-hashi-han-metrics exposes tools via MCP:
+Tasks are extracted from JSONL transcripts:
 
-- Standard STDIO transport
-- Follows MCP protocol
-- Integrates with Claude Code's MCP system
+- Detects TaskCreate/TaskUpdate tool uses
+- Transforms to database records
+- Maintains `last_indexed_line` for incremental processing
 
-See: [MCP Server](./mcp-server.md)
-
-## Continuous Improvement
-
-**Feedback Loop**:
-
-```
-Agent completes task
-       ↓
-Self-assesses outcome + confidence
-       ↓
-Hooks validate objectively
-       ↓
-Calibration accuracy calculated
-       ↓
-Patterns identified (overconfident on refactors?)
-       ↓
-SessionStart instructions adjusted
-       ↓
-Agent learns from calibration data
-       ↓
-Performance improves over time
-```
-
-**Prompt Adjustments**:
-
-Based on calibration metrics, SessionStart instructions can be dynamically adjusted:
-
-```markdown
-## Your Calibration Profile (Last 100 Tasks)
-
-Refactoring tasks: You tend to be 15% overconfident
-- When you think 85% confident → actually 70% succeed
-- Recommendation: Be more thorough with edge case testing
-
-Fix tasks: You tend to be 10% underconfident
-- When you think 70% confident → actually 80% succeed
-- Recommendation: Trust your fix validation more
-
-Overall: Well-calibrated (92% accuracy)
-```
+See: [Coordinator Data Layer](./coordinator-data-layer.md)
 
 ## Future Enhancements
 
 Potential additions based on usage:
 
-1. **Team Aggregation** (opt-in)
-   - Share anonymous metrics across team
-   - Benchmark against team averages
-   - Identify outlier patterns
+1. **Task Dependencies Graph**
+   - Visualize blocks/blockedBy relationships
+   - Critical path analysis
+   - Parallel work identification
 
-2. **Production Validation**
-   - Integrate with hashi-sentry
-   - Retroactive validation (did the fix actually work in prod?)
-   - Long-term outcome tracking
+2. **Task Templates**
+   - Common task patterns (fix, feature, refactor)
+   - Pre-filled descriptions
+   - Suggested dependencies
 
-3. **Cost Tracking**
-   - Track token usage per task
-   - Cost per success
-   - ROI analysis
+3. **Task Metrics**
+   - Average duration by type
+   - Completion rate trends
+   - Bottleneck detection
 
-4. **Quality Trend Analysis**
-   - Test coverage trends
-   - Code quality trends
-   - Complexity trends
+4. **Cross-Session Task Linking**
+   - Mark tasks as related across sessions
+   - Follow-up task tracking
+   - Long-running initiative tracking
+
+5. **Task Search**
+   - Full-text search via FTS5
+   - Filter by date range, status, owner
+   - Aggregate statistics
 
 ## Related Blueprints
 
-- [Hook System](./hook-system.md) - How hooks execute and validate
-- [MCP Server](./mcp-server.md) - MCP protocol integration
-- [SDLC Coverage](./sdlc-coverage.md) - Where metrics fit in the workflow
+- [Coordinator Data Layer](./coordinator-data-layer.md) - JSONL indexing architecture
+- [Browse Architecture](./browse-architecture.md) - UI for task visualization
+- [Native Module](./native-module.md) - Rust implementation of indexer
+- [Hook System](./hook-system.md) - Integration with validation hooks
 
 ## References
 
-- hashi-han-metrics plugin: `hashi/hashi-han-metrics/`
-- Metrics hooks: `hashi/hashi-han-metrics/hooks/metrics-tracking.md`, `hashi/hashi-han-metrics/hooks/validate-metrics.sh`
-- Database schema: `hashi/hashi-han-metrics/server/storage.ts`
+- Native task CRUD: `packages/han-native/src/crud.rs`
+- JSONL indexer: `packages/han-native/src/indexer.rs`
+- GraphQL types: `packages/han/lib/graphql/types/native-task.ts`
+- Browse UI sidebar: `packages/browse-client/src/components/organisms/SessionSidebar.tsx`
+- Database schema: `packages/han-native/src/schema.rs`
