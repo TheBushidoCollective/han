@@ -9,7 +9,7 @@ Static marketplace site with search, plugin discovery, and documentation renderi
 
 ## Overview
 
-The Han website is a Next.js static site that serves as the primary discovery interface for the plugin marketplace. It provides search functionality, category browsing, and dynamic documentation rendering for all 120+ plugins.
+The Han website is a Next.js static site that serves as the primary discovery interface for the plugin marketplace. It provides search functionality, category browsing, and dynamic documentation rendering for all plugins.
 
 ## Architecture
 
@@ -19,9 +19,11 @@ The Han website is a Next.js static site that serves as the primary discovery in
 - **UI Library**: React 19
 - **Styling**: Tailwind CSS 4.1
 - **Typography**: @tailwindcss/typography
-- **Search**: Fuse.js (client-side fuzzy search)
-- **Markdown**: react-markdown + remark-gfm
-- **Testing**: Playwright
+- **Search**: Fuse.js 7.1 (client-side fuzzy search)
+- **Markdown**: react-markdown 10.1 + remark-gfm 4.0
+- **Syntax Highlighting**: rehype-highlight 7.0 (highlight.js 11.11)
+- **Testing**: Playwright 1.56
+- **Build Tool**: Bun
 - **Analytics**: counter.dev (privacy-friendly)
 
 ### Build Pipeline
@@ -39,14 +41,32 @@ Pre-build Scripts
 ┌────────────────────────────────────────┐
 │ generate-search-index.ts               │
 │ - Scan plugin directories              │
-│ - Detect skills/commands/agents/hooks  │
+│ - Detect skills/hooks/agents           │
 │ - Build Fuse.js index                  │
 │ - Output: public/search-index.json     │
 └────────────────────────────────────────┘
     ↓
+┌────────────────────────────────────────┐
+│ generate-rss.ts                        │
+│ - Build RSS/Atom/JSON feeds            │
+│ - Output: public/{feed.xml,atom.xml}   │
+└────────────────────────────────────────┘
+    ↓
+┌────────────────────────────────────────┐
+│ generate-sitemap.ts                    │
+│ - Build XML sitemap                    │
+│ - Output: public/sitemap.xml           │
+└────────────────────────────────────────┘
+    ↓
+┌────────────────────────────────────────┐
+│ generate-paper-revisions.ts            │
+│ - Track paper version history          │
+│ - Generate revision metadata           │
+└────────────────────────────────────────┘
+    ↓
 Next.js Build (Static Export)
     ↓
-GitHub Pages Deployment
+Railway Deployment (dashboard.han.guru)
 ```
 
 ## Page Routes
@@ -58,22 +78,25 @@ GitHub Pages Deployment
 - `/search` - Search interface
 - `/tags` - Tag-based browsing
 - `/docs` - General documentation
+- `/insights` - Blog posts and articles
+- `/papers` - Research papers (AI-DLC 2026, etc.)
 
 ### Dynamic Routes
 
 ```
 /plugins/[category]
-├── /plugins/bushido
-├── /plugins/jutsu
-├── /plugins/do
-└── /plugins/hashi
+├── /plugins/core
+├── /plugins/languages
+├── /plugins/validation
+├── /plugins/services
+├── /plugins/tools
+├── /plugins/frameworks
+└── /plugins/disciplines
 
 /plugins/[category]/[slug]
 ├── Plugin detail page
 └── Nested routes:
     ├── /skills/[skill]      - Skill documentation
-    ├── /commands/[command]  - Command documentation
-    ├── /agents/[agent]      - Agent documentation
     └── /hooks/[hookfile]    - Hook documentation
 ```
 
@@ -87,8 +110,8 @@ GitHub Pages Deployment
 {
   "plugins": [
     {
-      "name": "jutsu-typescript",
-      "source": "./jutsu/jutsu-typescript"
+      "name": "typescript",
+      "source": "./plugins/languages/typescript"
     }
   ]
 }
@@ -100,8 +123,8 @@ GitHub Pages Deployment
 {
   "plugins": [
     {
-      "name": "jutsu-typescript",
-      "source": "https://github.com/thebushidocollective/han/tree/main/jutsu/jutsu-typescript"
+      "name": "typescript",
+      "source": "https://github.com/thebushidocollective/han/tree/main/plugins/languages/typescript"
     }
   ]
 }
@@ -109,7 +132,7 @@ GitHub Pages Deployment
 
 **Transform Logic**:
 
-- Local paths (`./*`) → GitHub URLs
+- Local paths (`./plugins/*`) → GitHub URLs
 - Preserves all metadata (name, description, keywords)
 - Maintains structure for frontend consumption
 
@@ -120,9 +143,8 @@ GitHub Pages Deployment
 ```typescript
 for each plugin:
   skills = glob("skills/*/SKILL.md")
-  commands = glob("commands/*.md")
+  hooks = glob("hooks/hooks.json")
   agents = glob("agents/*.md")
-  hooks = glob("hooks/*.md")
 ```
 
 **Index Structure**:
@@ -131,13 +153,11 @@ for each plugin:
 {
   "plugins": [
     {
-      "name": "jutsu-typescript",
-      "category": "Technique",
+      "name": "typescript",
+      "category": "languages",
       "description": "...",
       "keywords": ["typescript", "linting"],
       "skills": ["typescript-patterns", "type-safety"],
-      "commands": ["typecheck"],
-      "agents": [],
       "hooks": ["lint", "typecheck"]
     }
   ]
@@ -153,7 +173,6 @@ const fuse = new Fuse(index.plugins, {
     { name: 'description', weight: 1.5 },
     { name: 'keywords', weight: 1 },
     { name: 'skills', weight: 0.8 },
-    { name: 'commands', weight: 0.8 }
   ],
   threshold: 0.3,  // Fuzzy matching tolerance
   includeScore: true
@@ -173,11 +192,11 @@ app/
 │   │   └── [slug]/
 │   │       ├── page.tsx       # Plugin detail
 │   │       ├── skills/[skill]/page.tsx
-│   │       ├── commands/[command]/page.tsx
-│   │       ├── agents/[agent]/page.tsx
 │   │       └── hooks/[hookfile]/page.tsx
 ├── search/page.tsx            # Search interface
 ├── tags/page.tsx              # Tag browser
+├── insights/page.tsx          # Blog listing
+├── papers/page.tsx            # Papers listing
 └── components/
     ├── InstallationTabs.tsx   # Multi-method install UI
     ├── PluginCard.tsx         # Plugin preview card
@@ -213,11 +232,12 @@ export async function generateStaticParams() {
 
 ### Documentation Rendering
 
-Markdown files are rendered using `react-markdown`:
+Markdown files are rendered using `react-markdown` + `next-mdx-remote`:
 
 ```typescript
 <ReactMarkdown
   remarkPlugins={[remarkGfm]}
+  rehypePlugins={[rehypeHighlight, rehypeSlug]}
   className="prose dark:prose-invert"
 >
   {content}
@@ -227,80 +247,57 @@ Markdown files are rendered using `react-markdown`:
 Features:
 
 - GitHub Flavored Markdown (tables, task lists, strikethrough)
-- Syntax highlighting (via Tailwind Typography)
+- Syntax highlighting with highlight.js
 - Dark mode support
 - Responsive typography
+- Heading anchors
 
 ### Installation Instructions
 
-Component shows 4 installation methods:
+Component shows multiple installation methods:
 
 1. **npx** (no installation)
 
    ```bash
-   han plugin install jutsu-typescript
+   npx @thebushidocollective/han plugin install typescript
    ```
 
 2. **Claude Code** (built-in)
 
    ```
    /marketplace add han
-   /plugin install jutsu-typescript@han
+   /plugin install typescript@han
    ```
 
-3. **Claude CLI**
-
-   ```bash
-   claude marketplace add han
-   claude plugin install jutsu-typescript@han
-   ```
-
-4. **Manual** (config edit)
+3. **Manual** (config edit)
 
    ```json
    {
      "enabledPlugins": {
-       "jutsu-typescript@han": true
+       "typescript@han": true
      }
    }
    ```
 
 ## Deployment
 
-### GitHub Pages
+### Railway
 
-Workflow: `.github/workflows/deploy-website.yml`
+Service: `han-dashboard`
+URL: https://dashboard.han.guru
 
-```yaml
-on:
-  push:
-    branches: [main]
-    paths:
-      - "website/**"
-      - "jutsu/**"
-      - "do/**"
-      - "hashi/**"
-      - "bushido/**"
-```
+**Build Configuration**:
 
-**Build Steps**:
-
-1. Checkout repository
-2. Setup Node.js 20
-3. Install dependencies
-4. Copy marketplace.json to public/
-5. Run pre-build scripts
-6. Build Next.js (static export)
-7. Add .nojekyll file (bypass Jekyll)
-8. Upload artifact
-9. Deploy to GitHub Pages
+- Root directory: `/website`
+- Build command: `bun run build`
+- Start command: `bun run start`
+- Dockerfile: Multi-stage with `oven/bun:1` base image
 
 **Environment**:
 
-- Static hosting
-- Custom domain: han.guru
+- Static hosting via `serve` on port 3000
 - HTTPS enabled
-- No server-side rendering
+- Auto-deploys on main branch changes
 
 ### Testing
 
@@ -310,14 +307,20 @@ Playwright tests validate critical flows:
 test('plugin search works', async ({ page }) => {
   await page.goto('/search');
   await page.fill('input[type="search"]', 'typescript');
-  await expect(page.getByText('jutsu-typescript')).toBeVisible();
+  await expect(page.getByText('typescript')).toBeVisible();
 });
 
 test('plugin detail page loads', async ({ page }) => {
-  await page.goto('/plugins/jutsu/jutsu-typescript');
+  await page.goto('/plugins/languages/typescript');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('typescript');
 });
 ```
+
+**Test Commands**:
+
+- `bun run test:e2e` - End-to-end Playwright tests
+- `bun run test:bdd` - BDD-style Cucumber tests
+- `bun run test:all` - Run all test suites
 
 ## Files
 
@@ -325,6 +328,9 @@ test('plugin detail page loads', async ({ page }) => {
 
 - `website/scripts/generate-marketplace.ts` - Marketplace transformation
 - `website/scripts/generate-search-index.ts` - Search index generation
+- `website/scripts/generate-rss.ts` - RSS/Atom/JSON feeds
+- `website/scripts/generate-sitemap.ts` - XML sitemap
+- `website/scripts/generate-paper-revisions.ts` - Paper version tracking
 
 ### Core Application
 
@@ -333,6 +339,7 @@ test('plugin detail page loads', async ({ page }) => {
 - `website/app/globals.css` - Global styles + Tailwind
 - `website/tailwind.config.ts` - Tailwind configuration
 - `website/next.config.ts` - Next.js configuration
+- `website/package.json` - Dependencies and scripts
 
 ### Components
 
@@ -346,10 +353,15 @@ test('plugin detail page loads', async ({ page }) => {
 
 - `website/public/marketplace.json` - Web-formatted marketplace
 - `website/public/search-index.json` - Fuse.js search index
+- `website/public/feed.xml` - RSS 2.0 feed
+- `website/public/atom.xml` - Atom 1.0 feed
+- `website/public/feed.json` - JSON Feed
+- `website/public/sitemap.xml` - XML sitemap
 
 ### Testing
 
 - `website/playwright.config.ts` - Playwright configuration
+- `website/playwright.bdd.config.ts` - BDD test configuration
 - `website/tests/*.spec.ts` - E2E test suites
 
 ## Related Systems

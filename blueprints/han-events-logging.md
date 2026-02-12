@@ -67,7 +67,7 @@ Events are indexed into SQLite alongside session messages and displayed in the B
 │                                                                  │
 │  - Watches for *-han.jsonl files                                 │
 │  - Incremental indexing (same pattern as transcripts)            │
-│  - Inserts into han_events table                                 │
+│  - Inserts into messages table with message_type='han_event'     │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
                                   │
@@ -75,8 +75,10 @@ Events are indexed into SQLite alongside session messages and displayed in the B
 ┌─────────────────────────────────────────────────────────────────┐
 │                    SQLite Database                               │
 │                                                                  │
-│  han_events table:                                               │
-│  - id, session_id, event_type, data, timestamp, line_number     │
+│  messages table (unified with Claude messages):                  │
+│  - message_type: 'han_event'                                     │
+│  - tool_name: Event subtype (hook_start, mcp_tool_call, etc.)   │
+│  - content: JSON string with full event data                     │
 │  - FTS index for content search                                  │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
@@ -173,7 +175,7 @@ Each line in the `-han.jsonl` file:
   "type": "hook_complete",
   "timestamp": "2025-01-15T10:30:00.123Z",
   "data": {
-    "plugin": "jutsu-biome",
+    "plugin": "biome",
     "hook": "lint",
     "directory": "/path/to/project",
     "cached": false,
@@ -215,15 +217,13 @@ The coordinator indexes both files and interleaves based on timestamp:
 
 - `lib/events/logger.ts` - Event logger with file append
 - `lib/events/types.ts` - Event type definitions
-- `lib/db/han-events.ts` - SQLite operations for events
 
 ### Modified Files
 
-- `lib/commands/hook/dispatch.ts` - Log hook events
-- `lib/commands/hook/run.ts` - Log individual hook executions
+- `lib/commands/hook/run.ts` - Log hook executions
 - `lib/commands/mcp/server.ts` - Log MCP tool calls
 - `lib/commands/mcp/memory.ts` - Log memory operations
-- `han-native/src/schema.sql` - Add han_events table
+- `han-native/src/schema.sql` - messages table already supports han_event type
 - `han-native/src/indexer.rs` - Index *-han.jsonl files
 - `packages/browse-client/src/components/pages/SessionDetailPage/` - Display events
 
@@ -281,15 +281,15 @@ type HanEventConnection {
 
 ### Session Detail Page
 
-Add a "Han Activity" tab or interleave events in the message timeline:
+Interleave events in the message timeline:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ Session: abc-123                                     ⚙️ Events   │
 ├─────────────────────────────────────────────────────────────────┤
 │ 10:30:00  [User] Help me fix the linting errors                 │
-│ 10:30:01  [Han] 🔧 Hook: jutsu-biome/lint started               │
-│ 10:30:03  [Han] ✓ Hook: jutsu-biome/lint completed (2.3s)       │
+│ 10:30:01  [Han] 🔧 Hook: biome/lint started                     │
+│ 10:30:03  [Han] ✓ Hook: biome/lint completed (2.3s)             │
 │ 10:30:05  [Claude] I've run the linter...                       │
 │ 10:30:10  [Han] 🔧 MCP: context7_resolve-library-id called      │
 │ 10:30:12  [Han] ✓ MCP: context7_resolve-library-id (1.8s)       │
@@ -303,7 +303,7 @@ Clicking an event shows full details:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ Hook: jutsu-biome/lint                                    ✓ OK  │
+│ Hook: biome/lint                                          ✓ OK  │
 ├─────────────────────────────────────────────────────────────────┤
 │ Directory: /Users/john/project                                   │
 │ Duration: 2,312ms                                               │
@@ -332,16 +332,6 @@ Events are tied to Claude Code sessions. Session ID is obtained from:
 - **Buffered writes**: Batch multiple events before fsync
 - **Incremental indexing**: Same pattern as JSONL transcripts
 - **Lazy loading**: Events loaded on demand in UI
-
-## Configuration
-
-```yaml
-# han.yml
-events:
-  enabled: true        # Master switch (default: true)
-  log_output: true     # Include command output (default: true, false saves space)
-  max_output_length: 10000  # Truncate output (default: 10KB)
-```
 
 ## Related
 
