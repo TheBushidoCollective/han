@@ -309,8 +309,11 @@ function explainHooks(hookType?: string, hanOnly = false): void {
       )
     : allHooks;
 
-  // Render the Ink UI component
-  render(<HookExplainUI hooks={filteredHooks} showAll={!hanOnly} />);
+  // Render the Ink UI component (static output, unmount immediately)
+  const { unmount } = render(
+    <HookExplainUI hooks={filteredHooks} showAll={!hanOnly} />
+  );
+  unmount();
 }
 
 export function registerHookExplain(hookCommand: Command): void {
@@ -329,5 +332,7 @@ export function registerHookExplain(hookCommand: Command): void {
     .option('--han-only', 'Show only Han plugin hooks (exclude settings hooks)')
     .action((hookType: string | undefined, options: { hanOnly?: boolean }) => {
       explainHooks(hookType, options.hanOnly ?? false);
+      // Explicitly exit after rendering to avoid hanging on open handles
+      process.exit(0);
     });
 }

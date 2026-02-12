@@ -1,8 +1,21 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import {
+  afterEach,
+  beforeEach,
+  describe as bunDescribe,
+  expect,
+  test,
+} from 'bun:test';
 import {
   type ExecSyncOptionsWithStringEncoding,
   execSync,
 } from 'node:child_process';
+
+// Skip CLI subprocess tests when native module is unavailable or in CI without source
+const SKIP_CLI =
+  process.env.SKIP_NATIVE === 'true' ||
+  (process.env.CI === 'true' && process.env.HAN_TEST_SOURCE !== 'true');
+const describe = SKIP_CLI ? bunDescribe.skip : bunDescribe;
+
 import {
   existsSync,
   mkdirSync,
