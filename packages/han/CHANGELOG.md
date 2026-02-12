@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.12.6] - 2026-02-12
+
+### Fixed
+
+- eliminate global state race in memory storage tests ([535533ee](../../commit/535533ee))
+- harden memory-storage and dispatch-stdin tests against parallel races ([c45edf5b](../../commit/c45edf5b))
+
+### Changed
+
+- drop MCP server from blueprints plugin, use native tools ([33c4b9b8](../../commit/33c4b9b8))
+
+### Other
+
+- Merge branch 'main' of github.com:TheBushidoCollective/han ([d9cfea70](../../commit/d9cfea70))
+- remove legacy jutsu/hashi/do prefixes from skills, commands, and prompts ([9721c29a](../../commit/9721c29a))
+- add comprehensive task for fixing 9 failing test expectations ([e04b09d2](../../commit/e04b09d2))
+- create task to fix 9 failing test expectations for discipline paths ([92150a96](../../commit/92150a96))
+- document remaining references to old discipline directory names ([33525727](../../commit/33525727))
+
 ## [3.12.5] - 2026-02-11
 
 ### Changed
