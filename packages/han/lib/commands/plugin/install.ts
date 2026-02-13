@@ -69,10 +69,14 @@ export function registerPluginInstall(pluginCommand: Command): void {
       '--scope <scope>',
       'Installation scope: "project" (.claude/settings.json, default) or "local" (.claude/settings.local.json)'
     )
+    .option(
+      '--from <repo>',
+      'Install from an external GitHub marketplace repo (e.g., thebushidocollective/ai-dlc)'
+    )
     .action(
       async (
         pluginNames: string[],
-        options: { auto?: boolean; analyze?: boolean; scope?: string },
+        options: { auto?: boolean; analyze?: boolean; scope?: string; from?: string },
         command: Command
       ) => {
         try {
@@ -98,7 +102,7 @@ export function registerPluginInstall(pluginCommand: Command): void {
           if (options.auto) {
             await install(scope, { useAiAnalysis });
           } else if (pluginNames.length > 0) {
-            await installPlugins(pluginNames, scope);
+            await installPlugins(pluginNames, scope, options.from);
           } else {
             await installInteractive(scope);
           }
