@@ -57,11 +57,6 @@ module "api" {
   database_url = module.postgres.connection_url
   redis_url    = module.redis.connection_url
 
-  # Secrets
-  jwt_secret            = var.jwt_secret
-  session_secret        = var.session_secret
-  master_encryption_key = var.master_encryption_key
-
   # Optional OAuth
   github_client_id     = var.github_client_id
   github_client_secret = var.github_client_secret

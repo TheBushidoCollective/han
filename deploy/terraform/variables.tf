@@ -98,24 +98,6 @@ variable "sentry_organization_slug" {
 # Secrets (sensitive - pass via TF_VAR_* or terraform.tfvars)
 # -----------------------------------------------------------------------------
 
-variable "jwt_secret" {
-  description = "JWT signing secret (generate with: openssl rand -hex 32)"
-  type        = string
-  sensitive   = true
-}
-
-variable "session_secret" {
-  description = "Session encryption secret (generate with: openssl rand -hex 32)"
-  type        = string
-  sensitive   = true
-}
-
-variable "master_encryption_key" {
-  description = "Master encryption key for session data (generate with: openssl rand -hex 32)"
-  type        = string
-  sensitive   = true
-}
-
 variable "github_client_id" {
   description = "GitHub OAuth client ID (optional)"
   type        = string

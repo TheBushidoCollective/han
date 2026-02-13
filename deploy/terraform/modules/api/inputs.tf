@@ -23,24 +23,6 @@ variable "redis_url" {
   type        = string
 }
 
-variable "jwt_secret" {
-  description = "JWT signing secret"
-  type        = string
-  sensitive   = true
-}
-
-variable "session_secret" {
-  description = "Session encryption secret"
-  type        = string
-  sensitive   = true
-}
-
-variable "master_encryption_key" {
-  description = "Master encryption key for session data"
-  type        = string
-  sensitive   = true
-}
-
 # -----------------------------------------------------------------------------
 # Service Configuration
 # -----------------------------------------------------------------------------
