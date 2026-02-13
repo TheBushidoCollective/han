@@ -1,4 +1,7 @@
 {
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -23,13 +26,9 @@
       }
     ]
   },
-  "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
-  },
   "enabledPlugins": {
     "accessibility@han": true,
     "act@han": true,
-    "ai-dlc@ai-dlc": true,
     "atomic-design@han": true,
     "biome@han": true,
     "blueprints@han": true,
