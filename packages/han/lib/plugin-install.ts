@@ -22,23 +22,6 @@ import {
 import { recordPluginInstall } from './telemetry/index.ts';
 
 /**
- * Fetch marketplace.json from a GitHub repo
- */
-async function fetchExternalMarketplace(
-  repo: string
-): Promise<MarketplacePlugin[]> {
-  const url = `https://raw.githubusercontent.com/${repo}/main/.claude-plugin/marketplace.json`;
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch marketplace from ${repo}: ${response.status} ${response.statusText}`
-    );
-  }
-  const data = (await response.json()) as { plugins: MarketplacePlugin[] };
-  return data.plugins || [];
-}
-
-/**
  * Derive marketplace name from repo
  * Example: thebushidocollective/ai-dlc -> thebushidocollective-ai-dlc
  */
@@ -246,85 +229,84 @@ export async function installPlugins(
 
   ensureClaudeDirectory(scope);
 
-  // Validate plugins exist in marketplace
-  console.log(
-    `Validating plugins against ${isExternalMarketplace ? `${marketplaceRepo} marketplace` : 'Han marketplace'}...\n`
-  );
-  const marketplacePlugins = isExternalMarketplace
-    ? await fetchExternalMarketplace(marketplaceRepo)
-    : await fetchMarketplace();
+  // For Han marketplace: validate and offer interactive search
+  // For external marketplace: let Claude CLI handle validation
+  if (!isExternalMarketplace) {
+    console.log('Validating plugins against Han marketplace...\n');
+    const marketplacePlugins = await fetchMarketplace();
 
-  if (marketplacePlugins.length === 0) {
-    console.error(
-      'Error: Could not fetch marketplace. Please check your internet connection.'
+    if (marketplacePlugins.length === 0) {
+      console.error(
+        'Error: Could not fetch marketplace. Please check your internet connection.'
+      );
+      process.exit(1);
+    }
+
+    const validPluginNames = new Set(marketplacePlugins.map((p) => p.name));
+
+    // Check all plugins are valid, or search for similar ones
+    const invalidPlugins = Array.from(pluginsToInstall).filter(
+      (p) => !validPluginNames.has(p)
     );
-    process.exit(1);
-  }
 
-  const validPluginNames = new Set(marketplacePlugins.map((p) => p.name));
+    if (invalidPlugins.length > 0) {
+      // If there's only one invalid plugin, try to search for it
+      if (invalidPlugins.length === 1 && pluginNames.length === 1) {
+        const query = invalidPlugins[0];
+        const searchResults = await searchForPlugin(query, marketplacePlugins);
 
-  // Check all plugins are valid, or search for similar ones
-  const invalidPlugins = Array.from(pluginsToInstall).filter(
-    (p) => !validPluginNames.has(p)
-  );
+        if (searchResults.length === 0) {
+          console.error(`Error: No plugins found matching "${query}"\n`);
+          showAvailablePlugins(marketplacePlugins);
+          process.exit(1);
+        }
 
-  if (invalidPlugins.length > 0) {
-    // If there's only one invalid plugin, try to search for it
-    if (invalidPlugins.length === 1 && pluginNames.length === 1) {
-      const query = invalidPlugins[0];
-      const searchResults = await searchForPlugin(query, marketplacePlugins);
+        // If exact match found after normalization, use it
+        const exactMatch = searchResults.find(
+          (p) => p.name.toLowerCase() === query.toLowerCase()
+        );
+        if (exactMatch && searchResults.length === 1) {
+          console.log(`✓ Found exact match: ${exactMatch.name}\n`);
+          pluginsToInstall.delete(query);
+          pluginsToInstall.add(exactMatch.name);
+        } else {
+          // Show interactive selector
+          console.log(
+            `Plugin "${query}" not found. Searching for similar plugins...\n`
+          );
+          const selectedPlugins = await showPluginSelector(
+            searchResults,
+            [],
+            marketplacePlugins
+          );
 
-      if (searchResults.length === 0) {
-        console.error(`Error: No plugins found matching "${query}"\n`);
+          if (selectedPlugins.length === 0) {
+            console.log('Installation cancelled.');
+            process.exit(0);
+          }
+
+          // Replace the invalid plugin with selected ones
+          pluginsToInstall.delete(query);
+          for (const plugin of selectedPlugins) {
+            pluginsToInstall.add(plugin);
+          }
+        }
+      } else {
+        console.error(
+          `Error: Plugin(s) not found in Han marketplace: ${invalidPlugins.join(', ')}\n`
+        );
         showAvailablePlugins(marketplacePlugins);
         process.exit(1);
       }
-
-      // If exact match found after normalization, use it
-      const exactMatch = searchResults.find(
-        (p) => p.name.toLowerCase() === query.toLowerCase()
-      );
-      if (exactMatch && searchResults.length === 1) {
-        console.log(`✓ Found exact match: ${exactMatch.name}\n`);
-        pluginsToInstall.delete(query);
-        pluginsToInstall.add(exactMatch.name);
-      } else {
-        // Show interactive selector
-        console.log(
-          `Plugin "${query}" not found. Searching for similar plugins...\n`
-        );
-        const selectedPlugins = await showPluginSelector(
-          searchResults,
-          [],
-          marketplacePlugins
-        );
-
-        if (selectedPlugins.length === 0) {
-          console.log('Installation cancelled.');
-          process.exit(0);
-        }
-
-        // Replace the invalid plugin with selected ones
-        pluginsToInstall.delete(query);
-        for (const plugin of selectedPlugins) {
-          pluginsToInstall.add(plugin);
-        }
-      }
-    } else {
-      console.error(
-        `Error: Plugin(s) not found in Han marketplace: ${invalidPlugins.join(', ')}\n`
-      );
-      showAvailablePlugins(marketplacePlugins);
-      process.exit(1);
     }
-  }
 
-  // Remove any invalid plugins that are no longer in the marketplace
-  const removedPlugins = removeInvalidPlugins(validPluginNames, scope);
-  if (removedPlugins.length > 0) {
-    console.log(
-      `✓ Removed ${removedPlugins.length} invalid plugin(s): ${removedPlugins.join(', ')}\n`
-    );
+    // Remove any invalid plugins that are no longer in the marketplace
+    const removedPlugins = removeInvalidPlugins(validPluginNames, scope);
+    if (removedPlugins.length > 0) {
+      console.log(
+        `✓ Removed ${removedPlugins.length} invalid plugin(s): ${removedPlugins.join(', ')}\n`
+      );
+    }
   }
 
   const settings = readOrCreateSettings(scope);
