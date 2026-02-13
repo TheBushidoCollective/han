@@ -22,6 +22,31 @@ import {
 import { recordPluginInstall } from './telemetry/index.ts';
 
 /**
+ * Fetch marketplace.json from a GitHub repo
+ */
+async function fetchExternalMarketplace(
+  repo: string
+): Promise<MarketplacePlugin[]> {
+  const url = `https://raw.githubusercontent.com/${repo}/main/.claude-plugin/marketplace.json`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch marketplace from ${repo}: ${response.status} ${response.statusText}`
+    );
+  }
+  const data = (await response.json()) as { plugins: MarketplacePlugin[] };
+  return data.plugins || [];
+}
+
+/**
+ * Derive marketplace name from repo
+ * Example: thebushidocollective/ai-dlc -> thebushidocollective-ai-dlc
+ */
+function deriveMarketplaceName(repo: string): string {
+  return repo.replace('/', '-');
+}
+
+/**
  * Check if Claude CLI is available
  * Set HAN_SKIP_CLAUDE_CLI=1 to force using direct settings modification (useful for tests)
  */
@@ -80,20 +105,22 @@ function showAvailablePlugins(marketplacePlugins: MarketplacePlugin[]): void {
 
 /**
  * Install plugins using Claude CLI
- * Uses `claude plugin install <plugin>@han` for proper Claude Code integration
+ * Uses `claude plugin install <plugin>@<marketplace>` for proper Claude Code integration
  */
 function installPluginViaClaude(
   pluginName: string,
-  scope: InstallScope
+  scope: InstallScope,
+  marketplaceName: string,
+  marketplaceRepo: string
 ): boolean {
   try {
     const claudePath = findClaudeExecutable();
     const scopeArg = scope === 'local' ? '--scope local' : '--scope project';
 
-    // First ensure the Han marketplace is added
+    // Ensure the marketplace is added
     try {
       execSync(
-        `${claudePath} marketplace add han --source github --repo ${HAN_MARKETPLACE_REPO} ${scopeArg}`,
+        `${claudePath} marketplace add ${marketplaceName} --source github --repo ${marketplaceRepo} ${scopeArg}`,
         { stdio: 'pipe', encoding: 'utf-8' }
       );
     } catch {
@@ -101,9 +128,12 @@ function installPluginViaClaude(
     }
 
     // Install the plugin
-    execSync(`${claudePath} plugin install ${pluginName}@han ${scopeArg}`, {
-      stdio: 'inherit',
-    });
+    execSync(
+      `${claudePath} plugin install ${pluginName}@${marketplaceName} ${scopeArg}`,
+      {
+        stdio: 'inherit',
+      }
+    );
     return true;
   } catch (error) {
     console.error(`Failed to install ${pluginName}:`, error);
@@ -114,22 +144,27 @@ function installPluginViaClaude(
 /**
  * Install plugin directly to settings file (fallback when claude CLI unavailable)
  */
-function installPluginDirect(pluginName: string, scope: InstallScope): boolean {
+function installPluginDirect(
+  pluginName: string,
+  scope: InstallScope,
+  marketplaceName: string,
+  marketplaceRepo: string
+): boolean {
   try {
     const settings = readOrCreateSettings(scope);
 
-    // Add Han marketplace if not already added
-    if (!settings?.extraKnownMarketplaces?.han) {
+    // Add marketplace if not already added
+    if (!settings?.extraKnownMarketplaces?.[marketplaceName]) {
       settings.extraKnownMarketplaces = {
         ...settings.extraKnownMarketplaces,
-        han: { source: { source: 'github', repo: HAN_MARKETPLACE_REPO } },
+        [marketplaceName]: { source: { source: 'github', repo: marketplaceRepo } },
       };
     }
 
     // Add the plugin
     settings.enabledPlugins = {
       ...settings.enabledPlugins,
-      [`${pluginName}@han`]: true,
+      [`${pluginName}@${marketplaceName}`]: true,
     };
 
     writeSettings(settings, scope);
@@ -146,12 +181,14 @@ function installPluginDirect(pluginName: string, scope: InstallScope): boolean {
 function doInstallPlugin(
   pluginName: string,
   scope: InstallScope,
-  useClaudeCli: boolean
+  useClaudeCli: boolean,
+  marketplaceName: string,
+  marketplaceRepo: string
 ): boolean {
   if (useClaudeCli) {
-    return installPluginViaClaude(pluginName, scope);
+    return installPluginViaClaude(pluginName, scope, marketplaceName, marketplaceRepo);
   }
-  return installPluginDirect(pluginName, scope);
+  return installPluginDirect(pluginName, scope, marketplaceName, marketplaceRepo);
 }
 
 /**
@@ -159,7 +196,8 @@ function doInstallPlugin(
  */
 export async function installPlugins(
   pluginNames: string[],
-  scope: InstallScope = 'project'
+  scope: InstallScope = 'project',
+  externalRepo?: string
 ): Promise<void> {
   // Reject user scope - Han plugins must be installed at project or local scope
   if (scope === 'user') {
@@ -173,6 +211,13 @@ export async function installPlugins(
     console.error('Error: No plugin names provided.');
     process.exit(1);
   }
+
+  // Determine marketplace to use
+  const marketplaceRepo = externalRepo || HAN_MARKETPLACE_REPO;
+  const marketplaceName = externalRepo
+    ? deriveMarketplaceName(externalRepo)
+    : 'han';
+  const isExternalMarketplace = !!externalRepo;
 
   // Check for deprecated naming (jutsu-*, hashi-*, do-*)
   const deprecatedInputs = pluginNames.filter(isDeprecatedPluginName);
@@ -193,14 +238,21 @@ export async function installPlugins(
   const { resolved } = resolvePluginNamesStrict(pluginNames);
   const resolvedNames = resolved.map((r) => r.name);
 
-  // Always include bushido and core plugins as dependencies
-  const pluginsToInstall = new Set(['core', 'bushido', ...resolvedNames]);
+  // For Han marketplace: always include bushido and core as dependencies
+  // For external marketplaces: install core + bushido from Han, then external plugins
+  const pluginsToInstall = new Set(
+    isExternalMarketplace ? resolvedNames : ['core', 'bushido', ...resolvedNames]
+  );
 
   ensureClaudeDirectory(scope);
 
   // Validate plugins exist in marketplace
-  console.log('Validating plugins against marketplace...\n');
-  const marketplacePlugins = await fetchMarketplace();
+  console.log(
+    `Validating plugins against ${isExternalMarketplace ? `${marketplaceRepo} marketplace` : 'Han marketplace'}...\n`
+  );
+  const marketplacePlugins = isExternalMarketplace
+    ? await fetchExternalMarketplace(marketplaceRepo)
+    : await fetchMarketplace();
 
   if (marketplacePlugins.length === 0) {
     console.error(
@@ -275,7 +327,9 @@ export async function installPlugins(
     );
   }
 
-  const currentPlugins = getInstalledPlugins(scope);
+  const settings = readOrCreateSettings(scope);
+  const enabledPlugins = settings.enabledPlugins || {};
+
   const filename = getSettingsFilename(scope);
   console.log(`Installing to ${filename}...\n`);
 
@@ -291,13 +345,38 @@ export async function installPlugins(
   const alreadyInstalled: string[] = [];
   const failed: string[] = [];
 
+  // Install han core + bushido first if using external marketplace
+  if (isExternalMarketplace) {
+    console.log(
+      '\nInstalling Han foundation (core + bushido) from Han marketplace...\n'
+    );
+    for (const foundationPlugin of ['core', 'bushido']) {
+      const pluginKey = `${foundationPlugin}@han`;
+      if (enabledPlugins[pluginKey]) {
+        // Already installed
+        continue;
+      }
+      console.log(`Installing ${pluginKey}...`);
+      if (doInstallPlugin(foundationPlugin, scope, useClaudeCli, 'han', HAN_MARKETPLACE_REPO)) {
+        installed.push(foundationPlugin);
+        recordPluginInstall(foundationPlugin, scope, true);
+      } else {
+        failed.push(foundationPlugin);
+      }
+    }
+    console.log(
+      `\nInstalling plugins from ${marketplaceRepo} marketplace...\n`
+    );
+  }
+
   // Install each plugin
   for (const pluginName of pluginsToInstall) {
-    if (currentPlugins.includes(pluginName)) {
+    const pluginKey = `${pluginName}@${marketplaceName}`;
+    if (enabledPlugins[pluginKey]) {
       alreadyInstalled.push(pluginName);
     } else {
-      console.log(`Installing ${pluginName}@han...`);
-      if (doInstallPlugin(pluginName, scope, useClaudeCli)) {
+      console.log(`Installing ${pluginKey}...`);
+      if (doInstallPlugin(pluginName, scope, useClaudeCli, marketplaceName, marketplaceRepo)) {
         installed.push(pluginName);
         // Record telemetry
         recordPluginInstall(pluginName, scope, true);
