@@ -44,7 +44,7 @@ Update blueprints using the Write tool on `blueprints/{name}.md` when you:
 | hook-result-parent-linkage | Hook result messages need parent_id linkage to hook run messages |
 | hook-system | Direct plugin hook execution via Claude Code with no centralized orchestration |
 | marketplace | Central plugin registry with canonical names, backward-compatible aliases, and category-based organization |
-| mcp-server | MCP tool exposure via direct plugin registration and dynamic han_workflow orchestrator |
+| mcp-server | Model Context Protocol server exposing plugin tools |
 | metrics-system | Automatic task tracking via Claude Code native TaskCreate/TaskUpdate indexed from JSONL transcripts |
 | native-module | Rust NAPI-RS bindings providing complete database layer, JSONL indexing, FTS search, and coordinator management |
 | plugin-directory | Filesystem organization with category-based directories and short plugin identifiers |
