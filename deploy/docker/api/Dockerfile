@@ -36,9 +36,8 @@ COPY --from=builder /app/packages/han-team-server/node_modules ./node_modules
 # Copy migration files
 COPY packages/han-team-server/migrations ./migrations
 
-# Copy entrypoint script
-COPY deploy/docker/api/entrypoint.sh ./entrypoint.sh
-RUN chmod +x ./entrypoint.sh
+# Inline entrypoint script (avoids Docker context path issues)
+RUN printf '#!/bin/bash\nset -e\nif [ "${AUTO_MIGRATE:-false}" = "true" ]; then\n  echo "Running database migrations..."\n  bun run migrate\n  echo "Migrations complete."\nfi\nexec "$@"\n' > ./entrypoint.sh && chmod +x ./entrypoint.sh
 
 # Create non-root user
 RUN groupadd -r han && useradd -r -g han han
