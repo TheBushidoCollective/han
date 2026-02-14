@@ -139,7 +139,6 @@ module "dns" {
   enable_api_dns     = var.api_custom_domain != ""
 
   # Railway DNS values for custom domains
-  website_dns_value     = module.website.custom_domain_dns_value
-  website_www_dns_value = module.website.www_domain_dns_value
-  api_dns_value         = module.api.custom_domain_dns_value
+  website_dns_value = module.website.custom_domain_dns_value
+  api_dns_value     = module.api.custom_domain_dns_value
 }

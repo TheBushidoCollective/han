@@ -11,7 +11,7 @@
 
 # Project Configuration
 project_name      = "han-team-platform"
-github_repo       = "thebushidocollective/han-team-platform"
+github_repo       = "thebushidocollective/han"
 production_branch = "main"
 domain            = "han.guru"
 
@@ -22,27 +22,17 @@ enable_pr_environments = true
 api_server_root_directory = "packages/han-team-server"
 api_custom_domain         = "api.han.guru"
 
-# Website
+# Website (team platform UI - not the marketplace at han.guru)
 website_root_directory = "website"
-website_custom_domain  = "han.guru"
+website_custom_domain  = "app.han.guru"
 
 # GCP DNS (optional - leave gcp_project_id empty to skip)
-gcp_project_id    = ""  # e.g., "bushido-collective"
+gcp_project_id    = ""  # e.g., "waldrip-net"
 gcp_dns_zone_name = "han-guru"
 
 # Sentry (optional - leave sentry_organization_slug empty to skip)
 # Requires SENTRY_AUTH_TOKEN environment variable
 sentry_organization_slug = ""  # e.g., "bushido-collective"
-
-# -----------------------------------------------------------------------------
-# SECRETS - Generate these with: openssl rand -hex 32
-# For Terraform Cloud, mark these as "Sensitive"
-# -----------------------------------------------------------------------------
-
-# Required secrets
-jwt_secret            = ""
-session_secret        = ""
-master_encryption_key = ""
 
 # Optional OAuth (leave empty to skip)
 github_client_id     = ""

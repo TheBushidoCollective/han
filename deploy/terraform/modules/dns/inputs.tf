@@ -15,13 +15,7 @@ variable "domain" {
 
 # Railway DNS values (from custom_domain resources)
 variable "website_dns_value" {
-  description = "Railway DNS value for website apex domain"
-  type        = string
-  default     = ""
-}
-
-variable "website_www_dns_value" {
-  description = "Railway DNS value for website www subdomain"
+  description = "Railway DNS value for website subdomain"
   type        = string
   default     = ""
 }

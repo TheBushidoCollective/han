@@ -12,8 +12,3 @@ output "custom_domain_dns_value" {
   description = "DNS record value for custom domain"
   value       = var.custom_domain != "" ? railway_custom_domain.website[0].dns_record_value : null
 }
-
-output "www_domain_dns_value" {
-  description = "DNS record value for www subdomain"
-  value       = var.custom_domain != "" ? railway_custom_domain.website_www[0].dns_record_value : null
-}
