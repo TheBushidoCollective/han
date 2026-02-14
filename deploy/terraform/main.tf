@@ -2,6 +2,38 @@
 # Han Team Platform - Railway Infrastructure
 # -----------------------------------------------------------------------------
 
+# -----------------------------------------------------------------------------
+# Import existing Railway resources into Terraform state
+# These blocks can be removed after the first successful apply.
+# -----------------------------------------------------------------------------
+
+import {
+  to = module.project.railway_project.this
+  id = "24bcc47a-dadf-464b-887f-bcccaf3e25e2"
+}
+
+import {
+  to = module.api.railway_service.api
+  id = "9d8b6991-73c6-4c7d-810e-7519fb9a582e"
+}
+
+import {
+  to = module.website.railway_service.website
+  id = "f71ad15d-cfe1-495e-8c05-c4d1e2942c05"
+}
+
+import {
+  to = module.postgres.railway_service.postgres
+  id = "dca29e2a-db91-411b-a938-bfc576bf8a6b"
+}
+
+import {
+  to = module.redis.railway_service.redis
+  id = "01b8201a-5c6d-4c9b-879d-6bb2163bea48"
+}
+
+# -----------------------------------------------------------------------------
+
 module "project" {
   source = "./modules/project"
 
