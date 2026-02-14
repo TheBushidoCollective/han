@@ -6,7 +6,6 @@ import type { Hono } from "hono";
 import {
   requireAuth,
   requireDecryptionAccess,
-  onErrorHandler,
   syncRateLimit,
   strictRateLimit,
   exportRateLimit,
@@ -21,9 +20,6 @@ import { handleSessionExport } from "./export.ts";
  * Register session routes with the Hono app
  */
 export function registerSessionRoutes(app: Hono): void {
-  // Apply error handler globally
-  app.onError(onErrorHandler);
-
   // Apply auth to all session routes
   app.use("/api/sessions/*", requireAuth);
 
