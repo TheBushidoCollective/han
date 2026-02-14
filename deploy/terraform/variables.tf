@@ -57,9 +57,9 @@ variable "api_custom_domain" {
 # -----------------------------------------------------------------------------
 
 variable "website_root_directory" {
-  description = "Root directory for the website service"
+  description = "Root directory for the website service (browse-client with team mode)"
   type        = string
-  default     = "website"
+  default     = "packages/browse-client"
 }
 
 variable "website_custom_domain" {

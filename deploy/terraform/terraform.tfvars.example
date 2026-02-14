@@ -23,7 +23,7 @@ api_server_root_directory = "packages/han-team-server"
 api_custom_domain         = "api.han.guru"
 
 # Website (team platform UI - not the marketplace at han.guru)
-website_root_directory = "website"
+website_root_directory = "packages/browse-client"
 website_custom_domain  = "app.han.guru"
 
 # GCP DNS (optional - leave gcp_project_id empty to skip)

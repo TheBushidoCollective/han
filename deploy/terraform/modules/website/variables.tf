@@ -9,6 +9,6 @@ resource "railway_variable" "sentry_dsn" {
   count          = var.enable_sentry ? 1 : 0
   environment_id = var.environment_id
   service_id     = railway_service.website.id
-  name           = "NEXT_PUBLIC_SENTRY_DSN"
+  name           = "VITE_SENTRY_DSN"
   value          = var.sentry_dsn
 }

@@ -34,7 +34,7 @@ variable "root_directory" {
 variable "config_path" {
   description = "Path to railway.toml config (relative to repo root)"
   type        = string
-  default     = "website/railway.toml"
+  default     = "packages/browse-client/railway.toml"
 }
 
 variable "node_env" {
