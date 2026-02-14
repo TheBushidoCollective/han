@@ -11,7 +11,7 @@ variable "project_name" {
 variable "github_repo" {
   description = "GitHub repository for deployments (owner/repo format)"
   type        = string
-  default     = "thebushidocollective/han"
+  default     = "TheBushidoCollective/han"
 }
 
 variable "production_branch" {

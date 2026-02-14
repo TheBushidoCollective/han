@@ -11,7 +11,7 @@
 
 # Project Configuration
 project_name      = "han-team-platform"
-github_repo       = "thebushidocollective/han"
+github_repo       = "TheBushidoCollective/han"
 production_branch = "main"
 domain            = "han.guru"
 
