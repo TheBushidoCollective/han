@@ -141,4 +141,8 @@ module "dns" {
   # Railway DNS values for custom domains
   website_dns_value = module.website.custom_domain_dns_value
   api_dns_value     = module.api.custom_domain_dns_value
+
+  # Railway domain verification TXT records
+  api_verify_txt     = var.api_domain_verify_txt
+  website_verify_txt = var.website_domain_verify_txt
 }
