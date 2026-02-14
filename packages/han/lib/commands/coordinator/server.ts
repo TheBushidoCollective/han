@@ -5,7 +5,7 @@
  * This is the central server that all clients connect to.
  */
 
-import { execSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { createServer as createHttpServer, type Server } from 'node:http';
 import { createServer as createHttpsServer } from 'node:https';
 import { parse } from 'node:url';
@@ -232,32 +232,85 @@ async function processPendingHooks(): Promise<void> {
       publishSessionHooksChanged(sessionId, hookSource, hook.hookName, 'run');
 
       try {
-        // Execute the hook command
+        // Execute the hook command asynchronously to avoid blocking the event loop.
+        // This keeps health checks and slot acquire/release operations responsive.
         const pluginRoot = hook.pluginRoot ?? '';
-        const output = execSync(command, {
-          cwd: directory,
-          encoding: 'utf-8',
-          timeout: 300000, // 5 minute timeout
-          shell: '/bin/bash',
-          env: {
-            ...process.env,
-            CLAUDE_PROJECT_DIR: directory,
-            HAN_SESSION_ID: sessionId,
-            ...(pluginRoot ? { CLAUDE_PLUGIN_ROOT: pluginRoot } : {}),
-          },
+        const { stdout, stderr, exitCode } = await new Promise<{
+          stdout: string;
+          stderr: string;
+          exitCode: number;
+        }>((resolve) => {
+          const stdoutChunks: Buffer[] = [];
+          const stderrChunks: Buffer[] = [];
+          const child = spawn(command, {
+            cwd: directory,
+            shell: '/bin/bash',
+            env: {
+              ...process.env,
+              CLAUDE_PROJECT_DIR: directory,
+              HAN_SESSION_ID: sessionId,
+              ...(pluginRoot ? { CLAUDE_PLUGIN_ROOT: pluginRoot } : {}),
+            },
+          });
+
+          child.stdout?.on('data', (chunk: Buffer) => stdoutChunks.push(chunk));
+          child.stderr?.on('data', (chunk: Buffer) => stderrChunks.push(chunk));
+
+          // 5 minute timeout
+          const timeout = setTimeout(() => {
+            child.kill('SIGTERM');
+            resolve({
+              stdout: Buffer.concat(stdoutChunks).toString('utf-8'),
+              stderr: 'Hook timed out after 5 minutes',
+              exitCode: 124,
+            });
+          }, 300000);
+
+          child.on('close', (code) => {
+            clearTimeout(timeout);
+            resolve({
+              stdout: Buffer.concat(stdoutChunks).toString('utf-8'),
+              stderr: Buffer.concat(stderrChunks).toString('utf-8'),
+              exitCode: code ?? 1,
+            });
+          });
         });
 
         const duration = Date.now() - startTime;
 
-        // Mark as completed
-        deferredHooks.complete(hookId, true, output.trim(), null, duration);
+        if (exitCode === 0) {
+          // Mark as completed
+          deferredHooks.complete(hookId, true, stdout.trim(), null, duration);
 
-        // Reset failure counter on success
-        hookAttempts.reset(sessionId, hookSource, hook.hookName, directory);
+          // Reset failure counter on success
+          hookAttempts.reset(sessionId, hookSource, hook.hookName, directory);
 
-        log.info(
-          `Hook ${hookSource}/${hook.hookName} in ${directory} completed successfully in ${duration}ms`
-        );
+          log.info(
+            `Hook ${hookSource}/${hook.hookName} in ${directory} completed successfully in ${duration}ms`
+          );
+        } else {
+          // Mark as failed
+          deferredHooks.complete(
+            hookId,
+            false,
+            stdout.trim(),
+            stderr.trim(),
+            duration
+          );
+
+          // Increment failure counter
+          const attemptInfo = hookAttempts.increment(
+            sessionId,
+            hookSource,
+            hook.hookName,
+            directory
+          );
+
+          log.warn(
+            `Hook ${hookSource}/${hook.hookName} failed (attempt ${attemptInfo.consecutiveFailures}/${attemptInfo.maxAttempts}): ${stderr.slice(0, 100)}`
+          );
+        }
+
         publishSessionHooksChanged(
           sessionId,
           hookSource,
@@ -265,29 +318,17 @@ async function processPendingHooks(): Promise<void> {
           'result'
         );
       } catch (error: unknown) {
-        const stderr = (error as { stderr?: Buffer })?.stderr?.toString() || '';
-        const stdout = (error as { stdout?: Buffer })?.stdout?.toString() || '';
         const duration = Date.now() - startTime;
-
-        // Mark as failed
         deferredHooks.complete(
           hookId,
           false,
-          stdout.trim(),
-          stderr.trim(),
+          '',
+          String(error),
           duration
         );
 
-        // Increment failure counter
-        const attemptInfo = hookAttempts.increment(
-          sessionId,
-          hookSource,
-          hook.hookName,
-          directory
-        );
-
         log.warn(
-          `Hook ${hookSource}/${hook.hookName} failed (attempt ${attemptInfo.consecutiveFailures}/${attemptInfo.maxAttempts}): ${stderr.slice(0, 100)}`
+          `Hook ${hookSource}/${hook.hookName} spawn error: ${String(error).slice(0, 100)}`
         );
         publishSessionHooksChanged(
           sessionId,

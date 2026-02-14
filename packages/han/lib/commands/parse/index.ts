@@ -215,7 +215,7 @@ export function registerParseCommands(program: Command): void {
             process.exit(1);
           }
           console.log(opts.raw ? '' : 'null');
-          return;
+          process.exit(0);
         }
 
         // If --keys flag, output object keys
@@ -226,7 +226,7 @@ export function registerParseCommands(program: Command): void {
               console.log(key);
             }
           }
-          return;
+          process.exit(0);
         }
 
         if (opts.raw && typeof result === 'string') {
@@ -234,6 +234,7 @@ export function registerParseCommands(program: Command): void {
         } else {
           console.log(JSON.stringify(result));
         }
+        process.exit(0);
       } catch (error) {
         console.error(
           `Error: ${error instanceof Error ? error.message : error}`
@@ -256,6 +257,7 @@ export function registerParseCommands(program: Command): void {
         const value = JSON.parse(valueArg);
         const result = setPath(data, pathArg, value);
         console.log(JSON.stringify(result));
+        process.exit(0);
       } catch (error) {
         console.error(
           `Error: ${error instanceof Error ? error.message : error}`
@@ -293,6 +295,7 @@ export function registerParseCommands(program: Command): void {
         if (!opts.quiet) {
           console.log('valid');
         }
+        process.exit(0);
       } catch (error) {
         if (!opts.quiet) {
           console.error(
@@ -341,7 +344,7 @@ export function registerParseCommands(program: Command): void {
             process.exit(1);
           }
           console.log(opts.raw ? '' : 'null');
-          return;
+          process.exit(0);
         }
 
         if (opts.raw && typeof result === 'string') {
@@ -351,6 +354,7 @@ export function registerParseCommands(program: Command): void {
         } else {
           console.log(yaml.stringify(result).trim());
         }
+        process.exit(0);
       } catch (error) {
         console.error(
           `Error: ${error instanceof Error ? error.message : error}`
@@ -379,6 +383,7 @@ export function registerParseCommands(program: Command): void {
           update as Record<string, unknown>
         );
         console.log(result);
+        process.exit(0);
       } catch (error) {
         console.error(
           `Error: ${error instanceof Error ? error.message : error}`
@@ -397,6 +402,7 @@ export function registerParseCommands(program: Command): void {
         const input = await Bun.stdin.text();
         const data = yaml.parse(input);
         console.log(JSON.stringify(data));
+        process.exit(0);
       } catch (error) {
         console.error(
           `Error: ${error instanceof Error ? error.message : error}`
@@ -415,6 +421,7 @@ export function registerParseCommands(program: Command): void {
         const input = await Bun.stdin.text();
         const data = JSON.parse(input);
         console.log(yaml.stringify(data).trim());
+        process.exit(0);
       } catch (error) {
         console.error(
           `Error: ${error instanceof Error ? error.message : error}`

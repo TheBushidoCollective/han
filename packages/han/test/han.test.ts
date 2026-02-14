@@ -8,6 +8,7 @@ import {
 import {
   type ExecSyncOptionsWithStringEncoding,
   execSync,
+  spawnSync,
 } from 'node:child_process';
 
 // Skip CLI subprocess tests when native module is unavailable or in CI without source
@@ -781,7 +782,8 @@ describe('Hook config (han-plugin.yml)', () => {
       execSync('git init', { cwd: projectDir, stdio: 'pipe' });
       execSync('git add .', { cwd: projectDir, stdio: 'pipe' });
 
-      const output = execSync(`${binCommand} hook run jutsu-test test`, {
+      // Success messages go to stderr (not stdout) to avoid interrupting the model
+      const result = spawnSync(binCommand.split(' ')[0], [...binCommand.split(' ').slice(1), 'hook', 'run', 'jutsu-test', 'test'], {
         cwd: projectDir,
         encoding: 'utf8',
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -790,9 +792,11 @@ describe('Hook config (han-plugin.yml)', () => {
           CLAUDE_PLUGIN_ROOT: undefined,
           CLAUDE_PROJECT_DIR: projectDir,
         },
-      } as ExecSyncOptionsWithStringEncoding);
+        shell: true,
+      });
 
-      expect(output).toContain('passed');
+      expect(result.status).toBe(0);
+      expect(result.stderr).toContain('passed');
     },
     { timeout: BINARY_TIMEOUT }
   );
@@ -889,7 +893,8 @@ describe('Hook config (han-plugin.yml)', () => {
       execSync('git init', { cwd: projectDir, stdio: 'pipe' });
       execSync('git add .', { cwd: projectDir, stdio: 'pipe' });
 
-      const output = execSync(`${binCommand} hook run test-plugin test`, {
+      // Success messages go to stderr (not stdout) to avoid interrupting the model
+      const result = spawnSync(binCommand.split(' ')[0], [...binCommand.split(' ').slice(1), 'hook', 'run', 'test-plugin', 'test'], {
         cwd: projectDir,
         encoding: 'utf8',
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -898,9 +903,11 @@ describe('Hook config (han-plugin.yml)', () => {
           CLAUDE_PLUGIN_ROOT: pluginDir,
           CLAUDE_PROJECT_DIR: projectDir,
         },
-      } as ExecSyncOptionsWithStringEncoding);
+        shell: true,
+      });
 
-      expect(output).toContain('passed');
+      expect(result.status).toBe(0);
+      expect(result.stderr).toContain('passed');
     },
     { timeout: BINARY_TIMEOUT }
   );
@@ -925,7 +932,8 @@ describe('Hook config (han-plugin.yml)', () => {
       const projectDir = join(testDir, 'project');
       mkdirSync(projectDir, { recursive: true });
 
-      const output = execSync(`${binCommand} hook run test-plugin lint`, {
+      // Success messages go to stderr (not stdout) to avoid interrupting the model
+      const result = spawnSync(binCommand.split(' ')[0], [...binCommand.split(' ').slice(1), 'hook', 'run', 'test-plugin', 'lint'], {
         cwd: projectDir,
         encoding: 'utf8',
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -934,9 +942,11 @@ describe('Hook config (han-plugin.yml)', () => {
           CLAUDE_PLUGIN_ROOT: pluginDir,
           CLAUDE_PROJECT_DIR: projectDir,
         },
-      } as ExecSyncOptionsWithStringEncoding);
+        shell: true,
+      });
 
-      expect(output).toContain('passed');
+      expect(result.status).toBe(0);
+      expect(result.stderr).toContain('passed');
     },
     { timeout: BINARY_TIMEOUT }
   );
@@ -959,23 +969,23 @@ describe('Hook config (han-plugin.yml)', () => {
       const projectDir = join(testDir, 'project');
       mkdirSync(projectDir, { recursive: true });
 
-      const output = execSync(
-        `${binCommand} hook run test-plugin nonexistent`,
-        {
-          cwd: projectDir,
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'pipe'],
-          env: {
-            ...process.env,
-            CLAUDE_PLUGIN_ROOT: pluginDir,
-            CLAUDE_PROJECT_DIR: projectDir,
-          },
-        } as ExecSyncOptionsWithStringEncoding
-      );
+      // Informational messages go to stderr (not stdout) to avoid interrupting the model
+      const result = spawnSync(binCommand.split(' ')[0], [...binCommand.split(' ').slice(1), 'hook', 'run', 'test-plugin', 'nonexistent'], {
+        cwd: projectDir,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: {
+          ...process.env,
+          CLAUDE_PLUGIN_ROOT: pluginDir,
+          CLAUDE_PROJECT_DIR: projectDir,
+        },
+        shell: true,
+      });
 
+      expect(result.status).toBe(0);
       expect(
-        output.includes('No directories found') ||
-          output.includes('nonexistent')
+        result.stderr.includes('No directories found') ||
+          result.stderr.includes('nonexistent')
       ).toBe(true);
     },
     { timeout: BINARY_TIMEOUT }

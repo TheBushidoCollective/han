@@ -11,6 +11,11 @@
 import { COORDINATOR_PORT } from '../commands/coordinator/types.ts';
 
 /**
+ * Coordinator FQDN for HTTPS connections (matches health.ts pattern)
+ */
+const COORDINATOR_HOST = 'coordinator.local.han.guru';
+
+/**
  * Debug logging
  */
 function debugLog(message: string): void {
@@ -25,9 +30,11 @@ function debugLog(message: string): void {
 async function isCoordinatorAvailable(): Promise<boolean> {
   try {
     const response = await fetch(
-      `http://127.0.0.1:${COORDINATOR_PORT}/health`,
+      `https://${COORDINATOR_HOST}:${COORDINATOR_PORT}/health`,
       {
         signal: AbortSignal.timeout(1000),
+        // @ts-expect-error - Node.js/Bun fetch option for self-signed certs
+        rejectUnauthorized: false,
       }
     );
     if (!response.ok) return false;
@@ -69,7 +76,7 @@ async function acquireFromCoordinator(
 		`;
 
     const response = await fetch(
-      `http://127.0.0.1:${COORDINATOR_PORT}/graphql`,
+      `https://${COORDINATOR_HOST}:${COORDINATOR_PORT}/graphql`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -78,6 +85,8 @@ async function acquireFromCoordinator(
           variables: { sessionId, hookName, pid, pluginName },
         }),
         signal: AbortSignal.timeout(5000),
+        // @ts-expect-error - Node.js/Bun fetch option for self-signed certs
+        rejectUnauthorized: false,
       }
     );
 
@@ -123,7 +132,7 @@ async function releaseToCoordinator(
 		`;
 
     const response = await fetch(
-      `http://127.0.0.1:${COORDINATOR_PORT}/graphql`,
+      `https://${COORDINATOR_HOST}:${COORDINATOR_PORT}/graphql`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -132,6 +141,8 @@ async function releaseToCoordinator(
           variables: { slotId, pid },
         }),
         signal: AbortSignal.timeout(5000),
+        // @ts-expect-error - Node.js/Bun fetch option for self-signed certs
+        rejectUnauthorized: false,
       }
     );
 
@@ -335,12 +346,14 @@ export async function getSlotStatus(): Promise<{
 		`;
 
     const response = await fetch(
-      `http://127.0.0.1:${COORDINATOR_PORT}/graphql`,
+      `https://${COORDINATOR_HOST}:${COORDINATOR_PORT}/graphql`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query }),
         signal: AbortSignal.timeout(5000),
+        // @ts-expect-error - Node.js/Bun fetch option for self-signed certs
+        rejectUnauthorized: false,
       }
     );
 

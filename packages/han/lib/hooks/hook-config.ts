@@ -613,6 +613,7 @@ function testDirCommand(dir: string, cmd: string): boolean {
       encoding: 'utf8',
       shell: '/bin/sh',
       env: process.env,
+      timeout: 10000,
     });
     return true;
   } catch {

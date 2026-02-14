@@ -3,9 +3,7 @@
 
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "../../deploy/docker/api/Dockerfile"
-# Build from repo root for proper context
-dockerContext = "../.."
+dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "bun dist/server.js"

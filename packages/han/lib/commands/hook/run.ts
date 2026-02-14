@@ -150,6 +150,9 @@ export function registerHookRun(hookCommand: Command): void {
           );
         }
         if (sessionId) {
+          // Propagate session ID to env so local file-lock fallback uses
+          // a consistent ID across all hook processes (instead of PPID-derived)
+          process.env.HAN_SESSION_ID = sessionId;
           // Events are stored alongside Claude transcripts in the project directory
           initEventLogger(sessionId, {}, process.cwd());
         } else if (isDebugMode()) {
@@ -273,6 +276,9 @@ export function registerHookRun(hookCommand: Command): void {
             sessionId, // Pass sessionId for cache tracking
             async: options.async,
           });
+          // Safety net: runConfiguredHook calls process.exit() internally,
+          // but if bun doesn't actually exit (open handles), force it
+          process.exit(0);
         }
       }
     );

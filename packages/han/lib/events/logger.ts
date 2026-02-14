@@ -332,6 +332,10 @@ export class EventLogger {
     this.flushTimer = setTimeout(() => {
       this.flush();
     }, 100);
+    // Don't let the flush timer keep the process alive
+    if (this.flushTimer && typeof this.flushTimer === 'object' && 'unref' in this.flushTimer) {
+      (this.flushTimer as NodeJS.Timeout).unref();
+    }
   }
 
   /**

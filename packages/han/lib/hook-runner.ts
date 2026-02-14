@@ -1037,25 +1037,26 @@ export async function runConfiguredHook(
   }
 
   // Handle edge cases before acquiring lock
+  // Use stderr for informational messages so async hooks don't pollute stdout
   if (totalFound === 0) {
-    console.log(
+    console.error(
       `No directories found for hook "${hookName}" in plugin "${pluginName}"`
     );
     process.exit(0);
   }
 
   if (disabledCount === totalFound) {
-    console.log(
+    console.error(
       `All directories have hook "${hookName}" disabled via han-config.yml`
     );
     process.exit(0);
   }
 
   if (configsToRun.length === 0 && skippedCount > 0) {
-    console.log(
+    console.error(
       `Skipped ${skippedCount} director${skippedCount === 1 ? 'y' : 'ies'} (no changes detected)`
     );
-    console.log('No changes detected in any directories. Nothing to run.');
+    console.error('No changes detected in any directories. Nothing to run.');
     process.exit(0);
   }
 
@@ -1076,9 +1077,9 @@ export async function runConfiguredHook(
         ? '.'
         : config.directory.replace(`${projectRoot}/`, '');
 
-    // Substitute ${HAN_FILES} with session-modified files when --async is set
+    // Substitute ${HAN_FILES} with session-modified files
     let commandToRun = config.command;
-    if (options.async && config.command.includes(HAN_FILES_TEMPLATE)) {
+    if (config.command.includes(HAN_FILES_TEMPLATE)) {
       const substitution = await substituteHanFilesForStop(
         config.command,
         config,
@@ -1151,9 +1152,9 @@ export async function runConfiguredHook(
 
   const ranCount = successfulConfigs.length + failures.length;
 
-  // Report skipped directories if any
+  // Report skipped directories if any (stderr to avoid polluting model context)
   if (skippedCount > 0) {
-    console.log(
+    console.error(
       `Skipped ${skippedCount} director${skippedCount === 1 ? 'y' : 'ies'} (no changes detected)`
     );
   }
@@ -1259,8 +1260,10 @@ export async function runConfiguredHook(
     process.exit(2);
   }
 
-  console.log(
-    `\n✅ All ${ranCount} director${ranCount === 1 ? 'y' : 'ies'} passed`
+  // Silent success on stdout - only failures should produce stdout output
+  // that gets fed back to the model. Log to stderr for debugging.
+  console.error(
+    `✅ All ${ranCount} director${ranCount === 1 ? 'y' : 'ies'} passed`
   );
   process.exit(0);
 }
