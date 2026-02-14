@@ -45,6 +45,17 @@ const result = await Bun.build({
 	define: {
 		"process.env.NODE_ENV": JSON.stringify("production"),
 		global: "globalThis",
+		...(process.env.GRAPHQL_URL
+			? {
+					__GRAPHQL_URL__: JSON.stringify(process.env.GRAPHQL_URL),
+					__GRAPHQL_WS_URL__: JSON.stringify(
+						process.env.GRAPHQL_URL.replace(/^https:/, "wss:").replace(
+							/^http:/,
+							"ws:",
+						),
+					),
+				}
+			: {}),
 	},
 	loader: {
 		".css": "css",

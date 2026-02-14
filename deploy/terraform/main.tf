@@ -114,6 +114,9 @@ module "website" {
   branch         = var.production_branch
   root_directory = var.website_root_directory
 
+  # Team API connection
+  graphql_url = var.api_custom_domain != "" ? "https://${var.api_custom_domain}/graphql" : ""
+
   # Custom domain
   custom_domain = var.website_custom_domain
 

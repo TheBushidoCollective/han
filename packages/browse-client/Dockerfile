@@ -15,6 +15,10 @@ COPY . .
 # Verify schema exists for relay-compiler
 RUN test -f schema.graphql || (echo "ERROR: schema.graphql missing" && exit 1)
 
+# Build-time GraphQL URL injection (for team mode deployment)
+ARG GRAPHQL_URL
+ENV GRAPHQL_URL=${GRAPHQL_URL}
+
 # Build the application
 RUN bun run build
 

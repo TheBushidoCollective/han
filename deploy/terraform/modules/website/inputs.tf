@@ -43,6 +43,12 @@ variable "node_env" {
   default     = "production"
 }
 
+variable "graphql_url" {
+  description = "GraphQL API URL for the team server (e.g., https://api.han.guru/graphql)"
+  type        = string
+  default     = ""
+}
+
 variable "custom_domain" {
   description = "Custom domain for the website (optional)"
   type        = string
