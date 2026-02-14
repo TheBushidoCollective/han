@@ -38,3 +38,16 @@ variable "enable_api_dns" {
   type        = bool
   default     = false
 }
+
+# Railway domain verification TXT records
+variable "api_verify_txt" {
+  description = "Railway domain verification TXT value for API"
+  type        = string
+  default     = ""
+}
+
+variable "website_verify_txt" {
+  description = "Railway domain verification TXT value for website"
+  type        = string
+  default     = ""
+}
