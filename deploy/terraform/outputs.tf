@@ -43,10 +43,6 @@ output "website_custom_domain_dns" {
   value       = module.website.custom_domain_dns_value
 }
 
-output "website_www_dns" {
-  description = "DNS record value for website www subdomain"
-  value       = module.website.www_domain_dns_value
-}
 
 output "sentry_api_project_id" {
   description = "Sentry API project ID (if enabled)"
