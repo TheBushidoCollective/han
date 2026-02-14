@@ -49,6 +49,12 @@ variable "custom_domain" {
   default     = ""
 }
 
+variable "enable_sentry" {
+  description = "Whether Sentry is enabled (plan-time-known flag)"
+  type        = bool
+  default     = false
+}
+
 variable "sentry_dsn" {
   description = "Sentry DSN for error tracking (optional)"
   type        = string

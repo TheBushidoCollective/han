@@ -31,3 +31,16 @@ variable "api_dns_value" {
   type        = string
   default     = ""
 }
+
+# Plan-time-known flags for conditional resource creation
+variable "enable_website_dns" {
+  description = "Whether to create website DNS records"
+  type        = bool
+  default     = false
+}
+
+variable "enable_api_dns" {
+  description = "Whether to create API DNS records"
+  type        = bool
+  default     = false
+}

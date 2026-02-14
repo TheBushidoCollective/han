@@ -67,7 +67,8 @@ module "api" {
   custom_domain = var.api_custom_domain
 
   # Observability
-  sentry_dsn = var.sentry_organization_slug != "" ? module.sentry[0].api_dsn : ""
+  enable_sentry = var.sentry_organization_slug != ""
+  sentry_dsn    = var.sentry_organization_slug != "" ? module.sentry[0].api_dsn : ""
 }
 
 module "website" {
@@ -85,7 +86,8 @@ module "website" {
   custom_domain = var.website_custom_domain
 
   # Observability
-  sentry_dsn = var.sentry_organization_slug != "" ? module.sentry[0].website_dsn : ""
+  enable_sentry = var.sentry_organization_slug != ""
+  sentry_dsn    = var.sentry_organization_slug != "" ? module.sentry[0].website_dsn : ""
 }
 
 # -----------------------------------------------------------------------------
@@ -99,6 +101,10 @@ module "dns" {
   project_id = var.gcp_project_id
   zone_name  = var.gcp_dns_zone_name
   domain     = var.domain
+
+  # Plan-time-known flags for conditional DNS record creation
+  enable_website_dns = var.website_custom_domain != ""
+  enable_api_dns     = var.api_custom_domain != ""
 
   # Railway DNS values for custom domains
   website_dns_value     = module.website.custom_domain_dns_value
