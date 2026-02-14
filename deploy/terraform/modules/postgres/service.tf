@@ -5,6 +5,6 @@ resource "railway_service" "postgres" {
 
   volume = {
     name       = "${var.service_name}-data"
-    mount_path = "/var/lib/postgresql/data"
+    mount_path = "/var/lib/postgresql/data/pgdata"
   }
 }

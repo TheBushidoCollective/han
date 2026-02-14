@@ -19,6 +19,13 @@ resource "railway_variable" "database" {
   value          = var.database
 }
 
+resource "railway_variable" "pgdata" {
+  environment_id = var.environment_id
+  service_id     = railway_service.postgres.id
+  name           = "PGDATA"
+  value          = "/var/lib/postgresql/data/pgdata"
+}
+
 resource "random_password" "postgres" {
   length  = 32
   special = false
