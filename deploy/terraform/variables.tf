@@ -52,12 +52,6 @@ variable "api_custom_domain" {
   default     = ""
 }
 
-variable "api_domain_verify_txt" {
-  description = "Railway domain verification TXT value for API custom domain"
-  type        = string
-  default     = ""
-}
-
 # -----------------------------------------------------------------------------
 # Website Configuration
 # -----------------------------------------------------------------------------
@@ -70,12 +64,6 @@ variable "website_root_directory" {
 
 variable "website_custom_domain" {
   description = "Custom domain for production website (e.g., han.guru)"
-  type        = string
-  default     = ""
-}
-
-variable "website_domain_verify_txt" {
-  description = "Railway domain verification TXT value for website custom domain"
   type        = string
   default     = ""
 }
