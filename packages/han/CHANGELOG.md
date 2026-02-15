@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.13.2] - 2026-02-15
+
+### Added
+
+- support external marketplace installation (#68) ([a131b3a8](../../commit/a131b3a8))
+
+### Fixed
+
+- add process.exit(0) to all han keep subcommands to prevent hanging ([a357b7fe](../../commit/a357b7fe))
+- move API Dockerfile into service directory for Railway build context ([75a8a4b9](../../commit/75a8a4b9))
+- eliminate global state race in memory storage tests ([535533ee](../../commit/535533ee))
+- harden memory-storage and dispatch-stdin tests against parallel races ([c45edf5b](../../commit/c45edf5b))
+
+### Changed
+
+- simplify external marketplace installation to use Claude CLI (#69) ([4b451f23](../../commit/4b451f23))
+
+### Other
+
+- remove trailing blank line in han.test.ts ([87d2267a](../../commit/87d2267a))
+- Han Team Platform (#42) ([6b124530](../../commit/6b124530))
+- Remove centralized hook orchestration layer (#62) ([910853e7](../../commit/910853e7))
+- Merge branch 'main' of github.com:TheBushidoCollective/han ([d9cfea70](../../commit/d9cfea70))
+- remove legacy jutsu/hashi/do prefixes from skills, commands, and prompts ([9721c29a](../../commit/9721c29a))
+
 ## [3.13.1] - 2026-02-14
 
 ### Added
