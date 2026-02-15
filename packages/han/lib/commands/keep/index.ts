@@ -98,6 +98,7 @@ export function registerKeepCommands(program: Command): void {
           ? ` (${storageOptions.branchName})`
           : '';
         console.log(`Saved to ${scope}:${key}${branchSuffix}`);
+        process.exit(0);
       } catch (error) {
         console.error(
           `Error saving ${key}:`,
@@ -127,7 +128,7 @@ export function registerKeepCommands(program: Command): void {
         if (options.path) {
           const path = getStoragePath(scope, key, storageOptions);
           console.log(path);
-          return;
+          process.exit(0);
         }
 
         const content = load(scope, key, storageOptions);
@@ -140,6 +141,7 @@ export function registerKeepCommands(program: Command): void {
         }
 
         console.log(content);
+        process.exit(0);
       } catch (error) {
         if (!options.quiet) {
           console.error(
@@ -177,6 +179,7 @@ export function registerKeepCommands(program: Command): void {
             console.log(key);
           }
         }
+        process.exit(0);
       } catch (error) {
         console.error(
           'Error listing keys:',
@@ -214,6 +217,7 @@ export function registerKeepCommands(program: Command): void {
             : '';
           console.log(`Deleted ${scope}:${key}${branchSuffix}`);
         }
+        process.exit(0);
       } catch (error) {
         if (!options.quiet) {
           console.error(
@@ -267,6 +271,7 @@ export function registerKeepCommands(program: Command): void {
         console.log(
           `Cleared ${deleted} key(s) from ${scope} scope${branchSuffix}`
         );
+        process.exit(0);
       } catch (error) {
         console.error(
           'Error clearing keys:',
