@@ -1,0 +1,28 @@
+[package]
+name = "han-api"
+version = "0.1.0"
+edition = "2021"
+description = "Han GraphQL API layer with async-graphql - dual SQLite/Postgres support"
+
+[features]
+default = ["sqlite"]
+sqlite = ["han-db/sqlite"]
+postgres = ["han-db/postgres"]
+
+[dependencies]
+han-db = { path = "../han-db" }
+async-graphql = { version = "7", features = ["dataloader", "chrono", "uuid"] }
+tokio = { version = "1", features = ["sync", "rt"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+sea-orm = { version = "1", features = ["macros", "with-chrono", "with-json"] }
+base64 = "0.22"
+tracing = "0.1"
+thiserror = "2"
+tokio-stream = { version = "0.1", features = ["sync"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full", "test-util"] }
+async-graphql = { version = "7", features = ["dataloader", "chrono", "uuid"] }
