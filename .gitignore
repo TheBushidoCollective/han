@@ -25,6 +25,7 @@ tsconfig.tsbuildinfo
 
 # Build output
 packages/han/out/
+packages/han-rs/target/
 plugins/**/dist/
 
 # Google Cloud credentials
