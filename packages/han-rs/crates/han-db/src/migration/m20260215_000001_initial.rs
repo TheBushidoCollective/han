@@ -70,6 +70,10 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
+        // config_dirs indexes
+        manager.create_index(Index::create().if_not_exists().name("idx_config_dirs_path").table(ConfigDirs::Table).col(ConfigDirs::Path).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_config_dirs_default").table(ConfigDirs::Table).col(ConfigDirs::IsDefault).to_owned()).await?;
+
         // -- projects
         manager
             .create_table(
@@ -261,6 +265,10 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
+        // session_summaries indexes
+        manager.create_index(Index::create().if_not_exists().name("idx_session_summaries_session").table(SessionSummaries::Table).col(SessionSummaries::SessionId).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_session_summaries_timestamp").table(SessionSummaries::Table).col(SessionSummaries::Timestamp).to_owned()).await?;
+
         // -- session_compacts
         manager
             .create_table(
@@ -281,6 +289,10 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
+        // session_compacts indexes
+        manager.create_index(Index::create().if_not_exists().name("idx_session_compacts_session").table(SessionCompacts::Table).col(SessionCompacts::SessionId).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_session_compacts_timestamp").table(SessionCompacts::Table).col(SessionCompacts::Timestamp).to_owned()).await?;
+
         // -- session_todos
         manager
             .create_table(
@@ -298,6 +310,10 @@ impl MigrationTrait for Migration {
                     .to_owned(),
             )
             .await?;
+
+        // session_todos indexes
+        manager.create_index(Index::create().if_not_exists().name("idx_session_todos_session").table(SessionTodos::Table).col(SessionTodos::SessionId).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_session_todos_timestamp").table(SessionTodos::Table).col(SessionTodos::Timestamp).to_owned()).await?;
 
         // -- native_tasks
         manager
@@ -325,6 +341,11 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
+        // native_tasks indexes
+        manager.create_index(Index::create().if_not_exists().name("idx_native_tasks_session").table(NativeTasks::Table).col(NativeTasks::SessionId).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_native_tasks_status").table(NativeTasks::Table).col(NativeTasks::Status).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_native_tasks_created").table(NativeTasks::Table).col(NativeTasks::CreatedAt).to_owned()).await?;
+
         // -- tasks (metrics)
         manager
             .create_table(
@@ -348,11 +369,15 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
+        // tasks indexes (single-column)
         manager.create_index(Index::create().if_not_exists().name("idx_tasks_task_id").table(Tasks::Table).col(Tasks::TaskId).to_owned()).await?;
         manager.create_index(Index::create().if_not_exists().name("idx_tasks_session").table(Tasks::Table).col(Tasks::SessionId).to_owned()).await?;
         manager.create_index(Index::create().if_not_exists().name("idx_tasks_type").table(Tasks::Table).col(Tasks::TaskType).to_owned()).await?;
         manager.create_index(Index::create().if_not_exists().name("idx_tasks_outcome").table(Tasks::Table).col(Tasks::Outcome).to_owned()).await?;
         manager.create_index(Index::create().if_not_exists().name("idx_tasks_started").table(Tasks::Table).col(Tasks::StartedAt).to_owned()).await?;
+        // tasks composite indexes for metrics queries
+        manager.create_index(Index::create().if_not_exists().name("idx_tasks_started_type").table(Tasks::Table).col(Tasks::StartedAt).col(Tasks::TaskType).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_tasks_started_outcome").table(Tasks::Table).col(Tasks::StartedAt).col(Tasks::Outcome).to_owned()).await?;
 
         // -- orchestrations
         manager
@@ -375,6 +400,11 @@ impl MigrationTrait for Migration {
                     .to_owned(),
             )
             .await?;
+
+        // orchestrations indexes
+        manager.create_index(Index::create().if_not_exists().name("idx_orchestrations_session").table(Orchestrations::Table).col(Orchestrations::SessionId).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_orchestrations_status").table(Orchestrations::Table).col(Orchestrations::Status).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_orchestrations_created").table(Orchestrations::Table).col(Orchestrations::CreatedAt).to_owned()).await?;
 
         // -- hook_executions
         manager
@@ -403,14 +433,28 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(HookExecutions::MaxAttempts).integer().null().default(3))
                     .col(ColumnDef::new(HookExecutions::Pid).integer().null())
                     .col(ColumnDef::new(HookExecutions::PluginRoot).string().null())
-                    .foreign_key(ForeignKey::create().from(HookExecutions::Table, HookExecutions::OrchestrationId).to(Orchestrations::Table, Orchestrations::Id))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(HookExecutions::Table, HookExecutions::OrchestrationId)
+                            .to(Orchestrations::Table, Orchestrations::Id)
+                            .on_delete(ForeignKeyAction::SetNull),
+                    )
                     .foreign_key(ForeignKey::create().from(HookExecutions::Table, HookExecutions::SessionId).to(Sessions::Table, Sessions::Id))
                     .to_owned(),
             )
             .await?;
 
+        // hook_executions indexes
         manager.create_index(Index::create().if_not_exists().name("idx_hook_executions_session").table(HookExecutions::Table).col(HookExecutions::SessionId).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_hook_executions_task").table(HookExecutions::Table).col(HookExecutions::TaskId).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_hook_executions_name").table(HookExecutions::Table).col(HookExecutions::HookName).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_hook_executions_executed").table(HookExecutions::Table).col(HookExecutions::ExecutedAt).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_hook_executions_status").table(HookExecutions::Table).col(HookExecutions::Status).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_hook_executions_session_hook").table(HookExecutions::Table).col(HookExecutions::SessionId).col(HookExecutions::HookName).col(HookExecutions::Directory).to_owned()).await?;
         manager.create_index(Index::create().if_not_exists().name("idx_hook_executions_orchestration").table(HookExecutions::Table).col(HookExecutions::OrchestrationId).to_owned()).await?;
+        // Composite indexes for hook stats queries
+        manager.create_index(Index::create().if_not_exists().name("idx_hook_executions_executed_type").table(HookExecutions::Table).col(HookExecutions::ExecutedAt).col(HookExecutions::HookType).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_hook_executions_executed_passed").table(HookExecutions::Table).col(HookExecutions::ExecutedAt).col(HookExecutions::Passed).to_owned()).await?;
 
         // -- pending_hooks
         manager
@@ -426,10 +470,19 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(PendingHooks::IfChanged).text().null())
                     .col(ColumnDef::new(PendingHooks::Command).text().not_null())
                     .col(ColumnDef::new(PendingHooks::QueuedAt).string().not_null())
-                    .foreign_key(ForeignKey::create().from(PendingHooks::Table, PendingHooks::OrchestrationId).to(Orchestrations::Table, Orchestrations::Id))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(PendingHooks::Table, PendingHooks::OrchestrationId)
+                            .to(Orchestrations::Table, Orchestrations::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
                     .to_owned(),
             )
             .await?;
+
+        // pending_hooks indexes
+        manager.create_index(Index::create().if_not_exists().name("idx_pending_hooks_orchestration").table(PendingHooks::Table).col(PendingHooks::OrchestrationId).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_pending_hooks_queued").table(PendingHooks::Table).col(PendingHooks::QueuedAt).to_owned()).await?;
 
         // -- frustration_events
         manager
@@ -451,6 +504,12 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
+        // frustration_events indexes
+        manager.create_index(Index::create().if_not_exists().name("idx_frustration_session").table(FrustrationEvents::Table).col(FrustrationEvents::SessionId).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_frustration_task").table(FrustrationEvents::Table).col(FrustrationEvents::TaskId).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_frustration_level").table(FrustrationEvents::Table).col(FrustrationEvents::FrustrationLevel).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_frustration_recorded").table(FrustrationEvents::Table).col(FrustrationEvents::RecordedAt).to_owned()).await?;
+
         // -- session_file_changes
         manager
             .create_table(
@@ -471,6 +530,14 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
+        // session_file_changes indexes
+        manager.create_index(Index::create().if_not_exists().name("idx_file_changes_session").table(SessionFileChanges::Table).col(SessionFileChanges::SessionId).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_file_changes_path").table(SessionFileChanges::Table).col(SessionFileChanges::FilePath).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_file_changes_action").table(SessionFileChanges::Table).col(SessionFileChanges::Action).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_file_changes_agent").table(SessionFileChanges::Table).col(SessionFileChanges::SessionId).col(SessionFileChanges::AgentId).to_owned()).await?;
+        // UNIQUE constraint: (session_id, file_path, recorded_at)
+        manager.create_index(Index::create().if_not_exists().name("uq_file_changes_session_path_time").table(SessionFileChanges::Table).col(SessionFileChanges::SessionId).col(SessionFileChanges::FilePath).col(SessionFileChanges::RecordedAt).unique().to_owned()).await?;
+
         // -- session_file_validations
         manager
             .create_table(
@@ -490,6 +557,14 @@ impl MigrationTrait for Migration {
                     .to_owned(),
             )
             .await?;
+
+        // session_file_validations indexes
+        manager.create_index(Index::create().if_not_exists().name("idx_file_validations_session").table(SessionFileValidations::Table).col(SessionFileValidations::SessionId).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_file_validations_path").table(SessionFileValidations::Table).col(SessionFileValidations::FilePath).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_file_validations_plugin").table(SessionFileValidations::Table).col(SessionFileValidations::PluginName).col(SessionFileValidations::HookName).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_file_validations_dir").table(SessionFileValidations::Table).col(SessionFileValidations::Directory).to_owned()).await?;
+        // UNIQUE constraint: (session_id, file_path, plugin_name, hook_name, directory)
+        manager.create_index(Index::create().if_not_exists().name("uq_file_validations_composite").table(SessionFileValidations::Table).col(SessionFileValidations::SessionId).col(SessionFileValidations::FilePath).col(SessionFileValidations::PluginName).col(SessionFileValidations::HookName).col(SessionFileValidations::Directory).unique().to_owned()).await?;
 
         // -- async_hook_queue
         manager
@@ -515,6 +590,12 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
+        // async_hook_queue indexes
+        manager.create_index(Index::create().if_not_exists().name("idx_async_hook_queue_session").table(AsyncHookQueue::Table).col(AsyncHookQueue::SessionId).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_async_hook_queue_status").table(AsyncHookQueue::Table).col(AsyncHookQueue::Status).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_async_hook_queue_dedup").table(AsyncHookQueue::Table).col(AsyncHookQueue::SessionId).col(AsyncHookQueue::Cwd).col(AsyncHookQueue::Plugin).col(AsyncHookQueue::HookName).col(AsyncHookQueue::Status).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_async_hook_queue_created").table(AsyncHookQueue::Table).col(AsyncHookQueue::CreatedAt).to_owned()).await?;
+
         // -- generated_session_summaries
         manager
             .create_table(
@@ -536,6 +617,23 @@ impl MigrationTrait for Migration {
                     .to_owned(),
             )
             .await?;
+
+        // generated_session_summaries indexes
+        manager.create_index(Index::create().if_not_exists().name("idx_gen_summaries_session").table(GeneratedSessionSummaries::Table).col(GeneratedSessionSummaries::SessionId).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_gen_summaries_outcome").table(GeneratedSessionSummaries::Table).col(GeneratedSessionSummaries::Outcome).to_owned()).await?;
+        manager.create_index(Index::create().if_not_exists().name("idx_gen_summaries_created").table(GeneratedSessionSummaries::Table).col(GeneratedSessionSummaries::CreatedAt).to_owned()).await?;
+
+        // -- Partial index (requires raw SQL — WHERE clause not supported by SeaORM builder)
+        {
+            use sea_orm::{ConnectionTrait, Statement};
+            let db = manager.get_connection();
+            let backend = db.get_database_backend();
+            db.execute(Statement::from_string(
+                backend,
+                "CREATE INDEX IF NOT EXISTS idx_tasks_started_confidence ON tasks(started_at, confidence, outcome) WHERE confidence IS NOT NULL AND outcome IS NOT NULL".to_string(),
+            ))
+            .await?;
+        }
 
         // -- FTS5 virtual tables and triggers (SQLite only, raw SQL)
         #[cfg(feature = "sqlite")]

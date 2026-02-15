@@ -1185,6 +1185,559 @@ async fn test_activity_aggregates() {
 }
 
 // ============================================================================
+// Frustration Events CRUD Tests
+// ============================================================================
+
+#[tokio::test]
+async fn test_frustration_crud() {
+    let db = setup_db().await;
+    use han_db::crud::{frustration, sessions};
+
+    // Create session for FK
+    sessions::upsert(
+        &db,
+        "session-frust".to_string(),
+        None,
+        Some("active".to_string()),
+        None,
+        None,
+        None,
+    )
+    .await
+    .unwrap();
+
+    // Record frustration event
+    let event = frustration::record(
+        &db,
+        Some("session-frust".to_string()),
+        None,
+        "high".to_string(),
+        8.5,
+        "This is so broken!".to_string(),
+        Some(vec!["exclamation".to_string(), "negative_word".to_string()]),
+        Some("Trying to fix auth".to_string()),
+    )
+    .await
+    .expect("Failed to record frustration event");
+
+    assert_eq!(event.frustration_level, "high");
+    assert_eq!(event.frustration_score, 8.5);
+    assert_eq!(event.user_message, "This is so broken!");
+    assert_eq!(event.session_id, Some("session-frust".to_string()));
+    assert!(!event.id.is_empty());
+    assert!(!event.recorded_at.is_empty());
+
+    // Record without session
+    let event2 = frustration::record(
+        &db,
+        None,
+        Some("task-123".to_string()),
+        "moderate".to_string(),
+        5.0,
+        "This could be better".to_string(),
+        None,
+        None,
+    )
+    .await
+    .expect("Failed to record frustration without session");
+
+    assert_eq!(event2.frustration_level, "moderate");
+    assert!(event2.session_id.is_none());
+    assert_eq!(event2.task_id, Some("task-123".to_string()));
+}
+
+// ============================================================================
+// Session Summaries CRUD Tests
+// ============================================================================
+
+#[tokio::test]
+async fn test_session_summaries_crud() {
+    let db = setup_db().await;
+    use han_db::crud::{session_summaries, sessions};
+
+    sessions::upsert(
+        &db,
+        "session-ss".to_string(),
+        None,
+        Some("active".to_string()),
+        None,
+        None,
+        None,
+    )
+    .await
+    .unwrap();
+
+    // Upsert
+    let summary = session_summaries::upsert(
+        &db,
+        "session-ss".to_string(),
+        "msg-ss-001".to_string(),
+        Some("This session was about fixing bugs".to_string()),
+        Some("{\"type\":\"summary\"}".to_string()),
+        "2026-02-15T10:00:00Z".to_string(),
+        10,
+    )
+    .await
+    .expect("Failed to upsert session summary");
+
+    assert_eq!(summary.session_id, "session-ss");
+    assert_eq!(summary.message_id, "msg-ss-001");
+    assert_eq!(summary.content, Some("This session was about fixing bugs".to_string()));
+    assert_eq!(summary.line_number, 10);
+
+    // Get
+    let found = session_summaries::get(&db, "session-ss")
+        .await
+        .expect("Failed to get session summary");
+    assert!(found.is_some());
+    assert_eq!(found.unwrap().message_id, "msg-ss-001");
+
+    // Upsert again (should update, not duplicate)
+    let updated = session_summaries::upsert(
+        &db,
+        "session-ss".to_string(),
+        "msg-ss-002".to_string(),
+        Some("Updated summary".to_string()),
+        None,
+        "2026-02-15T11:00:00Z".to_string(),
+        20,
+    )
+    .await
+    .expect("Failed to upsert updated summary");
+
+    assert_eq!(updated.message_id, "msg-ss-002");
+    assert_eq!(updated.content, Some("Updated summary".to_string()));
+    assert_eq!(updated.line_number, 20);
+
+    // Get not found
+    let missing = session_summaries::get(&db, "nonexistent")
+        .await
+        .expect("Should not error");
+    assert!(missing.is_none());
+}
+
+// ============================================================================
+// Session Compacts CRUD Tests
+// ============================================================================
+
+#[tokio::test]
+async fn test_session_compacts_crud() {
+    let db = setup_db().await;
+    use han_db::crud::{session_compacts, sessions};
+
+    sessions::upsert(
+        &db,
+        "session-sc".to_string(),
+        None,
+        Some("active".to_string()),
+        None,
+        None,
+        None,
+    )
+    .await
+    .unwrap();
+
+    // Upsert
+    let compact = session_compacts::upsert(
+        &db,
+        "session-sc".to_string(),
+        "msg-sc-001".to_string(),
+        Some("Compact content here".to_string()),
+        Some("{\"type\":\"auto_compact\"}".to_string()),
+        "2026-02-15T10:00:00Z".to_string(),
+        5,
+        Some("auto_compact".to_string()),
+    )
+    .await
+    .expect("Failed to upsert session compact");
+
+    assert_eq!(compact.session_id, "session-sc");
+    assert_eq!(compact.compact_type, Some("auto_compact".to_string()));
+    assert_eq!(compact.line_number, 5);
+
+    // Get
+    let found = session_compacts::get(&db, "session-sc")
+        .await
+        .expect("Failed to get session compact");
+    assert!(found.is_some());
+    assert_eq!(found.unwrap().compact_type, Some("auto_compact".to_string()));
+
+    // Upsert again (should update)
+    let updated = session_compacts::upsert(
+        &db,
+        "session-sc".to_string(),
+        "msg-sc-002".to_string(),
+        Some("Newer compact".to_string()),
+        None,
+        "2026-02-15T12:00:00Z".to_string(),
+        15,
+        Some("compact".to_string()),
+    )
+    .await
+    .expect("Failed to upsert updated compact");
+
+    assert_eq!(updated.message_id, "msg-sc-002");
+    assert_eq!(updated.compact_type, Some("compact".to_string()));
+
+    // Get not found
+    let missing = session_compacts::get(&db, "nonexistent")
+        .await
+        .expect("Should not error");
+    assert!(missing.is_none());
+}
+
+// ============================================================================
+// Session Todos CRUD Tests
+// ============================================================================
+
+#[tokio::test]
+async fn test_session_todos_crud() {
+    let db = setup_db().await;
+    use han_db::crud::{session_todos, sessions};
+
+    sessions::upsert(
+        &db,
+        "session-td".to_string(),
+        None,
+        Some("active".to_string()),
+        None,
+        None,
+        None,
+    )
+    .await
+    .unwrap();
+
+    // Upsert
+    let todo = session_todos::upsert(
+        &db,
+        "session-td".to_string(),
+        "msg-td-001".to_string(),
+        r#"[{"content":"Fix bug","status":"pending"}]"#.to_string(),
+        "2026-02-15T10:00:00Z".to_string(),
+        3,
+    )
+    .await
+    .expect("Failed to upsert session todo");
+
+    assert_eq!(todo.session_id, "session-td");
+    assert!(todo.todos_json.contains("Fix bug"));
+    assert_eq!(todo.line_number, 3);
+
+    // Get
+    let found = session_todos::get(&db, "session-td")
+        .await
+        .expect("Failed to get session todo");
+    assert!(found.is_some());
+    assert!(found.unwrap().todos_json.contains("Fix bug"));
+
+    // Upsert again (should update)
+    let updated = session_todos::upsert(
+        &db,
+        "session-td".to_string(),
+        "msg-td-002".to_string(),
+        r#"[{"content":"Fix bug","status":"completed"},{"content":"Add tests","status":"pending"}]"#.to_string(),
+        "2026-02-15T11:00:00Z".to_string(),
+        7,
+    )
+    .await
+    .expect("Failed to upsert updated todo");
+
+    assert!(updated.todos_json.contains("completed"));
+    assert!(updated.todos_json.contains("Add tests"));
+
+    // Get not found
+    let missing = session_todos::get(&db, "nonexistent")
+        .await
+        .expect("Should not error");
+    assert!(missing.is_none());
+}
+
+// ============================================================================
+// Generated Summaries CRUD Tests
+// ============================================================================
+
+#[tokio::test]
+async fn test_generated_summaries_crud() {
+    let db = setup_db().await;
+    use han_db::crud::{generated_summaries, sessions};
+
+    sessions::upsert(
+        &db,
+        "session-gs".to_string(),
+        None,
+        Some("completed".to_string()),
+        None,
+        None,
+        None,
+    )
+    .await
+    .unwrap();
+
+    sessions::upsert(
+        &db,
+        "session-gs-2".to_string(),
+        None,
+        Some("completed".to_string()),
+        None,
+        None,
+        None,
+    )
+    .await
+    .unwrap();
+
+    // Upsert
+    let summary = generated_summaries::upsert(
+        &db,
+        "session-gs".to_string(),
+        "Fixed authentication bugs and added tests".to_string(),
+        vec!["auth".to_string(), "testing".to_string(), "bugfix".to_string()],
+        Some(vec!["src/auth.rs".to_string()]),
+        Some(vec!["Edit".to_string(), "Bash".to_string()]),
+        Some("completed".to_string()),
+        Some(15),
+        Some(300),
+    )
+    .await
+    .expect("Failed to upsert generated summary");
+
+    assert_eq!(summary.session_id, "session-gs");
+    assert!(summary.summary_text.contains("authentication"));
+    assert!(summary.topics.contains("auth"));
+    assert_eq!(summary.outcome, Some("completed".to_string()));
+    assert_eq!(summary.message_count, Some(15));
+
+    // Get
+    let found = generated_summaries::get(&db, "session-gs")
+        .await
+        .expect("Failed to get generated summary");
+    assert!(found.is_some());
+    let found = found.unwrap();
+    assert!(found.summary_text.contains("authentication"));
+
+    // Upsert again (should update)
+    let updated = generated_summaries::upsert(
+        &db,
+        "session-gs".to_string(),
+        "Updated: Fixed auth and added comprehensive tests".to_string(),
+        vec!["auth".to_string(), "testing".to_string()],
+        None,
+        None,
+        Some("completed".to_string()),
+        Some(20),
+        Some(600),
+    )
+    .await
+    .expect("Failed to upsert updated summary");
+
+    assert!(updated.summary_text.contains("comprehensive"));
+    assert_eq!(updated.message_count, Some(20));
+
+    // list_sessions_without_summaries
+    let without = generated_summaries::list_sessions_without_summaries(&db, Some(50))
+        .await
+        .expect("Failed to list sessions without summaries");
+    // session-gs has a summary, session-gs-2 does not
+    assert!(without.contains(&"session-gs-2".to_string()));
+    assert!(!without.contains(&"session-gs".to_string()));
+
+    // Get not found
+    let missing = generated_summaries::get(&db, "nonexistent")
+        .await
+        .expect("Should not error");
+    assert!(missing.is_none());
+}
+
+// ============================================================================
+// File Changes CRUD Tests
+// ============================================================================
+
+#[tokio::test]
+async fn test_file_changes_crud() {
+    let db = setup_db().await;
+    use han_db::crud::{file_changes, sessions};
+
+    sessions::upsert(
+        &db,
+        "session-fc".to_string(),
+        None,
+        Some("active".to_string()),
+        None,
+        None,
+        None,
+    )
+    .await
+    .unwrap();
+
+    // Record a change
+    let change = file_changes::record(
+        &db,
+        "session-fc".to_string(),
+        "src/main.rs".to_string(),
+        "modified".to_string(),
+        Some("abc123".to_string()),
+        Some("def456".to_string()),
+        Some("Edit".to_string()),
+        None,
+    )
+    .await
+    .expect("Failed to record file change");
+
+    assert_eq!(change.file_path, "src/main.rs");
+    assert_eq!(change.action, "modified");
+    assert_eq!(change.tool_name, Some("Edit".to_string()));
+    assert!(change.agent_id.is_none());
+
+    // Record another change (agent)
+    let change2 = file_changes::record(
+        &db,
+        "session-fc".to_string(),
+        "src/lib.rs".to_string(),
+        "created".to_string(),
+        None,
+        Some("789abc".to_string()),
+        Some("Write".to_string()),
+        Some("agent-001".to_string()),
+    )
+    .await
+    .expect("Failed to record agent file change");
+
+    assert_eq!(change2.agent_id, Some("agent-001".to_string()));
+
+    // Get by session (all)
+    let all = file_changes::get_by_session(&db, "session-fc", None)
+        .await
+        .expect("Failed to get file changes");
+    assert_eq!(all.len(), 2);
+
+    // Get by session (filtered by agent)
+    let agent_changes = file_changes::get_by_session(&db, "session-fc", Some("agent-001"))
+        .await
+        .expect("Failed to get agent file changes");
+    assert_eq!(agent_changes.len(), 1);
+    assert_eq!(agent_changes[0].file_path, "src/lib.rs");
+
+    // has_changes (main conversation, no agent)
+    let has = file_changes::has_changes(&db, "session-fc", None)
+        .await
+        .expect("Failed to check has_changes");
+    assert!(has);
+
+    // has_changes (specific agent)
+    let has_agent = file_changes::has_changes(&db, "session-fc", Some("agent-001"))
+        .await
+        .expect("Failed to check has_changes for agent");
+    assert!(has_agent);
+
+    // has_changes (nonexistent agent)
+    let has_none = file_changes::has_changes(&db, "session-fc", Some("no-agent"))
+        .await
+        .expect("Failed to check has_changes for missing agent");
+    assert!(!has_none);
+}
+
+// ============================================================================
+// File Validations CRUD Tests
+// ============================================================================
+
+#[tokio::test]
+async fn test_file_validations_crud() {
+    let db = setup_db().await;
+    use han_db::crud::{file_validations, sessions};
+
+    sessions::upsert(
+        &db,
+        "session-fv".to_string(),
+        None,
+        Some("active".to_string()),
+        None,
+        None,
+        None,
+    )
+    .await
+    .unwrap();
+
+    // Record validation
+    let val = file_validations::record(
+        &db,
+        "session-fv".to_string(),
+        "src/main.rs".to_string(),
+        "hash-abc".to_string(),
+        "biome".to_string(),
+        "lint".to_string(),
+        "/project".to_string(),
+        "cmd-hash-123".to_string(),
+    )
+    .await
+    .expect("Failed to record file validation");
+
+    assert_eq!(val.file_path, "src/main.rs");
+    assert_eq!(val.plugin_name, "biome");
+    assert_eq!(val.hook_name, "lint");
+    assert_eq!(val.file_hash, "hash-abc");
+
+    // Record another for same session
+    file_validations::record(
+        &db,
+        "session-fv".to_string(),
+        "src/lib.rs".to_string(),
+        "hash-def".to_string(),
+        "biome".to_string(),
+        "lint".to_string(),
+        "/project".to_string(),
+        "cmd-hash-123".to_string(),
+    )
+    .await
+    .expect("Failed to record second validation");
+
+    // Get by session
+    let all = file_validations::get_by_session(&db, "session-fv")
+        .await
+        .expect("Failed to get validations by session");
+    assert_eq!(all.len(), 2);
+
+    // Upsert same file (should update hash)
+    let updated = file_validations::record(
+        &db,
+        "session-fv".to_string(),
+        "src/main.rs".to_string(),
+        "hash-new".to_string(),
+        "biome".to_string(),
+        "lint".to_string(),
+        "/project".to_string(),
+        "cmd-hash-456".to_string(),
+    )
+    .await
+    .expect("Failed to upsert validation");
+
+    assert_eq!(updated.file_hash, "hash-new");
+    assert_eq!(updated.command_hash, "cmd-hash-456");
+
+    // Still 2 validations (not 3)
+    let all_after = file_validations::get_by_session(&db, "session-fv")
+        .await
+        .expect("Failed to get after upsert");
+    assert_eq!(all_after.len(), 2);
+
+    // Delete stale
+    let deleted = file_validations::delete_stale(
+        &db,
+        "session-fv",
+        "biome",
+        "lint",
+        "/project",
+    )
+    .await
+    .expect("Failed to delete stale validations");
+    assert_eq!(deleted, 2);
+
+    // Verify empty
+    let after_delete = file_validations::get_by_session(&db, "session-fv")
+        .await
+        .expect("Failed to get after delete");
+    assert_eq!(after_delete.len(), 0);
+}
+
+// ============================================================================
 // Integration Test Against Real Database (Read-Only)
 // ============================================================================
 
