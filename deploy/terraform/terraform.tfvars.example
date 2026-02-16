@@ -19,7 +19,7 @@ domain            = "han.guru"
 enable_pr_environments = true
 
 # API Server
-api_server_root_directory = "packages/han-team-server"
+api_server_root_directory = "packages/han-rs"
 api_custom_domain         = "api.han.guru"
 
 # Website (team platform UI - not the marketplace at han.guru)

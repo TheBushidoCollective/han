@@ -47,13 +47,13 @@ variable "branch" {
 variable "root_directory" {
   description = "Root directory for the service"
   type        = string
-  default     = "packages/han-team-server"
+  default     = "packages/han-rs"
 }
 
 variable "config_path" {
   description = "Path to railway.toml config (relative to repo root)"
   type        = string
-  default     = "packages/han-team-server/railway.toml"
+  default     = "packages/han-rs/railway.toml"
 }
 
 # -----------------------------------------------------------------------------

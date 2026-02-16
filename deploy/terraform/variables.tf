@@ -43,7 +43,7 @@ variable "enable_pr_environments" {
 variable "api_server_root_directory" {
   description = "Root directory for the API server service"
   type        = string
-  default     = "packages/han-team-server"
+  default     = "packages/han-rs"
 }
 
 variable "api_custom_domain" {
