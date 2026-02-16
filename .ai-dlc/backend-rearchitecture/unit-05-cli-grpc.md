@@ -1,6 +1,7 @@
 ---
-status: pending
-depends_on: ["unit-04-han-coordinator"]
+status: completed
+depends_on:
+  - unit-04-han-coordinator
 branch: ai-dlc/backend-rearchitecture/05-cli-grpc
 discipline: backend
 ticket: ""
@@ -225,3 +226,7 @@ This unit PROVIDES: the pure Bun CLI that communicates exclusively via gRPC with
 - ConnectRPC supports both HTTP/1.1 and HTTP/2. Use HTTP/2 for streaming.
 - The `@connectrpc/connect-node` package uses Node.js http2 module. Verify Bun compatibility or use fetch-based transport.
 - buf CLI (`npx @bufbuild/buf`) handles protobuf compilation without installing protoc.
+
+
+
+

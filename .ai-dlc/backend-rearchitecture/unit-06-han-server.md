@@ -1,6 +1,8 @@
 ---
-status: pending
-depends_on: ["unit-01-han-db", "unit-03-han-api"]
+status: completed
+depends_on:
+  - unit-01-han-db
+  - unit-03-han-api
 branch: ai-dlc/backend-rearchitecture/06-han-server
 discipline: backend
 ticket: ""
@@ -269,3 +271,5 @@ This unit PROVIDES: the complete teams binary that reuses han-api against Postgr
 - Railway auto-deploys from the main branch. Set up a separate Railway service for the Rust binary.
 - The sync protocol should be designed for eventual consistency. Local coordinators push data on a schedule or on session end.
 - Consider GDPR: the sync endpoint should support team-level data deletion requests.
+
+

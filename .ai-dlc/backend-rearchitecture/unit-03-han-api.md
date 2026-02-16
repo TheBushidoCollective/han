@@ -1,6 +1,7 @@
 ---
-status: pending
-depends_on: ["unit-01-han-db"]
+status: completed
+depends_on:
+  - unit-01-han-db
 branch: ai-dlc/backend-rearchitecture/03-han-api
 discipline: backend
 ticket: ""
@@ -260,3 +261,5 @@ This unit ONLY provides: the async-graphql schema as a library crate. It exports
 - Content block parsing is complex - 6 block types with nested structures. Port the exact parsing logic from `packages/han/lib/graphql/types/content-blocks/content-block-parser.ts`.
 - The team/ types directory is feature-gated. They only compile when the `team` feature is enabled (used by han-server). The local coordinator doesn't need them.
 - Some types have computed fields (Session.summary, Session.todoCount) that require additional DB queries. These use SeaORM queries, not raw SQL.
+
+

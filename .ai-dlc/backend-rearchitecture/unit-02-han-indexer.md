@@ -1,6 +1,7 @@
 ---
-status: pending
-depends_on: ["unit-01-han-db"]
+status: completed
+depends_on:
+  - unit-01-han-db
 branch: ai-dlc/backend-rearchitecture/02-han-indexer
 discipline: backend
 ticket: ""
@@ -140,3 +141,5 @@ This unit ONLY provides: JSONL parsing, file watching, message processing pipeli
 - The watcher falls back to polling if the callback-based mechanism fails. Preserve this fallback.
 - JSONL files can be large (100K+ lines for long sessions). The indexer MUST be incremental, not re-read entire files.
 - Han event files (`{session-id}-han.jsonl`) use the same parsing but different event types (hook_run, mcp_tool_call, etc.).
+
+

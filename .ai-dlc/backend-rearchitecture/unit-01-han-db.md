@@ -1,5 +1,5 @@
 ---
-status: pending
+status: completed
 depends_on: []
 branch: ai-dlc/backend-rearchitecture/01-han-db
 discipline: backend
@@ -162,3 +162,5 @@ This unit ONLY provides: database entities, migrations, connection management, C
 - RETURNING clause eliminates the Mutex re-entrancy deadlock documented in `.claude/rules/rust-mutex-deadlock.md`.
 - FTS5 virtual tables cannot be created via SeaORM migrations. Use raw SQL in the migration for these.
 - sqlite-vec tables are dynamically created. Include the creation logic but mark as optional.
+
+

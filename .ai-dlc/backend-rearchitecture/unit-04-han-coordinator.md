@@ -1,6 +1,9 @@
 ---
-status: pending
-depends_on: ["unit-01-han-db", "unit-02-han-indexer", "unit-03-han-api"]
+status: completed
+depends_on:
+  - unit-01-han-db
+  - unit-02-han-indexer
+  - unit-03-han-api
 branch: ai-dlc/backend-rearchitecture/04-han-coordinator
 discipline: backend
 ticket: ""
@@ -201,3 +204,5 @@ This unit PROVIDES: the complete local coordinator binary that embeds han-db, ha
 - The hook execution engine needs access to the project working directory (passed via `cwd` in the gRPC request). It runs commands with that as the CWD.
 - For TLS, the coordinator currently uses `coordinator.local.han.guru` with mkcert. Port this certificate management.
 - The browse-client static files may be embedded in the binary via `include_dir!` or served from a known filesystem path.
+
+
