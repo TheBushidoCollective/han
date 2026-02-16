@@ -28,7 +28,7 @@ import {
 import {
   type SessionFileValidation,
   sessionFileValidations,
-} from '../db/index.ts';
+} from '../grpc/data-access.ts';
 
 /**
  * Parsed paired event data for nested resolution

@@ -23,7 +23,7 @@ import {
   listConfigDirs,
   messages,
   watcher,
-} from '../../db/index.ts';
+} from '../../grpc/data-access.ts';
 import { createLoaders } from '../../graphql/loaders.ts';
 import {
   type MessageEdgeData,

@@ -5,7 +5,7 @@
  * This is distinct from Han's MCP metrics tasks.
  */
 
-import { nativeTasks } from '../../db/index.ts';
+import { nativeTasks } from '../../grpc/data-access.ts';
 import { builder } from '../builder.ts';
 
 /**

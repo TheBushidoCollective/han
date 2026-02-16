@@ -8,14 +8,14 @@
  */
 
 import { createHash } from 'node:crypto';
-import type { Message, Project, Repo, Session } from '../db/index.ts';
+import type { Message, Project, Repo, Session } from '../grpc/data-access.ts';
 import {
   messages,
   nativeTasks,
   projects,
   repos,
   sessions,
-} from '../db/index.ts';
+} from '../grpc/data-access.ts';
 import { checkSyncEligibility } from './privacy-filter.ts';
 import { getQueueManager } from './queue.ts';
 import type {

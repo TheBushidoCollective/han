@@ -15,8 +15,8 @@ import {
 import type {
   Task as DbTask,
   SessionFileChange as FileChangeData,
-} from '../../../db/index.ts';
-import { sessionFileChanges } from '../../../db/index.ts';
+} from '../../../grpc/data-access.ts';
+import { sessionFileChanges } from '../../../grpc/data-access.ts';
 import { builder } from '../../builder.ts';
 import { registerNodeLoader } from '../../node-registry.ts';
 import {

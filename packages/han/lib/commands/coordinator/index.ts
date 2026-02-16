@@ -310,7 +310,7 @@ export function registerCoordinatorCommands(program: Command): void {
         // Spawn a detached subprocess to index sessions.
         // fullScanAndIndex is a sync Rust napi call that blocks the Node event loop,
         // so we run it out-of-process to avoid starving the coordinator's GraphQL.
-        const indexScript = `import { indexer } from '${import.meta.resolve('../../db/index.ts')}'; const r = await indexer.fullScanAndIndex(); console.log('Indexed ' + r.length + ' sessions');`;
+        const indexScript = `import { indexer } from '${import.meta.resolve('../../grpc/data-access.ts')}'; const r = await indexer.fullScanAndIndex(); console.log('Indexed ' + r.length + ' sessions');`;
         const child = spawn(process.execPath, ['-e', indexScript], {
           detached: true,
           stdio: 'ignore',

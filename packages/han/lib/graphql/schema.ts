@@ -15,7 +15,7 @@ import {
   GraphQLString,
 } from 'graphql';
 import type { ProjectGroup } from '../api/sessions.ts';
-import { getMessage } from '../db/index.ts';
+import { getMessage } from '../grpc/data-access.ts';
 import { startMemoryQuerySession } from '../memory/streaming.ts';
 import { builder } from './builder.ts';
 import { decodeGlobalId } from './node-registry.ts';

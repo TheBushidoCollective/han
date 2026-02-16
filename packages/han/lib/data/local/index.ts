@@ -7,8 +7,8 @@
  * Used when running in local mode (han browse on developer machine).
  */
 
-import type { Session } from '../../db/index.ts';
-import * as db from '../../db/index.ts';
+import type { Session } from '../../grpc/data-access.ts';
+import * as db from '../../grpc/data-access.ts';
 import type {
   Connection,
   ConnectionArgs,

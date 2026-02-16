@@ -4,7 +4,7 @@
  * Relay-style pagination for file changes.
  */
 
-import type { SessionFileChange as FileChangeData } from '../../../db/index.ts';
+import type { SessionFileChange as FileChangeData } from '../../../grpc/data-access.ts';
 import { builder } from '../../builder.ts';
 import { type Connection, type Edge, PageInfoType } from '../pagination.ts';
 import { FileChangeType } from './file-change.ts';

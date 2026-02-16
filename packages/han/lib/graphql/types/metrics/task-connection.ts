@@ -4,7 +4,7 @@
  * Relay-style pagination for tasks.
  */
 
-import type { Task as DbTask } from '../../../db/index.ts';
+import type { Task as DbTask } from '../../../grpc/data-access.ts';
 import { builder } from '../../builder.ts';
 import { type Connection, type Edge, PageInfoType } from '../pagination.ts';
 import { TaskType } from './task.ts';

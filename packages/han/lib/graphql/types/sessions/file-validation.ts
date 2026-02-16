@@ -4,7 +4,7 @@
  * Represents a hook validation for a file.
  */
 
-import type { SessionFileValidation as FileValidationData } from '../../../db/index.ts';
+import type { SessionFileValidation as FileValidationData } from '../../../grpc/data-access.ts';
 import { builder } from '../../builder.ts';
 
 export const FileValidationType =

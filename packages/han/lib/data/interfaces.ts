@@ -23,7 +23,7 @@ import type {
   SessionTimestamps,
   SessionTodos,
   TaskMetrics,
-} from '../db/index.ts';
+} from '../grpc/data-access.ts';
 
 // =============================================================================
 // Multi-tenant Entity Types (Hosted Mode Only)

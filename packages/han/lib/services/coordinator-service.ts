@@ -19,7 +19,7 @@ import {
   messages,
   sessionTodos,
   watcher,
-} from '../db/index.ts';
+} from '../grpc/data-access.ts';
 import {
   type MessageEdgeData,
   publishHookResultAdded,

@@ -7,7 +7,7 @@
  * Now supports database-backed retrieval (faster) with fallback to message parsing.
  */
 
-import { sessionTodos } from '../db/index.ts';
+import { sessionTodos } from '../grpc/data-access.ts';
 import type { SessionMessage } from './sessions.ts';
 
 /**

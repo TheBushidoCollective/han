@@ -15,7 +15,7 @@ import micromatch from 'micromatch';
 import type {
   SessionFileChange as FileChangeData,
   SessionFileValidation as FileValidationData,
-} from '../../../db/index.ts';
+} from '../../../grpc/data-access.ts';
 import type { GraphQLContext } from '../../builder.ts';
 import { builder } from '../../builder.ts';
 import { FileChangeActionEnum } from './file-change-action-enum.ts';

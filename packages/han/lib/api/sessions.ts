@@ -16,7 +16,7 @@ import {
   projects as dbProjects,
   sessions as dbSessions,
   type Message,
-} from '../db/index.ts';
+} from '../grpc/data-access.ts';
 import {
   getGitCommonDir,
   getGitRemoteUrl,

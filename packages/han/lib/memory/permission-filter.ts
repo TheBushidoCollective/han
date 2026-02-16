@@ -11,7 +11,7 @@
  * - Org: Aggregated learnings only (no raw data exposed)
  */
 
-import type { Session } from '../db/index.ts';
+import type { Session } from '../grpc/data-access.ts';
 
 /**
  * Memory scope levels (from most restrictive to least)

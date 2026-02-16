@@ -9,7 +9,7 @@ import {
   getSyncConfig,
   type SyncConfig as HanSyncConfig,
 } from '../config/han-settings.ts';
-import type { Repo, Session } from '../db/index.ts';
+import type { Repo, Session } from '../grpc/data-access.ts';
 import {
   DEFAULT_SYNC_CONFIG,
   type SyncConfig,

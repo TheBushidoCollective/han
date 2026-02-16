@@ -5,7 +5,7 @@
  * Implements the Node interface for Relay global ID support.
  */
 
-import type { ConfigDir } from '../../db/index.ts';
+import type { ConfigDir } from '../../grpc/data-access.ts';
 import { builder } from '../builder.ts';
 import { encodeGlobalId, registerNodeLoader } from '../node-registry.ts';
 
