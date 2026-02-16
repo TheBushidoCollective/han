@@ -190,25 +190,8 @@ function getAllProjectsPaths(): string[] {
   // Always include default
   paths.add(getClaudeProjectsPath());
 
-  // Read registered config dirs from the database (sync via native module)
-  try {
-    // Lazy import to avoid circular deps and handle case where DB isn't initialized
-    const { getNativeModule } =
-      require('../native.ts') as typeof import('../native.ts');
-    const { getDbPath } =
-      require('../db/index.ts') as typeof import('../db/index.ts');
-    const native = getNativeModule();
-    const dbPath = getDbPath();
-    const configDirs = native.listConfigDirs(dbPath);
-    for (const dir of configDirs) {
-      const projectsPath = join(dir.path, 'projects');
-      if (existsSync(projectsPath)) {
-        paths.add(projectsPath);
-      }
-    }
-  } catch {
-    // DB not initialized yet — fall back to default only
-  }
+  // Multi-environment config dirs are now managed by the Rust coordinator.
+  // The CLI only needs the default path for session discovery.
 
   return Array.from(paths);
 }

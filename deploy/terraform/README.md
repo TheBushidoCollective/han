@@ -64,7 +64,7 @@ Or keep manual approval for production safety.
 | Railway Project | With PR preview environments enabled |
 | PostgreSQL | Postgres 16 with persistent volume |
 | Redis | Redis 7 with persistent volume |
-| API Server | han-team-server with env vars |
+| API Server | han-server (Rust) with env vars |
 | Website | Next.js site with env vars |
 | Sentry Projects | Error tracking for API and website |
 | GCP DNS Records | CNAME records pointing to Railway |

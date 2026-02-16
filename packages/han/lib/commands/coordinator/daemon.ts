@@ -107,24 +107,20 @@ export async function getStatus(port?: number): Promise<CoordinatorStatus> {
     };
   }
 
-  // Health check failed - try to clean up stale locks using native module
+  // Health check failed - try to clean up stale locks
   try {
-    const { tryGetNativeModule } = await import('../../native.ts');
-    const native = tryGetNativeModule();
-    if (native) {
-      const cleaned = native.cleanupStaleCoordinatorLock();
-      if (cleaned) {
-        console.log('[coordinator] Cleaned up stale lock file');
-        // After cleanup, no coordinator is running
-        removePidFile();
-        return {
-          running: false,
-          port: effectivePort,
-        };
-      }
+    const { coordinator: coord } = await import('../../grpc/data-access.ts');
+    const cleaned = coord.cleanupStaleLock();
+    if (cleaned) {
+      console.log('[coordinator] Cleaned up stale lock file');
+      removePidFile();
+      return {
+        running: false,
+        port: effectivePort,
+      };
     }
   } catch (error) {
-    // Native module not available or error - fall back to PID check
+    // gRPC data access not available or error - fall back to PID check
     if (process.env.HAN_DEBUG) {
       console.error('[coordinator] Failed to cleanup stale lock:', error);
     }

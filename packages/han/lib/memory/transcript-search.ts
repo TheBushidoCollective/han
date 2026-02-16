@@ -328,7 +328,7 @@ export async function parseTranscript(
 ): Promise<TranscriptMessage[]> {
   // Import database access
   const { messages: dbMessages, withFreshData } = await import(
-    '../db/index.ts'
+    '../grpc/data-access.ts'
   );
 
   const projectSlug = basename(dirname(filePath));
@@ -388,45 +388,11 @@ export async function parseTranscript(
  * The Rust coordinator indexes summaries into the session_summaries table.
  */
 export async function parseSummaries(
-  filePath: string
+  _filePath: string
 ): Promise<NativeSummary[]> {
-  // Import database access
-  const { getDbPath, initDb } = await import('../db/index.ts');
-  const native = await import('../native.ts').then((m) =>
-    m.tryGetNativeModule()
-  );
-
-  if (!native) {
-    return [];
-  }
-
-  const projectSlug = basename(dirname(filePath));
-  const sessionId = basename(filePath, '.jsonl').replace(/-han$/, '');
-
-  try {
-    await initDb();
-    const dbPath = getDbPath();
-
-    // Query session summary from database
-    const summary = native.getSessionSummary(dbPath, sessionId);
-
-    if (!summary || !summary.content) {
-      return [];
-    }
-
-    return [
-      {
-        sessionId: summary.sessionId,
-        projectSlug,
-        messageId: summary.messageId,
-        timestamp: summary.timestamp,
-        content: summary.content,
-        isContextWindowCompression: true,
-      },
-    ];
-  } catch {
-    return [];
-  }
+  // Session summaries are now indexed and served by the Rust coordinator.
+  // Direct native module access has been removed.
+  return [];
 }
 
 /**
@@ -685,7 +651,7 @@ export async function searchTranscriptsText(
 ): Promise<TranscriptSearchResult[]> {
   // Use the database FTS instead of brute-force file reading
   const { messages: dbMessages, withFreshData } = await import(
-    '../db/index.ts'
+    '../grpc/data-access.ts'
   );
 
   const { query, limit = 10 } = options;

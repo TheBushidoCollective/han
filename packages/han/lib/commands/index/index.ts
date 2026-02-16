@@ -33,7 +33,7 @@ export function registerReindexCommand(program: Command): void {
         type IndexOptions = import('../../memory/indexer.ts').IndexOptions;
 
         // Always truncate derived tables first (all data comes from logs)
-        const { truncateDerivedTables } = await import('../../db/index.ts');
+        const { truncateDerivedTables } = await import('../../grpc/data-access.ts');
         if (options.verbose) {
           console.log('Clearing derived tables...');
         }

@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'packages/han/**'
-      - 'packages/han-native/**'
+      - 'packages/han-rs/**'
       - 'plugins/**'
       - 'website/**'
       - '.github/workflows/auto-tag-release.yml'
@@ -41,7 +41,7 @@ jobs:
           CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
 
           # Check what changed
-          if echo "$CHANGED" | grep -qE "^packages/han(-native)?/"; then
+          if echo "$CHANGED" | grep -qE "^packages/han(-rs)?/"; then
             echo "packages=true" >> $GITHUB_OUTPUT
           else
             echo "packages=false" >> $GITHUB_OUTPUT
@@ -146,25 +146,6 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.4"
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install protoc
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
-
-      - name: Build native module
-        working-directory: ./packages/han-native
-        run: |
-          npm ci
-          npm run build
-
-      - name: Copy native module to CLI package
-        run: |
-          mkdir -p ./packages/han/native
-          cp ./packages/han-native/*.node ./packages/han/native/han-native.node
 
       - name: Determine version bump type
         id: bump-type

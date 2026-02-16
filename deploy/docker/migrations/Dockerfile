@@ -1,17 +1,32 @@
 # Han Team Platform - Database Migrations
-# Standalone migration runner for init containers and CLI
+# Migrations are now handled by han-server via SeaORM
 
-FROM oven/bun:1-slim
+FROM rust:1-slim AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY packages/han-team-server/package.json ./
-RUN bun install --production
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    protobuf-compiler \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy migration files and runner
-COPY packages/han-team-server/migrations ./migrations
-COPY packages/han-team-server/lib/migrations ./lib/migrations
+# Copy Rust workspace
+COPY packages/han-rs ./packages/han-rs
+
+# Build the han-server binary (includes migration runner)
+RUN cd packages/han-rs && cargo build --release -p han-server
+
+# Runtime
+FROM debian:bookworm-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y ca-certificates && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/packages/han-rs/target/release/han-server ./han-server
 
 # Create non-root user
 RUN groupadd -r han && useradd -r -g han han
@@ -19,4 +34,4 @@ RUN chown -R han:han /app
 USER han
 
 # Default: run migrations
-CMD ["bun", "run", "lib/migrations/run.ts"]
+CMD ["./han-server", "migrate"]

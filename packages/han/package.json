@@ -19,7 +19,7 @@
 		"prepack": "npm test",
 		"build:binary": "bun scripts/build-bundle.js",
 		"build:bundle": "bun scripts/build-bundle.js",
-		"schema:export": "bun lib/graphql/export-schema.ts"
+		"build:proto": "buf generate proto"
 	},
 	"repository": {
 		"type": "git",
@@ -74,8 +74,6 @@
 		"@opentelemetry/sdk-metrics": "^2.2.0",
 		"@opentelemetry/sdk-node": "^0.208.0",
 		"@opentelemetry/semantic-conventions": "^1.38.0",
-		"@pothos/core": "^4.5.0",
-		"@pothos/plugin-relay": "^4.4.0",
 		"@types/marked-terminal": "6.1.1",
 		"@types/micromatch": "^4.0.10",
 		"@types/minimatch": "^6.0.0",
@@ -91,9 +89,7 @@
 		"drizzle-kit": "^0.30.0",
 		"esbuild": "^0.27.0",
 		"graphql": "^16.10.0",
-		"graphql-relay": "^0.10.2",
 		"graphql-ws": "^5.16.0",
-		"graphql-yoga": "^5.10.11",
 		"gray-matter": "^4.0.3",
 		"ink": "6.5.1",
 		"ink-select-input": "^6.2.0",
@@ -114,10 +110,7 @@
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.72.1",
-		"@graphql-yoga/plugin-defer-stream": "^3.18.0",
-		"@pothos/plugin-directives": "^4.2.5",
 		"@tanstack/react-virtual": "^3.13.13",
-		"dataloader": "^2.2.3",
 		"drizzle-orm": "^0.38.0",
 		"highlight.js": "^11.11.1",
 		"jose": "^6.1.3",

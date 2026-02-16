@@ -18,6 +18,14 @@ else
   chmod +x package/han
 fi
 
+# Copy coordinator binary if present
+if [ -f "artifact/han-coordinator.exe" ]; then
+  cp "artifact/han-coordinator.exe" package/han-coordinator.exe
+elif [ -f "artifact/han-coordinator" ]; then
+  cp "artifact/han-coordinator" package/han-coordinator
+  chmod +x package/han-coordinator
+fi
+
 # Determine bin entry based on platform
 if [[ "$PLATFORM" == win32-* ]]; then
   BIN_ENTRY="han.exe"

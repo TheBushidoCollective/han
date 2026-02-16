@@ -1,7 +1,0 @@
-[test]
-# Preload test setup that sets environment variables for test mode
-# Required by security fix: test tokens only work when BOTH conditions are met:
-# 1. NODE_ENV=test (set automatically by bun test)
-# 2. HAN_TEST_MODE=true (set in test/setup.ts)
-# 3. HAN_ALLOW_TEST_ADMIN=true (set in test/setup.ts)
-preload = ["./test/setup.ts"]

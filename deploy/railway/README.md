@@ -20,8 +20,8 @@ See [`../terraform/README.md`](../terraform/README.md) for details.
 
 Railway hosts the backend services:
 
-1. **API Server** (`packages/han-team-server/`)
-   - Bun-based Hono API server
+1. **API Server** (`packages/han-rs/`)
+   - Rust-based API server (han-server)
    - Requires PostgreSQL and Redis
    - Health check: `/health`
 
@@ -51,7 +51,7 @@ In the Railway dashboard:
 
 1. **Add PostgreSQL service** (Railway template)
 2. **Add Redis service** (Railway template)
-3. **Add API Server service** - point to `packages/han-team-server/`
+3. **Add API Server service** - point to `packages/han-rs/`
 
 ### 3. Set Environment Variables
 

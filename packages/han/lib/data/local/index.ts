@@ -1,8 +1,8 @@
 /**
  * LocalDataSource Implementation
  *
- * Wraps existing han-native SQLite operations into the DataSource interface.
- * This is a thin wrapper that delegates all calls to the existing db module.
+ * Wraps gRPC data access operations into the DataSource interface.
+ * This is a thin wrapper that delegates all calls to the gRPC data access layer.
  *
  * Used when running in local mode (han browse on developer machine).
  */
@@ -23,8 +23,8 @@ import type {
 /**
  * LocalDataSource implementation
  *
- * Wraps the existing SQLite-based database operations from db/index.ts.
- * All methods are thin wrappers that delegate to the native module.
+ * Wraps the gRPC data access layer operations.
+ * All methods are thin wrappers that delegate to the gRPC client.
  */
 export class LocalDataSource implements DataSource {
   // =========================================================================

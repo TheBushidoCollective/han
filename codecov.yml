@@ -15,11 +15,6 @@ coverage:
           - han-cli
         target: auto
         threshold: 1%
-      han-native:
-        flags:
-          - han-native
-        target: auto
-        threshold: 1%
       website:
         flags:
           - website
@@ -36,9 +31,9 @@ flags:
     paths:
       - packages/han/
     carryforward: true
-  han-native:
+  han-rs:
     paths:
-      - packages/han-native/
+      - packages/han-rs/
     carryforward: true
   website:
     paths:
@@ -64,10 +59,10 @@ component_management:
       name: Han CLI
       paths:
         - packages/han/**
-    - component_id: han-native
-      name: Han Native (Rust)
+    - component_id: han-rs
+      name: Han Rust Crates
       paths:
-        - packages/han-native/**
+        - packages/han-rs/**
     - component_id: website
       name: Website
       paths:

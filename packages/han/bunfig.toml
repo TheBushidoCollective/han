@@ -6,7 +6,7 @@ preload = ["./test/setup.ts"]
 # coverageThreshold = 0.55
 coverageReporter = ["text", "lcov"]
 coverageDir = "coverage"
-coveragePathIgnorePatterns = "../han-native/index.js"
+coveragePathIgnorePatterns = "../han-rs/"
 
 [install]
 auto = "auto"
