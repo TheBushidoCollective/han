@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path, { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { query } from '@anthropic-ai/claude-agent-sdk';
-import { getGitRemoteUrl as nativeGetGitRemoteUrl } from '../native.ts';
+import { getGitRemoteUrl as nativeGetGitRemoteUrl } from '../bun-utils.ts';
 
 /**
  * JSONSchema for plugin detection structured output

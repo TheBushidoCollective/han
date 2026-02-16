@@ -7,7 +7,7 @@
  */
 
 import type { Command } from 'commander';
-import { gitWorktreeRemove } from '../../native.ts';
+import { gitWorktreeRemove } from '../../bun-utils.ts';
 import { type AiDlcWorktree, findOrphanedWorktrees } from './discovery.ts';
 
 /**

@@ -22,7 +22,7 @@ import {
   getGitRemoteUrl,
   getGitRoot,
   gitWorktreeList,
-} from '../native.ts';
+} from '../bun-utils.ts';
 
 /**
  * Check if a path is within a system temp folder

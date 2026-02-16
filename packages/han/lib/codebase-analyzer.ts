@@ -1,5 +1,5 @@
 import { basename } from 'node:path';
-import { gitLsFiles } from './native.ts';
+import { gitLsFiles } from './bun-utils.ts';
 
 export interface ExtensionCount {
   extension: string;

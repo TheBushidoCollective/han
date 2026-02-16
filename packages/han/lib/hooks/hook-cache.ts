@@ -14,7 +14,8 @@ import {
   setHookCache,
 } from '../db/index.ts';
 import type { EventLogger } from '../events/logger.ts';
-import { getGitRemoteUrl, getNativeModule } from '../native.ts';
+import { getGitRemoteUrl } from '../bun-utils.ts';
+import { getNativeModule } from '../native.ts';
 
 /**
  * Cache manifest structure stored per plugin/hook combination

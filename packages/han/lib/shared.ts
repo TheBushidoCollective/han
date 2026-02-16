@@ -11,7 +11,7 @@ import {
 } from './codebase-analyzer.ts';
 import { getHanBinary } from './config/han-settings.ts';
 import { getMarketplacePlugins } from './marketplace-cache.ts';
-import { getGitRemoteUrl as nativeGetGitRemoteUrl } from './native.ts';
+import { getGitRemoteUrl as nativeGetGitRemoteUrl } from './bun-utils.ts';
 import { resolvePluginNames } from './plugin-aliases.ts';
 
 const __filename = fileURLToPath(import.meta.url);
