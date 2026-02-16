@@ -20,3 +20,12 @@ pub mod session_file_changes;
 pub mod session_file_validations;
 pub mod async_hook_queue;
 pub mod generated_session_summaries;
+
+// Team/hosted mode entities
+pub mod users;
+pub mod teams;
+pub mod team_members;
+pub mod api_keys;
+pub mod synced_sessions;
+pub mod team_invites;
+pub mod encryption_keys;
