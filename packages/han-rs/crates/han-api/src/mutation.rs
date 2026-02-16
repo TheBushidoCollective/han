@@ -51,3 +51,20 @@ impl MutationRoot {
         Ok(true)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mutation_root_can_be_constructed() {
+        let _m = MutationRoot;
+    }
+
+    #[test]
+    fn mutation_root_debug_not_required() {
+        // MutationRoot is a unit struct - verify it can be used as a value
+        let m = MutationRoot;
+        let _ = &m;
+    }
+}
