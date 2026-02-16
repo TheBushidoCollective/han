@@ -16,8 +16,6 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
-  watch,
-  writeFileSync,
 } from 'node:fs';
 import { createServer } from 'node:http';
 import { platform, tmpdir } from 'node:os';
@@ -91,48 +89,7 @@ function getBrowseClientDir(): string {
   return join(__dirname, '..', '..', '..', '..', 'browse-client');
 }
 
-/**
- * Get the han package directory (packages/han)
- */
-function getHanPackageDir(): string {
-  // Navigate from packages/han/lib/commands/browse to packages/han
-  return join(__dirname, '..', '..', '..');
-}
-
-/**
- * Regenerate schema.graphql from GraphQL type definitions
- * Called when graphql/*.ts files change in dev mode
- */
-async function regenerateSchema(clientDir: string): Promise<boolean> {
-  const hanDir = getHanPackageDir();
-  const schemaPath = join(clientDir, 'schema.graphql');
-
-  try {
-    // Run the schema export script directly
-    const proc = Bun.spawn(['bun', 'run', 'schema:export'], {
-      cwd: hanDir,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-
-    const output = await new Response(proc.stdout).text();
-    const stderr = await new Response(proc.stderr).text();
-    await proc.exited;
-
-    if (proc.exitCode !== 0) {
-      console.error('[dev] Schema export failed:', stderr);
-      return false;
-    }
-
-    // Write the schema to the client directory
-    writeFileSync(schemaPath, output);
-    console.log('[dev] Regenerated schema.graphql');
-    return true;
-  } catch (error) {
-    console.error('[dev] Failed to regenerate schema:', error);
-    return false;
-  }
-}
+// Schema regeneration removed - GraphQL schema now managed by Rust coordinator
 
 /**
  * Start relay-compiler in watch mode
@@ -309,23 +266,8 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
     // Start relay-compiler in watch mode alongside Vite
     const relayProcess = startRelayCompiler(clientDir);
 
-    // Watch GraphQL type definitions and regenerate schema on change
-    const hanDir = getHanPackageDir();
-    const graphqlDir = join(hanDir, 'lib', 'graphql');
-    if (existsSync(graphqlDir)) {
-      let schemaTimeout: ReturnType<typeof setTimeout> | null = null;
-      watch(graphqlDir, { recursive: true }, (_event, filename) => {
-        if (!filename || !filename.endsWith('.ts')) return;
-        if (schemaTimeout) clearTimeout(schemaTimeout);
-        schemaTimeout = setTimeout(async () => {
-          console.log(
-            `\n[dev] GraphQL types changed (${filename}), regenerating schema...`
-          );
-          await regenerateSchema(clientDir);
-        }, 200);
-      });
-      console.log('[dev] Watching GraphQL types for schema changes');
-    }
+    // GraphQL schema is now managed by the Rust coordinator.
+    // Schema regeneration from TypeScript types has been removed.
 
     // Spawn Vite dev server
     const viteProcess = spawn(

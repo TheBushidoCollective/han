@@ -1,11 +1,15 @@
 /**
- * GraphQL Authentication Middleware
+ * Authentication Middleware
  *
  * Extracts and validates JWT from request headers,
  * populates auth context for resolvers.
  */
 
-import type { GraphQLContext } from '../graphql/builder.ts';
+/** Minimal context type for auth middleware */
+interface GraphQLContext {
+  request: Request;
+  [key: string]: unknown;
+}
 import { verifyAccessToken } from './jwt.ts';
 import {
   checkRateLimit,

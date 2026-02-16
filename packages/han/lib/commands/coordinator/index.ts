@@ -285,7 +285,7 @@ export function registerCoordinatorCommands(program: Command): void {
     .option('--name <name>', 'Human-friendly name for this environment')
     .action(async (options: { configDir?: string; name?: string }) => {
       try {
-        const { registerConfigDir } = await import('../../db/index.ts');
+        const { registerConfigDir } = await import('../../grpc/data-access.ts');
 
         // Determine config dir to register
         const configDir =

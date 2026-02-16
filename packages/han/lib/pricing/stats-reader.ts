@@ -200,7 +200,7 @@ export async function getAggregatedStats(): Promise<AggregatedStats> {
   // Try to read from all registered config dirs
   let configDirPaths: string[] = [];
   try {
-    const { listConfigDirs } = await import('../db/index.ts');
+    const { listConfigDirs } = await import('../grpc/data-access.ts');
     const configDirs = await listConfigDirs();
     configDirPaths = configDirs.map((d: { path: string }) => d.path);
   } catch {
@@ -264,7 +264,7 @@ export async function getPerConfigDirStats(): Promise<ConfigDirStats[]> {
 
   let configDirs: Array<{ id: string; path: string; name?: string }> = [];
   try {
-    const { listConfigDirs } = await import('../db/index.ts');
+    const { listConfigDirs } = await import('../grpc/data-access.ts');
     configDirs = await listConfigDirs();
   } catch {
     // Fallback

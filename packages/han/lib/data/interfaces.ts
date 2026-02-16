@@ -9,7 +9,7 @@
  * injected via the GraphQL context.
  */
 
-// Re-export types from db/index.ts which already re-exports from han-native
+// Types from gRPC data access layer
 import type {
   HookExecution,
   HookStats,
