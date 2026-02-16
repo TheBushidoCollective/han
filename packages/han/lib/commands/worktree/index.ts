@@ -16,7 +16,7 @@ import {
   gitCreateBranch,
   gitWorktreeAdd,
   gitWorktreeRemove,
-} from '../../native.ts';
+} from '../../bun-utils.ts';
 import {
   discoverForConstruct,
   findIntents,

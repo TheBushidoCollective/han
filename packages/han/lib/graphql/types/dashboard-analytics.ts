@@ -6,7 +6,7 @@
  * tool usage, hook health, and cost analysis.
  */
 
-import { queryDashboardAggregates } from '../../db/index.ts';
+import { queryDashboardAggregates } from '../../grpc/data-access.ts';
 import {
   calculateCacheSavings,
   calculateDefaultCost,

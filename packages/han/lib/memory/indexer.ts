@@ -13,7 +13,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getHanDataDir } from '../config/claude-settings.ts';
-import { tryGetNativeModule } from '../native.ts';
+import { fts as grpcFts, vectors as grpcVectors } from '../grpc/data-access.ts';
 import {
   getGitRemote,
   getSessionsPath,
@@ -99,12 +99,9 @@ export function getTableName(layer: IndexLayer, gitRemote?: string): string {
  * Initialize the database (creates if not exists)
  */
 export async function initTable(_tableName: string): Promise<boolean> {
-  const nativeModule = tryGetNativeModule();
-  if (!nativeModule) return false;
+  // Database initialization handled by coordinator via gRPC
   ensureIndexDir();
-  const dbPath = getIndexDbPath();
-  // dbInit initializes the database; tables are created implicitly on first index
-  return nativeModule.dbInit(dbPath);
+  return true;
 }
 
 /**
@@ -112,35 +109,34 @@ export async function initTable(_tableName: string): Promise<boolean> {
  * Runs both in parallel - FTS for keyword search, Vector for semantic search
  */
 export async function indexDocuments(
-  tableName: string,
+  _tableName: string,
   documents: IndexDocument[]
 ): Promise<number> {
-  const nativeModule = tryGetNativeModule();
-  if (!nativeModule) return 0;
   if (documents.length === 0) return 0;
 
   ensureIndexDir();
-  const dbPath = getIndexDbPath();
 
-  // Convert to native format for FTS
-  const nativeDocs = documents.map((doc) => ({
-    id: doc.id,
-    content: doc.content,
-    metadata: doc.metadata,
-  }));
-
-  // Index to FTS (always)
-  const ftsCount = nativeModule.ftsIndex(dbPath, tableName, nativeDocs);
+  // Index via gRPC FTS service
+  let count = 0;
+  for (const doc of documents) {
+    try {
+      await grpcFts.index(doc.id, doc.content);
+      count++;
+    } catch {
+      // Skip failed documents
+    }
+  }
 
   // Also index to vector store for semantic search (best effort)
   try {
-    await indexDocumentsToVector(tableName, documents, nativeModule, dbPath);
+    for (const doc of documents) {
+      await grpcVectors.index(doc.id, doc.content);
+    }
   } catch {
     // Vector indexing failed - FTS still works
-    // This can happen if ONNX isn't available yet
   }
 
-  return ftsCount;
+  return count;
 }
 
 /**
@@ -153,84 +149,26 @@ const EMBEDDING_BATCH_SIZE = 32;
  * Index documents to vector store for semantic search
  * Generates embeddings and stores with sqlite-vec
  */
-async function indexDocumentsToVector(
-  tableName: string,
-  documents: IndexDocument[],
-  nativeModule: ReturnType<typeof tryGetNativeModule>,
-  dbPath: string
-): Promise<void> {
-  if (!nativeModule) return;
-
-  // Check if embedding system is available
-  const embeddingAvailable = await nativeModule.embeddingIsAvailable();
-  if (!embeddingAvailable) {
-    // Try to download ONNX Runtime and model on first use
-    try {
-      await nativeModule.embeddingEnsureAvailable();
-    } catch {
-      // Embedding system not available - skip vector indexing
-      return;
-    }
-  }
-
-  // Process in batches to avoid memory issues
-  for (let i = 0; i < documents.length; i += EMBEDDING_BATCH_SIZE) {
-    const batch = documents.slice(i, i + EMBEDDING_BATCH_SIZE);
-    const texts = batch.map((doc) => doc.content);
-
-    // Generate embeddings for batch
-    const embeddings = await nativeModule.generateEmbeddings(texts);
-
-    // Prepare documents with embeddings for vector store
-    const vectorDocs = batch.map((doc, idx) => ({
-      id: doc.id,
-      content: doc.content,
-      vector: embeddings[idx],
-      metadata: doc.metadata,
-    }));
-
-    // Store in vector database
-    await nativeModule.vectorIndex(dbPath, tableName, vectorDocs);
-  }
-}
+// Vector indexing is now handled inline in indexDocuments via gRPC
 
 /**
  * Search FTS index
  */
 export async function searchFts(
-  tableName: string,
+  _tableName: string,
   query: string,
   limit = 10
 ): Promise<FtsResult[]> {
-  const nativeModule = tryGetNativeModule();
-  if (!nativeModule) return [];
-  const dbPath = getIndexDbPath();
-
-  // Check if DB exists
-  if (!existsSync(dbPath)) {
-    return [];
-  }
-
   try {
-    const results = await nativeModule.ftsSearch(
-      dbPath,
-      tableName,
-      query,
-      limit
-    );
+    const results = await grpcFts.search(query, { limit });
 
     return results.map((r) => ({
       id: r.id,
       content: r.content,
-      metadata: r.metadata ? JSON.parse(r.metadata) : undefined,
+      metadata: undefined,
       score: r.score,
     }));
-  } catch (error) {
-    // Handle case where table doesn't exist or database issues
-    if (error instanceof Error && error.message.includes('no such table')) {
-      return [];
-    }
-    // Database may be corrupted or incompatible - return empty results
+  } catch {
     return [];
   }
 }
@@ -239,48 +177,20 @@ export async function searchFts(
  * Search vector index by semantic similarity
  */
 export async function searchVector(
-  tableName: string,
+  _tableName: string,
   query: string,
   limit = 10
 ): Promise<FtsResult[]> {
-  const nativeModule = tryGetNativeModule();
-  if (!nativeModule) return [];
-  const dbPath = getIndexDbPath();
-
-  // Check if DB exists
-  if (!existsSync(dbPath)) {
-    return [];
-  }
-
   try {
-    // Check if embeddings are available
-    const embeddingAvailable = await nativeModule.embeddingIsAvailable();
-    if (!embeddingAvailable) {
-      return [];
-    }
-
-    // Generate embedding for query
-    const queryEmbedding = await nativeModule.generateEmbedding(query);
-
-    // Search by vector similarity
-    const results = await nativeModule.vectorSearch(
-      dbPath,
-      tableName,
-      queryEmbedding,
-      limit
-    );
+    const results = await grpcVectors.search(query, { limit });
 
     return results.map((r) => ({
       id: r.id,
       content: r.content,
-      metadata: r.metadata ? JSON.parse(r.metadata) : undefined,
+      metadata: undefined,
       score: r.score,
     }));
-  } catch (error) {
-    // Handle case where table doesn't exist or embeddings unavailable
-    if (error instanceof Error && error.message.includes('no such table')) {
-      return [];
-    }
+  } catch {
     return [];
   }
 }
@@ -351,40 +261,40 @@ export async function hybridSearch(
  * Delete documents from FTS index
  */
 export async function deleteDocuments(
-  tableName: string,
+  _tableName: string,
   ids: string[]
 ): Promise<number> {
-  const nativeModule = tryGetNativeModule();
-  if (!nativeModule) return 0;
-  const dbPath = getIndexDbPath();
-  return nativeModule.ftsDelete(dbPath, tableName, ids);
+  let count = 0;
+  for (const id of ids) {
+    const ok = await grpcFts.delete(id);
+    if (ok) count++;
+  }
+  return count;
 }
 
 /**
  * Generate embedding for a single text
+ * @deprecated Embedding generation is now handled by the coordinator
  */
-export async function generateEmbedding(text: string): Promise<number[]> {
-  const nativeModule = tryGetNativeModule();
-  if (!nativeModule) return [];
-  return nativeModule.generateEmbedding(text);
+export async function generateEmbedding(_text: string): Promise<number[]> {
+  // Embedding generation is now handled by the coordinator via gRPC
+  return [];
 }
 
 /**
  * Generate embeddings for multiple texts (batched)
+ * @deprecated Embedding generation is now handled by the coordinator
  */
-export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
-  const nativeModule = tryGetNativeModule();
-  if (!nativeModule) return [];
-  return nativeModule.generateEmbeddings(texts);
+export async function generateEmbeddings(_texts: string[]): Promise<number[][]> {
+  // Embedding generation is now handled by the coordinator via gRPC
+  return [];
 }
 
 /**
  * Get embedding dimension (384 for all-MiniLM-L6-v2)
  */
 export function getEmbeddingDimension(): number {
-  const nativeModule = tryGetNativeModule();
-  if (!nativeModule) return 384; // Default for all-MiniLM-L6-v2
-  return nativeModule.getEmbeddingDimension();
+  return 384; // Default for all-MiniLM-L6-v2
 }
 
 /**

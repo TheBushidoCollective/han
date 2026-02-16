@@ -16,13 +16,13 @@ import {
   projects as dbProjects,
   sessions as dbSessions,
   type Message,
-} from '../db/index.ts';
+} from '../grpc/data-access.ts';
 import {
   getGitCommonDir,
   getGitRemoteUrl,
   getGitRoot,
   gitWorktreeList,
-} from '../native.ts';
+} from '../bun-utils.ts';
 
 /**
  * Check if a path is within a system temp folder

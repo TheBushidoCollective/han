@@ -4,8 +4,7 @@
  * Aggregate metrics for a time period.
  */
 
-import { getDbPath, tasks } from '../../../db/index.ts';
-import { tryGetNativeModule } from '../../../native.ts';
+import { tasks, frustrations } from '../../../grpc/data-access.ts';
 import { builder } from '../../builder.ts';
 import type { TaskOutcomeCount } from './task-outcome-count.ts';
 import { TaskOutcomeCountType } from './task-outcome-count.ts';
@@ -147,28 +146,15 @@ export async function queryMetrics(
     significantFrustrationRate: 0,
   };
 
-  // Try to get frustration metrics from native database
-  const native = tryGetNativeModule();
-  if (native) {
-    try {
-      const dbPath = getDbPath();
-      const nativePeriodMap = {
-        DAY: 'day' as const,
-        WEEK: 'week' as const,
-        MONTH: 'month' as const,
-      };
-      const frustrationMetrics = native.queryFrustrationMetrics(
-        dbPath,
-        period ? nativePeriodMap[period] : undefined,
-        dbMetrics.totalTasks
-      );
-      result.significantFrustrations =
-        frustrationMetrics.significantFrustrations;
-      result.significantFrustrationRate =
-        frustrationMetrics.significantFrustrationRate;
-    } catch {
-      // Fall back to zero if native fails
-    }
+  // Try to get frustration metrics from gRPC
+  try {
+    const frustrationMetrics = await frustrations.queryMetrics();
+    const totalFrustrations = frustrationMetrics.total_events;
+    result.significantFrustrations = totalFrustrations;
+    result.significantFrustrationRate =
+      result.totalTasks > 0 ? totalFrustrations / result.totalTasks : 0;
+  } catch {
+    // Fall back to zero if gRPC fails
   }
 
   return result;

@@ -10,14 +10,14 @@
  * - Role-based data filtering (IC vs Manager)
  */
 
-import type { Session } from '../../../db/index.ts';
+import type { Session } from '../../../grpc/data-access.ts';
 import {
   listProjects,
   listSessions,
   messages,
   nativeTasks,
   tasks,
-} from '../../../db/index.ts';
+} from '../../../grpc/data-access.ts';
 import type { UserContext } from '../../builder.ts';
 import type { ActivityTimelineEntry } from './activity-timeline-entry.ts';
 import type { ContributorMetrics } from './contributor-metrics.ts';

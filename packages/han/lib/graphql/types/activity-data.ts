@@ -4,7 +4,7 @@
  * Complete activity data for dashboard visualizations.
  */
 
-import { queryActivityAggregates } from '../../db/index.ts';
+import { queryActivityAggregates } from '../../grpc/data-access.ts';
 import {
   calculateDefaultCost,
   calculateModelCost,

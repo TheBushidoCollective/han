@@ -10,11 +10,8 @@
  *       -> Memory Agent Synthesis -> Citations + Visibility
  */
 
-import { homedir } from 'node:os';
-import { join } from 'node:path';
-import type { Session } from '../db/index.ts';
-import { sessions as dbSessions } from '../db/index.ts';
-import { tryGetNativeModule } from '../native.ts';
+import type { Session } from '../grpc/data-access.ts';
+import { sessions as dbSessions, searchMessages as grpcSearchMessages } from '../grpc/data-access.ts';
 
 import type {
   MemoryScope,
@@ -139,42 +136,28 @@ async function searchMessagesWithSessionFilter(
   sessionIds: string[],
   limit: number
 ): Promise<SearchResultWithSession[]> {
-  const nativeModule = tryGetNativeModule();
-  if (!nativeModule) {
-    return [];
-  }
-
-  const dbPath = join(homedir(), '.claude', 'han', 'han.db');
   const results: SearchResultWithSession[] = [];
 
-  // Search each permitted session
-  // Note: This is less efficient than a single query with session filter
-  // In future, this should be optimized in the native module
+  // Search each permitted session via gRPC
   const sessionsToSearch = applySessionIdPreFilter(sessionIds);
 
   for (const sessionId of sessionsToSearch) {
     if (results.length >= limit) break;
 
     try {
-      const sessionResults = nativeModule.searchMessages(
-        dbPath,
+      const sessionResults = await grpcSearchMessages({
         query,
         sessionId,
-        Math.min(10, limit - results.length) // Limit per session
-      );
+        limit: Math.min(10, limit - results.length), // Limit per session
+      });
 
       for (const msg of sessionResults) {
         results.push({
           id: msg.id,
-          content: msg.content || msg.toolResult || msg.toolInput || '',
-          score: 0.7, // FTS match score
-          sessionId: msg.sessionId,
-          metadata: {
-            role: msg.role,
-            messageType: msg.messageType,
-            toolName: msg.toolName,
-            timestamp: new Date(msg.timestamp).getTime(),
-          },
+          content: msg.content || '',
+          score: msg.score ?? 0.7, // FTS match score
+          sessionId: msg.session_id,
+          metadata: {},
         });
       }
     } catch {

@@ -1,681 +1,304 @@
 /**
- * Coordinator Service for Real-Time Updates
+ * Coordinator Lifecycle Manager
  *
- * This service manages the single-instance coordinator pattern:
- * 1. Tries to acquire the coordinator lock
- * 2. If coordinator, watches for JSONL file changes
- * 3. Indexes changed files into the database
- * 4. Publishes events to GraphQL subscriptions
+ * Manages the Rust han-coordinator binary lifecycle:
+ * 1. Discovery: finds the coordinator binary
+ * 2. Auto-start: spawns as daemon process
+ * 3. Health check: gRPC health probe with retry
+ * 4. Shutdown: graceful stop via gRPC
  *
- * The coordinator pattern ensures only one instance is indexing at a time.
+ * The Rust coordinator handles all internal operations:
+ * file watching, JSONL indexing, SQLite, FTS, subscriptions.
  */
 
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import {
-  coordinator,
-  type IndexResult,
-  indexer,
-  initDb,
-  listConfigDirs,
-  messages,
-  sessionTodos,
-  watcher,
-} from '../db/index.ts';
-import {
-  type MessageEdgeData,
-  publishHookResultAdded,
-  publishSessionAdded,
-  publishSessionFilesChanged,
-  publishSessionHooksChanged,
-  publishSessionMessageAdded,
-  publishSessionTodosChanged,
-  publishSessionUpdated,
-  publishToolResultAdded,
-} from '../graphql/pubsub.ts';
+	createCoordinatorClients,
+	isCoordinatorHealthy,
+} from "../grpc/client.ts";
 
-/**
- * Event types that are paired with other messages (loaded as nested fields)
- * These should NOT be published in the main message stream
- */
-const PAIRED_EVENT_TYPES = new Set([
-  'sentiment_analysis',
-  'hook_result',
-  'mcp_tool_result',
-  'exposed_tool_result',
-]);
-
-/**
- * Tools that modify files
- * Used to detect file changes for the sessionFilesChanged subscription
- */
-const FILE_MODIFYING_TOOLS = new Set([
-  'Edit',
-  'Write',
-  'NotebookEdit',
-  // Bash can modify files but we don't track it to avoid noise
-]);
+const DEFAULT_PORT = 41956;
 
 /**
  * Get the han version from package.json
  */
 const getHanVersion = (): string => {
-  try {
-    // At build time this resolves to the built package
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pkg = require('../../package.json');
-    return pkg.version || '0.0.0';
-  } catch {
-    return '0.0.0';
-  }
+	try {
+		const pkg = require("../../package.json");
+		return pkg.version || "0.0.0";
+	} catch {
+		return "0.0.0";
+	}
 };
 
-/**
- * Coordinator version for upgrade detection
- */
 export const COORDINATOR_VERSION = getHanVersion();
 
 /**
  * Coordinator service state
  */
 interface CoordinatorState {
-  isCoordinator: boolean;
-  heartbeatInterval: NodeJS.Timeout | null;
-  isRunning: boolean;
-  version: string;
-  restartPending: boolean;
+	isRunning: boolean;
+	version: string;
+	process: ReturnType<typeof Bun.spawn> | null;
+	port: number;
 }
 
 const state: CoordinatorState = {
-  isCoordinator: false,
-  heartbeatInterval: null,
-  isRunning: false,
-  version: COORDINATOR_VERSION,
-  restartPending: false,
+	isRunning: false,
+	version: COORDINATOR_VERSION,
+	process: null,
+	port: DEFAULT_PORT,
 };
 
+// ============================================================================
+// Binary Discovery
+// ============================================================================
+
 /**
- * Callback for when data is indexed
- * Publishes events to GraphQL subscriptions
+ * Find the han-coordinator binary.
+ * Search order:
+ * 1. ~/.han/bin/han-coordinator
+ * 2. npm platform package bundled binary
+ * 3. PATH
  */
-async function onDataIndexed(result: IndexResult): Promise<void> {
-  if (result.error) {
-    // Skip errored results
-    return;
-  }
+function findCoordinatorBinary(): string | null {
+	const home = process.env.HOME || process.env.USERPROFILE || "/tmp";
 
-  // Publish session events
-  if (result.isNewSession) {
-    // New session was created
-    publishSessionAdded(result.sessionId, null);
-  }
+	// 1. ~/.han/bin/han-coordinator
+	const hanBin = join(home, ".han", "bin", "han-coordinator");
+	if (existsSync(hanBin)) return hanBin;
 
-  // Always publish session updated for any change
-  publishSessionUpdated(result.sessionId);
+	// 2. npm platform package
+	const arch = process.arch;
+	const platform = process.platform;
+	try {
+		const pkgName = `@thebushidocollective/han-${platform}-${arch}`;
+		const pkgPath = require.resolve(`${pkgName}/han-coordinator`);
+		if (existsSync(pkgPath)) return pkgPath;
+	} catch {
+		// Package not installed
+	}
 
-  // Publish message added events for new messages
-  if (result.messagesIndexed > 0) {
-    // Fetch the newly indexed messages to include in the subscription payload
-    try {
-      // Get the latest messages (the ones we just indexed)
-      const newMessages = await messages.list({
-        sessionId: result.sessionId,
-        limit: result.messagesIndexed,
-        // Messages are returned in ascending order, we want the latest ones
-        // Offset to skip earlier messages: totalMessages - messagesIndexed
-        offset: Math.max(0, result.totalMessages - result.messagesIndexed),
-      });
+	// 3. PATH lookup via which/where
+	try {
+		const result = Bun.spawnSync(
+			[process.platform === "win32" ? "where" : "which", "han-coordinator"],
+			{ stdout: "pipe", stderr: "ignore" },
+		);
+		if (result.exitCode === 0) {
+			const path = result.stdout.toString().trim();
+			if (path && existsSync(path)) return path;
+		}
+	} catch {
+		// Not in PATH
+	}
 
-      // Track if any message contains a TodoWrite tool call
-      let hasTodoWrite = false;
-      // Track file-modifying tools and count
-      const fileModifyingTools: Set<string> = new Set();
-
-      // Publish each message as a separate event with edge data for @prependEdge
-      // Filter out paired event types that are loaded as nested fields
-      for (let i = 0; i < newMessages.length; i++) {
-        const msg = newMessages[i];
-
-        // Skip messages with parentId - these are tool results that belong to a parent message
-        // They should NOT appear in the main message stream, instead publish an update for the parent
-        if (msg.parentId) {
-          // TODO: Publish a parent message update event so the UI can refetch the parent's results
-          // For now, just skip adding to the stream
-          continue;
-        }
-
-        // Skip paired event types - they're loaded as nested fields on other messages
-        // But publish to specific topics so subscribers can update the parent message
-        if (msg.messageType === 'han_event' && msg.toolName) {
-          if (PAIRED_EVENT_TYPES.has(msg.toolName)) {
-            // Publish to specific topic for paired events
-            if (msg.toolName === 'hook_result' && msg.rawJson) {
-              try {
-                const event = JSON.parse(msg.rawJson);
-                const data = event.data || {};
-                // hookRunId is at the event level, not inside data
-                const hookRunId = event.hookRunId;
-                const pluginName = data.plugin || 'unknown';
-                const hookName = data.hook || 'unknown';
-                if (hookRunId) {
-                  publishHookResultAdded(
-                    result.sessionId,
-                    hookRunId,
-                    pluginName,
-                    hookName,
-                    data.success ?? data.passed ?? true,
-                    data.duration_ms || data.durationMs || 0
-                  );
-                }
-                // Also publish session hooks changed for sidebar refresh
-                publishSessionHooksChanged(
-                  result.sessionId,
-                  pluginName,
-                  hookName,
-                  'result'
-                );
-              } catch {
-                // Ignore parse errors
-              }
-            } else if (
-              (msg.toolName === 'mcp_tool_result' ||
-                msg.toolName === 'exposed_tool_result') &&
-              msg.rawJson
-            ) {
-              try {
-                const event = JSON.parse(msg.rawJson);
-                const data = event.data || {};
-                if (data.callId) {
-                  publishToolResultAdded(
-                    result.sessionId,
-                    data.callId,
-                    msg.toolName === 'mcp_tool_result' ? 'mcp' : 'exposed',
-                    data.success ?? true,
-                    data.duration_ms || data.durationMs || 0
-                  );
-                }
-              } catch {
-                // Ignore parse errors
-              }
-            }
-            continue;
-          }
-
-          // Detect hook_run events and publish session hooks changed
-          if (msg.toolName === 'hook_run' && msg.rawJson) {
-            try {
-              const event = JSON.parse(msg.rawJson);
-              const data = event.data || {};
-              publishSessionHooksChanged(
-                result.sessionId,
-                data.plugin || 'unknown',
-                data.hook || 'unknown',
-                'run'
-              );
-            } catch {
-              // Ignore parse errors
-            }
-          }
-        }
-
-        // Apply the same filtering as the query to keep subscription in sync
-        // Skip messages that should not appear in the main stream
-        if (msg.rawJson) {
-          try {
-            const parsed = JSON.parse(msg.rawJson);
-            const content = parsed.message?.content;
-
-            if (Array.isArray(content) && content.length > 0) {
-              // Skip tool_result-only messages (Claude API tool results)
-              // These are shown with their parent tool_use message
-              if (
-                content.every(
-                  (block: { type: string }) => block.type === 'tool_result'
-                )
-              ) {
-                continue;
-              }
-            }
-
-            // Check if message has displayable text content
-            // This matches getMessageText() logic from the query
-            let hasDisplayableContent = false;
-
-            if (typeof content === 'string' && content.length > 0) {
-              hasDisplayableContent = true;
-            } else if (Array.isArray(content)) {
-              // Check for text blocks
-              const hasTextBlocks = content.some(
-                (block: { type: string; text?: string }) =>
-                  block.type === 'text' && block.text && block.text.length > 0
-              );
-              // Check for tool_use blocks (these generate a summary in the UI)
-              const hasToolUse = content.some(
-                (block: { type: string }) => block.type === 'tool_use'
-              );
-              // Check for TodoWrite tool calls
-              if (
-                content.some(
-                  (block: { type: string; name?: string }) =>
-                    block.type === 'tool_use' && block.name === 'TodoWrite'
-                )
-              ) {
-                hasTodoWrite = true;
-              }
-              // Check for file-modifying tool calls
-              for (const block of content) {
-                if (
-                  block.type === 'tool_use' &&
-                  block.name &&
-                  FILE_MODIFYING_TOOLS.has(block.name)
-                ) {
-                  fileModifyingTools.add(block.name);
-                }
-              }
-
-              hasDisplayableContent = hasTextBlocks || hasToolUse;
-            }
-
-            // Skip messages with no displayable content (unless summary/han_event)
-            if (!hasDisplayableContent) {
-              if (
-                msg.messageType !== 'han_event' &&
-                msg.messageType !== 'summary'
-              ) {
-                continue;
-              }
-            }
-          } catch {
-            // Ignore parse errors, let message through
-          }
-        }
-
-        const messageIndex = result.totalMessages - result.messagesIndexed + i;
-
-        // Build the edge data for Relay @prependEdge
-        const edgeData: MessageEdgeData = {
-          node: {
-            id: msg.id,
-            timestamp: msg.timestamp,
-            type: msg.messageType,
-            rawJson: msg.rawJson ?? '{}',
-            projectDir: '', // Project dir is on session, not message
-            sessionId: result.sessionId,
-            lineNumber: msg.lineNumber,
-            toolName: msg.toolName, // Required for han_event subtype resolution
-          },
-          cursor: Buffer.from(`cursor:${messageIndex}`).toString('base64'),
-        };
-
-        publishSessionMessageAdded(result.sessionId, messageIndex, edgeData);
-      }
-
-      // If TodoWrite was detected, publish todos changed event
-      if (hasTodoWrite) {
-        try {
-          const todos = await sessionTodos.get(result.sessionId);
-          if (todos?.todosJson) {
-            const parsed = JSON.parse(todos.todosJson);
-            if (Array.isArray(parsed)) {
-              const todoCount = parsed.length;
-              const inProgressCount = parsed.filter(
-                (t: { status?: string }) => t.status === 'in_progress'
-              ).length;
-              const completedCount = parsed.filter(
-                (t: { status?: string }) => t.status === 'completed'
-              ).length;
-              publishSessionTodosChanged(
-                result.sessionId,
-                todoCount,
-                inProgressCount,
-                completedCount
-              );
-            }
-          }
-        } catch {
-          // Ignore errors, just skip the todos update
-        }
-      }
-
-      // If file-modifying tools were detected, publish files changed event
-      if (fileModifyingTools.size > 0) {
-        // Publish for each tool type detected
-        for (const toolName of fileModifyingTools) {
-          publishSessionFilesChanged(
-            result.sessionId,
-            fileModifyingTools.size,
-            toolName
-          );
-        }
-      }
-    } catch (error) {
-      console.error(
-        `[coordinator] Failed to fetch messages for subscription:`,
-        error
-      );
-      // Fallback: publish without edge data (client will refetch)
-      publishSessionMessageAdded(result.sessionId, -1, null);
-    }
-  }
+	return null;
 }
 
+// ============================================================================
+// Health Check with Retry
+// ============================================================================
+
 /**
- * Start the coordinator service
+ * Wait for coordinator to become healthy with exponential backoff.
+ * Retries: 100ms, 200ms, 400ms, 800ms, 1600ms (total ~3.1s)
+ */
+async function waitForHealthy(
+	port: number,
+	maxRetries = 5,
+): Promise<boolean> {
+	for (let i = 0; i < maxRetries; i++) {
+		if (await isCoordinatorHealthy(port, 2000)) {
+			return true;
+		}
+		const delay = 100 * 2 ** i;
+		await Bun.sleep(delay);
+	}
+	return false;
+}
+
+// ============================================================================
+// Lifecycle Management
+// ============================================================================
+
+/**
+ * Start the coordinator service.
  *
- * Call this when the browse server starts. This function:
- * 1. Initializes the database
- * 2. Tries to become the coordinator
- * 3. If coordinator, starts file watching and initial indexing
+ * If the coordinator is already running (another process), this just
+ * verifies connectivity. Otherwise, spawns the Rust binary as a daemon.
  */
 export async function startCoordinatorService(): Promise<void> {
-  if (state.isRunning) {
-    console.log('[coordinator] Already running');
-    return;
-  }
+	if (state.isRunning) {
+		console.log("[coordinator] Already running");
+		return;
+	}
 
-  state.isRunning = true;
+	// Check if coordinator is already running (from another process)
+	if (await isCoordinatorHealthy(state.port)) {
+		console.log("[coordinator] Coordinator already running, connecting...");
+		state.isRunning = true;
+		return;
+	}
 
-  try {
-    // Initialize the database
-    await initDb();
-    console.log('[coordinator] Database initialized');
+	// Find the binary
+	const binaryPath = findCoordinatorBinary();
+	if (!binaryPath) {
+		console.error(
+			"[coordinator] han-coordinator binary not found. " +
+				"Install via: curl -fsSL https://han.guru/install.sh | bash",
+		);
+		return;
+	}
 
-    // Try to acquire the coordinator lock
-    state.isCoordinator = coordinator.tryAcquire();
+	console.log(`[coordinator] Starting ${binaryPath} on port ${state.port}`);
 
-    if (state.isCoordinator) {
-      console.log('[coordinator] Acquired coordinator lock');
-      await startCoordinating();
-    } else {
-      console.log('[coordinator] Another instance is coordinating');
-      // Start polling to try to become coordinator if the current one fails
-      scheduleCoordinatorCheck();
-    }
-  } catch (error) {
-    console.error('[coordinator] Failed to start:', error);
-    state.isRunning = false;
-  }
+	try {
+		// Spawn as daemon process
+		state.process = Bun.spawn(
+			[binaryPath, "--daemon", "--port", String(state.port)],
+			{
+				stdout: "ignore",
+				stderr: "ignore",
+				// Don't keep parent alive
+				unref: true,
+			},
+		);
+
+		// Wait for it to become healthy
+		const healthy = await waitForHealthy(state.port);
+		if (healthy) {
+			state.isRunning = true;
+			console.log("[coordinator] Coordinator started and healthy");
+		} else {
+			console.error(
+				"[coordinator] Coordinator started but failed health check",
+			);
+			state.process = null;
+		}
+	} catch (error) {
+		console.error("[coordinator] Failed to start coordinator:", error);
+		state.process = null;
+	}
 }
 
 /**
- * Start coordinating (watching and indexing)
+ * Stop the coordinator service.
+ * Sends graceful shutdown via gRPC, falls back to process kill.
  */
-async function startCoordinating(): Promise<void> {
-  // Start heartbeat to maintain lock
-  const heartbeatMs = coordinator.getHeartbeatInterval() * 1000;
-  state.heartbeatInterval = setInterval(() => {
-    if (!coordinator.updateHeartbeat()) {
-      console.error('[coordinator] Failed to update heartbeat');
-      stopCoordinating();
-    }
-  }, heartbeatMs);
+export async function stopCoordinatorService(): Promise<void> {
+	if (!state.isRunning) return;
 
-  // Check if data version changed and reindex is needed
-  console.log('[coordinator] Checking for schema/data version changes...');
-  void (async () => {
-    try {
-      // Check if reindex is needed (schema upgrade, new features requiring backfill)
-      const needsReindex = await indexer.needsReindex();
+	state.isRunning = false;
 
-      if (needsReindex) {
-        console.log(
-          '[coordinator] Data version changed - truncating derived tables for full reindex...'
-        );
-        await indexer.truncateDerivedTables();
-        // Clear flag immediately after truncation to prevent destructive loop
-        // if the subsequent full scan is interrupted or fails
-        await indexer.clearReindexFlag();
-        console.log('[coordinator] Reindex flag cleared');
-      }
+	try {
+		const clients = createCoordinatorClients(state.port);
+		await clients.coordinator.shutdown({
+			graceful: true,
+			timeoutSeconds: 5,
+		});
+		console.log("[coordinator] Graceful shutdown sent");
+	} catch {
+		// If gRPC shutdown fails, kill the process directly
+		if (state.process) {
+			state.process.kill();
+			console.log("[coordinator] Process killed");
+		}
+	}
 
-      // Perform full scan and index
-      console.log('[coordinator] Starting full scan and index...');
-      const results = await indexer.fullScanAndIndex();
-      const totalSessions = results.length;
-      const newSessions = results.filter((r) => r.isNewSession).length;
-      const totalMessages = results.reduce(
-        (sum, r) => sum + r.messagesIndexed,
-        0
-      );
-
-      console.log(
-        `[coordinator] Indexed ${totalSessions} sessions (${newSessions} new), ${totalMessages} messages`
-      );
-
-      // Publish events for indexed data
-      for (const result of results) {
-        // Fire and forget - don't block startup
-        void onDataIndexed(result);
-      }
-    } catch (error) {
-      console.error('[coordinator] Full scan failed:', error);
-    }
-  })();
-
-  // Start the file watcher with the default path
-  console.log('[coordinator] Starting file watcher...');
-  const watchPath = watcher.getDefaultPath();
-  const watchStarted = await watcher.start(watchPath);
-
-  if (watchStarted) {
-    console.log(`[coordinator] Watching ${watchPath} for changes`);
-
-    // Add additional watch paths for registered config directories (multi-environment support)
-    try {
-      const configDirs = await listConfigDirs();
-      for (const configDir of configDirs) {
-        // Skip if this is the default path (already watching)
-        if (configDir.isDefault) {
-          continue;
-        }
-
-        const projectsPath = `${configDir.path}/projects`;
-        const added = watcher.addWatchPath(configDir.path, projectsPath);
-        if (added) {
-          console.log(
-            `[coordinator] Added watch path: ${projectsPath} (${configDir.name || configDir.path})`
-          );
-        }
-      }
-    } catch (error) {
-      console.error(
-        '[coordinator] Failed to load additional config dirs:',
-        error
-      );
-    }
-
-    // Set up periodic check for new files (the native watcher handles events)
-    setupFileChangePolling();
-    // Set up periodic full scan to catch any missed sessions (macOS FSEvents can miss some events)
-    setupPeriodicFullScan();
-  } else {
-    console.error('[coordinator] Failed to start file watcher');
-  }
+	state.process = null;
+	console.log("[coordinator] Service stopped");
 }
 
 /**
- * Stop coordinating
- */
-function stopCoordinating(): void {
-  if (state.heartbeatInterval) {
-    clearInterval(state.heartbeatInterval);
-    state.heartbeatInterval = null;
-  }
-
-  watcher.stop();
-  coordinator.release();
-  state.isCoordinator = false;
-  console.log('[coordinator] Released coordinator lock');
-
-  // Try to become coordinator again
-  scheduleCoordinatorCheck();
-}
-
-/**
- * Schedule periodic check to become coordinator
- */
-function scheduleCoordinatorCheck(): void {
-  if (!state.isRunning) return;
-
-  // Check every 10 seconds if we can become coordinator
-  setTimeout(async () => {
-    if (!state.isRunning || state.isCoordinator) return;
-
-    state.isCoordinator = coordinator.tryAcquire();
-    if (state.isCoordinator) {
-      console.log('[coordinator] Acquired coordinator lock (failover)');
-      await startCoordinating();
-    } else {
-      scheduleCoordinatorCheck();
-    }
-  }, 10000);
-}
-
-/**
- * Setup polling for index results from the native watcher
- * The watcher queues results that we poll and publish to GraphQL subscriptions
- */
-function setupFileChangePolling(): void {
-  // Poll every 500ms for watcher results
-  const pollInterval = setInterval(() => {
-    if (!state.isCoordinator || !state.isRunning) {
-      clearInterval(pollInterval);
-      return;
-    }
-
-    // Poll for index results from the native watcher's queue
-    try {
-      const results = watcher.pollResults();
-      for (const result of results) {
-        // Fire and forget - don't block polling
-        void onDataIndexed(result);
-      }
-    } catch (_error) {
-      // Silently ignore poll errors - not critical
-    }
-  }, 500);
-}
-
-/**
- * Setup periodic full scan to catch any missed sessions
- * macOS FSEvents can sometimes miss file creation events, especially
- * when files are created atomically (via rename) or rapidly
- */
-function setupPeriodicFullScan(): void {
-  // Run full scan every 30 seconds to catch missed sessions
-  const scanInterval = setInterval(async () => {
-    if (!state.isCoordinator || !state.isRunning) {
-      clearInterval(scanInterval);
-      return;
-    }
-
-    try {
-      const results = await indexer.fullScanAndIndex();
-      // Only publish events for newly discovered sessions
-      const newSessions = results.filter((r) => r.isNewSession);
-      if (newSessions.length > 0) {
-        console.log(
-          `[coordinator] Periodic scan found ${newSessions.length} new sessions`
-        );
-        for (const result of newSessions) {
-          void onDataIndexed(result);
-        }
-      }
-    } catch (_error) {
-      // Silently ignore scan errors - not critical
-    }
-  }, 30000);
-}
-
-/**
- * Stop the coordinator service
- */
-export function stopCoordinatorService(): void {
-  if (!state.isRunning) return;
-
-  state.isRunning = false;
-
-  if (state.isCoordinator) {
-    stopCoordinating();
-  }
-
-  console.log('[coordinator] Service stopped');
-}
-
-/**
- * Check if this instance is the coordinator
+ * Check if coordinator is currently running and healthy.
  */
 export function isCoordinatorInstance(): boolean {
-  return state.isCoordinator;
+	return state.isRunning;
 }
 
 /**
- * Get the current coordinator version
+ * Get the current coordinator version.
  */
 export function getCoordinatorVersion(): string {
-  return state.version;
+	return state.version;
 }
 
 /**
- * Compare semantic versions
+ * Get coordinator status via gRPC.
+ */
+export async function getCoordinatorStatus() {
+	const clients = createCoordinatorClients(state.port);
+	return clients.coordinator.status({});
+}
+
+/**
+ * Compare semantic versions.
  * Returns: -1 if a < b, 0 if a == b, 1 if a > b
  */
 function compareVersions(a: string, b: string): number {
-  const partsA = a.split('.').map((p) => parseInt(p, 10) || 0);
-  const partsB = b.split('.').map((p) => parseInt(p, 10) || 0);
+	const partsA = a.split(".").map((p) => Number.parseInt(p, 10) || 0);
+	const partsB = b.split(".").map((p) => Number.parseInt(p, 10) || 0);
 
-  for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
-    const partA = partsA[i] || 0;
-    const partB = partsB[i] || 0;
-    if (partA < partB) return -1;
-    if (partA > partB) return 1;
-  }
-  return 0;
+	for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+		const partA = partsA[i] || 0;
+		const partB = partsB[i] || 0;
+		if (partA < partB) return -1;
+		if (partA > partB) return 1;
+	}
+	return 0;
 }
 
 /**
- * Check if a client version is newer than the coordinator
- * If so, schedule a coordinator restart to upgrade
- * Returns true if a restart is scheduled
+ * Check if a client version is newer than the coordinator.
+ * If so, schedule a coordinator restart.
  */
 export function checkClientVersion(clientVersion: string): boolean {
-  if (!state.isCoordinator || state.restartPending) {
-    return false;
-  }
+	if (!state.isRunning) return false;
 
-  const cmp = compareVersions(clientVersion, state.version);
-  if (cmp > 0) {
-    console.log(
-      `[coordinator] Client version ${clientVersion} > coordinator version ${state.version}, scheduling restart`
-    );
-    state.restartPending = true;
-
-    // Schedule restart after a short delay to allow current operations to complete
-    setTimeout(() => {
-      console.log('[coordinator] Restarting for version upgrade...');
-      stopCoordinatorService();
-      // The new client should detect the coordinator is stopped and become the new coordinator
-      // This is a graceful handoff - the newer client will take over
-    }, 1000);
-
-    return true;
-  }
-
-  return false;
+	const cmp = compareVersions(clientVersion, state.version);
+	if (cmp > 0) {
+		console.log(
+			`[coordinator] Client version ${clientVersion} > coordinator version ${state.version}, scheduling restart`,
+		);
+		// Schedule restart after a short delay
+		setTimeout(async () => {
+			console.log("[coordinator] Restarting for version upgrade...");
+			await stopCoordinatorService();
+			await startCoordinatorService();
+		}, 1000);
+		return true;
+	}
+	return false;
 }
 
 /**
- * Manually trigger indexing of a file
- * Used when we detect a file change externally
+ * Trigger indexing of a file via gRPC.
  */
 export async function indexFile(filePath: string): Promise<void> {
-  if (!state.isCoordinator) {
-    console.log('[coordinator] Not coordinator, skipping index');
-    return;
-  }
+	if (!state.isRunning) {
+		console.log("[coordinator] Not running, skipping index");
+		return;
+	}
 
-  try {
-    const result = await indexer.indexSessionFile(filePath);
-    await onDataIndexed(result);
-  } catch (error) {
-    console.error(`[coordinator] Failed to index ${filePath}:`, error);
-  }
+	try {
+		const clients = createCoordinatorClients(state.port);
+		await clients.indexer.indexFile({ filePath });
+	} catch (error) {
+		console.error(`[coordinator] Failed to index ${filePath}:`, error);
+	}
+}
+
+/**
+ * Ensure coordinator is running, auto-starting if needed.
+ * Returns true if coordinator is available.
+ */
+export async function ensureCoordinator(): Promise<boolean> {
+	if (state.isRunning && (await isCoordinatorHealthy(state.port))) {
+		return true;
+	}
+
+	await startCoordinatorService();
+	return state.isRunning;
 }

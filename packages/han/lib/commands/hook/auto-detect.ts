@@ -22,7 +22,7 @@ import {
   runDirTest,
 } from '../../marker-detection.ts';
 import { getMarketplacePlugins } from '../../marketplace-cache.ts';
-import { getGitRemoteUrl } from '../../native.ts';
+import { getGitRemoteUrl } from '../../bun-utils.ts';
 import {
   getInstalledPlugins,
   isDebugMode,

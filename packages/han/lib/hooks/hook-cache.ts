@@ -12,9 +12,9 @@ import {
   getHookCache,
   sessionFileValidations,
   setHookCache,
-} from '../db/index.ts';
+} from '../grpc/data-access.ts';
 import type { EventLogger } from '../events/logger.ts';
-import { getGitRemoteUrl, getNativeModule } from '../native.ts';
+import { getGitRemoteUrl, globFilesSync } from '../bun-utils.ts';
 
 /**
  * Cache manifest structure stored per plugin/hook combination
@@ -92,7 +92,8 @@ export function getCacheFilePath(pluginName: string, hookName: string): string {
  * Compute SHA256 hash of file contents
  */
 export function computeFileHash(filePath: string): string {
-  return getNativeModule().computeFileHash(filePath);
+  const content = readFileSync(filePath);
+  return createHash('sha256').update(content).digest('hex');
 }
 
 /**
@@ -211,14 +212,28 @@ export function findFilesWithGlob(
   rootDir: string,
   patterns: string[]
 ): string[] {
-  return getNativeModule().findFilesWithGlob(rootDir, patterns);
+  const results: string[] = [];
+  for (const pattern of patterns) {
+    for (const file of globFilesSync(pattern, rootDir)) {
+      results.push(join(rootDir, file));
+    }
+  }
+  return results;
 }
 
 /**
  * Build a manifest of file hashes for given files
  */
-export function buildManifest(files: string[], rootDir: string): CacheManifest {
-  return getNativeModule().buildManifest(files, rootDir);
+export function buildManifest(files: string[], _rootDir: string): CacheManifest {
+  const manifest: CacheManifest = {};
+  for (const filePath of files) {
+    try {
+      manifest[filePath] = computeFileHash(filePath);
+    } catch {
+      // Skip files that can't be read
+    }
+  }
+  return manifest;
 }
 
 /**
@@ -233,7 +248,21 @@ function hasChanges(
   if (!cachedManifest) {
     return true;
   }
-  return getNativeModule().hasChanges(rootDir, patterns, cachedManifest);
+  const currentFiles = findFilesWithGlob(rootDir, patterns);
+  const currentManifest = buildManifest(currentFiles, rootDir);
+  // Check if any file hashes differ
+  for (const [filePath, hash] of Object.entries(currentManifest)) {
+    if (cachedManifest[filePath] !== hash) {
+      return true;
+    }
+  }
+  // Check if any cached files were deleted
+  for (const filePath of Object.keys(cachedManifest)) {
+    if (!(filePath in currentManifest)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -350,11 +379,8 @@ export async function trackFilesAsync(
 
   if (options.trackSessionChangesOnly) {
     // Only track files that the session has changed
-    const { getSessionFileChanges } = await import('../native.ts');
-    const { getDbPath } = await import('../db/index.ts');
-    const dbPath = getDbPath();
-
-    const sessionChanges = getSessionFileChanges(dbPath, options.sessionId);
+    const { sessionFileChanges: sfc } = await import('../grpc/data-access.ts');
+    const sessionChanges = await sfc.list(options.sessionId);
 
     // If no session changes, nothing to track
     if (sessionChanges.length === 0) {
@@ -465,11 +491,8 @@ export async function checkForChangesAsync(
 
   if (options.checkSessionChangesOnly) {
     // Only check files that the session has changed AND are within this directory
-    const { getSessionFileChanges } = await import('../native.ts');
-    const { getDbPath } = await import('../db/index.ts');
-    const dbPath = getDbPath();
-
-    const allSessionChanges = getSessionFileChanges(dbPath, options.sessionId);
+    const { sessionFileChanges: sfc } = await import('../grpc/data-access.ts');
+    const allSessionChanges = await sfc.list(options.sessionId);
 
     // Canonicalize rootDir to match canonicalized paths in session changes
     // (e.g., /Volumes/dev vs /Users/name/dev pointing to same location)
@@ -530,10 +553,8 @@ export async function checkForChangesAsync(
       }
 
       // For pattern-based checks, see if any manifest files were changed in the session
-      const { getSessionFileChanges } = await import('../native.ts');
-      const { getDbPath } = await import('../db/index.ts');
-      const dbPath = getDbPath();
-      const sessionChanges = getSessionFileChanges(dbPath, options.sessionId);
+      const { sessionFileChanges: sfc2 } = await import('../grpc/data-access.ts');
+      const sessionChanges = await sfc2.list(options.sessionId);
       const sessionChangedPaths = new Set(
         sessionChanges.map((c) => c.filePath)
       );
@@ -587,5 +608,11 @@ export function findDirectoriesWithMarkers(
   rootDir: string,
   markerPatterns: string[]
 ): string[] {
-  return getNativeModule().findDirectoriesWithMarkers(rootDir, markerPatterns);
+  const dirs = new Set<string>();
+  for (const pattern of markerPatterns) {
+    for (const file of globFilesSync(pattern, rootDir)) {
+      dirs.add(dirname(join(rootDir, file)));
+    }
+  }
+  return Array.from(dirs);
 }

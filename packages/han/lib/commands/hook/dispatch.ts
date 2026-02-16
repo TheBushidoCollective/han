@@ -18,18 +18,9 @@ import {
   readSettingsFile,
 } from '../../config/claude-settings.ts';
 
-// Lazy import to avoid loading native module for commands that don't need it
-// (e.g., `han hook reference` doesn't need the native module)
-let _sessionFileChanges:
-  | typeof import('../../db/index.ts').sessionFileChanges
-  | null = null;
-async function getSessionFileChanges() {
-  if (!_sessionFileChanges) {
-    const db = await import('../../db/index.ts');
-    _sessionFileChanges = db.sessionFileChanges;
-  }
-  return _sessionFileChanges;
-}
+import { sessionFileChanges } from '../../grpc/data-access.ts';
+import { executeHooksViaGrpc } from '../../grpc/hook-executor.ts';
+import { isCoordinatorHealthy } from '../../grpc/client.ts';
 
 import { getEventLogger, initEventLogger } from '../../events/logger.ts';
 import { getClaudeProjectPath } from '../../memory/paths.ts';
@@ -639,8 +630,7 @@ async function shouldSkipDueToNoChanges(
     return false;
   }
 
-  const sfc = await getSessionFileChanges();
-  const hasChanges = await sfc.hasChanges(sessionId);
+  const hasChanges = await sessionFileChanges.hasChanges(sessionId);
   return !hasChanges;
 }
 
@@ -690,9 +680,36 @@ async function dispatchHooks(
     return;
   }
 
-  // Note: Checkpoint capture at session/agent start has been removed.
-  // Session filtering now uses the database-backed session_file_changes table.
+  // Try gRPC delegation to coordinator first.
+  // The coordinator discovers all plugin hooks for this event and executes them.
+  const coordinatorHealthy = await isCoordinatorHealthy().catch(() => false);
+  if (coordinatorHealthy) {
+    if (isDebugMode()) {
+      console.error(`[dispatch] Delegating to coordinator via gRPC for ${hookType}`);
+    }
+    try {
+      const results = await executeHooksViaGrpc({
+        event: hookType,
+        sessionId: sessionId,
+        toolName: typeof payload?.tool_name === 'string' ? payload.tool_name : undefined,
+        toolInput: payload?.tool_input ? JSON.stringify(payload.tool_input) : undefined,
+        cwd: typeof payload?.cwd === 'string' ? payload.cwd : process.cwd(),
+      });
+      // Check for failures
+      const failures = results.filter(r => r.exitCode !== 0);
+      if (failures.length > 0 && isDebugMode()) {
+        console.error(`[dispatch] ${failures.length} hook(s) failed via gRPC`);
+      }
+      return; // gRPC handled it — skip local execution
+    } catch (error) {
+      if (isDebugMode()) {
+        console.error(`[dispatch] gRPC execution failed, falling back to local: ${error}`);
+      }
+      // Fall through to local execution
+    }
+  }
 
+  // Fallback: local execution when coordinator is unavailable
   const outputs: string[] = [];
 
   // Dispatch settings hooks if --all is specified

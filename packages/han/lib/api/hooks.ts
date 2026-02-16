@@ -8,8 +8,8 @@
  * The coordinator handles JSONL → SQLite indexing.
  */
 
-import type { Message } from '../db/index.ts';
-import { messages, withFreshData } from '../db/index.ts';
+import type { Message } from '../grpc/data-access.ts';
+import { messages, withFreshData } from '../grpc/data-access.ts';
 
 /**
  * Hook execution record

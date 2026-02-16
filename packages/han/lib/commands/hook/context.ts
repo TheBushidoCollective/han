@@ -8,7 +8,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import type { Command } from 'commander';
-import { hookExecutions, tasks } from '../../db/index.ts';
+import { hookExecutions, tasks } from '../../grpc/data-access.ts';
 import { injectSessionContext } from '../../memory/index.ts';
 
 /**

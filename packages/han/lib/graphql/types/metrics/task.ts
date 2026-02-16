@@ -4,7 +4,7 @@
  * A tracked task.
  */
 
-import type { Task as DbTask } from '../../../db/index.ts';
+import type { Task as DbTask } from '../../../grpc/data-access.ts';
 import { builder } from '../../builder.ts';
 import { TaskOutcomeEnum } from './task-outcome-enum.ts';
 import { TaskStatusEnum } from './task-status-enum.ts';

@@ -7,9 +7,7 @@
  * - Minimum message threshold for meaningful sessions
  */
 
-import { homedir } from 'node:os';
-import { join } from 'node:path';
-import { tryGetNativeModule } from '../native.ts';
+import { sessions as dbSessions } from '../grpc/data-access.ts';
 
 /**
  * Information about a session's completion status
@@ -83,42 +81,19 @@ export async function detectCompletedSessions(
   // Total gap includes both the minimum gap and cooldown period
   const totalGapMinutes = minGapMinutes + cooldownMinutes;
 
-  const nativeModule = tryGetNativeModule();
-  if (!nativeModule) {
-    console.warn('[session-completion] Native module not available');
+  // Use gRPC-backed session list instead of native module
+  const allSessions = await dbSessions.list({ limit: limit * 4 });
+
+  if (allSessions.length === 0) {
     return [];
   }
-
-  const dbPath = join(homedir(), '.claude', 'han', 'han.db');
-
-  // Get sessions without summaries
-  const sessionsWithoutSummaries = nativeModule.listSessionsWithoutSummaries(
-    dbPath,
-    limit * 2 // Get more than we need since we'll filter
-  );
-
-  if (sessionsWithoutSummaries.length === 0) {
-    return [];
-  }
-
-  // Get message counts for these sessions
-  const messageCounts = nativeModule.getMessageCountsBatch(
-    dbPath,
-    sessionsWithoutSummaries
-  );
-
-  // Get timestamps for these sessions
-  const timestamps = nativeModule.getSessionTimestampsBatch(
-    dbPath,
-    sessionsWithoutSummaries
-  );
 
   const results: SessionCompletionStatus[] = [];
 
-  for (const sessionId of sessionsWithoutSummaries) {
-    const messageCount = messageCounts[sessionId] || 0;
-    const ts = timestamps[sessionId];
-    const lastMessageAt = ts?.endedAt || null;
+  for (const session of allSessions) {
+    const messageCount = session.message_count ?? 0;
+    const lastMessageAt = session.ended_at || null;
+    const sessionId = session.id;
 
     // Skip sessions with too few messages
     if (messageCount < minMessages) {

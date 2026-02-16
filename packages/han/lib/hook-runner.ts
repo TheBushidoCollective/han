@@ -19,7 +19,7 @@ import {
   getPluginHookSettings,
   isCacheEnabled,
 } from './config/han-settings.ts';
-import { getSessionModifiedFiles, sessionFileValidations } from './db/index.ts';
+import { getSessionModifiedFiles, sessionFileValidations } from './grpc/data-access.ts';
 import { getEventLogger } from './events/logger.ts';
 import {
   createLockManager,

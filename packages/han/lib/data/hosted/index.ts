@@ -22,7 +22,7 @@ import type {
   SessionTodos as NativeSessionTodos,
   TaskMetrics as NativeTaskMetrics,
   SessionTimestamps,
-} from '../../db/index.ts';
+} from '../../grpc/data-access.ts';
 import type {
   Connection,
   ConnectionArgs,

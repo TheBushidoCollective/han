@@ -9,7 +9,7 @@
 
 import { existsSync } from 'node:fs';
 import { basename } from 'node:path';
-import { getNativeModule } from '../native.ts';
+// Native module removed - extractFileOperations inlined below
 import { getGitRemote } from './paths.ts';
 import {
   parseTranscript,
@@ -151,21 +151,26 @@ async function parseTranscriptWithToolUse(
  * - Bash commands: git, npm, etc.
  */
 function extractFileOperations(messages: TranscriptMessage[]): FileOperation[] {
-  const native = getNativeModule();
   const operations: FileOperation[] = [];
 
   for (const message of messages) {
     if (message.type !== 'assistant') continue;
 
-    // Use native regex extraction for performance
-    const result = native.extractFileOperations(message.content);
-
-    for (const op of result.operations) {
-      operations.push({
-        path: op.path,
-        operation: op.operation as FileOperation['operation'],
-        timestamp: message.timestamp,
-      });
+    const content = message.content;
+    // Match Write/Create tool invocations
+    const writeMatches = content.matchAll(/(?:Writing|Wrote|Creating|Created)\s+(?:to\s+)?['"`]?([^\s'"`]+\.\w+)/gi);
+    for (const m of writeMatches) {
+      if (m[1]) operations.push({ path: m[1], operation: 'write', timestamp: message.timestamp });
+    }
+    // Match Edit/Modify tool invocations
+    const editMatches = content.matchAll(/(?:Editing|Edited|Modifying|Modified)\s+['"`]?([^\s'"`]+\.\w+)/gi);
+    for (const m of editMatches) {
+      if (m[1]) operations.push({ path: m[1], operation: 'edit', timestamp: message.timestamp });
+    }
+    // Match Read tool invocations
+    const readMatches = content.matchAll(/(?:Reading|Read)\s+['"`]?([^\s'"`]+\.\w+)/gi);
+    for (const m of readMatches) {
+      if (m[1]) operations.push({ path: m[1], operation: 'read', timestamp: message.timestamp });
     }
   }
 

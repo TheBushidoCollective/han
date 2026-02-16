@@ -10,8 +10,8 @@
  */
 
 import type { ProjectGroup } from '../../api/sessions.ts';
-import { projects, repos } from '../../db/index.ts';
-import { getGitRemoteUrl } from '../../native.ts';
+import { projects, repos } from '../../grpc/data-access.ts';
+import { getGitRemoteUrl } from '../../bun-utils.ts';
 import { builder } from '../builder.ts';
 import { registerNodeLoader } from '../node-registry.ts';
 import { getAllProjects, ProjectType } from './project.ts';

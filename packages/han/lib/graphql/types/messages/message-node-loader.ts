@@ -10,7 +10,7 @@ import {
   type SessionMessage,
 } from '../../../api/sessions.ts';
 import { getClaudeConfigDir } from '../../../config/claude-settings.ts';
-import { getMessage, getProjectBySlug, getSession } from '../../../db/index.ts';
+import { getMessage, getProjectBySlug, getSession } from '../../../grpc/data-access.ts';
 import { registerNodeLoader } from '../../node-registry.ts';
 import type { MessageWithSession } from './message-interface.ts';
 
