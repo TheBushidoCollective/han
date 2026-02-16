@@ -18,18 +18,7 @@ import {
   readSettingsFile,
 } from '../../config/claude-settings.ts';
 
-// Lazy import to avoid loading native module for commands that don't need it
-// (e.g., `han hook reference` doesn't need the native module)
-let _sessionFileChanges:
-  | typeof import('../../db/index.ts').sessionFileChanges
-  | null = null;
-async function getSessionFileChanges() {
-  if (!_sessionFileChanges) {
-    const db = await import('../../db/index.ts');
-    _sessionFileChanges = db.sessionFileChanges;
-  }
-  return _sessionFileChanges;
-}
+import { sessionFileChanges } from '../../grpc/data-access.ts';
 
 import { getEventLogger, initEventLogger } from '../../events/logger.ts';
 import { getClaudeProjectPath } from '../../memory/paths.ts';
@@ -639,8 +628,7 @@ async function shouldSkipDueToNoChanges(
     return false;
   }
 
-  const sfc = await getSessionFileChanges();
-  const hasChanges = await sfc.hasChanges(sessionId);
+  const hasChanges = await sessionFileChanges.hasChanges(sessionId);
   return !hasChanges;
 }
 
