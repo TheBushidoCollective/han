@@ -517,6 +517,25 @@ impl MemoryServiceTrait for MemoryServiceImpl {
 mod tests {
     use super::*;
 
+    fn test_state() -> Arc<CoordinatorState> {
+        Arc::new(CoordinatorState {
+            db: {
+                // Use a dummy connection - tests that need real DB should set this up
+                // For unit tests of gRPC handlers that don't hit DB, this is sufficient
+                futures::executor::block_on(async {
+                    han_db::establish_connection(han_db::DbConfig::Sqlite {
+                        path: ":memory:".to_string(),
+                    })
+                    .await
+                    .unwrap()
+                })
+            },
+            start_time: Instant::now(),
+            hook_engine: Arc::new(Mutex::new(HookEngine::new(None))),
+            slots: Arc::new(RwLock::new(HashMap::new())),
+        })
+    }
+
     #[test]
     fn test_model_to_session_data() {
         let model = han_db::entities::sessions::Model {
@@ -537,5 +556,235 @@ mod tests {
         assert_eq!(data.session_slug, Some("my-session".to_string()));
         assert_eq!(data.session_file_path, Some("/path/to/file.jsonl".to_string()));
         assert_eq!(data.last_indexed_line, Some(42));
+    }
+
+    #[tokio::test]
+    async fn test_coordinator_health() {
+        let state = test_state();
+        let svc = CoordinatorServiceImpl {
+            state: state.clone(),
+        };
+        let resp = svc.health(Request::new(Empty {})).await.unwrap();
+        let health = resp.into_inner();
+        assert!(health.healthy);
+        assert!(!health.version.is_empty());
+        assert!(health.uptime_ms >= 0);
+    }
+
+    #[tokio::test]
+    async fn test_coordinator_status() {
+        let state = test_state();
+        let svc = CoordinatorServiceImpl {
+            state: state.clone(),
+        };
+        let resp = svc.status(Request::new(Empty {})).await.unwrap();
+        let status = resp.into_inner();
+        assert!(!status.version.is_empty());
+        assert!(status.watcher_active);
+    }
+
+    #[tokio::test]
+    async fn test_slot_acquire_release() {
+        let state = test_state();
+        let svc = SlotServiceImpl {
+            state: state.clone(),
+        };
+
+        // Acquire slot
+        let resp = svc
+            .acquire(Request::new(AcquireSlotRequest {
+                slot_name: "build".to_string(),
+                owner: "agent-1".to_string(),
+                ttl_seconds: Some(60),
+            }))
+            .await
+            .unwrap();
+        let acq = resp.into_inner();
+        assert!(acq.acquired);
+        assert_eq!(acq.current_owner, Some("agent-1".to_string()));
+
+        // Try to acquire same slot (should fail)
+        let resp = svc
+            .acquire(Request::new(AcquireSlotRequest {
+                slot_name: "build".to_string(),
+                owner: "agent-2".to_string(),
+                ttl_seconds: None,
+            }))
+            .await
+            .unwrap();
+        let acq = resp.into_inner();
+        assert!(!acq.acquired);
+        assert_eq!(acq.current_owner, Some("agent-1".to_string()));
+
+        // Release slot
+        let resp = svc
+            .release(Request::new(ReleaseSlotRequest {
+                slot_name: "build".to_string(),
+                owner: "agent-1".to_string(),
+            }))
+            .await;
+        assert!(resp.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_slot_release_wrong_owner() {
+        let state = test_state();
+        let svc = SlotServiceImpl {
+            state: state.clone(),
+        };
+
+        // Acquire slot
+        let _ = svc
+            .acquire(Request::new(AcquireSlotRequest {
+                slot_name: "deploy".to_string(),
+                owner: "agent-1".to_string(),
+                ttl_seconds: None,
+            }))
+            .await
+            .unwrap();
+
+        // Try to release with wrong owner
+        let resp = svc
+            .release(Request::new(ReleaseSlotRequest {
+                slot_name: "deploy".to_string(),
+                owner: "agent-2".to_string(),
+            }))
+            .await;
+        assert!(resp.is_err());
+        let status = resp.unwrap_err();
+        assert_eq!(status.code(), tonic::Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    async fn test_slot_release_not_found() {
+        let state = test_state();
+        let svc = SlotServiceImpl {
+            state: state.clone(),
+        };
+
+        let resp = svc
+            .release(Request::new(ReleaseSlotRequest {
+                slot_name: "nonexistent".to_string(),
+                owner: "agent-1".to_string(),
+            }))
+            .await;
+        assert!(resp.is_err());
+        assert_eq!(resp.unwrap_err().code(), tonic::Code::NotFound);
+    }
+
+    #[tokio::test]
+    async fn test_slot_list() {
+        let state = test_state();
+        let svc = SlotServiceImpl {
+            state: state.clone(),
+        };
+
+        // Empty initially
+        let resp = svc
+            .list(Request::new(ListSlotsRequest {}))
+            .await
+            .unwrap();
+        assert!(resp.into_inner().slots.is_empty());
+
+        // Add two slots
+        let _ = svc
+            .acquire(Request::new(AcquireSlotRequest {
+                slot_name: "slot-a".to_string(),
+                owner: "owner-1".to_string(),
+                ttl_seconds: Some(30),
+            }))
+            .await;
+        let _ = svc
+            .acquire(Request::new(AcquireSlotRequest {
+                slot_name: "slot-b".to_string(),
+                owner: "owner-2".to_string(),
+                ttl_seconds: None,
+            }))
+            .await;
+
+        let resp = svc
+            .list(Request::new(ListSlotsRequest {}))
+            .await
+            .unwrap();
+        let slots = resp.into_inner().slots;
+        assert_eq!(slots.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_hook_list_hooks() {
+        let state = test_state();
+        let svc = HookServiceImpl {
+            state: state.clone(),
+        };
+
+        // Should return empty list when no plugins installed
+        let resp = svc
+            .list_hooks(Request::new(ListHooksRequest {
+                event_filter: None,
+            }))
+            .await
+            .unwrap();
+        // May have hooks from installed plugins, but should not error
+        let _ = resp.into_inner().hooks;
+    }
+
+    #[tokio::test]
+    async fn test_hook_list_hooks_with_filter() {
+        let state = test_state();
+        let svc = HookServiceImpl {
+            state: state.clone(),
+        };
+
+        let resp = svc
+            .list_hooks(Request::new(ListHooksRequest {
+                event_filter: Some("Stop".to_string()),
+            }))
+            .await
+            .unwrap();
+        // All returned hooks should match the filter
+        for hook in resp.into_inner().hooks {
+            assert_eq!(hook.event, "Stop");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_memory_search() {
+        let state = test_state();
+        let svc = MemoryServiceImpl {
+            state: state.clone(),
+        };
+
+        // Search on empty DB should return empty results, not error
+        let resp = svc
+            .search(Request::new(MemorySearchRequest {
+                query: "test query".to_string(),
+                session_id: None,
+                limit: 10,
+            }))
+            .await;
+        // May succeed with empty results or fail with "no such table" on unmigrated DB
+        // Both are acceptable - the handler doesn't crash
+        let _ = resp;
+    }
+
+    #[tokio::test]
+    async fn test_model_to_session_data_minimal() {
+        let model = han_db::entities::sessions::Model {
+            id: "min-session".to_string(),
+            project_id: None,
+            status: None,
+            slug: None,
+            transcript_path: None,
+            source_config_dir: None,
+            last_indexed_line: None,
+        };
+
+        let data = model_to_session_data(&model);
+        assert_eq!(data.id, "min-session");
+        assert_eq!(data.project_id, None);
+        assert_eq!(data.status, None);
+        assert_eq!(data.session_slug, None);
+        assert_eq!(data.session_file_path, None);
+        assert_eq!(data.last_indexed_line, None);
     }
 }

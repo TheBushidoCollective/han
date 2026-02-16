@@ -1,13 +1,14 @@
 //! HTTP/WebSocket server for GraphQL API.
 //!
 //! Uses Axum for HTTP routing with async-graphql handlers.
-//! POST /graphql for queries/mutations, GET /graphiql for IDE.
+//! POST /graphql for queries/mutations, GET /graphql (WS upgrade) for subscriptions,
+//! GET /graphiql for IDE.
 
 use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{
     Router,
-    extract::State,
+    extract::{State, WebSocketUpgrade},
     response::{Html, IntoResponse},
     routing::{get, post},
 };
@@ -37,6 +38,112 @@ async fn graphql_handler(
     state.schema.execute(req.into_inner()).await.into()
 }
 
+/// GraphQL WebSocket handler for subscriptions.
+///
+/// Handles WS upgrade and runs the graphql-ws protocol using async-graphql's
+/// built-in transport support. This avoids depending on async-graphql-axum's
+/// `GraphQLSubscription` which may conflict with tonic's axum version.
+async fn graphql_ws_handler(
+    State(state): State<Arc<AppState>>,
+    ws: WebSocketUpgrade,
+) -> impl IntoResponse {
+    let schema = state.schema.clone();
+
+    ws.protocols(["graphql-transport-ws", "graphql-ws"])
+        .on_upgrade(move |socket| async move {
+            use axum::extract::ws::Message;
+            use futures_util::{SinkExt, StreamExt};
+
+            let (mut sink, mut stream) = socket.split();
+
+            // Simple graphql-ws protocol handler
+            let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(64);
+
+            // Forward outgoing messages
+            let send_handle = tokio::spawn(async move {
+                while let Some(msg) = rx.recv().await {
+                    if sink.send(Message::Text(msg.into())).await.is_err() {
+                        break;
+                    }
+                }
+            });
+
+            // Process incoming messages
+            while let Some(Ok(msg)) = stream.next().await {
+                match msg {
+                    Message::Text(text) => {
+                        let text = text.to_string();
+                        if let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) {
+                            let msg_type = value
+                                .get("type")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("");
+
+                            match msg_type {
+                                "connection_init" => {
+                                    let ack = serde_json::json!({"type": "connection_ack"});
+                                    let _ = tx.send(ack.to_string()).await;
+                                }
+                                "subscribe" | "start" => {
+                                    let id = value
+                                        .get("id")
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("1")
+                                        .to_string();
+                                    let payload = value.get("payload").cloned().unwrap_or_default();
+                                    let query = payload
+                                        .get("query")
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("")
+                                        .to_string();
+
+                                    let request =
+                                        async_graphql::Request::new(&query);
+                                    let mut subscription_stream =
+                                        schema.execute_stream(request);
+
+                                    let tx_clone = tx.clone();
+                                    let id_clone = id.clone();
+                                    tokio::spawn(async move {
+                                        while let Some(response) =
+                                            subscription_stream.next().await
+                                        {
+                                            let next = serde_json::json!({
+                                                "id": id_clone,
+                                                "type": "next",
+                                                "payload": serde_json::to_value(&response).unwrap_or_default()
+                                            });
+                                            if tx_clone.send(next.to_string()).await.is_err() {
+                                                break;
+                                            }
+                                        }
+                                        let complete = serde_json::json!({
+                                            "id": id_clone,
+                                            "type": "complete"
+                                        });
+                                        let _ = tx_clone.send(complete.to_string()).await;
+                                    });
+                                }
+                                "complete" | "stop" => {
+                                    // Client wants to stop subscription - handled by drop
+                                }
+                                "ping" => {
+                                    let pong = serde_json::json!({"type": "pong"});
+                                    let _ = tx.send(pong.to_string()).await;
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                    Message::Close(_) => break,
+                    _ => {}
+                }
+            }
+
+            send_handle.abort();
+        })
+}
+
 /// GraphiQL IDE handler.
 async fn graphiql_handler() -> impl IntoResponse {
     Html(
@@ -64,7 +171,10 @@ pub fn build_router(schema: HanSchema) -> Router {
 
     Router::new()
         .route("/health", get(health_handler))
-        .route("/graphql", post(graphql_handler))
+        .route(
+            "/graphql",
+            post(graphql_handler).get(graphql_ws_handler),
+        )
         .route("/graphiql", get(graphiql_handler))
         .layer(cors)
         .with_state(state)
