@@ -5,7 +5,7 @@
 
 use rcgen::{CertificateParams, DistinguishedName, KeyPair, SanType};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use thiserror::Error;
 
 const CERT_DOMAIN: &str = "coordinator.local.han.guru";
@@ -127,7 +127,6 @@ fn get_certs_dir() -> Result<PathBuf, TlsError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
 
     #[test]
     fn test_generate_certificate() {

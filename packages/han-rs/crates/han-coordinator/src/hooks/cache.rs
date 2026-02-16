@@ -6,7 +6,6 @@
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::io::Read;
-use std::path::Path;
 
 /// Cache key for a hook's file validation.
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]

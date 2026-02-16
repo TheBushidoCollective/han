@@ -6,7 +6,6 @@
 use han_api::context::DbChangeEvent;
 use han_indexer::{WatcherService, handle_file_event};
 use sea_orm::DatabaseConnection;
-use std::sync::Arc;
 use tokio::sync::broadcast;
 
 /// Start the watcher bridge in a background task.
