@@ -70,7 +70,7 @@ jobs:
         working-directory: ./packages/han
 
       - name: Upload coverage to Codecov
-        if: always()
+        if: github.ref == 'refs/heads/main' && success()
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
