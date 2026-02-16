@@ -340,3 +340,149 @@ impl SubscriptionRoot {
             }))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn node_updated_payload_construction() {
+        let p = NodeUpdatedPayload {
+            id: "Session:abc".into(),
+            typename: "Session".into(),
+        };
+        assert_eq!(p.id, "Session:abc");
+        assert_eq!(p.typename, "Session");
+    }
+
+    #[test]
+    fn node_updated_payload_clone() {
+        let p = NodeUpdatedPayload { id: "x".into(), typename: "Y".into() };
+        let p2 = p.clone();
+        assert_eq!(p.id, p2.id);
+        assert_eq!(p.typename, p2.typename);
+    }
+
+    #[test]
+    fn session_message_added_payload() {
+        let p = SessionMessageAddedPayload {
+            session_id: "s1".into(),
+            message_index: 42,
+        };
+        assert_eq!(p.session_id, "s1");
+        assert_eq!(p.message_index, 42);
+    }
+
+    #[test]
+    fn session_added_payload() {
+        let p = SessionAddedPayload {
+            session_id: "s1".into(),
+            parent_id: Some("proj-1".into()),
+        };
+        assert_eq!(p.session_id, "s1");
+        assert_eq!(p.parent_id, Some("proj-1".into()));
+    }
+
+    #[test]
+    fn session_added_payload_no_parent() {
+        let p = SessionAddedPayload {
+            session_id: "s1".into(),
+            parent_id: None,
+        };
+        assert!(p.parent_id.is_none());
+    }
+
+    #[test]
+    fn tool_result_added_payload() {
+        let p = ToolResultAddedPayload {
+            session_id: "s1".into(),
+            call_id: "c1".into(),
+            result_type: "mcp".into(),
+            success: true,
+            duration_ms: 250,
+        };
+        assert!(p.success);
+        assert_eq!(p.duration_ms, 250);
+        assert_eq!(p.result_type, "mcp");
+    }
+
+    #[test]
+    fn hook_result_added_payload() {
+        let p = HookResultAddedPayload {
+            session_id: "s1".into(),
+            hook_run_id: "hr1".into(),
+            plugin_name: "biome".into(),
+            hook_name: "lint".into(),
+            success: false,
+            duration_ms: 1200,
+        };
+        assert!(!p.success);
+        assert_eq!(p.plugin_name, "biome");
+        assert_eq!(p.hook_name, "lint");
+    }
+
+    #[test]
+    fn session_todos_changed_payload() {
+        let p = SessionTodosChangedPayload {
+            session_id: "s1".into(),
+            todo_count: 5,
+            in_progress_count: 2,
+            completed_count: 3,
+        };
+        assert_eq!(p.todo_count, 5);
+        assert_eq!(p.in_progress_count, 2);
+        assert_eq!(p.completed_count, 3);
+    }
+
+    #[test]
+    fn session_files_changed_payload() {
+        let p = SessionFilesChangedPayload {
+            session_id: "s1".into(),
+            file_count: 10,
+            tool_name: "Write".into(),
+        };
+        assert_eq!(p.file_count, 10);
+        assert_eq!(p.tool_name, "Write");
+    }
+
+    #[test]
+    fn session_hooks_changed_payload() {
+        let p = SessionHooksChangedPayload {
+            session_id: "s1".into(),
+            plugin_name: "biome".into(),
+            hook_name: "lint".into(),
+            event_type: "Stop".into(),
+        };
+        assert_eq!(p.event_type, "Stop");
+    }
+
+    #[test]
+    fn repo_added_payload() {
+        let p = RepoAddedPayload { repo_id: "r1".into() };
+        assert_eq!(p.repo_id, "r1");
+    }
+
+    #[test]
+    fn project_added_payload() {
+        let p = ProjectAddedPayload {
+            project_id: "p1".into(),
+            parent_id: None,
+        };
+        assert_eq!(p.project_id, "p1");
+        assert!(p.parent_id.is_none());
+    }
+
+    #[test]
+    fn all_payloads_implement_debug() {
+        let _ = format!("{:?}", NodeUpdatedPayload { id: "".into(), typename: "".into() });
+        let _ = format!("{:?}", SessionMessageAddedPayload { session_id: "".into(), message_index: 0 });
+        let _ = format!("{:?}", SessionAddedPayload { session_id: "".into(), parent_id: None });
+        let _ = format!("{:?}", ToolResultAddedPayload { session_id: "".into(), call_id: "".into(), result_type: "".into(), success: false, duration_ms: 0 });
+        let _ = format!("{:?}", HookResultAddedPayload { session_id: "".into(), hook_run_id: "".into(), plugin_name: "".into(), hook_name: "".into(), success: false, duration_ms: 0 });
+        let _ = format!("{:?}", SessionTodosChangedPayload { session_id: "".into(), todo_count: 0, in_progress_count: 0, completed_count: 0 });
+        let _ = format!("{:?}", SessionFilesChangedPayload { session_id: "".into(), file_count: 0, tool_name: "".into() });
+        let _ = format!("{:?}", SessionHooksChangedPayload { session_id: "".into(), plugin_name: "".into(), hook_name: "".into(), event_type: "".into() });
+        let _ = format!("{:?}", RepoAddedPayload { repo_id: "".into() });
+        let _ = format!("{:?}", ProjectAddedPayload { project_id: "".into(), parent_id: None });
+    }
+}

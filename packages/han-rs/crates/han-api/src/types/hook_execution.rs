@@ -89,3 +89,120 @@ pub struct HookStats {
     pub total_duration_ms: i64,
     pub average_duration_ms: f64,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use han_db::entities::hook_executions;
+
+    fn make_model(passed: i32) -> hook_executions::Model {
+        hook_executions::Model {
+            id: "he-1".into(),
+            orchestration_id: Some("orch-1".into()),
+            session_id: Some("sess-1".into()),
+            task_id: Some("task-1".into()),
+            hook_type: "Stop".into(),
+            hook_name: "biome".into(),
+            hook_source: Some("validation/biome".into()),
+            directory: Some("/project".into()),
+            duration_ms: 1500,
+            exit_code: 0,
+            passed,
+            output: Some("All checks passed".into()),
+            error: None,
+            if_changed: None,
+            command: Some("npx biome check".into()),
+            executed_at: "2025-01-01T12:00:00Z".into(),
+            status: Some("completed".into()),
+            consecutive_failures: None,
+            max_attempts: None,
+            pid: None,
+            plugin_root: None,
+        }
+    }
+
+    #[test]
+    fn from_model_maps_all_fields() {
+        let he = HookExecution::from(make_model(1));
+        assert_eq!(he.raw_id, "he-1");
+        assert_eq!(he.orchestration_id, Some("orch-1".into()));
+        assert_eq!(he.session_id, Some("sess-1".into()));
+        assert_eq!(he.task_id, Some("task-1".into()));
+        assert_eq!(he.hook_type, "Stop");
+        assert_eq!(he.hook_name, "biome");
+        assert_eq!(he.hook_source, Some("validation/biome".into()));
+        assert_eq!(he.directory, Some("/project".into()));
+        assert_eq!(he.duration_ms, 1500);
+        assert_eq!(he.exit_code, 0);
+        assert!(he.passed);
+        assert_eq!(he.output, Some("All checks passed".into()));
+        assert!(he.error.is_none());
+        assert_eq!(he.command, Some("npx biome check".into()));
+        assert_eq!(he.executed_at, "2025-01-01T12:00:00Z");
+        assert_eq!(he.status, Some("completed".into()));
+    }
+
+    #[test]
+    fn passed_true_when_nonzero() {
+        assert!(HookExecution::from(make_model(1)).passed);
+        assert!(HookExecution::from(make_model(42)).passed);
+    }
+
+    #[test]
+    fn passed_false_when_zero() {
+        assert!(!HookExecution::from(make_model(0)).passed);
+    }
+
+    #[test]
+    fn optional_fields_none() {
+        let m = hook_executions::Model {
+            id: "h".into(),
+            orchestration_id: None,
+            session_id: None,
+            task_id: None,
+            hook_type: "Stop".into(),
+            hook_name: "test".into(),
+            hook_source: None,
+            directory: None,
+            duration_ms: 0,
+            exit_code: 1,
+            passed: 0,
+            output: None,
+            error: None,
+            if_changed: None,
+            command: None,
+            executed_at: "".into(),
+            status: None,
+            consecutive_failures: None,
+            max_attempts: None,
+            pid: None,
+            plugin_root: None,
+        };
+        let he = HookExecution::from(m);
+        assert!(he.orchestration_id.is_none());
+        assert!(he.session_id.is_none());
+        assert!(he.task_id.is_none());
+        assert!(he.hook_source.is_none());
+        assert!(he.directory.is_none());
+        assert!(he.output.is_none());
+        assert!(he.error.is_none());
+        assert!(he.command.is_none());
+        assert!(he.status.is_none());
+    }
+
+    #[test]
+    fn hook_stats_construction() {
+        let stats = HookStats {
+            total_executions: 10,
+            passed: 8,
+            failed: 2,
+            total_duration_ms: 5000,
+            average_duration_ms: 500.0,
+        };
+        assert_eq!(stats.total_executions, 10);
+        assert_eq!(stats.passed, 8);
+        assert_eq!(stats.failed, 2);
+        assert_eq!(stats.total_duration_ms, 5000);
+        assert!((stats.average_duration_ms - 500.0).abs() < f64::EPSILON);
+    }
+}

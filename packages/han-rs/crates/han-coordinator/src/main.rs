@@ -430,4 +430,42 @@ mod tests {
         assert!(cli.no_grpc);
         assert_eq!(cli.db_path, Some("/tmp/test.db".to_string()));
     }
+
+    #[test]
+    fn test_resolve_db_path_explicit_absolute() {
+        assert_eq!(
+            resolve_db_path(Some("/custom/path/data.db")),
+            "/custom/path/data.db"
+        );
+    }
+
+    #[test]
+    fn test_resolve_db_path_explicit_relative() {
+        assert_eq!(resolve_db_path(Some("./local.db")), "./local.db");
+    }
+
+    #[test]
+    fn test_resolve_db_path_none_falls_back() {
+        // When no explicit path is given, should resolve to something ending in han.db
+        let path = resolve_db_path(None);
+        assert!(
+            path.ends_with("han.db"),
+            "Expected path ending with han.db, got: {}",
+            path
+        );
+        // On a system with a home dir, it should contain .han directory
+        if dirs::home_dir().is_some() {
+            assert!(
+                path.contains(".han"),
+                "Expected path containing .han, got: {}",
+                path
+            );
+        }
+    }
+
+    #[test]
+    fn test_resolve_db_path_explicit_empty_string() {
+        // An empty string is still an explicit path
+        assert_eq!(resolve_db_path(Some("")), "");
+    }
 }

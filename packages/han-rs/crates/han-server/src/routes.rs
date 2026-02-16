@@ -334,3 +334,36 @@ async fn upsert_user(
     active.insert(db).await.map_err(|e| format!("Insert failed: {e}"))?;
     Ok(user_id)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::response::IntoResponse;
+    use http_body_util::BodyExt;
+
+    #[tokio::test]
+    async fn test_health_handler_returns_ok() {
+        let response = health_handler().await.into_response();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_health_handler_json_body() {
+        let response = health_handler().await.into_response();
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(json["status"], "ok");
+        assert_eq!(json["service"], "han-server");
+        assert!(json["version"].is_string(), "version should be a string");
+    }
+
+    #[tokio::test]
+    async fn test_health_handler_version_matches_cargo_pkg() {
+        let response = health_handler().await.into_response();
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(json["version"].as_str().unwrap(), env!("CARGO_PKG_VERSION"));
+    }
+}

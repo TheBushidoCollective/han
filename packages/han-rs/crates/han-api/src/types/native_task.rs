@@ -61,3 +61,100 @@ impl From<han_db::entities::native_tasks::Model> for NativeTask {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use han_db::entities::native_tasks;
+
+    fn make_model() -> native_tasks::Model {
+        native_tasks::Model {
+            id: "nt-1".into(),
+            session_id: "sess-1".into(),
+            message_id: "msg-1".into(),
+            subject: "Fix auth bug".into(),
+            description: Some("Users can't login".into()),
+            status: "in_progress".into(),
+            active_form: Some("Fixing auth bug".into()),
+            owner: Some("agent-1".into()),
+            blocks: Some(r#"["2","3"]"#.into()),
+            blocked_by: Some(r#"["0"]"#.into()),
+            created_at: "2025-01-01".into(),
+            updated_at: "2025-01-02".into(),
+            completed_at: None,
+            line_number: 42,
+        }
+    }
+
+    #[test]
+    fn from_model_maps_all_fields() {
+        let nt = NativeTask::from(make_model());
+        assert_eq!(nt.raw_id, "nt-1");
+        assert_eq!(nt.session_id, "sess-1");
+        assert_eq!(nt.message_id, "msg-1");
+        assert_eq!(nt.subject, "Fix auth bug");
+        assert_eq!(nt.description, Some("Users can't login".into()));
+        assert_eq!(nt.status, "in_progress");
+        assert_eq!(nt.active_form, Some("Fixing auth bug".into()));
+        assert_eq!(nt.owner, Some("agent-1".into()));
+        assert_eq!(nt.line_number, 42);
+    }
+
+    #[test]
+    fn blocks_parses_json_array() {
+        let nt = NativeTask::from(make_model());
+        // blocks field stores JSON, the GraphQL resolver parses it
+        let parsed: Vec<String> = serde_json::from_str(nt.blocks.as_ref().unwrap()).unwrap();
+        assert_eq!(parsed, vec!["2", "3"]);
+    }
+
+    #[test]
+    fn blocked_by_parses_json_array() {
+        let nt = NativeTask::from(make_model());
+        let parsed: Vec<String> = serde_json::from_str(nt.blocked_by.as_ref().unwrap()).unwrap();
+        assert_eq!(parsed, vec!["0"]);
+    }
+
+    #[test]
+    fn blocks_none_when_not_set() {
+        let mut m = make_model();
+        m.blocks = None;
+        m.blocked_by = None;
+        let nt = NativeTask::from(m);
+        assert!(nt.blocks.is_none());
+        assert!(nt.blocked_by.is_none());
+    }
+
+    #[test]
+    fn optional_fields_none() {
+        let m = native_tasks::Model {
+            id: "n".into(),
+            session_id: "s".into(),
+            message_id: "m".into(),
+            subject: "sub".into(),
+            description: None,
+            status: "pending".into(),
+            active_form: None,
+            owner: None,
+            blocks: None,
+            blocked_by: None,
+            created_at: "".into(),
+            updated_at: "".into(),
+            completed_at: None,
+            line_number: 0,
+        };
+        let nt = NativeTask::from(m);
+        assert!(nt.description.is_none());
+        assert!(nt.active_form.is_none());
+        assert!(nt.owner.is_none());
+        assert!(nt.completed_at.is_none());
+    }
+
+    #[test]
+    fn completed_at_populated() {
+        let mut m = make_model();
+        m.completed_at = Some("2025-01-03".into());
+        let nt = NativeTask::from(m);
+        assert_eq!(nt.completed_at, Some("2025-01-03".into()));
+    }
+}

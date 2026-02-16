@@ -265,4 +265,170 @@ mod tests {
         let matched = find_matching_hooks(&hooks, "PostToolUse", None);
         assert_eq!(matched.len(), 0);
     }
+
+    #[test]
+    fn test_parse_hooks_json_empty_hooks_object() {
+        let dir = TempDir::new().unwrap();
+        let hooks_path = dir.path().join("hooks.json");
+        std::fs::write(&hooks_path, r#"{"hooks": {}}"#).unwrap();
+
+        let hooks = parse_hooks_json(&hooks_path, "empty-plugin", dir.path()).unwrap();
+        assert!(hooks.is_empty());
+    }
+
+    #[test]
+    fn test_parse_hooks_json_multiple_events() {
+        let dir = TempDir::new().unwrap();
+        let hooks_path = dir.path().join("hooks.json");
+        std::fs::write(
+            &hooks_path,
+            r#"{
+                "hooks": {
+                    "SessionStart": [{
+                        "hooks": [{
+                            "type": "command",
+                            "command": "echo starting"
+                        }]
+                    }],
+                    "Stop": [{
+                        "hooks": [{
+                            "type": "command",
+                            "command": "npm run lint",
+                            "timeout": 30000
+                        }]
+                    }],
+                    "PreToolUse": [{
+                        "matcher": "Bash",
+                        "hooks": [{
+                            "type": "command",
+                            "command": "echo pre-tool"
+                        }]
+                    }]
+                }
+            }"#,
+        )
+        .unwrap();
+
+        let hooks = parse_hooks_json(&hooks_path, "multi-plugin", dir.path()).unwrap();
+        assert_eq!(hooks.len(), 3);
+
+        let session_start: Vec<_> = hooks.iter().filter(|h| h.event == "SessionStart").collect();
+        assert_eq!(session_start.len(), 1);
+        assert_eq!(session_start[0].command.as_deref(), Some("echo starting"));
+        assert_eq!(session_start[0].plugin_name, "multi-plugin");
+
+        let stop: Vec<_> = hooks.iter().filter(|h| h.event == "Stop").collect();
+        assert_eq!(stop.len(), 1);
+        assert_eq!(stop[0].timeout, Some(30000));
+
+        let pre_tool: Vec<_> = hooks.iter().filter(|h| h.event == "PreToolUse").collect();
+        assert_eq!(pre_tool.len(), 1);
+        assert_eq!(pre_tool[0].matcher.as_deref(), Some("Bash"));
+    }
+
+    #[test]
+    fn test_parse_hooks_json_prompt_type_hooks() {
+        let dir = TempDir::new().unwrap();
+        let hooks_path = dir.path().join("hooks.json");
+        std::fs::write(
+            &hooks_path,
+            r#"{
+                "hooks": {
+                    "SessionStart": [{
+                        "hooks": [{
+                            "type": "prompt",
+                            "prompt": "Remember to follow coding standards."
+                        }]
+                    }]
+                }
+            }"#,
+        )
+        .unwrap();
+
+        let hooks = parse_hooks_json(&hooks_path, "prompt-plugin", dir.path()).unwrap();
+        assert_eq!(hooks.len(), 1);
+        assert_eq!(hooks[0].hook_type, "prompt");
+        assert_eq!(
+            hooks[0].prompt.as_deref(),
+            Some("Remember to follow coding standards.")
+        );
+        assert!(hooks[0].command.is_none());
+    }
+
+    #[test]
+    fn test_find_matching_hooks_pipe_separated_matchers() {
+        let hooks = vec![DiscoveredHook {
+            plugin_name: "validator".into(),
+            plugin_root: PathBuf::from("/test"),
+            event: "PostToolUse".into(),
+            matcher: Some("Edit|Write|Bash".into()),
+            hook_type: "command".into(),
+            command: Some("echo validated".into()),
+            prompt: None,
+            timeout: None,
+        }];
+
+        // Each tool in the pipe-separated matcher should match
+        let matched = find_matching_hooks(&hooks, "PostToolUse", Some("Edit"));
+        assert_eq!(matched.len(), 1);
+
+        let matched = find_matching_hooks(&hooks, "PostToolUse", Some("Write"));
+        assert_eq!(matched.len(), 1);
+
+        let matched = find_matching_hooks(&hooks, "PostToolUse", Some("Bash"));
+        assert_eq!(matched.len(), 1);
+
+        // A tool not in the list should not match
+        let matched = find_matching_hooks(&hooks, "PostToolUse", Some("Read"));
+        assert_eq!(matched.len(), 0);
+
+        let matched = find_matching_hooks(&hooks, "PostToolUse", Some("Glob"));
+        assert_eq!(matched.len(), 0);
+    }
+
+    #[test]
+    fn test_find_matching_hooks_empty_matcher_string() {
+        let hooks = vec![DiscoveredHook {
+            plugin_name: "test".into(),
+            plugin_root: PathBuf::from("/test"),
+            event: "PostToolUse".into(),
+            matcher: Some("".into()),
+            hook_type: "command".into(),
+            command: Some("echo test".into()),
+            prompt: None,
+            timeout: None,
+        }];
+
+        // Empty matcher with a tool name: the split produces [""], which does not match "Bash"
+        let matched = find_matching_hooks(&hooks, "PostToolUse", Some("Bash"));
+        assert_eq!(matched.len(), 0);
+
+        // Empty matcher with no tool name: matcher is Some but tool_name is None => no match
+        let matched = find_matching_hooks(&hooks, "PostToolUse", None);
+        assert_eq!(matched.len(), 0);
+    }
+
+    #[test]
+    fn test_find_matching_hooks_no_hooks() {
+        let hooks: Vec<DiscoveredHook> = Vec::new();
+        let matched = find_matching_hooks(&hooks, "Stop", None);
+        assert!(matched.is_empty());
+    }
+
+    #[test]
+    fn test_find_matching_hooks_wrong_event() {
+        let hooks = vec![DiscoveredHook {
+            plugin_name: "test".into(),
+            plugin_root: PathBuf::from("/test"),
+            event: "Stop".into(),
+            matcher: None,
+            hook_type: "command".into(),
+            command: Some("echo test".into()),
+            prompt: None,
+            timeout: None,
+        }];
+
+        let matched = find_matching_hooks(&hooks, "SessionStart", None);
+        assert!(matched.is_empty());
+    }
 }

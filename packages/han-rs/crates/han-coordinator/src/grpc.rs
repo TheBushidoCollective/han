@@ -787,4 +787,56 @@ mod tests {
         assert_eq!(data.session_file_path, None);
         assert_eq!(data.last_indexed_line, None);
     }
+
+    #[test]
+    fn test_model_to_session_data_all_none() {
+        let model = han_db::entities::sessions::Model {
+            id: "empty-id".to_string(),
+            project_id: None,
+            status: None,
+            slug: None,
+            transcript_path: None,
+            source_config_dir: None,
+            last_indexed_line: None,
+        };
+
+        let data = model_to_session_data(&model);
+        assert_eq!(data.id, "empty-id");
+        assert_eq!(data.session_id, "empty-id");
+        assert!(data.project_id.is_none());
+        assert!(data.status.is_none());
+        assert!(data.session_slug.is_none());
+        assert!(data.session_file_path.is_none());
+        assert!(data.started_at.is_none());
+        assert!(data.ended_at.is_none());
+        assert!(data.last_indexed_line.is_none());
+    }
+
+    #[test]
+    fn test_model_to_session_data_full() {
+        let model = han_db::entities::sessions::Model {
+            id: "full-session-abc".to_string(),
+            project_id: Some("project-xyz".to_string()),
+            status: Some("completed".to_string()),
+            slug: Some("snug-dreaming-knuth".to_string()),
+            transcript_path: Some("/home/user/.claude/sessions/full.jsonl".to_string()),
+            source_config_dir: Some("/home/user/project".to_string()),
+            last_indexed_line: Some(1500),
+        };
+
+        let data = model_to_session_data(&model);
+        assert_eq!(data.id, "full-session-abc");
+        assert_eq!(data.session_id, "full-session-abc");
+        assert_eq!(data.project_id, Some("project-xyz".to_string()));
+        assert_eq!(data.status, Some("completed".to_string()));
+        assert_eq!(data.session_slug, Some("snug-dreaming-knuth".to_string()));
+        assert_eq!(
+            data.session_file_path,
+            Some("/home/user/.claude/sessions/full.jsonl".to_string())
+        );
+        assert_eq!(data.last_indexed_line, Some(1500));
+        // started_at and ended_at are always None in current implementation
+        assert!(data.started_at.is_none());
+        assert!(data.ended_at.is_none());
+    }
 }

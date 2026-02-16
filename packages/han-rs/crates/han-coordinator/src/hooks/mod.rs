@@ -380,4 +380,148 @@ mod tests {
             assert_eq!(cache.len(), 1);
         }
     }
+
+    #[tokio::test]
+    async fn test_execute_event_multiple_hooks_same_event() {
+        let mut engine = HookEngine::new(None);
+        engine.hooks = vec![
+            DiscoveredHook {
+                plugin_name: "plugin-a".to_string(),
+                plugin_root: PathBuf::from("/tmp"),
+                event: "Stop".to_string(),
+                hook_type: "command".to_string(),
+                command: Some("echo hook-a".to_string()),
+                prompt: None,
+                matcher: None,
+                timeout: Some(5000),
+            },
+            DiscoveredHook {
+                plugin_name: "plugin-b".to_string(),
+                plugin_root: PathBuf::from("/tmp"),
+                event: "Stop".to_string(),
+                hook_type: "command".to_string(),
+                command: Some("echo hook-b".to_string()),
+                prompt: None,
+                matcher: None,
+                timeout: Some(5000),
+            },
+        ];
+
+        let (tx, mut rx) = mpsc::channel(256);
+
+        let results = engine
+            .execute_event("Stop", None, Some(Path::new("/tmp")), &[], tx)
+            .await;
+
+        // Both hooks should have executed
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].exit_code, 0);
+        assert_eq!(results[1].exit_code, 0);
+        assert_eq!(results[0].plugin_name, "plugin-a");
+        assert_eq!(results[1].plugin_name, "plugin-b");
+
+        // Collect all stdout lines
+        let mut stdout_lines = Vec::new();
+        while let Ok(line) = rx.try_recv() {
+            if let HookOutputLine::Stdout(text) = &line.3 {
+                stdout_lines.push(text.clone());
+            }
+        }
+        assert!(stdout_lines.iter().any(|l| l.contains("hook-a")));
+        assert!(stdout_lines.iter().any(|l| l.contains("hook-b")));
+    }
+
+    #[tokio::test]
+    async fn test_engine_env_injection() {
+        let mut engine = HookEngine::new(None);
+        engine.hooks = vec![DiscoveredHook {
+            plugin_name: "env-test".to_string(),
+            plugin_root: PathBuf::from("/tmp/env-plugin"),
+            event: "Stop".to_string(),
+            hook_type: "command".to_string(),
+            command: Some("echo $MY_CUSTOM_VAR-$CLAUDE_PLUGIN_ROOT".to_string()),
+            prompt: None,
+            matcher: None,
+            timeout: Some(5000),
+        }];
+
+        let env = vec![("MY_CUSTOM_VAR".to_string(), "injected".to_string())];
+        let (tx, mut rx) = mpsc::channel(256);
+
+        let results = engine
+            .execute_event("Stop", None, Some(Path::new("/tmp")), &env, tx)
+            .await;
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].exit_code, 0);
+
+        let mut stdout_lines = Vec::new();
+        while let Ok(line) = rx.try_recv() {
+            if let HookOutputLine::Stdout(text) = &line.3 {
+                stdout_lines.push(text.clone());
+            }
+        }
+
+        // Should contain the injected env var AND the auto-added CLAUDE_PLUGIN_ROOT
+        assert!(
+            stdout_lines.iter().any(|l| l.contains("injected")),
+            "Expected MY_CUSTOM_VAR in output, got: {:?}",
+            stdout_lines
+        );
+        assert!(
+            stdout_lines.iter().any(|l| l.contains("/tmp/env-plugin")),
+            "Expected CLAUDE_PLUGIN_ROOT in output, got: {:?}",
+            stdout_lines
+        );
+    }
+
+    #[tokio::test]
+    async fn test_engine_with_manually_injected_hooks() {
+        let mut engine = HookEngine::new(None);
+
+        // Verify engine starts empty (or with whatever is discovered)
+        let _initial_hooks = engine.all_hooks().len();
+
+        // Manually inject hooks
+        engine.hooks = vec![
+            DiscoveredHook {
+                plugin_name: "manual-1".to_string(),
+                plugin_root: PathBuf::from("/tmp"),
+                event: "SessionStart".to_string(),
+                hook_type: "command".to_string(),
+                command: Some("echo session-start".to_string()),
+                prompt: None,
+                matcher: None,
+                timeout: Some(5000),
+            },
+            DiscoveredHook {
+                plugin_name: "manual-2".to_string(),
+                plugin_root: PathBuf::from("/tmp"),
+                event: "Stop".to_string(),
+                hook_type: "command".to_string(),
+                command: Some("echo stop".to_string()),
+                prompt: None,
+                matcher: None,
+                timeout: Some(5000),
+            },
+        ];
+
+        assert_eq!(engine.all_hooks().len(), 2);
+
+        // Execute only SessionStart hooks
+        let (tx, _rx) = mpsc::channel(256);
+        let results = engine
+            .execute_event("SessionStart", None, Some(Path::new("/tmp")), &[], tx)
+            .await;
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].plugin_name, "manual-1");
+
+        // Execute only Stop hooks
+        let (tx2, _rx2) = mpsc::channel(256);
+        let results = engine
+            .execute_event("Stop", None, Some(Path::new("/tmp")), &[], tx2)
+            .await;
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].plugin_name, "manual-2");
+    }
 }

@@ -154,3 +154,94 @@ fn session_model_to_data(m: sessions::Model) -> SessionData {
         status: m.status,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_session_model() -> sessions::Model {
+        sessions::Model {
+            id: "sess-abc".into(),
+            project_id: Some("proj-1".into()),
+            status: Some("active".into()),
+            slug: Some("snug-dreaming-knuth".into()),
+            transcript_path: Some("/home/user/.claude/sessions/sess-abc.jsonl".into()),
+            source_config_dir: Some("/home/user/.claude".into()),
+            last_indexed_line: Some(100),
+        }
+    }
+
+    #[test]
+    fn session_model_to_data_maps_id() {
+        let sd = session_model_to_data(make_session_model());
+        assert_eq!(sd.session_id, "sess-abc");
+    }
+
+    #[test]
+    fn session_model_to_data_maps_project_id() {
+        let sd = session_model_to_data(make_session_model());
+        assert_eq!(sd.project_id, Some("proj-1".into()));
+    }
+
+    #[test]
+    fn session_model_to_data_maps_status() {
+        let sd = session_model_to_data(make_session_model());
+        assert_eq!(sd.status, Some("active".into()));
+    }
+
+    #[test]
+    fn session_model_to_data_maps_slug() {
+        let sd = session_model_to_data(make_session_model());
+        assert_eq!(sd.slug, Some("snug-dreaming-knuth".into()));
+    }
+
+    #[test]
+    fn session_model_to_data_maps_source_config_dir() {
+        let sd = session_model_to_data(make_session_model());
+        assert_eq!(sd.source_config_dir, Some("/home/user/.claude".into()));
+    }
+
+    #[test]
+    fn session_model_to_data_defaults_empty_strings() {
+        let sd = session_model_to_data(make_session_model());
+        assert_eq!(sd.project_dir, "");
+        assert_eq!(sd.project_name, "");
+        assert_eq!(sd.project_path, "");
+        assert_eq!(sd.date, "");
+    }
+
+    #[test]
+    fn session_model_to_data_defaults_none_fields() {
+        let sd = session_model_to_data(make_session_model());
+        assert!(sd.summary.is_none());
+        assert!(sd.started_at.is_none());
+        assert!(sd.updated_at.is_none());
+        assert!(sd.git_branch.is_none());
+        assert!(sd.version.is_none());
+        assert!(sd.worktree_name.is_none());
+    }
+
+    #[test]
+    fn session_model_to_data_defaults_message_count_zero() {
+        let sd = session_model_to_data(make_session_model());
+        assert_eq!(sd.message_count, 0);
+    }
+
+    #[test]
+    fn session_model_to_data_handles_none_fields() {
+        let m = sessions::Model {
+            id: "s".into(),
+            project_id: None,
+            status: None,
+            slug: None,
+            transcript_path: None,
+            source_config_dir: None,
+            last_indexed_line: None,
+        };
+        let sd = session_model_to_data(m);
+        assert!(sd.project_id.is_none());
+        assert!(sd.status.is_none());
+        assert!(sd.slug.is_none());
+        assert!(sd.source_config_dir.is_none());
+    }
+}

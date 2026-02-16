@@ -229,4 +229,41 @@ mod tests {
         let response = app.oneshot(req).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
     }
+
+    #[tokio::test]
+    async fn test_graphiql_handler_returns_html() {
+        let schema = test_schema();
+        let app = build_router(schema);
+
+        let req = Request::builder()
+            .uri("/graphiql")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(req).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // Check content-type is HTML
+        let content_type = response
+            .headers()
+            .get("content-type")
+            .expect("should have content-type header")
+            .to_str()
+            .unwrap();
+        assert!(
+            content_type.contains("text/html"),
+            "Expected text/html content-type, got: {}",
+            content_type
+        );
+
+        // Read body and verify it contains GraphiQL markers
+        let body_bytes = axum::body::to_bytes(response.into_body(), 1_000_000)
+            .await
+            .unwrap();
+        let body_str = String::from_utf8_lossy(&body_bytes);
+        assert!(
+            body_str.contains("graphiql") || body_str.contains("GraphiQL"),
+            "Expected GraphiQL content in HTML body"
+        );
+    }
 }

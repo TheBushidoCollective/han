@@ -211,3 +211,156 @@ pub enum Granularity {
     #[graphql(name = "month")]
     Month,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn content_block_type_equality() {
+        assert_eq!(ContentBlockType::Text, ContentBlockType::Text);
+        assert_ne!(ContentBlockType::Text, ContentBlockType::Thinking);
+    }
+
+    #[test]
+    fn content_block_type_clone() {
+        let t = ContentBlockType::ToolUse;
+        let t2 = t;
+        assert_eq!(t, t2);
+    }
+
+    #[test]
+    fn content_block_type_debug() {
+        assert_eq!(format!("{:?}", ContentBlockType::Image), "Image");
+    }
+
+    #[test]
+    fn tool_category_variants() {
+        let cats = [
+            ToolCategory::FileOperation,
+            ToolCategory::CodeExecution,
+            ToolCategory::Search,
+            ToolCategory::Navigation,
+            ToolCategory::Communication,
+            ToolCategory::TaskManagement,
+            ToolCategory::Mcp,
+            ToolCategory::Other,
+        ];
+        // All unique
+        for (i, a) in cats.iter().enumerate() {
+            for (j, b) in cats.iter().enumerate() {
+                if i == j {
+                    assert_eq!(a, b);
+                } else {
+                    assert_ne!(a, b);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn event_action_variants() {
+        assert_ne!(EventAction::Created, EventAction::Updated);
+        assert_ne!(EventAction::Updated, EventAction::Deleted);
+        assert_ne!(EventAction::Created, EventAction::Deleted);
+    }
+
+    #[test]
+    fn memory_event_type_variants() {
+        assert_eq!(MemoryEventType::Session, MemoryEventType::Session);
+        assert_ne!(MemoryEventType::Session, MemoryEventType::Settings);
+    }
+
+    #[test]
+    fn plugin_scope_variants() {
+        assert_ne!(PluginScope::User, PluginScope::Project);
+        assert_ne!(PluginScope::Project, PluginScope::Local);
+    }
+
+    #[test]
+    fn todo_status_variants() {
+        assert_ne!(TodoStatus::Pending, TodoStatus::InProgress);
+        assert_ne!(TodoStatus::InProgress, TodoStatus::Completed);
+    }
+
+    #[test]
+    fn task_status_variants() {
+        assert_eq!(TaskStatus::Active, TaskStatus::Active);
+        assert_ne!(TaskStatus::Active, TaskStatus::Completed);
+        assert_ne!(TaskStatus::Completed, TaskStatus::Abandoned);
+    }
+
+    #[test]
+    fn task_type_all_variants_distinct() {
+        let types = [
+            TaskType::Feature, TaskType::Bugfix, TaskType::Refactor,
+            TaskType::Test, TaskType::Docs, TaskType::Config,
+            TaskType::Research, TaskType::Other,
+        ];
+        for (i, a) in types.iter().enumerate() {
+            for (j, b) in types.iter().enumerate() {
+                if i != j { assert_ne!(a, b); }
+            }
+        }
+    }
+
+    #[test]
+    fn task_outcome_variants() {
+        assert_ne!(TaskOutcome::Success, TaskOutcome::Partial);
+        assert_ne!(TaskOutcome::Partial, TaskOutcome::Abandoned);
+        assert_ne!(TaskOutcome::Abandoned, TaskOutcome::Unknown);
+    }
+
+    #[test]
+    fn memory_layer_variants() {
+        assert_ne!(MemoryLayer::Session, MemoryLayer::Project);
+        assert_ne!(MemoryLayer::Project, MemoryLayer::Global);
+    }
+
+    #[test]
+    fn memory_source_variants() {
+        assert_ne!(MemorySource::Fts, MemorySource::Vector);
+        assert_ne!(MemorySource::Vector, MemorySource::Hybrid);
+    }
+
+    #[test]
+    fn confidence_variants() {
+        assert_ne!(Confidence::High, Confidence::Medium);
+        assert_ne!(Confidence::Medium, Confidence::Low);
+    }
+
+    #[test]
+    fn memory_agent_progress_type_variants() {
+        let types = [
+            MemoryAgentProgressType::Searching,
+            MemoryAgentProgressType::Found,
+            MemoryAgentProgressType::Synthesizing,
+            MemoryAgentProgressType::Complete,
+            MemoryAgentProgressType::Error,
+        ];
+        for (i, a) in types.iter().enumerate() {
+            for (j, b) in types.iter().enumerate() {
+                if i != j { assert_ne!(a, b); }
+            }
+        }
+    }
+
+    #[test]
+    fn file_change_action_variants() {
+        assert_ne!(FileChangeAction::Created, FileChangeAction::Modified);
+        assert_ne!(FileChangeAction::Modified, FileChangeAction::Deleted);
+    }
+
+    #[test]
+    fn granularity_variants() {
+        assert_ne!(Granularity::Day, Granularity::Week);
+        assert_ne!(Granularity::Week, Granularity::Month);
+    }
+
+    #[test]
+    fn metrics_period_variants() {
+        assert_ne!(MetricsPeriod::Today, MetricsPeriod::Week);
+        assert_ne!(MetricsPeriod::Week, MetricsPeriod::Month);
+        assert_ne!(MetricsPeriod::Month, MetricsPeriod::All);
+    }
+}

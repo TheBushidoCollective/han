@@ -240,4 +240,68 @@ mod tests {
         // The output should contain our temp dir path
         assert!(!stdout_lines.is_empty());
     }
+
+    #[tokio::test]
+    async fn test_execute_invalid_command() {
+        let (tx, mut rx) = mpsc::channel(100);
+
+        // Use a command that does not exist; bash -c will return exit code 127
+        let result = execute_hook(
+            "totally_nonexistent_command_xyz_12345",
+            None,
+            &[],
+            Some(5000),
+            tx,
+        )
+        .await;
+
+        assert!(result.is_ok());
+        let exit_code = result.unwrap();
+        assert_ne!(exit_code, 0); // bash returns 127 for command not found
+
+        let mut got_complete = false;
+        let mut stderr_lines = Vec::new();
+        while let Ok(msg) = rx.try_recv() {
+            match msg {
+                HookOutputLine::Complete { exit_code, .. } => {
+                    assert_ne!(exit_code, 0);
+                    got_complete = true;
+                }
+                HookOutputLine::Stderr(line) => stderr_lines.push(line),
+                _ => {}
+            }
+        }
+        assert!(got_complete);
+        // bash should emit a "not found" message on stderr
+        assert!(
+            stderr_lines.iter().any(|l| l.contains("not found")),
+            "Expected 'not found' in stderr, got: {:?}",
+            stderr_lines
+        );
+    }
+
+    #[tokio::test]
+    async fn test_execute_multiline_output() {
+        let (tx, mut rx) = mpsc::channel(100);
+
+        let result = execute_hook(
+            "printf 'line1\\nline2\\nline3\\n'",
+            None,
+            &[],
+            Some(5000),
+            tx,
+        )
+        .await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 0);
+
+        let mut stdout_lines = Vec::new();
+        while let Ok(msg) = rx.try_recv() {
+            if let HookOutputLine::Stdout(line) = msg {
+                stdout_lines.push(line);
+            }
+        }
+
+        assert_eq!(stdout_lines, vec!["line1", "line2", "line3"]);
+    }
 }

@@ -91,3 +91,58 @@ async fn run_watcher_loop(
 
     tracing::info!("Watcher bridge stopped");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Verify that the module compiles and key types are accessible.
+    /// The watcher bridge is heavily async and depends on real file system
+    /// watching, so we verify the public API surface compiles correctly.
+    #[test]
+    fn test_start_watcher_bridge_compiles() {
+        // Verify the function signature is correct by referencing it
+        let _fn_ptr: fn(DatabaseConnection, broadcast::Sender<DbChangeEvent>) -> tokio::task::JoinHandle<()> =
+            start_watcher_bridge;
+    }
+
+    #[test]
+    fn test_db_change_event_variants() {
+        // Verify that the DbChangeEvent types used by the bridge are constructable
+        let event = DbChangeEvent::SessionAdded {
+            session_id: "test-session".to_string(),
+            parent_id: None,
+        };
+        match &event {
+            DbChangeEvent::SessionAdded { session_id, parent_id } => {
+                assert_eq!(session_id, "test-session");
+                assert!(parent_id.is_none());
+            }
+            _ => panic!("Expected SessionAdded variant"),
+        }
+
+        let event = DbChangeEvent::SessionMessageAdded {
+            session_id: "test-session".to_string(),
+            message_index: 42,
+        };
+        match &event {
+            DbChangeEvent::SessionMessageAdded { session_id, message_index } => {
+                assert_eq!(session_id, "test-session");
+                assert_eq!(*message_index, 42);
+            }
+            _ => panic!("Expected SessionMessageAdded variant"),
+        }
+
+        let event = DbChangeEvent::NodeUpdated {
+            id: "Session:abc".to_string(),
+            typename: "SessionData".to_string(),
+        };
+        match &event {
+            DbChangeEvent::NodeUpdated { id, typename } => {
+                assert_eq!(id, "Session:abc");
+                assert_eq!(typename, "SessionData");
+            }
+            _ => panic!("Expected NodeUpdated variant"),
+        }
+    }
+}
