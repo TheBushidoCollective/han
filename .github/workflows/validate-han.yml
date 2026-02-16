@@ -4,14 +4,14 @@ on:
   pull_request:
     paths:
       - "packages/han/**"
-      - "packages/han-native/**"
+      - "packages/han-rs/**"
       - ".github/workflows/validate-han.yml"
   push:
     branches:
       - main
     paths:
       - "packages/han/**"
-      - "packages/han-native/**"
+      - "packages/han-rs/**"
       - ".github/workflows/validate-han.yml"
   workflow_dispatch:
 
@@ -28,38 +28,6 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.2"
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            packages/han-native/target/
-          key: ${{ runner.os }}-cargo-validate-${{ hashFiles('packages/han-native/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-validate-
-
-      - name: Install han-native dependencies
-        working-directory: ./packages/han-native
-        run: npm ci
-
-      - name: Build native module
-        working-directory: ./packages/han-native
-        run: |
-          cargo build --release
-          # Copy for NAPI-RS loader (packages/han-native/)
-          cp target/release/libhan_native.so han-native.linux-x64-gnu.node
-          # Copy for direct loader (packages/han/native/)
-          mkdir -p ../han/native
-          cp target/release/libhan_native.so ../han/native/han-native.node
-          echo "Built native module:"
-          ls -la han-native.linux-x64-gnu.node ../han/native/han-native.node
 
       - name: Install dependencies
         run: bun install --frozen-lockfile

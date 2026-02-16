@@ -20,29 +20,29 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             bun_target: bun-linux-x64
-            native_file: han-native.linux-x64-gnu.node
             binary_name: han-linux-x64
-            cargo_output: libhan_native.so
+            coordinator_binary: han-coordinator
+            build_method: zigbuild
           - target: aarch64-unknown-linux-gnu
             bun_target: bun-linux-arm64
-            native_file: han-native.linux-arm64-gnu.node
             binary_name: han-linux-arm64
-            cargo_output: libhan_native.so
+            coordinator_binary: han-coordinator
+            build_method: zigbuild
           - target: x86_64-apple-darwin
             bun_target: bun-darwin-x64
-            native_file: han-native.darwin-x64.node
             binary_name: han-darwin-x64
-            cargo_output: libhan_native.dylib
+            coordinator_binary: han-coordinator
+            build_method: docker-zigbuild
           - target: aarch64-apple-darwin
             bun_target: bun-darwin-arm64
-            native_file: han-native.darwin-arm64.node
             binary_name: han-darwin-arm64
-            cargo_output: libhan_native.dylib
+            coordinator_binary: han-coordinator
+            build_method: docker-zigbuild
           - target: x86_64-pc-windows-msvc
             bun_target: bun-windows-x64
-            native_file: han-native.win32-x64-msvc.node
             binary_name: han-windows-x64
-            cargo_output: han_native.dll
+            coordinator_binary: han-coordinator.exe
+            build_method: xwin
 
     runs-on: ${{ contains(matrix.target, 'aarch64-unknown-linux') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     steps:
@@ -98,52 +98,47 @@ jobs:
         run: |
           sudo apt-get install -y llvm clang nasm
 
-      - name: Install han-native dependencies
-        working-directory: ./packages/han-native
-        run: npm ci
-
-      - name: Build native module (zigbuild for Linux)
-        if: contains(matrix.target, 'linux')
-        working-directory: ./packages/han-native
+      - name: Build han-coordinator (zigbuild for Linux)
+        if: matrix.build_method == 'zigbuild'
+        working-directory: ./packages/han-rs
         shell: bash
         run: |
-          cargo zigbuild --release --target ${{ matrix.target }}
-          cp target/${{ matrix.target }}/release/${{ matrix.cargo_output }} ${{ matrix.native_file }}
-          echo "Built native module:"
-          ls -la *.node
+          cargo zigbuild --release --target ${{ matrix.target }} -p han-coordinator
+          mkdir -p ../han/dist/coordinator
+          cp target/${{ matrix.target }}/release/${{ matrix.coordinator_binary }} ../han/dist/coordinator/
+          echo "Built han-coordinator:"
+          ls -la ../han/dist/coordinator/
 
-      - name: Build native module (zigbuild for Darwin via Docker)
-        if: contains(matrix.target, 'apple')
+      - name: Build han-coordinator (zigbuild for Darwin via Docker)
+        if: matrix.build_method == 'docker-zigbuild'
         shell: bash
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/io \
-            -w /io/packages/han-native \
+            -w /io/packages/han-rs \
             ghcr.io/rust-cross/cargo-zigbuild:latest \
-            bash -c "rustup update stable && rustup default stable && rustup target add ${{ matrix.target }} && cargo zigbuild --release --target ${{ matrix.target }}"
-          cp packages/han-native/target/${{ matrix.target }}/release/${{ matrix.cargo_output }} packages/han-native/${{ matrix.native_file }}
-          echo "Built native module:"
-          ls -la packages/han-native/*.node
+            bash -c "rustup update stable && rustup default stable && rustup target add ${{ matrix.target }} && cargo zigbuild --release --target ${{ matrix.target }} -p han-coordinator"
+          mkdir -p packages/han/dist/coordinator
+          cp packages/han-rs/target/${{ matrix.target }}/release/${{ matrix.coordinator_binary }} packages/han/dist/coordinator/
+          echo "Built han-coordinator:"
+          ls -la packages/han/dist/coordinator/
 
-      - name: Build native module (xwin)
-        if: contains(matrix.target, 'windows')
-        working-directory: ./packages/han-native
+      - name: Build han-coordinator (xwin for Windows)
+        if: matrix.build_method == 'xwin'
+        working-directory: ./packages/han-rs
         shell: bash
         run: |
-          cargo xwin build --release --target ${{ matrix.target }}
-          cp target/${{ matrix.target }}/release/${{ matrix.cargo_output }} ${{ matrix.native_file }}
-          echo "Built native module:"
-          ls -la *.node
+          cargo xwin build --release --target ${{ matrix.target }} -p han-coordinator
+          mkdir -p ../han/dist/coordinator
+          cp target/${{ matrix.target }}/release/${{ matrix.coordinator_binary }} ../han/dist/coordinator/
+          echo "Built han-coordinator:"
+          ls -la ../han/dist/coordinator/
 
       - name: Build bun binary
         shell: bash
         run: |
           cd packages/han
           bun install
-          mkdir -p native
-          cp ../han-native/${{ matrix.native_file }} native/han-native.node
-          echo "Prepared native module for embedding:"
-          ls -la native/
           mkdir -p dist/binaries
           bun scripts/build-bundle.js ${{ matrix.bun_target }}
           echo "Built binary:"
@@ -165,6 +160,7 @@ jobs:
           path: |
             packages/han/dist/binaries/${{ matrix.binary_name }}${{ contains(matrix.target, 'windows') && '.exe' || '' }}
             packages/han/dist/binaries/${{ matrix.binary_name }}${{ contains(matrix.target, 'windows') && '.exe' || '' }}.sha256
+            packages/han/dist/coordinator/${{ matrix.coordinator_binary }}
 
   release:
     needs: build
