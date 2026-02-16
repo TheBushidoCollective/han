@@ -1,5 +1,5 @@
 ---
-status: pending
+status: in_progress
 depends_on: ["unit-04-han-coordinator", "unit-05-cli-grpc", "unit-06-han-server"]
 branch: ai-dlc/backend-rearchitecture/07-cleanup
 discipline: devops
