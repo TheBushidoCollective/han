@@ -126,6 +126,7 @@ describe('doctor command', () => {
         'hanBinary: bun run /dev/han/lib/main.ts\n'
       );
       process.env.HAN_REEXEC = '1';
+      process.env.CLAUDE_PROJECT_DIR = testDir;
 
       const results = runDiagnostics();
       const overrideCheck = results.find(
@@ -133,7 +134,7 @@ describe('doctor command', () => {
       );
 
       expect(overrideCheck?.status).toBe('ok');
-      expect(overrideCheck?.details).toContain('Override is active');
+      expect(overrideCheck?.details).toEqual(['Override is active']);
     });
   });
 
