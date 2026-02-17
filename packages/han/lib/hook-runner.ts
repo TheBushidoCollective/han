@@ -1490,20 +1490,19 @@ export async function runAsyncPostToolUse(
 
   if (sessionId) {
     try {
+      const hookCommand = `${pluginName}/${hookName}`;
       const existing = await sessionFileValidations.get(
         sessionId,
         filePath,
-        pluginName,
-        hookName,
-        matchedDir
+        hookCommand
       );
 
       if (existing) {
         // Check if file hash is still the same
         const currentHash = computeFileHash(filePath);
         if (
-          existing.fileHash === currentHash &&
-          existing.commandHash === commandHash
+          existing.file_hash === currentHash &&
+          existing.command_hash === commandHash
         ) {
           // Cache hit - file hasn't changed since last validation
           if (isDebugMode()) {
@@ -1546,13 +1545,11 @@ export async function runAsyncPostToolUse(
       try {
         const fileHash = computeFileHash(filePath);
         await sessionFileValidations.record({
-          sessionId,
-          filePath,
-          fileHash,
-          pluginName,
-          hookName,
-          directory: matchedDir,
-          commandHash,
+          session_id: sessionId,
+          file_path: filePath,
+          file_hash: fileHash,
+          hook_command: `${pluginName}/${hookName}`,
+          command_hash: commandHash,
         });
       } catch {
         // Cache write failed, non-fatal
@@ -1613,15 +1610,15 @@ export async function substituteHanFilesForStop(
   }
 
   try {
-    const sessionFiles = await getSessionModifiedFiles(sessionId);
+    const sessionFiles = await getSessionModifiedFiles(sessionId, process.cwd());
 
-    if (!sessionFiles.success || sessionFiles.allModified.length === 0) {
-      // No session files or query failed - replace with "."
+    if (sessionFiles.modifiedFiles.length === 0) {
+      // No session files - replace with "."
       return { command: buildCommandWithFiles(command, []), skipped: false };
     }
 
     // Filter to files within this config's directory that still exist on disk
-    const relativeFiles = sessionFiles.allModified
+    const relativeFiles = sessionFiles.modifiedFiles
       .filter((absPath) => {
         const inDirectory =
           absPath.startsWith(`${config.directory}/`) ||

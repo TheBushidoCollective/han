@@ -105,7 +105,7 @@ export async function ensureCertificates(): Promise<TLSCredentials | null> {
       return null;
     }
 
-    const bundle: CertBundle = await response.json();
+    const bundle = await response.json() as CertBundle;
 
     // Validate bundle structure
     if (!bundle.cert || !bundle.key || !bundle.expires || !bundle.domain) {
@@ -191,7 +191,7 @@ export async function checkAndRefreshCertificates(
       return false;
     }
 
-    const bundle: CertBundle = await response.json();
+    const bundle = await response.json() as CertBundle;
 
     // Validate bundle structure
     if (!bundle.cert || !bundle.key || !bundle.expires || !bundle.domain) {

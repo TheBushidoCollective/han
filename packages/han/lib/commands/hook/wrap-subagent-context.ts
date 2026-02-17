@@ -1,6 +1,7 @@
 import { execSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import type { Command } from 'commander';
+import { isHooksEnabled } from '../../config/han-settings.ts';
 import { isDebugMode } from '../../shared.ts';
 
 /**
@@ -227,6 +228,9 @@ export function registerWrapSubagentContext(hookCommand: Command): void {
       'XML tag name to wrap context (default: subagent-context)'
     )
     .action(async (options) => {
+      if (!isHooksEnabled()) {
+        process.exit(0);
+      }
       await wrapSubagentContext(options);
     });
 }

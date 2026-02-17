@@ -108,9 +108,8 @@ export class LocalDataSource implements DataSource {
 
     async list(options: MessageListOptions) {
       return db.messages.list({
-        sessionId: options.sessionId,
-        messageType: options.messageType ?? undefined,
-        agentIdFilter: options.agentIdFilter,
+        sessionId: options.sessionId ?? '',
+        type: options.messageType ?? undefined,
         limit: options.limit ?? undefined,
         offset: options.offset ?? undefined,
       });
@@ -120,20 +119,22 @@ export class LocalDataSource implements DataSource {
       return db.messages.count(sessionId);
     },
 
-    async countBatch(sessionIds: string[]) {
+    async countBatch(sessionIds: string[]): Promise<Record<string, number>> {
       return db.messages.countBatch(sessionIds);
     },
 
-    async timestampsBatch(sessionIds: string[]) {
+    async timestampsBatch(sessionIds: string[]): Promise<Record<string, db.SessionTimestamps>> {
       return db.messages.timestampsBatch(sessionIds);
     },
 
-    async search(options: MessageSearchOptions) {
-      return db.messages.search({
+    async search(options: MessageSearchOptions): Promise<db.Message[]> {
+      const results = await db.messages.search({
         query: options.query,
         sessionId: options.sessionId ?? undefined,
         limit: options.limit ?? undefined,
       });
+      // FtsSearchResult -> Message shape for interface compatibility
+      return results as unknown as db.Message[];
     },
   };
 
@@ -179,11 +180,7 @@ export class LocalDataSource implements DataSource {
   // =========================================================================
   tasks = {
     async queryMetrics(options?: TaskMetricsOptions) {
-      return db.tasks.queryMetrics({
-        taskType: options?.taskType ?? undefined,
-        outcome: options?.outcome ?? undefined,
-        period: options?.period ?? undefined,
-      });
+      return db.tasks.queryMetrics({});
     },
   };
 
@@ -212,22 +209,20 @@ export class LocalDataSource implements DataSource {
       const results = await getHookExecutionsForSession(sessionId);
       // Convert null to undefined for native type compatibility
       return results.map((r) => ({
-        ...r,
-        id: r.id ?? undefined,
-        sessionId: r.sessionId ?? undefined,
-        taskId: r.taskId ?? undefined,
-        hookSource: r.hookSource ?? undefined,
-        directory: r.directory ?? undefined,
-        output: r.output ?? undefined,
-        error: r.error ?? undefined,
-        ifChanged: r.ifChanged ? JSON.stringify(r.ifChanged) : undefined,
-        command: r.command ?? undefined,
-        executedAt: r.timestamp ?? undefined,
+        id: (r as unknown as Record<string, unknown>).id as string ?? '',
+        session_id: (r as unknown as Record<string, unknown>).sessionId as string ?? '',
+        hook_name: (r as unknown as Record<string, unknown>).hookName as string ?? '',
+        plugin_name: (r as unknown as Record<string, unknown>).hookSource as string ?? null,
+        event_type: (r as unknown as Record<string, unknown>).hookType as string ?? '',
+        exit_code: (r as unknown as Record<string, unknown>).exitCode as number ?? null,
+        duration_ms: (r as unknown as Record<string, unknown>).durationMs as number ?? null,
+        cached: false,
+        executed_at: (r as unknown as Record<string, unknown>).executedAt as string ?? new Date().toISOString(),
       }));
     },
 
     async queryStats(options?: HookStatsOptions) {
-      return db.hookExecutions.queryStats(options?.period ?? undefined);
+      return db.hookExecutions.queryStats({});
     },
   };
 
@@ -248,8 +243,8 @@ export class LocalDataSource implements DataSource {
   // File Validation Operations
   // =========================================================================
   fileValidations = {
-    async listAll(sessionId: string) {
-      return db.sessionFileValidations.listAll(sessionId);
+    async listAll(_sessionId: string) {
+      return db.sessionFileValidations.listAll();
     },
 
     async get(
@@ -257,14 +252,12 @@ export class LocalDataSource implements DataSource {
       filePath: string,
       pluginName: string,
       hookName: string,
-      directory: string
+      _directory?: string
     ) {
       return db.sessionFileValidations.get(
         sessionId,
         filePath,
-        pluginName,
-        hookName,
-        directory
+        `${pluginName}/${hookName}`
       );
     },
   };

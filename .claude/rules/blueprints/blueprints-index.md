@@ -39,6 +39,8 @@ Update blueprints using the Write tool on `blueprints/{name}.md` when you:
 | coordinator-daemon | Coordinator daemon with GraphQL server, lazy startup, file watching, and unified data access via han-native |
 | coordinator-data-layer | JSONL transcript indexing to SQLite via han-native with FTS5 search and DataLoader-compatible batch queries |
 | distribution-architecture | NPM wrapper with platform-specific Bun binaries, curl installer, and Homebrew distribution |
+| doctor-test-fix | Fix for doctor.test.ts hanBinary Override check failure |
+| fix-plan-2026-02-16 | Fix plan for all build/typecheck/test failures in packages/han on ai-dlc/backend-rearchitecture |
 | han-events-logging | Session-scoped logging of Han events (hooks, MCP calls) to JSONL files indexed into SQLite for Browse UI visibility |
 | han-memory-system | Memory system with Agent SDK synthesis, multi-strategy search (FTS/Vector/Hybrid), plugin-discovered MCP providers, and read-only Memory Agent for autonomous research |
 | hook-result-parent-linkage | Hook result messages need parent_id linkage to hook run messages |
@@ -53,5 +55,6 @@ Update blueprints using the Write tool on `blueprints/{name}.md` when you:
 | rust-graphql-migration | [PROPOSAL] Migration plan for tight DB-GraphQL coupling with Seaography, Relay connections, and sqlite3_update_hook subscriptions |
 | sdlc-coverage | AI-native engineering workflow alignment with OpenAI's framework |
 | settings-management | Multi-scope settings with precedence rules |
+| test-fix-plan | Specific file-by-file fixes for the 117 test failures in packages/han on ai-dlc/backend-rearchitecture |
 | validation | Configuration validation and schema enforcement |
 | website | Static marketplace site with search and documentation |

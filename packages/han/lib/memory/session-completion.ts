@@ -91,7 +91,7 @@ export async function detectCompletedSessions(
   const results: SessionCompletionStatus[] = [];
 
   for (const session of allSessions) {
-    const messageCount = session.message_count ?? 0;
+    const messageCount = 0; // message_count not available in gRPC Session type
     const lastMessageAt = session.ended_at || null;
     const sessionId = session.id;
 

@@ -4,7 +4,7 @@
  * Uses existsSync mock that returns true to exercise findCoordinatorBinary
  * success path and Bun.spawn error handling.
  */
-import { describe, expect, mock, test, beforeEach, afterEach } from "bun:test";
+import { describe, expect, mock, test, beforeEach, afterEach, afterAll } from "bun:test";
 
 // ============================================================================
 // Mock infrastructure — existsSync returns true to simulate binary found
@@ -64,6 +64,16 @@ afterEach(async () => {
 	// Ensure stopped between tests
 	mockShutdown.mockResolvedValue({});
 	await cs.stopCoordinatorService();
+});
+
+// Restore real node:fs after all tests to prevent mock from bleeding into
+// other test files. Bun 1.3.4 shares mock.module state across test files
+// within the same test run, so this cleanup is essential.
+afterAll(() => {
+	// Re-mock node:fs with real implementation to unblock other test files
+	// that depend on existsSync returning accurate results
+	const realFs = require("node:fs");
+	mock.module("node:fs", () => realFs);
 });
 
 // ============================================================================

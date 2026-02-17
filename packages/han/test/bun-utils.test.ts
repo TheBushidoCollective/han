@@ -98,9 +98,9 @@ describe("Bun Utils", () => {
 
 	describe("FileEventType", () => {
 		it("has expected values", () => {
-			expect(FileEventType.Created).toBe("Created");
-			expect(FileEventType.Modified).toBe("Modified");
-			expect(FileEventType.Removed).toBe("Removed");
+			expect(FileEventType.Created as string).toBe("Created");
+			expect(FileEventType.Modified as string).toBe("Modified");
+			expect(FileEventType.Removed as string).toBe("Removed");
 		});
 	});
 });

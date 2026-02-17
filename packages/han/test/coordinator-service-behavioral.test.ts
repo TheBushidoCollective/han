@@ -4,7 +4,7 @@
  * Tests the coordinator lifecycle management, health checks,
  * version comparison, gRPC delegation, and state management.
  */
-import { describe, expect, mock, test, beforeEach, afterEach } from "bun:test";
+import { describe, expect, mock, test, beforeEach, afterEach, afterAll } from "bun:test";
 
 // ============================================================================
 // Mock infrastructure
@@ -76,6 +76,14 @@ afterEach(() => {
 	console.log = originalLog;
 	console.error = originalError;
 });
+// Restore real node:fs after all tests to prevent mock from bleeding into
+// other test files. Bun 1.3.4 shares mock.module state across test files
+// within the same test run.
+afterAll(() => {
+	const realFs = require("node:fs");
+	mock.module("node:fs", () => realFs);
+});
+
 
 // ============================================================================
 // getCoordinatorVersion
@@ -111,13 +119,16 @@ describe("isCoordinatorInstance", () => {
 describe("getCoordinatorStatus", () => {
 	test("delegates to gRPC coordinator.status", async () => {
 		mockStatus.mockResolvedValueOnce({
-			healthy: true,
 			version: "1.0.0",
-			uptime: 100,
+			uptimeSeconds: "100",
+			dbPath: "/path/to/db",
+			sessionCount: 0n,
+			messageCount: 0n,
+			watcherActive: false,
+			watchedPaths: [],
 		});
 
 		const result = await cs.getCoordinatorStatus();
-		expect(result.healthy).toBe(true);
 		expect(result.version).toBe("1.0.0");
 		expect(mockStatus).toHaveBeenCalledTimes(1);
 	});

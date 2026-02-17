@@ -38,14 +38,14 @@ export function executeHook(
       shouldSkipHook(hook.pluginName, hook.name, fp)
     );
     if (allCached) {
-      return {
+      return Promise.resolve({
         hook,
         exitCode: 0,
         stdout: '',
         stderr: '',
         durationMs: 0,
         skipped: true,
-      };
+      });
     }
   }
 

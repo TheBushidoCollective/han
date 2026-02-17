@@ -166,18 +166,14 @@ async function searchTranscriptsNative(
     });
 
     return messages.map((msg) => ({
-      id: `transcript:${msg.session_id}:${msg.id}`,
-      content: msg.content || msg.tool_result || msg.tool_input || '',
-      score: 0.7, // FTS matches get decent score
+      id: `transcript:${msg.session_id ?? 'unknown'}:${msg.id}`,
+      content: msg.content || '',
+      score: msg.score ?? 0.7, // FTS matches get decent score
       layer: 'transcripts',
       metadata: {
         sessionId: msg.session_id,
         messageId: msg.id,
-        role: msg.role,
-        messageType: msg.message_type,
-        toolName: msg.tool_name,
-        timestamp: new Date(msg.timestamp).getTime(),
-        lineNumber: msg.line_number,
+        source: msg.source,
       },
       browseUrl: `/sessions/${msg.session_id}#msg-${msg.id}`,
     }));

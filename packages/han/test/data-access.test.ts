@@ -44,9 +44,9 @@ describe("gRPC Data Access Layer", () => {
 	});
 
 	it("exports FileEventType enum", () => {
-		expect(FileEventType.Created).toBe("Created");
-		expect(FileEventType.Modified).toBe("Modified");
-		expect(FileEventType.Removed).toBe("Removed");
+		expect(FileEventType.Created as string).toBe("Created");
+		expect(FileEventType.Modified as string).toBe("Modified");
+		expect(FileEventType.Removed as string).toBe("Removed");
 	});
 
 	it("getDbPath returns a valid path", () => {

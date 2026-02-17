@@ -110,15 +110,12 @@ export async function getStatus(port?: number): Promise<CoordinatorStatus> {
   // Health check failed - try to clean up stale locks
   try {
     const { coordinator: coord } = await import('../../grpc/data-access.ts');
-    const cleaned = coord.cleanupStaleLock();
-    if (cleaned) {
-      console.log('[coordinator] Cleaned up stale lock file');
+    // In gRPC architecture, stale lock cleanup is handled by the Rust coordinator
       removePidFile();
       return {
         running: false,
         port: effectivePort,
       };
-    }
   } catch (error) {
     // gRPC data access not available or error - fall back to PID check
     if (process.env.HAN_DEBUG) {

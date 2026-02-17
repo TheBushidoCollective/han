@@ -23,7 +23,11 @@ tsconfig.tsbuildinfo
 # Build output
 packages/han/out/
 packages/han-rs/target/
+packages/han-native/
 plugins/**/dist/
+
+# Plugin lock files (managed per-plugin, not committed)
+plugins/**/bun.lock
 
 # Google Cloud credentials
 gcloud-credentials.json

@@ -592,7 +592,7 @@ export const messages = {
 	async count(_sessionId: string): Promise<number> {
 		throw new Error("messages.count: use GraphQL query instead");
 	},
-	async countBatch(_sessionIds: string[]): Promise<Map<string, number>> {
+	async countBatch(_sessionIds: string[]): Promise<Record<string, number>> {
 		throw new Error("messages.countBatch: use GraphQL query instead");
 	},
 	async getLastIndexedLine(_sessionId: string): Promise<number> {
@@ -602,7 +602,7 @@ export const messages = {
 	},
 	async timestampsBatch(
 		_sessionIds: string[],
-	): Promise<Map<string, SessionTimestamps>> {
+	): Promise<Record<string, SessionTimestamps>> {
 		throw new Error(
 			"messages.timestampsBatch: use GraphQL query instead",
 		);
@@ -620,7 +620,7 @@ export const messages = {
 			sessionId: options.sessionId,
 			limit: options.limit ?? 20,
 		});
-		return resp.results.map((r) => ({
+		return (resp.results as Array<{ id: string; content: string; score: number; sessionId?: string; source?: string }>).map((r) => ({
 			id: r.id,
 			content: r.content,
 			score: r.score,
@@ -942,7 +942,7 @@ export const fts = {
 			sessionId: options?.sessionId,
 			limit: options?.limit ?? 20,
 		});
-		return resp.results.map((r) => ({
+		return (resp.results as Array<{ id: string; content: string; score: number; sessionId?: string; source?: string }>).map((r) => ({
 			id: r.id,
 			content: r.content,
 			score: r.score,
@@ -984,7 +984,7 @@ export const vectors = {
 			sessionId: options?.sessionId,
 			limit: options?.limit ?? 20,
 		});
-		return resp.results.map((r) => ({
+		return (resp.results as Array<{ id: string; content: string; score: number; sessionId?: string; source?: string }>).map((r) => ({
 			id: r.id,
 			content: r.content,
 			score: r.score,
@@ -1374,7 +1374,7 @@ export function getDefaultWatchPath(): string {
 }
 
 // Re-exports that previously came from native.ts
-export { FileEventType } from "../bun-utils.js";
+export { FileEventType } from "../bun-utils.ts";
 
 // ============================================================================
 // Helpers

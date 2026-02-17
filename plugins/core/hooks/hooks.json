@@ -75,18 +75,6 @@
           }
         ]
       }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Task|Skill",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han hook inject-subagent-context",
-            "timeout": 10
-          }
-        ]
-      }
     ]
   }
 }

@@ -106,10 +106,10 @@ export function getTodoCounts(todos: TodoItem[]): {
 export async function getTodosFromDb(sessionId: string): Promise<TodoItem[]> {
   try {
     const result = await sessionTodos.get(sessionId);
-    if (!result?.todosJson) {
+    if (!result?.todos_json) {
       return [];
     }
-    const parsed = JSON.parse(result.todosJson);
+    const parsed = JSON.parse(result.todos_json);
     if (!Array.isArray(parsed)) {
       return [];
     }

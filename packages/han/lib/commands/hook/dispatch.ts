@@ -17,12 +17,11 @@ import {
   type MarketplaceConfig,
   readSettingsFile,
 } from '../../config/claude-settings.ts';
-
+import { isHooksEnabled } from '../../config/han-settings.ts';
+import { getEventLogger, initEventLogger } from '../../events/logger.ts';
+import { isCoordinatorHealthy } from '../../grpc/client.ts';
 import { sessionFileChanges } from '../../grpc/data-access.ts';
 import { executeHooksViaGrpc } from '../../grpc/hook-executor.ts';
-import { isCoordinatorHealthy } from '../../grpc/client.ts';
-
-import { getEventLogger, initEventLogger } from '../../events/logger.ts';
 import { getClaudeProjectPath } from '../../memory/paths.ts';
 import { getPluginNameFromRoot, isDebugMode } from '../../shared.ts';
 import { recordHookExecution as recordOtelHookExecution } from '../../telemetry/index.ts';
@@ -154,6 +153,9 @@ interface HookPayload {
   hook_event_name?: string;
   agent_id?: string;
   agent_type?: string;
+  tool_name?: string;
+  tool_input?: unknown;
+  cwd?: string;
 }
 
 /**
@@ -685,25 +687,34 @@ async function dispatchHooks(
   const coordinatorHealthy = await isCoordinatorHealthy().catch(() => false);
   if (coordinatorHealthy) {
     if (isDebugMode()) {
-      console.error(`[dispatch] Delegating to coordinator via gRPC for ${hookType}`);
+      console.error(
+        `[dispatch] Delegating to coordinator via gRPC for ${hookType}`
+      );
     }
     try {
       const results = await executeHooksViaGrpc({
         event: hookType,
         sessionId: sessionId,
-        toolName: typeof payload?.tool_name === 'string' ? payload.tool_name : undefined,
-        toolInput: payload?.tool_input ? JSON.stringify(payload.tool_input) : undefined,
+        toolName:
+          typeof payload?.tool_name === 'string'
+            ? payload.tool_name
+            : undefined,
+        toolInput: payload?.tool_input
+          ? JSON.stringify(payload.tool_input)
+          : undefined,
         cwd: typeof payload?.cwd === 'string' ? payload.cwd : process.cwd(),
       });
       // Check for failures
-      const failures = results.filter(r => r.exitCode !== 0);
+      const failures = results.filter((r) => r.exitCode !== 0);
       if (failures.length > 0 && isDebugMode()) {
         console.error(`[dispatch] ${failures.length} hook(s) failed via gRPC`);
       }
       return; // gRPC handled it — skip local execution
     } catch (error) {
       if (isDebugMode()) {
-        console.error(`[dispatch] gRPC execution failed, falling back to local: ${error}`);
+        console.error(
+          `[dispatch] gRPC execution failed, falling back to local: ${error}`
+        );
       }
       // Fall through to local execution
     }
@@ -799,6 +810,9 @@ export function registerHookDispatch(hookCommand: Command): void {
         hookType: string,
         options: { all?: boolean; cache?: boolean; checkpoints?: boolean }
       ) => {
+        if (!isHooksEnabled()) {
+          process.exit(0);
+        }
         // Commander uses --no-X pattern which sets cache/checkpoints to false when used
         await dispatchHooks(
           hookType,

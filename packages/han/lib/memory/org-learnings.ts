@@ -190,7 +190,7 @@ async function aggregatePatternsFromSessions(
             sessionPatterns.add(pattern);
 
             const existing = patternCounts.get(pattern);
-            const timestamp = new Date(msg.timestamp).getTime();
+            const timestamp = new Date(msg.timestamp ?? 0).getTime();
 
             if (existing) {
               existing.count++;

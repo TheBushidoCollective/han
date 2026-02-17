@@ -161,10 +161,10 @@ export async function startCoordinatorService(): Promise<void> {
 			{
 				stdout: "ignore",
 				stderr: "ignore",
-				// Don't keep parent alive
-				unref: true,
 			},
 		);
+		// Don't keep parent alive
+		state.process.unref();
 
 		// Wait for it to become healthy
 		const healthy = await waitForHealthy(state.port);

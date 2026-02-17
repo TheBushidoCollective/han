@@ -220,7 +220,7 @@ export function checkSyncEligibility(
   const syncConfig = resolveConfig(config);
 
   // No repo means we can't determine eligibility
-  if (!repo || !repo.remote) {
+  if (!repo || !repo.remote_url) {
     return {
       eligible: false,
       reason: 'No repository information available',
@@ -230,11 +230,11 @@ export function checkSyncEligibility(
   }
 
   // Parse the remote URL
-  const parsed = parseGitRemote(repo.remote);
+  const parsed = parseGitRemote(repo.remote_url);
   if (!parsed) {
     return {
       eligible: false,
-      reason: `Unable to parse repository remote: ${repo.remote}`,
+      reason: `Unable to parse repository remote: ${repo.remote_url}`,
       repoType: 'unknown',
       repoOwner: null,
     };
@@ -242,7 +242,7 @@ export function checkSyncEligibility(
 
   // Check forced exclusions first (highest priority)
   if (syncConfig?.forceExclude?.length) {
-    if (matchesPattern(repo.remote, syncConfig.forceExclude)) {
+    if (matchesPattern(repo.remote_url, syncConfig.forceExclude)) {
       return {
         eligible: false,
         reason: 'Repository is in force exclude list',
@@ -254,7 +254,7 @@ export function checkSyncEligibility(
 
   // Check forced inclusions (overrides personal repo check)
   if (syncConfig?.forceInclude?.length) {
-    if (matchesPattern(repo.remote, syncConfig.forceInclude)) {
+    if (matchesPattern(repo.remote_url, syncConfig.forceInclude)) {
       return {
         eligible: true,
         reason: 'Repository is in force include list',
