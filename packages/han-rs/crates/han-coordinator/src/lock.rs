@@ -155,12 +155,23 @@ impl Drop for CoordinatorLock {
 }
 
 /// Check if a process with the given PID exists.
+#[cfg(unix)]
 fn process_exists(pid: u32) -> bool {
     use nix::sys::signal;
     use nix::unistd::Pid;
 
     // kill(pid, 0) checks process existence without sending a signal
     signal::kill(Pid::from_raw(pid as i32), None).is_ok()
+}
+
+#[cfg(windows)]
+fn process_exists(pid: u32) -> bool {
+    use std::process::Command;
+    Command::new("tasklist")
+        .args(["/FI", &format!("PID eq {pid}"), "/NH"])
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).contains(&pid.to_string()))
+        .unwrap_or(false)
 }
 
 #[cfg(test)]

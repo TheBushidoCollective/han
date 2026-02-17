@@ -117,7 +117,7 @@ jobs:
             -v ${{ github.workspace }}:/io \
             -w /io/packages/han-rs \
             ghcr.io/rust-cross/cargo-zigbuild:latest \
-            bash -c "rustup update stable && rustup default stable && rustup target add ${{ matrix.target }} && cargo zigbuild --release --target ${{ matrix.target }} -p han-coordinator"
+            bash -c "apt-get update && apt-get install -y protobuf-compiler && rustup update stable && rustup default stable && rustup target add ${{ matrix.target }} && cargo zigbuild --release --target ${{ matrix.target }} -p han-coordinator"
           mkdir -p packages/han/dist/coordinator
           cp packages/han-rs/target/${{ matrix.target }}/release/${{ matrix.coordinator_binary }} packages/han/dist/coordinator/
           echo "Built han-coordinator:"
