@@ -40,6 +40,7 @@ function findPluginHooksFiles(): string[] {
 interface HookConfig {
   type: string;
   command: string;
+  async?: boolean;
 }
 
 interface HookEntry {
