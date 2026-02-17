@@ -1,0 +1,20 @@
+{
+  "name": "git-worktrees",
+  "version": "1.0.0",
+  "description": "Agent isolation via git worktrees - gives each subagent its own checkout to prevent interference.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "git",
+    "worktree",
+    "isolation",
+    "subagent",
+    "parallel",
+    "multi-agent"
+  ]
+}

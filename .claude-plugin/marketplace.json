@@ -564,6 +564,20 @@
       ]
     },
     {
+      "name": "git-worktrees",
+      "description": "Agent isolation via git worktrees - gives each subagent its own checkout to prevent interference during parallel work.",
+      "source": "./plugins/patterns/git-worktrees",
+      "category": "Pattern",
+      "keywords": [
+        "git",
+        "worktree",
+        "isolation",
+        "subagent",
+        "parallel",
+        "multi-agent"
+      ]
+    },
+    {
       "name": "github",
       "description": "MCP server configuration for GitHub integration providing repository management, issues, pull requests, actions, and code search.",
       "source": "./plugins/services/github",

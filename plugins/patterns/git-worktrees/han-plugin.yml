@@ -1,0 +1,6 @@
+# git-worktrees plugin configuration
+# Provides agent isolation via git worktrees for subagent tasks
+#
+# Hooks are defined in hooks/hooks.json for direct Claude Code integration
+
+hooks: {}

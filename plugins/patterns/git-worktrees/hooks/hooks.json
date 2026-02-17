@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook wrap-subagent-context --context-command 'bash \"${CLAUDE_PLUGIN_ROOT}/hooks/worktree-context.sh\"'"
+          }
+        ]
+      }
+    ]
+  }
+}
