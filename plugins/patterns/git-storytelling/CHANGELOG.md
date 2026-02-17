@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-02-17
+
+### Added
+
+- backend rearchitecture — Rust crates replace han-native (#70) ([877601e0](../../commit/877601e0))
+
+### Fixed
+
+- move API Dockerfile into service directory for Railway build context ([75a8a4b9](../../commit/75a8a4b9))
+
 ## [2.2.0] - 2026-02-14
 
 ### Fixed
