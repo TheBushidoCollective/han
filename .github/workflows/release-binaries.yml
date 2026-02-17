@@ -104,10 +104,10 @@ jobs:
         shell: bash
         run: |
           cargo zigbuild --release --target ${{ matrix.target }} -p han-coordinator
-          mkdir -p ../han/dist/coordinator
-          cp target/${{ matrix.target }}/release/${{ matrix.coordinator_binary }} ../han/dist/coordinator/
+          mkdir -p ../han/dist/binaries
+          cp target/${{ matrix.target }}/release/${{ matrix.coordinator_binary }} ../han/dist/binaries/
           echo "Built han-coordinator:"
-          ls -la ../han/dist/coordinator/
+          ls -la ../han/dist/binaries/${{ matrix.coordinator_binary }}
 
       - name: Build han-coordinator (zigbuild for Darwin via Docker)
         if: matrix.build_method == 'docker-zigbuild'
@@ -118,10 +118,10 @@ jobs:
             -w /io/packages/han-rs \
             ghcr.io/rust-cross/cargo-zigbuild:latest \
             bash -c "apt-get update && apt-get install -y protobuf-compiler && rustup update stable && rustup default stable && rustup target add ${{ matrix.target }} && cargo zigbuild --release --target ${{ matrix.target }} -p han-coordinator"
-          mkdir -p packages/han/dist/coordinator
-          cp packages/han-rs/target/${{ matrix.target }}/release/${{ matrix.coordinator_binary }} packages/han/dist/coordinator/
+          mkdir -p packages/han/dist/binaries
+          cp packages/han-rs/target/${{ matrix.target }}/release/${{ matrix.coordinator_binary }} packages/han/dist/binaries/
           echo "Built han-coordinator:"
-          ls -la packages/han/dist/coordinator/
+          ls -la packages/han/dist/binaries/${{ matrix.coordinator_binary }}
 
       - name: Build han-coordinator (xwin for Windows)
         if: matrix.build_method == 'xwin'
@@ -129,10 +129,10 @@ jobs:
         shell: bash
         run: |
           cargo xwin build --release --target ${{ matrix.target }} -p han-coordinator
-          mkdir -p ../han/dist/coordinator
-          cp target/${{ matrix.target }}/release/${{ matrix.coordinator_binary }} ../han/dist/coordinator/
+          mkdir -p ../han/dist/binaries
+          cp target/${{ matrix.target }}/release/${{ matrix.coordinator_binary }} ../han/dist/binaries/
           echo "Built han-coordinator:"
-          ls -la ../han/dist/coordinator/
+          ls -la ../han/dist/binaries/${{ matrix.coordinator_binary }}
 
       - name: Build bun binary
         shell: bash
@@ -157,10 +157,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.binary_name }}
-          path: |
-            packages/han/dist/binaries/${{ matrix.binary_name }}${{ contains(matrix.target, 'windows') && '.exe' || '' }}
-            packages/han/dist/binaries/${{ matrix.binary_name }}${{ contains(matrix.target, 'windows') && '.exe' || '' }}.sha256
-            packages/han/dist/coordinator/${{ matrix.coordinator_binary }}
+          path: packages/han/dist/binaries/
 
   release:
     needs: build
