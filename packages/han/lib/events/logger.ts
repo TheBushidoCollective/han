@@ -12,7 +12,7 @@ import { randomUUID } from 'node:crypto';
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { ensureMemoryDirs, getHanEventsFilePath } from '../memory/paths.ts';
-import { getGitBranch as nativeGetGitBranch } from '../native.ts';
+import { getGitBranch as nativeGetGitBranch } from '../bun-utils.ts';
 import { isDebugMode } from '../shared.ts';
 import type {
   EventLogConfig,

@@ -5,11 +5,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run plugin-development generate-hooks --async"
+            "command": "han hook run claude-plugin-development generate-hooks --async",
+            "async": true
           }
         ],
-        "matcher": "Edit|Write",
-        "async": true
+        "matcher": "Edit|Write"
       }
     ],
     "Stop": [
@@ -17,28 +17,28 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run plugin-development lint --async"
+            "command": "han hook run claude-plugin-development lint --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run plugin-development config-sync --async"
+            "command": "han hook run claude-plugin-development config-sync --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run plugin-development generate-hooks --async"
+            "command": "han hook run claude-plugin-development generate-hooks --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       }
     ],
     "SubagentStop": [
@@ -46,28 +46,28 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run plugin-development lint --async"
+            "command": "han hook run claude-plugin-development lint --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run plugin-development config-sync --async"
+            "command": "han hook run claude-plugin-development config-sync --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run plugin-development generate-hooks --async"
+            "command": "han hook run claude-plugin-development generate-hooks --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       }
     ]
   }

@@ -12,7 +12,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import { basename, join, relative } from 'node:path';
 import { getClaudeConfigDir } from '../config/claude-settings.ts';
 import { parseTranscript, pathToSlug } from '../memory/transcript-search.ts';
-import { getNativeModule } from '../native.ts';
+// Native module removed - extractFileOperations inlined below
 import { findFilesWithGlob } from './hook-cache.ts';
 
 /**
@@ -112,7 +112,6 @@ function findAgentTranscript(
 async function extractModifiedFilesFromTranscript(
   transcriptPath: string
 ): Promise<TranscriptModifiedFiles> {
-  const native = getNativeModule();
   const written = new Set<string>();
   const edited = new Set<string>();
 
@@ -122,16 +121,17 @@ async function extractModifiedFilesFromTranscript(
   for (const message of messages) {
     if (message.type !== 'assistant') continue;
 
-    // Use native regex extraction for performance
-    const result = native.extractFileOperations(message.content);
-
-    for (const op of result.operations) {
-      if (op.operation === 'write') {
-        written.add(op.path);
-      } else if (op.operation === 'edit') {
-        edited.add(op.path);
-      }
-      // Skip 'read' and 'delete' for hook filtering
+    // Simple regex extraction (replaces native Rust extraction)
+    const content = message.content;
+    // Match Write tool invocations
+    const writeMatches = content.matchAll(/(?:Writing|Wrote|Creating|Created)\s+(?:to\s+)?['"`]?([^\s'"`]+\.\w+)/gi);
+    for (const m of writeMatches) {
+      if (m[1]) written.add(m[1]);
+    }
+    // Match Edit tool invocations
+    const editMatches = content.matchAll(/(?:Editing|Edited|Modifying|Modified)\s+['"`]?([^\s'"`]+\.\w+)/gi);
+    for (const m of editMatches) {
+      if (m[1]) edited.add(m[1]);
     }
   }
 

@@ -5,7 +5,7 @@ website/node_modules/
 
 # Cargo build artifacts
 **/target/
-packages/han-native/target/
+packages/han-rs/target/
 
 # Playwright test artifacts
 **/playwright-report/

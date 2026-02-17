@@ -35,7 +35,6 @@ interface ClaudeHooksJson {
 interface ClaudeHookGroup {
   matcher?: string;
   hooks: ClaudeHookEntry[];
-  async?: boolean;
 }
 
 interface ClaudeHookEntry {
@@ -43,6 +42,7 @@ interface ClaudeHookEntry {
   command?: string;
   prompt?: string;
   timeout?: number;
+  async?: boolean;
 }
 
 /**
@@ -111,6 +111,11 @@ export function generateHooksJson(
         command,
       };
 
+      // All hooks async by default (sync: true in YAML overrides)
+      if (isAsync) {
+        hookEntry.async = true;
+      }
+
       const hookGroup: ClaudeHookGroup = {
         hooks: [hookEntry],
       };
@@ -120,11 +125,6 @@ export function generateHooksJson(
         toolMatcher || hookDef.tool_filter?.join('|') || undefined;
       if (effectiveMatcher) {
         hookGroup.matcher = effectiveMatcher;
-      }
-
-      // All hooks async by default (sync: true in YAML overrides)
-      if (isAsync) {
-        hookGroup.async = true;
       }
 
       if (!eventGroups.has(eventType)) {

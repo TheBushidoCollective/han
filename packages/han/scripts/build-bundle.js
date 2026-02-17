@@ -3,11 +3,13 @@
  * Build script for han CLI binary.
  *
  * This script compiles the TypeScript source directly to a standalone binary
- * using `bun build --compile`. The native module (.node file) is embedded
- * automatically when using a bare `require()` with a static string path.
+ * using `bun build --compile`.
  *
  * Since bun build --compile doesn't support --define, we generate a build-info
  * file that gets imported by the main module.
+ *
+ * The han-coordinator binary is built separately by the Rust workspace
+ * (packages/han-rs) and distributed alongside the CLI binary.
  *
  * Usage:
  *   bun scripts/build-bundle.js [target]
@@ -21,8 +23,6 @@
  *   - bun-windows-x64
  */
 import {
-  copyFileSync,
-  existsSync,
   mkdirSync,
   readFileSync,
   writeFileSync,
@@ -59,44 +59,6 @@ console.log(`Building han v${version} for ${target}...`);
 
 // Ensure output directory exists
 mkdirSync(dirname(outfile), { recursive: true });
-
-// Map target to platform identifier for native module
-// These names must match the workflow matrix native_file values
-const platformMap = {
-  bun: `${process.platform}-${process.arch}`,
-  'bun-darwin-arm64': 'darwin-arm64',
-  'bun-darwin-x64': 'darwin-x64',
-  'bun-linux-x64': 'linux-x64-gnu',
-  'bun-linux-arm64': 'linux-arm64-gnu',
-  'bun-windows-x64': 'win32-x64-msvc',
-};
-
-const platform = platformMap[target];
-if (!platform) {
-  console.error(`Unknown target: ${target}`);
-  process.exit(1);
-}
-
-// Copy the native module for the target platform
-const nativeModuleSrc = join(
-  __dirname,
-  '..',
-  '..',
-  'han-native',
-  `han-native.${platform}.node`
-);
-const nativeModuleDest = join(__dirname, '..', 'native', 'han-native.node');
-
-if (!existsSync(nativeModuleSrc)) {
-  console.error(
-    `Native module not found for platform ${platform}: ${nativeModuleSrc}`
-  );
-  process.exit(1);
-}
-
-mkdirSync(dirname(nativeModuleDest), { recursive: true });
-copyFileSync(nativeModuleSrc, nativeModuleDest);
-console.log(`Copied native module: ${nativeModuleSrc} -> ${nativeModuleDest}`);
 
 // Generate build-info.ts with version and prompt embedded
 const buildInfoPath = join(__dirname, '..', 'lib', 'build-info.generated.ts');
@@ -135,22 +97,6 @@ const proc = Bun.spawn(
     'vite',
     '--external',
     'lightningcss',
-    // Externalize han-native to prevent bundling the napi-rs loader
-    // (we load the .node file directly via lib/native.ts)
-    '--external',
-    'han-native',
-    '--external',
-    '@thebushidocollective/han-native',
-    '--external',
-    '@thebushidocollective/han-native-darwin-arm64',
-    '--external',
-    '@thebushidocollective/han-native-darwin-x64',
-    '--external',
-    '@thebushidocollective/han-native-linux-x64-gnu',
-    '--external',
-    '@thebushidocollective/han-native-linux-arm64-gnu',
-    '--external',
-    '@thebushidocollective/han-native-win32-x64-msvc',
     join(__dirname, '..', 'lib', 'main.ts'),
     '--outfile',
     outfile,

@@ -285,7 +285,7 @@ export function registerCoordinatorCommands(program: Command): void {
     .option('--name <name>', 'Human-friendly name for this environment')
     .action(async (options: { configDir?: string; name?: string }) => {
       try {
-        const { registerConfigDir } = await import('../../db/index.ts');
+        const { registerConfigDir } = await import('../../grpc/data-access.ts');
 
         // Determine config dir to register
         const configDir =
@@ -299,18 +299,17 @@ export function registerCoordinatorCommands(program: Command): void {
         // Always register (idempotent upsert)
         const result = await registerConfigDir({
           path: configDir,
-          name: options.name,
-          isDefault,
+          label: options.name,
         });
 
         console.log(
-          `Registered config directory: ${result.path}${result.name ? ` (${result.name})` : ''}`
+          `Registered config directory: ${result.path}${result.label ? ` (${result.label})` : ''}`
         );
 
         // Spawn a detached subprocess to index sessions.
         // fullScanAndIndex is a sync Rust napi call that blocks the Node event loop,
         // so we run it out-of-process to avoid starving the coordinator's GraphQL.
-        const indexScript = `import { indexer } from '${import.meta.resolve('../../db/index.ts')}'; const r = await indexer.fullScanAndIndex(); console.log('Indexed ' + r.length + ' sessions');`;
+        const indexScript = `import { indexer } from '${import.meta.resolve('../../grpc/data-access.ts')}'; const r = await indexer.fullScanAndIndex(); console.log('Indexed ' + r.length + ' sessions');`;
         const child = spawn(process.execPath, ['-e', indexScript], {
           detached: true,
           stdio: 'ignore',

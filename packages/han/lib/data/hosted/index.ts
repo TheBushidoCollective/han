@@ -22,7 +22,7 @@ import type {
   SessionTodos as NativeSessionTodos,
   TaskMetrics as NativeTaskMetrics,
   SessionTimestamps,
-} from '../../db/index.ts';
+} from '../../grpc/data-access.ts';
 import type {
   Connection,
   ConnectionArgs,
@@ -67,12 +67,15 @@ import * as schema from './schema/index.ts';
  */
 function toNativeSession(session: schema.Session): NativeSession {
   return {
-    id: session.localSessionId,
-    projectId: session.projectId ?? undefined,
-    status: session.status,
-    transcriptPath: session.transcriptPath ?? undefined,
-    slug: session.slug ?? undefined,
-    lastIndexedLine: session.lastIndexedLine ?? undefined,
+    id: session.id ?? session.localSessionId ?? '',
+    session_id: session.localSessionId ?? '',
+    project_id: session.projectId ?? null,
+    status: session.status ?? null,
+    session_file_path: session.transcriptPath ?? null,
+    session_slug: session.slug ?? null,
+    started_at: session.createdAt?.toISOString() ?? null,
+    ended_at: null,
+    last_indexed_line: session.lastIndexedLine ?? null,
   };
 }
 
@@ -81,26 +84,18 @@ function toNativeSession(session: schema.Session): NativeSession {
  */
 function toNativeMessage(message: schema.Message): NativeMessage {
   return {
-    id: message.localMessageId,
-    sessionId: '', // Will be set from context
-    agentId: message.agentId ?? undefined,
-    parentId: message.parentId ?? undefined,
-    messageType: message.messageType,
-    role: message.role ?? undefined,
-    content: message.content ?? undefined,
-    toolName: message.toolName ?? undefined,
-    toolInput: message.toolInput ?? undefined,
-    toolResult: message.toolResult ?? undefined,
-    rawJson: message.rawJson ?? undefined,
-    timestamp: message.timestamp.toISOString(),
-    lineNumber: message.lineNumber,
-    sourceFileName: message.sourceFileName ?? undefined,
-    sourceFileType: message.sourceFileType ?? undefined,
-    sentimentScore: message.sentimentScore ?? undefined,
-    sentimentLevel: message.sentimentLevel ?? undefined,
-    frustrationScore: message.frustrationScore ?? undefined,
-    frustrationLevel: message.frustrationLevel ?? undefined,
-    indexedAt: message.indexedAt?.toISOString() ?? undefined,
+    id: message.localMessageId ?? message.id ?? '',
+    session_id: '', // Will be set from context
+    line_number: message.lineNumber,
+    timestamp: message.timestamp?.toISOString() ?? null,
+    type: message.messageType ?? '',
+    role: message.role ?? null,
+    content: message.content ?? null,
+    tool_call_id: null,
+    tool_name: message.toolName ?? null,
+    parent_id: message.parentId ?? null,
+    uuid: null,
+    raw_json: message.rawJson ?? null,
   };
 }
 
@@ -109,15 +104,12 @@ function toNativeMessage(message: schema.Message): NativeMessage {
  */
 function toNativeProject(project: schema.Project): NativeProject {
   return {
-    id: project.id ?? undefined,
-    repoId: project.repositoryId ?? undefined,
-    slug: project.slug,
+    id: project.id ?? '',
+    repo_id: project.repositoryId ?? null,
     path: project.path ?? '',
-    relativePath: project.relativePath ?? undefined,
-    name: project.name,
-    isWorktree: project.isWorktree ?? false,
-    createdAt: project.createdAt?.toISOString() ?? undefined,
-    updatedAt: project.updatedAt?.toISOString() ?? undefined,
+    slug: project.slug ?? '',
+    name: project.name ?? null,
+    created_at: project.createdAt?.toISOString() ?? new Date().toISOString(),
   };
 }
 
@@ -126,12 +118,12 @@ function toNativeProject(project: schema.Project): NativeProject {
  */
 function toNativeRepo(repo: schema.Repository): NativeRepo {
   return {
-    id: repo.id ?? undefined,
-    remote: repo.remote,
-    name: repo.name,
-    defaultBranch: repo.defaultBranch ?? undefined,
-    createdAt: repo.createdAt?.toISOString() ?? undefined,
-    updatedAt: repo.updatedAt?.toISOString() ?? undefined,
+    id: repo.id ?? '',
+    remote_url: repo.remote ?? '',
+    provider: null,
+    owner: null,
+    name: repo.name ?? null,
+    created_at: repo.createdAt?.toISOString() ?? new Date().toISOString(),
   };
 }
 
@@ -142,27 +134,15 @@ function toNativeHookExecution(
   hook: schema.HookExecution
 ): NativeHookExecution {
   return {
-    id: hook.id ?? undefined,
-    orchestrationId: hook.orchestrationId ?? undefined,
-    sessionId: hook.sessionId ?? undefined,
-    taskId: hook.taskId ?? undefined,
-    hookType: hook.hookType,
-    hookName: hook.hookName,
-    hookSource: hook.hookSource ?? undefined,
-    directory: hook.directory ?? undefined,
-    durationMs: hook.durationMs,
-    exitCode: hook.exitCode,
-    passed: hook.passed,
-    output: hook.output ?? undefined,
-    error: hook.error ?? undefined,
-    ifChanged: hook.ifChanged ?? undefined,
-    command: hook.command ?? undefined,
-    executedAt: hook.executedAt?.toISOString() ?? undefined,
-    status: hook.status ?? undefined,
-    consecutiveFailures: hook.consecutiveFailures ?? undefined,
-    maxAttempts: hook.maxAttempts ?? undefined,
-    pid: hook.pid ?? undefined,
-    pluginRoot: hook.pluginRoot ?? undefined,
+    id: hook.id ?? '',
+    session_id: hook.sessionId ?? '',
+    hook_name: hook.hookName ?? '',
+    plugin_name: hook.hookSource ?? null,
+    event_type: hook.hookType ?? '',
+    exit_code: hook.exitCode ?? null,
+    duration_ms: hook.durationMs ?? null,
+    cached: false,
+    executed_at: hook.executedAt?.toISOString() ?? new Date().toISOString(),
   };
 }
 
@@ -173,14 +153,12 @@ function toNativeFileChange(
   change: schema.SessionFileChange
 ): NativeSessionFileChange {
   return {
-    id: change.id ?? undefined,
-    sessionId: '', // Will be set from context
-    filePath: change.filePath,
-    action: change.action,
-    fileHashBefore: change.fileHashBefore ?? undefined,
-    fileHashAfter: change.fileHashAfter ?? undefined,
-    toolName: change.toolName ?? undefined,
-    recordedAt: change.recordedAt?.toISOString() ?? undefined,
+    id: change.id ?? '',
+    session_id: '', // Will be set from context
+    file_path: change.filePath ?? '',
+    change_type: change.action ?? '',
+    tool_name: change.toolName ?? null,
+    timestamp: change.recordedAt?.toISOString() ?? new Date().toISOString(),
   };
 }
 
@@ -191,15 +169,14 @@ function toNativeFileValidation(
   validation: schema.SessionFileValidation
 ): NativeSessionFileValidation {
   return {
-    id: validation.id ?? undefined,
-    sessionId: '', // Will be set from context
-    filePath: validation.filePath,
-    fileHash: validation.fileHash,
-    pluginName: validation.pluginName,
-    hookName: validation.hookName,
-    directory: validation.directory,
-    commandHash: validation.commandHash,
-    validatedAt: validation.validatedAt?.toISOString() ?? undefined,
+    id: validation.id ?? '',
+    session_id: '', // Will be set from context
+    file_path: validation.filePath ?? '',
+    hook_command: validation.hookName ?? '',
+    file_hash: validation.fileHash ?? '',
+    command_hash: validation.commandHash ?? '',
+    validated_at: validation.validatedAt?.toISOString() ?? new Date().toISOString(),
+    is_valid: true, // is_valid defaults to true (hosted schema has no passed field)
   };
 }
 
@@ -208,20 +185,15 @@ function toNativeFileValidation(
  */
 function toNativeNativeTask(task: schema.NativeTask): NativeNativeTask {
   return {
-    id: task.localTaskId,
-    sessionId: '', // Will be set from context
-    messageId: task.messageId ?? '',
-    subject: task.subject,
-    description: task.description ?? undefined,
-    status: task.status,
-    activeForm: task.activeForm ?? undefined,
-    owner: task.owner ?? undefined,
-    blocks: task.blocks ?? undefined,
-    blockedBy: task.blockedBy ?? undefined,
-    createdAt: task.createdAt.toISOString(),
-    updatedAt: task.updatedAt.toISOString(),
-    completedAt: task.completedAt?.toISOString() ?? undefined,
-    lineNumber: task.lineNumber,
+    id: task.localTaskId ?? task.id ?? '',
+    session_id: '', // Will be set from context
+    task_id: task.localTaskId ?? '',
+    subject: task.subject ?? null,
+    description: task.description ?? null,
+    status: task.status ?? 'pending',
+    owner: task.owner ?? null,
+    created_at: task.createdAt?.toISOString() ?? new Date().toISOString(),
+    updated_at: task.updatedAt?.toISOString() ?? new Date().toISOString(),
   };
 }
 
@@ -583,9 +555,9 @@ export class HostedDataSource implements DataSource, HostedDataSourceWriteOps {
 
         if (timestamps[0]) {
           result[sessionId] = {
-            sessionId,
-            startedAt: timestamps[0].minTs ?? undefined,
-            endedAt: timestamps[0].maxTs ?? undefined,
+            session_id: sessionId,
+            first_message_at: timestamps[0].minTs ?? null,
+            last_message_at: timestamps[0].maxTs ?? null,
           };
         }
       }
@@ -746,17 +718,10 @@ export class HostedDataSource implements DataSource, HostedDataSourceWriteOps {
       // For hosted mode, task metrics would be computed from native_tasks table
       // This is a placeholder that returns empty metrics
       return {
-        totalTasks: 0,
-        completedTasks: 0,
-        successfulTasks: 0,
-        partialTasks: 0,
-        failedTasks: 0,
-        successRate: 0,
-        averageConfidence: undefined,
-        averageDurationSeconds: undefined,
-        calibrationScore: undefined,
-        byType: undefined,
-        byOutcome: undefined,
+        total_tasks: 0,
+        completed_tasks: 0,
+        failed_tasks: 0,
+        avg_duration_ms: null,
       };
     },
   };
@@ -830,7 +795,7 @@ export class HostedDataSource implements DataSource, HostedDataSourceWriteOps {
         .limit(1);
 
       return result[0]
-        ? { ...toNativeNativeTask(result[0]), sessionId: sessionId }
+        ? { ...toNativeNativeTask(result[0]), session_id: sessionId }
         : null;
     },
   };
@@ -877,12 +842,10 @@ export class HostedDataSource implements DataSource, HostedDataSourceWriteOps {
     ): Promise<NativeHookStats> => {
       // Placeholder for hook stats query
       return {
-        totalExecutions: 0,
-        totalPassed: 0,
-        totalFailed: 0,
-        passRate: 0,
-        uniqueHooks: 0,
-        byHookType: undefined,
+        total_executions: 0,
+        cached_executions: 0,
+        avg_duration_ms: null,
+        failure_count: 0,
       };
     },
   };
@@ -1016,7 +979,7 @@ export class HostedDataSource implements DataSource, HostedDataSourceWriteOps {
         .limit(1);
 
       return result[0]
-        ? { ...toNativeFileValidation(result[0]), sessionId: sessionId }
+        ? { ...toNativeFileValidation(result[0]), session_id: sessionId }
         : null;
     },
   };

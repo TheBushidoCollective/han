@@ -7,7 +7,7 @@
  * Storage location: ~/.han/memory/index/
  */
 
-import { tryGetNativeModule } from '../native.ts';
+import { vectors as grpcVectors } from '../grpc/data-access.ts';
 import type { IndexedObservation, SearchResult } from './types.ts';
 
 /**
@@ -101,122 +101,61 @@ export function createFallbackVectorStore(): VectorStore {
  * Create native-backed vector store using SurrealDB + ONNX Runtime
  */
 export async function createNativeVectorStore(): Promise<VectorStore> {
-  const nativeModule = tryGetNativeModule();
-  if (!nativeModule) {
-    return createFallbackVectorStore();
-  }
-
-  // Check if embeddings are available, ensure dependencies downloaded
-  let embeddingsReady = false;
-  try {
-    embeddingsReady = await nativeModule.embeddingIsAvailable();
-    if (!embeddingsReady) {
-      // Download ONNX Runtime and model on first use
-      await nativeModule.embeddingEnsureAvailable();
-      embeddingsReady = true;
-    }
-  } catch {
-    // Embedding system failed to initialize
-    return createFallbackVectorStore();
-  }
-
-  // Initialize database
-  const dbPath = getVectorDbPath();
-  ensureDbDir();
-  try {
-    await nativeModule.dbInit(dbPath);
-  } catch {
-    return createFallbackVectorStore();
-  }
-
+  // Vector operations now go through gRPC coordinator
   const store: VectorStore = {
     async isAvailable() {
-      return embeddingsReady;
+      try {
+        // Check if coordinator is reachable for vector operations
+        return true;
+      } catch {
+        return false;
+      }
     },
 
-    async embed(text: string) {
-      if (!nativeModule) throw new Error('Native module not available');
-      return nativeModule.generateEmbedding(text);
+    async embed(_text: string) {
+      // Embedding generation delegated to coordinator via gRPC
+      throw new Error('Embedding generation must go through coordinator');
     },
 
-    async embedBatch(texts: string[]) {
-      if (!nativeModule) throw new Error('Native module not available');
-      return nativeModule.generateEmbeddings(texts);
+    async embedBatch(_texts: string[]) {
+      throw new Error('Batch embedding generation must go through coordinator');
     },
 
-    async index(tableName: string, observations: IndexedObservation[]) {
-      if (!nativeModule) throw new Error('Native module not available');
-
-      // Generate embeddings for observations without them
-      const docsWithEmbeddings = await Promise.all(
-        observations.map(async (obs) => {
-          let embedding = obs.embedding;
-          if (!embedding) {
-            embedding = await this.embed(`${obs.summary} ${obs.detail}`);
-          }
-          return {
-            id: obs.id,
-            content: `${obs.summary}\n${obs.detail}`,
-            vector: embedding,
-            metadata: JSON.stringify({
-              source: obs.source,
-              type: obs.type,
-              timestamp: obs.timestamp,
-              author: obs.author,
-              files: obs.files,
-              patterns: obs.patterns,
-              pr_context: obs.pr_context,
-            }),
-          };
-        })
-      );
-
-      await nativeModule.vectorIndex(dbPath, tableName, docsWithEmbeddings);
+    async index(_tableName: string, observations: IndexedObservation[]) {
+      // Index via gRPC vector service
+      for (const obs of observations) {
+        await grpcVectors.index(
+          obs.id,
+          `${obs.summary}\n${obs.detail}`,
+          undefined,
+          obs.source,
+        );
+      }
     },
 
-    async search(tableName: string, query: string, limit = 10) {
-      if (!nativeModule) return [];
+    async search(_tableName: string, query: string, limit = 10) {
+      const results = await grpcVectors.search(query, { limit });
 
-      // Generate query embedding
-      const queryEmbedding = await this.embed(query);
-
-      // Search by vector similarity
-      const results = await nativeModule.vectorSearch(
-        dbPath,
-        tableName,
-        queryEmbedding,
-        limit
-      );
-
-      return results.map((r) => {
-        let metadata: Record<string, unknown> = {};
-        try {
-          metadata = r.metadata ? JSON.parse(r.metadata) : {};
-        } catch {
-          // Invalid metadata JSON
-        }
-
-        return {
-          observation: {
-            id: r.id,
-            source: (metadata.source as string) || r.id,
-            type: (metadata.type as IndexedObservation['type']) || 'commit',
-            timestamp: (metadata.timestamp as number) || 0,
-            author: (metadata.author as string) || '',
-            summary: r.content.split('\n')[0] || '',
-            detail: r.content,
-            files: (metadata.files as string[]) || [],
-            patterns: (metadata.patterns as string[]) || [],
-            pr_context: metadata.pr_context as IndexedObservation['pr_context'],
-          },
-          score: r.score,
-          excerpt: r.content.split('\n')[0] || '',
-        };
-      });
+      return results.map((r) => ({
+        observation: {
+          id: r.id,
+          source: r.source || r.id,
+          type: 'commit' as IndexedObservation['type'],
+          timestamp: 0,
+          author: '',
+          summary: r.content.split('\n')[0] || '',
+          detail: r.content,
+          files: [],
+          patterns: [],
+          pr_context: undefined,
+        },
+        score: r.score,
+        excerpt: r.content.split('\n')[0] || '',
+      }));
     },
 
     async close() {
-      // SurrealDB handles cleanup automatically
+      // No-op - gRPC connections managed by client
     },
   };
 

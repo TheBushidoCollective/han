@@ -296,7 +296,7 @@ async function hanBridgePlugin(ctx: CodexPluginContext) {
             if (!skill) {
               // Try partial match
               const matches = allSkills.filter((s) =>
-                s.name.toLowerCase().includes(args.skill?.toLowerCase())
+                s.name.toLowerCase().includes((args.skill ?? "").toLowerCase())
               );
               if (matches.length === 1) {
                 return { output: loadSkillContent(matches[0]) };

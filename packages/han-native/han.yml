@@ -1,7 +1,0 @@
-# Project-specific han configuration for han-native
-# Tests must run serially due to shared database singleton
-
-plugins:
-  rust:
-    test:
-      command: "cargo test -- --test-threads=1"

@@ -1,0 +1,244 @@
+syntax = "proto3";
+
+package han.coordinator;
+
+// ============================================================================
+// Common types
+// ============================================================================
+
+message Empty {}
+
+message StatusResponse {
+  string version = 1;
+  string uptime_seconds = 2;
+  string db_path = 3;
+  int64 session_count = 4;
+  int64 message_count = 5;
+  bool watcher_active = 6;
+  repeated string watched_paths = 7;
+}
+
+// ============================================================================
+// CoordinatorService - Core lifecycle management
+// ============================================================================
+
+service CoordinatorService {
+  rpc Health(Empty) returns (HealthResponse);
+  rpc Shutdown(ShutdownRequest) returns (Empty);
+  rpc Status(Empty) returns (StatusResponse);
+}
+
+message HealthResponse {
+  bool healthy = 1;
+  string version = 2;
+  int64 uptime_ms = 3;
+}
+
+message ShutdownRequest {
+  bool graceful = 1;
+  int32 timeout_seconds = 2;
+}
+
+// ============================================================================
+// SessionService - Session queries via gRPC
+// ============================================================================
+
+service SessionService {
+  rpc GetActive(GetActiveSessionRequest) returns (SessionResponse);
+  rpc Get(GetSessionRequest) returns (SessionResponse);
+  rpc List(ListSessionsRequest) returns (ListSessionsResponse);
+}
+
+message GetActiveSessionRequest {
+  string project_path = 1;
+}
+
+message GetSessionRequest {
+  string session_id = 1;
+}
+
+message ListSessionsRequest {
+  optional string project_id = 1;
+  optional string status = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message SessionResponse {
+  optional SessionData session = 1;
+}
+
+message SessionData {
+  string id = 1;
+  string session_id = 2;
+  optional string project_id = 3;
+  optional string status = 4;
+  optional string session_file_path = 5;
+  optional string session_slug = 6;
+  optional string started_at = 7;
+  optional string ended_at = 8;
+  optional int32 last_indexed_line = 9;
+}
+
+message ListSessionsResponse {
+  repeated SessionData sessions = 1;
+  int32 total = 2;
+}
+
+// ============================================================================
+// IndexerService - Trigger indexing operations
+// ============================================================================
+
+service IndexerService {
+  rpc TriggerScan(TriggerScanRequest) returns (ScanResponse);
+  rpc IndexFile(IndexFileRequest) returns (IndexFileResponse);
+}
+
+message TriggerScanRequest {
+  optional string config_dir = 1;
+}
+
+message ScanResponse {
+  int32 sessions_indexed = 1;
+  int32 messages_indexed = 2;
+  repeated string errors = 3;
+}
+
+message IndexFileRequest {
+  string file_path = 1;
+  optional string config_dir = 2;
+}
+
+message IndexFileResponse {
+  string session_id = 1;
+  int32 messages_indexed = 2;
+  int32 total_messages = 3;
+  bool is_new_session = 4;
+  optional string error = 5;
+}
+
+// ============================================================================
+// HookService - Execute hooks with streaming output
+// ============================================================================
+
+service HookService {
+  rpc ExecuteHooks(ExecuteHooksRequest) returns (stream HookOutput);
+  rpc ListHooks(ListHooksRequest) returns (ListHooksResponse);
+}
+
+message ExecuteHooksRequest {
+  string event = 1;
+  optional string session_id = 2;
+  optional string tool_name = 3;
+  optional string tool_input = 4;
+  optional string cwd = 5;
+  map<string, string> env = 6;
+}
+
+message HookOutput {
+  string hook_id = 1;
+  string plugin_name = 2;
+  string hook_name = 3;
+  oneof payload {
+    string stdout_line = 4;
+    string stderr_line = 5;
+    HookComplete complete = 6;
+  }
+}
+
+message HookComplete {
+  int32 exit_code = 1;
+  bool cached = 2;
+  optional string error = 3;
+  int64 duration_ms = 4;
+}
+
+message ListHooksRequest {
+  optional string event_filter = 1;
+}
+
+message ListHooksResponse {
+  repeated HookDefinition hooks = 1;
+}
+
+message HookDefinition {
+  string plugin_name = 1;
+  string hook_name = 2;
+  string event = 3;
+  string command = 4;
+  optional string matcher = 5;
+  optional int32 timeout_ms = 6;
+}
+
+// ============================================================================
+// SlotService - In-memory resource slot management
+// ============================================================================
+
+service SlotService {
+  rpc Acquire(AcquireSlotRequest) returns (AcquireSlotResponse);
+  rpc Release(ReleaseSlotRequest) returns (Empty);
+  rpc List(ListSlotsRequest) returns (ListSlotsResponse);
+}
+
+message AcquireSlotRequest {
+  string slot_name = 1;
+  string owner = 2;
+  optional int32 ttl_seconds = 3;
+}
+
+message AcquireSlotResponse {
+  bool acquired = 1;
+  optional string current_owner = 2;
+}
+
+message ReleaseSlotRequest {
+  string slot_name = 1;
+  string owner = 2;
+}
+
+message ListSlotsRequest {}
+
+message SlotInfo {
+  string slot_name = 1;
+  string owner = 2;
+  string acquired_at = 3;
+  optional int32 ttl_seconds = 4;
+}
+
+message ListSlotsResponse {
+  repeated SlotInfo slots = 1;
+}
+
+// ============================================================================
+// MemoryService - Search and index documents
+// ============================================================================
+
+service MemoryService {
+  rpc Search(MemorySearchRequest) returns (MemorySearchResponse);
+  rpc IndexDocument(IndexDocumentRequest) returns (Empty);
+}
+
+message MemorySearchRequest {
+  string query = 1;
+  optional string session_id = 2;
+  int32 limit = 3;
+}
+
+message MemorySearchResponse {
+  repeated MemoryResult results = 1;
+}
+
+message MemoryResult {
+  string id = 1;
+  string content = 2;
+  double score = 3;
+  optional string session_id = 4;
+  optional string source = 5;
+}
+
+message IndexDocumentRequest {
+  string content = 1;
+  optional string session_id = 2;
+  optional string source = 3;
+  map<string, string> metadata = 4;
+}

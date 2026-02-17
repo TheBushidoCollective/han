@@ -693,8 +693,8 @@ export class BackendPool {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(request),
         })
-          .then((res) => res.json())
-          .then((response: JsonRpcResponse) => {
+          .then((res) => res.json() as Promise<JsonRpcResponse>)
+          .then((response) => {
             clearTimeout(timeout);
             connection.pendingRequests.delete(id);
 

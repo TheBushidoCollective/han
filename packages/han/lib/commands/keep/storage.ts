@@ -23,7 +23,7 @@ import {
 } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { getClaudeConfigDir } from '../../config/claude-settings.ts';
-import { getGitBranch, getGitRemoteUrl } from '../../native.ts';
+import { getGitBranch, getGitRemoteUrl } from '../../bun-utils.ts';
 
 export type Scope = 'global' | 'repo' | 'branch';
 

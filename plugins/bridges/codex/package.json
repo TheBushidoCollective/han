@@ -34,5 +34,8 @@
   "homepage": "https://github.com/thebushidocollective/han/tree/main/plugins/bridges/codex",
   "engines": {
     "bun": ">=1.0.0"
+  },
+  "devDependencies": {
+    "bun-types": "^1.3.9"
   }
 }

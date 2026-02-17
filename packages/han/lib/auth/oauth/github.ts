@@ -120,7 +120,7 @@ export async function completeGitHubOAuth(
     throw new Error(`GitHub token exchange failed: ${error}`);
   }
 
-  const tokenData = await tokenResponse.json();
+  const tokenData = await tokenResponse.json() as Record<string, unknown>;
 
   if (tokenData.error) {
     throw new Error(
@@ -128,10 +128,10 @@ export async function completeGitHubOAuth(
     );
   }
 
-  const accessToken = tokenData.access_token;
-  const refreshToken = tokenData.refresh_token || null;
-  const expiresIn = tokenData.expires_in;
-  const scopes = (tokenData.scope || '').split(',').filter(Boolean);
+  const accessToken = tokenData.access_token as string;
+  const refreshToken = (tokenData.refresh_token as string | null | undefined) || null;
+  const expiresIn = tokenData.expires_in as number | undefined;
+  const scopes = ((tokenData.scope as string | undefined) || '').split(',').filter(Boolean);
 
   // Fetch user info
   const userResponse = await fetch(`${GITHUB_API_BASE}/user`, {
@@ -145,7 +145,7 @@ export async function completeGitHubOAuth(
     throw new Error('Failed to fetch GitHub user info');
   }
 
-  const user: GitHubUser = await userResponse.json();
+  const user = await userResponse.json() as GitHubUser;
 
   // Fetch primary email if not provided
   let email = user.email;
@@ -158,7 +158,7 @@ export async function completeGitHubOAuth(
     });
 
     if (emailsResponse.ok) {
-      const emails: GitHubEmail[] = await emailsResponse.json();
+      const emails = await emailsResponse.json() as GitHubEmail[];
       const primaryEmail = emails.find((e) => e.primary && e.verified);
       email = primaryEmail?.email || emails[0]?.email || null;
     }
@@ -216,17 +216,17 @@ export async function refreshGitHubToken(
       return null;
     }
 
-    const data = await response.json();
+    const data = await response.json() as Record<string, unknown>;
 
     if (data.error) {
       return null;
     }
 
     return {
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token || null,
+      accessToken: data.access_token as string,
+      refreshToken: (data.refresh_token as string | null | undefined) || null,
       expiresAt: data.expires_in
-        ? new Date(Date.now() + data.expires_in * 1000)
+        ? new Date(Date.now() + (data.expires_in as number) * 1000)
         : null,
     };
   } catch {

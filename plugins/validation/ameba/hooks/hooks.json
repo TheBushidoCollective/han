@@ -1,14 +1,26 @@
 {
   "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook run ameba lint --async",
+            "async": true
+          }
+        ],
+        "matcher": "Edit|Write"
+      }
+    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run ameba lint --async"
+            "command": "han hook run ameba lint --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       }
     ],
     "SubagentStop": [
@@ -16,10 +28,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run ameba lint --async"
+            "command": "han hook run ameba lint --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       }
     ]
   }

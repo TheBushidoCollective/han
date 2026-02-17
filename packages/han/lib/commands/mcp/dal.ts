@@ -39,7 +39,7 @@ import {
   multiStrategySearchWithFallbacks,
   type SearchStrategy,
 } from '../../memory/multi-strategy-search.ts';
-import { tryGetNativeModule } from '../../native.ts';
+import { searchMessages as grpcSearchMessages, fts as grpcFts } from '../../grpc/data-access.ts';
 
 interface JsonRpcRequest {
   jsonrpc: '2.0';
@@ -156,34 +156,26 @@ async function searchTranscriptsNative(
   limit: number,
   expansion: ExpansionLevel = 'minimal'
 ): Promise<SearchResultWithCitation[]> {
-  const nativeModule = tryGetNativeModule();
-  if (!nativeModule) {
-    return [];
-  }
-
   try {
-    const dbPath = join(getHanDataDir(), 'han.db');
-
     // Expand query before search
     const { expanded } = expandQuery(query, { level: expansion });
 
-    const messages = nativeModule.searchMessages(dbPath, expanded, null, limit);
+    const messages = await grpcSearchMessages({
+      query: expanded,
+      limit,
+    });
 
     return messages.map((msg) => ({
-      id: `transcript:${msg.sessionId}:${msg.id}`,
-      content: msg.content || msg.toolResult || msg.toolInput || '',
-      score: 0.7, // FTS matches get decent score
+      id: `transcript:${msg.session_id ?? 'unknown'}:${msg.id}`,
+      content: msg.content || '',
+      score: msg.score ?? 0.7, // FTS matches get decent score
       layer: 'transcripts',
       metadata: {
-        sessionId: msg.sessionId,
+        sessionId: msg.session_id,
         messageId: msg.id,
-        role: msg.role,
-        messageType: msg.messageType,
-        toolName: msg.toolName,
-        timestamp: new Date(msg.timestamp).getTime(),
-        lineNumber: msg.lineNumber,
+        source: msg.source,
       },
-      browseUrl: `/sessions/${msg.sessionId}#msg-${msg.id}`,
+      browseUrl: `/sessions/${msg.session_id}#msg-${msg.id}`,
     }));
   } catch (error) {
     console.error('[DAL] Transcript search error:', error);
@@ -199,33 +191,19 @@ async function searchSummariesNative(
   query: string,
   limit: number
 ): Promise<SearchResultWithCitation[]> {
-  const nativeModule = tryGetNativeModule();
-  if (!nativeModule) {
-    return [];
-  }
-
   try {
-    const dbPath = join(getHanDataDir(), 'han.db');
-    const summaries = nativeModule.searchGeneratedSummaries(
-      dbPath,
-      query,
-      limit
-    );
+    // Use gRPC FTS search for summaries
+    const results = await grpcFts.search(query, { limit });
 
-    return summaries.map((s) => ({
-      id: `summary:${s.sessionId}`,
-      content: `${s.summaryText}\n\nTopics: ${s.topics.join(', ')}`,
+    return results.map((s) => ({
+      id: `summary:${s.session_id || s.id}`,
+      content: s.content,
       score: 0.8, // Generated summaries get higher score than raw transcripts
       layer: 'summaries',
       metadata: {
-        sessionId: s.sessionId,
-        topics: s.topics,
-        outcome: s.outcome,
-        filesModified: s.filesModified,
-        toolsUsed: s.toolsUsed,
-        messageCount: s.messageCount,
+        sessionId: s.session_id,
       },
-      browseUrl: `/sessions/${s.sessionId}`,
+      browseUrl: `/sessions/${s.session_id}`,
     }));
   } catch (error) {
     console.error('[DAL] Summary search error:', error);

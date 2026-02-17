@@ -471,14 +471,18 @@ describe('validate.ts', () => {
         return null;
       };
 
-      const doDir = join(testDir, 'do', 'do-frontend-development');
+      // Use isolated temp dir to avoid race conditions with parallel tests
+      const random = Math.random().toString(36).substring(2, 9);
+      const localDir = join(tmpdir(), `han-validate-do-${Date.now()}-${random}`);
+      const doDir = join(localDir, 'do', 'do-frontend-development');
       mkdirSync(doDir, { recursive: true });
 
-      const result = findPluginInMarketplace(
-        testDir,
-        'do-frontend-development'
-      );
-      expect(result).toBe(doDir);
+      try {
+        const result = findPluginInMarketplace(localDir, 'do-frontend-development');
+        expect(result).toBe(doDir);
+      } finally {
+        rmSync(localDir, { recursive: true, force: true });
+      }
     });
 
     test('finds plugin in hashi directory', () => {
@@ -502,11 +506,18 @@ describe('validate.ts', () => {
         return null;
       };
 
-      const hashiDir = join(testDir, 'hashi', 'hashi-github');
+      // Use isolated temp dir to avoid race conditions with parallel tests
+      const random = Math.random().toString(36).substring(2, 9);
+      const localDir = join(tmpdir(), `han-validate-hashi-${Date.now()}-${random}`);
+      const hashiDir = join(localDir, 'hashi', 'hashi-github');
       mkdirSync(hashiDir, { recursive: true });
 
-      const result = findPluginInMarketplace(testDir, 'hashi-github');
-      expect(result).toBe(hashiDir);
+      try {
+        const result = findPluginInMarketplace(localDir, 'hashi-github');
+        expect(result).toBe(hashiDir);
+      } finally {
+        rmSync(localDir, { recursive: true, force: true });
+      }
     });
 
     test('finds plugin in root directory', () => {
@@ -530,11 +541,18 @@ describe('validate.ts', () => {
         return null;
       };
 
-      const pluginDir = join(testDir, 'bushido');
+      // Use isolated temp dir to avoid race conditions with parallel tests
+      const random = Math.random().toString(36).substring(2, 9);
+      const localDir = join(tmpdir(), `han-validate-root-${Date.now()}-${random}`);
+      const pluginDir = join(localDir, 'bushido');
       mkdirSync(pluginDir, { recursive: true });
 
-      const result = findPluginInMarketplace(testDir, 'bushido');
-      expect(result).toBe(pluginDir);
+      try {
+        const result = findPluginInMarketplace(localDir, 'bushido');
+        expect(result).toBe(pluginDir);
+      } finally {
+        rmSync(localDir, { recursive: true, force: true });
+      }
     });
 
     test('returns null when plugin not found', () => {
@@ -558,8 +576,17 @@ describe('validate.ts', () => {
         return null;
       };
 
-      const result = findPluginInMarketplace(testDir, 'nonexistent-plugin');
-      expect(result).toBeNull();
+      // Use isolated temp dir to avoid race conditions with parallel tests
+      const random = Math.random().toString(36).substring(2, 9);
+      const localDir = join(tmpdir(), `han-validate-null-${Date.now()}-${random}`);
+      mkdirSync(localDir, { recursive: true });
+
+      try {
+        const result = findPluginInMarketplace(localDir, 'nonexistent-plugin');
+        expect(result).toBeNull();
+      } finally {
+        rmSync(localDir, { recursive: true, force: true });
+      }
     });
   });
 

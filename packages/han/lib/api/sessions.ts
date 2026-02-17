@@ -16,13 +16,13 @@ import {
   projects as dbProjects,
   sessions as dbSessions,
   type Message,
-} from '../db/index.ts';
+} from '../grpc/data-access.ts';
 import {
   getGitCommonDir,
   getGitRemoteUrl,
   getGitRoot,
   gitWorktreeList,
-} from '../native.ts';
+} from '../bun-utils.ts';
 
 /**
  * Check if a path is within a system temp folder
@@ -190,25 +190,8 @@ function getAllProjectsPaths(): string[] {
   // Always include default
   paths.add(getClaudeProjectsPath());
 
-  // Read registered config dirs from the database (sync via native module)
-  try {
-    // Lazy import to avoid circular deps and handle case where DB isn't initialized
-    const { getNativeModule } =
-      require('../native.ts') as typeof import('../native.ts');
-    const { getDbPath } =
-      require('../db/index.ts') as typeof import('../db/index.ts');
-    const native = getNativeModule();
-    const dbPath = getDbPath();
-    const configDirs = native.listConfigDirs(dbPath);
-    for (const dir of configDirs) {
-      const projectsPath = join(dir.path, 'projects');
-      if (existsSync(projectsPath)) {
-        paths.add(projectsPath);
-      }
-    }
-  } catch {
-    // DB not initialized yet — fall back to default only
-  }
+  // Multi-environment config dirs are now managed by the Rust coordinator.
+  // The CLI only needs the default path for session discovery.
 
   return Array.from(paths);
 }
@@ -625,21 +608,20 @@ async function getSessionMessages(
   sessionId: string,
   agentIdFilter?: string | null
 ): Promise<SessionMessage[]> {
-  const msgs = await dbMessages.list({ sessionId, agentIdFilter });
+  const msgs = await dbMessages.list({ sessionId });
   return msgs.map((msg: Message) => ({
     id: msg.id, // Message UUID for sentiment matching
-    type: msg.messageType,
+    type: msg.type,
     role: msg.role ?? undefined,
     content: msg.content ?? undefined,
-    timestamp: msg.timestamp,
-    sessionId: msg.sessionId,
+    timestamp: msg.timestamp ?? '',
+    sessionId: msg.session_id,
     cwd: undefined, // These are stored at session level now
     gitBranch: undefined,
     version: undefined,
-    rawJson: msg.rawJson ?? undefined,
-    toolName: msg.toolName ?? undefined, // Han event subtype
-    agentId: msg.agentId ?? undefined,
-    parentId: msg.parentId ?? undefined,
+    rawJson: msg.raw_json ?? undefined,
+    toolName: msg.tool_name ?? undefined, // Han event subtype
+    parentId: msg.parent_id ?? undefined,
   }));
 }
 
@@ -693,24 +675,23 @@ export async function getSessionMessagesPaginated(
   hasMore: boolean;
 }> {
   const [msgs, totalCount] = await Promise.all([
-    dbMessages.list({ sessionId, offset, limit, agentIdFilter }),
+    dbMessages.list({ sessionId, offset, limit }),
     dbMessages.count(sessionId),
   ]);
 
   const messages: SessionMessage[] = msgs.map((msg: Message) => ({
     id: msg.id, // Message UUID for sentiment matching
-    type: msg.messageType,
+    type: msg.type,
     role: msg.role ?? undefined,
     content: msg.content ?? undefined,
-    timestamp: msg.timestamp,
-    sessionId: msg.sessionId,
+    timestamp: msg.timestamp ?? '',
+    sessionId: msg.session_id,
     cwd: undefined,
     gitBranch: undefined,
     version: undefined,
-    rawJson: msg.rawJson ?? undefined,
-    toolName: msg.toolName ?? undefined, // Han event subtype
-    agentId: msg.agentId ?? undefined,
-    parentId: msg.parentId ?? undefined,
+    rawJson: msg.raw_json ?? undefined,
+    toolName: msg.tool_name ?? undefined, // Han event subtype
+    parentId: msg.parent_id ?? undefined,
   }));
 
   return {
@@ -760,8 +741,8 @@ export async function getSessionPaginated(
   let projectId: string | undefined;
   let worktreeName: string | undefined;
 
-  if (dbSession.transcriptPath) {
-    const parts = dbSession.transcriptPath.split('/');
+  if (dbSession.session_file_path) {
+    const parts = dbSession.session_file_path.split('/');
     const projectsIndex = parts.indexOf('projects');
     if (projectsIndex >= 0 && parts[projectsIndex + 1]) {
       projectDir = parts[projectsIndex + 1];
@@ -1343,8 +1324,8 @@ export async function listSessionsAsync(
     let projectName = '';
     let projectId: string | undefined;
 
-    if (session.transcriptPath) {
-      const parts = session.transcriptPath.split('/');
+    if (session.session_file_path) {
+      const parts = session.session_file_path.split('/');
       const projectsIndex = parts.indexOf('projects');
       if (projectsIndex >= 0 && parts[projectsIndex + 1]) {
         projectDir = parts[projectsIndex + 1];
@@ -1361,18 +1342,18 @@ export async function listSessionsAsync(
     data.push({
       sessionId: session.id,
       date:
-        sessionTimestamps?.startedAt?.split('T')[0] ??
+        sessionTimestamps?.first_message_at?.split('T')[0] ??
         new Date().toISOString().split('T')[0],
-      slug: session.slug ?? undefined, // Human-readable session name from CC
+      slug: session.session_slug ?? undefined, // Human-readable session name from CC
       project: projectName,
       projectPath,
       projectDir,
       projectId,
-      sourceConfigDir: session.sourceConfigDir ?? undefined,
+      sourceConfigDir: undefined,
       summary: undefined, // TODO: Store summary in database
       messageCount,
-      startedAt: sessionTimestamps?.startedAt,
-      endedAt: sessionTimestamps?.endedAt,
+      startedAt: sessionTimestamps?.first_message_at ?? undefined,
+      endedAt: sessionTimestamps?.last_message_at ?? undefined,
       gitBranch: undefined, // TODO: Store in database
       version: undefined, // TODO: Store in database
     });
@@ -1539,8 +1520,8 @@ export async function getSessionAsync(
   let projectId: string | undefined;
   let worktreeName: string | undefined;
 
-  if (dbSession.transcriptPath) {
-    const parts = dbSession.transcriptPath.split('/');
+  if (dbSession.session_file_path) {
+    const parts = dbSession.session_file_path.split('/');
     const projectsIndex = parts.indexOf('projects');
     if (projectsIndex >= 0 && parts[projectsIndex + 1]) {
       projectDir = parts[projectsIndex + 1];
@@ -1580,7 +1561,7 @@ export async function getSessionAsync(
     projectDir,
     projectId,
     worktreeName,
-    sourceConfigDir: dbSession.sourceConfigDir ?? undefined,
+    sourceConfigDir: undefined,
     startedAt: firstMsg?.timestamp, // Derived from first message
     endedAt: lastMsg?.timestamp, // Derived from last message
     gitBranch: firstMsg?.gitBranch,
@@ -1702,8 +1683,8 @@ export async function getAgentTask(
   let projectId: string | undefined;
   let worktreeName: string | undefined;
 
-  if (dbSession.transcriptPath) {
-    const parts = dbSession.transcriptPath.split('/');
+  if (dbSession.session_file_path) {
+    const parts = dbSession.session_file_path.split('/');
     const projectsIndex = parts.indexOf('projects');
     if (projectsIndex >= 0 && parts[projectsIndex + 1]) {
       projectDir = parts[projectsIndex + 1];

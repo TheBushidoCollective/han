@@ -1,6 +1,9 @@
 import { fstatSync, readFileSync } from 'node:fs';
 import type { Command } from 'commander';
+import { isHooksEnabled } from '../../config/han-settings.ts';
 import { initEventLogger } from '../../events/logger.ts';
+import { isCoordinatorHealthy } from '../../grpc/client.ts';
+import { executeHooksAndExit } from '../../grpc/hook-executor.ts';
 import {
   runAsyncPostToolUse,
   runConfiguredHook,
@@ -122,10 +125,11 @@ export function registerHookRun(hookCommand: Command): void {
           async?: boolean;
         }
       ) => {
-        // Allow global disable of all hooks via environment variable
+        // Allow global disable of all hooks via environment variable or han.yml config
         if (
           process.env.HAN_DISABLE_HOOKS === 'true' ||
-          process.env.HAN_DISABLE_HOOKS === '1'
+          process.env.HAN_DISABLE_HOOKS === '1' ||
+          !isHooksEnabled()
         ) {
           process.exit(0);
         }
@@ -232,6 +236,40 @@ export function registerHookRun(hookCommand: Command): void {
               verbose,
             });
             return;
+          }
+
+          // Try gRPC execution via coordinator first.
+          // The coordinator handles hook discovery, execution, and streaming.
+          const coordinatorHealthy = await isCoordinatorHealthy().catch(
+            () => false
+          );
+          if (coordinatorHealthy) {
+            if (isDebugMode()) {
+              console.error(
+                '[han hook run] Delegating to coordinator via gRPC'
+              );
+            }
+            await executeHooksAndExit({
+              event: hookName, // hookName is the event type (e.g., "Stop", "SessionStart")
+              sessionId,
+              toolName:
+                typeof payload?.tool_name === 'string'
+                  ? payload.tool_name
+                  : undefined,
+              toolInput: payload?.tool_input
+                ? JSON.stringify(payload.tool_input)
+                : undefined,
+              cwd:
+                typeof payload?.cwd === 'string' ? payload.cwd : process.cwd(),
+            });
+            // executeHooksAndExit calls process.exit() internally
+          }
+
+          // Fallback: local execution when coordinator is unavailable
+          if (isDebugMode()) {
+            console.error(
+              '[han hook run] Coordinator unavailable, falling back to local execution'
+            );
           }
 
           // Read checkpoint info from options or environment variables

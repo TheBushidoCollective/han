@@ -11,7 +11,7 @@
  * - Org: Aggregated learnings only (no raw data exposed)
  */
 
-import type { Session } from '../db/index.ts';
+import type { Session } from '../grpc/data-access.ts';
 
 /**
  * Memory scope levels (from most restrictive to least)
@@ -78,7 +78,7 @@ export function isPersonalSession(
   // This will be enhanced when user tracking is added to sessions
 
   // Match by email in transcript path or session metadata
-  if (context.email && session.transcriptPath) {
+  if (context.email && session.session_file_path) {
     // Check if session was created by this user
     // (In future: check session.createdBy field)
     return true; // Permissive for now - will be tightened with auth
@@ -99,8 +99,8 @@ export function hasProjectAccess(
   }
 
   // Check if session's project is in user's accessible projects
-  if (session.projectId) {
-    return context.accessibleProjects.includes(session.projectId);
+  if (session.project_id) {
+    return context.accessibleProjects.includes(session.project_id);
   }
 
   return false;
@@ -121,11 +121,11 @@ export function hasTeamAccess(
   // Session's project should have a repo association
   // For now, check if session's transcript path matches accessible repos
 
-  if (session.transcriptPath) {
+  if (session.session_file_path) {
     // Extract project slug from path and match against repo patterns
     // This is a simplified check - will be enhanced with proper repo tracking
     for (const repoId of context.accessibleRepos) {
-      if (session.transcriptPath.includes(repoId)) {
+      if (session.session_file_path.includes(repoId)) {
         return true;
       }
     }

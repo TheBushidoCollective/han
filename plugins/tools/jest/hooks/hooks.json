@@ -5,11 +5,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jest test-changed --async"
+            "command": "han hook run jest test-changed --async",
+            "async": true
           }
         ],
-        "matcher": "Edit|Write|NotebookEdit",
-        "async": true
+        "matcher": "Edit|Write|NotebookEdit"
       }
     ],
     "Stop": [
@@ -17,10 +17,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jest test --async"
+            "command": "han hook run jest test --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       }
     ],
     "SubagentStop": [
@@ -28,10 +28,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run jest test --async"
+            "command": "han hook run jest test --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       }
     ]
   }

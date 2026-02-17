@@ -8,14 +8,14 @@
  */
 
 import { createHash } from 'node:crypto';
-import type { Message, Project, Repo, Session } from '../db/index.ts';
+import type { Message, Project, Repo, Session } from '../grpc/data-access.ts';
 import {
   messages,
   nativeTasks,
   projects,
   repos,
   sessions,
-} from '../db/index.ts';
+} from '../grpc/data-access.ts';
 import { checkSyncEligibility } from './privacy-filter.ts';
 import { getQueueManager } from './queue.ts';
 import type {
@@ -41,13 +41,13 @@ export function messageToSyncFormat(
   message: Message,
   includeContent: boolean
 ): SyncMessage {
-  const content = message.rawJson ?? '';
+  const content = message.raw_json ?? '';
 
   return {
     id: message.id,
-    lineNumber: message.lineNumber,
-    messageType: message.messageType,
-    timestamp: message.timestamp,
+    lineNumber: message.line_number,
+    messageType: message.type,
+    timestamp: message.timestamp ?? '',
     contentHash: hashContent(content),
     content: includeContent ? content : undefined,
     // Token counts not available in current Message type
@@ -83,11 +83,11 @@ async function getTasksForSession(sessionId: string): Promise<SyncTask[]> {
   return tasks.map((task) => ({
     id: task.id,
     taskId: task.id.split('-').pop() ?? task.id, // Extract task number from ID
-    subject: task.subject,
+    subject: task.subject ?? '',
     description: task.description ?? null,
     status: mapTaskStatus(task.status),
-    createdAt: task.createdAt,
-    updatedAt: task.updatedAt,
+    createdAt: task.created_at,
+    updatedAt: task.updated_at,
   }));
 }
 
@@ -154,10 +154,10 @@ async function getSessionsWithContext(): Promise<SessionWithContext[]> {
 
   // Build session context
   return allSessions.map((session) => {
-    const project = session.projectId
-      ? (projectMap.get(session.projectId) ?? null)
+    const project = session.project_id
+      ? (projectMap.get(session.project_id) ?? null)
       : null;
-    const repoId = project?.repoId;
+    const repoId = project?.repo_id;
     const repo = repoId ? (repoMap.get(repoId) ?? null) : null;
 
     return { session, project, repo };
@@ -205,10 +205,10 @@ export async function calculateSessionDelta(
 
   return {
     id: session.id,
-    projectSlug: project?.slug ?? session.projectId ?? '',
-    repoRemote: repo?.remote ?? '',
-    status: session.status,
-    slug: session.slug ?? null,
+    projectSlug: project?.slug ?? session.project_id ?? '',
+    repoRemote: repo?.remote_url ?? '',
+    status: session.status ?? '',
+    slug: session.session_slug ?? null,
     messages: newMessages,
     tasks,
     lastModified: new Date().toISOString(), // Session doesn't have updatedAt
@@ -297,16 +297,16 @@ export async function calculateSessionOnlyDelta(
 
   // Get project for this session
   let project: Project | null = null;
-  if (session.projectId) {
+  if (session.project_id) {
     const allProjects = await projects.list();
-    project = allProjects.find((p) => p.id === session.projectId) ?? null;
+    project = allProjects.find((p) => p.id === session.project_id) ?? null;
   }
 
   // Get repo for this session (via project)
   let repo: Repo | null = null;
-  if (project?.repoId) {
+  if (project?.repo_id) {
     const allRepos = await repos.list();
-    repo = allRepos.find((r) => r.id === project?.repoId) ?? null;
+    repo = allRepos.find((r) => r.id === project?.repo_id) ?? null;
   }
 
   // Calculate delta for this session

@@ -7,7 +7,7 @@
  * Now supports database-backed retrieval (faster) with fallback to message parsing.
  */
 
-import { sessionTodos } from '../db/index.ts';
+import { sessionTodos } from '../grpc/data-access.ts';
 import type { SessionMessage } from './sessions.ts';
 
 /**
@@ -106,10 +106,10 @@ export function getTodoCounts(todos: TodoItem[]): {
 export async function getTodosFromDb(sessionId: string): Promise<TodoItem[]> {
   try {
     const result = await sessionTodos.get(sessionId);
-    if (!result?.todosJson) {
+    if (!result?.todos_json) {
       return [];
     }
-    const parsed = JSON.parse(result.todosJson);
+    const parsed = JSON.parse(result.todos_json);
     if (!Array.isArray(parsed)) {
       return [];
     }

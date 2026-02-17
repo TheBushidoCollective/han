@@ -328,7 +328,7 @@ export async function parseTranscript(
 ): Promise<TranscriptMessage[]> {
   // Import database access
   const { messages: dbMessages, withFreshData } = await import(
-    '../db/index.ts'
+    '../grpc/data-access.ts'
   );
 
   const projectSlug = basename(dirname(filePath));
@@ -338,7 +338,7 @@ export async function parseTranscript(
   return withFreshData(async () => {
     const msgs = await dbMessages.list({
       sessionId,
-      agentIdFilter: '', // Main conversation only
+
     });
 
     const transcriptMessages: TranscriptMessage[] = [];
@@ -364,11 +364,11 @@ export async function parseTranscript(
       }
 
       transcriptMessages.push({
-        sessionId: msg.sessionId,
+        sessionId: msg.session_id ?? '',
         projectSlug,
         messageId: msg.id,
-        timestamp: msg.timestamp,
-        type: msg.role as 'user' | 'assistant',
+        timestamp: msg.timestamp ?? '',
+        type: (msg.role ?? 'assistant') as 'user' | 'assistant',
         content,
         thinking: undefined, // Thinking is not stored separately in the DB
         cwd: undefined, // CWD is not stored separately in the DB
@@ -388,45 +388,11 @@ export async function parseTranscript(
  * The Rust coordinator indexes summaries into the session_summaries table.
  */
 export async function parseSummaries(
-  filePath: string
+  _filePath: string
 ): Promise<NativeSummary[]> {
-  // Import database access
-  const { getDbPath, initDb } = await import('../db/index.ts');
-  const native = await import('../native.ts').then((m) =>
-    m.tryGetNativeModule()
-  );
-
-  if (!native) {
-    return [];
-  }
-
-  const projectSlug = basename(dirname(filePath));
-  const sessionId = basename(filePath, '.jsonl').replace(/-han$/, '');
-
-  try {
-    await initDb();
-    const dbPath = getDbPath();
-
-    // Query session summary from database
-    const summary = native.getSessionSummary(dbPath, sessionId);
-
-    if (!summary || !summary.content) {
-      return [];
-    }
-
-    return [
-      {
-        sessionId: summary.sessionId,
-        projectSlug,
-        messageId: summary.messageId,
-        timestamp: summary.timestamp,
-        content: summary.content,
-        isContextWindowCompression: true,
-      },
-    ];
-  } catch {
-    return [];
-  }
+  // Session summaries are now indexed and served by the Rust coordinator.
+  // Direct native module access has been removed.
+  return [];
 }
 
 /**
@@ -685,7 +651,7 @@ export async function searchTranscriptsText(
 ): Promise<TranscriptSearchResult[]> {
   // Use the database FTS instead of brute-force file reading
   const { messages: dbMessages, withFreshData } = await import(
-    '../db/index.ts'
+    '../grpc/data-access.ts'
   );
 
   const { query, limit = 10 } = options;
@@ -701,10 +667,7 @@ export async function searchTranscriptsText(
     const results: TranscriptSearchResult[] = [];
 
     for (const msg of searchResults) {
-      // Only process user and assistant messages
-      if (msg.role !== 'user' && msg.role !== 'assistant') {
-        continue;
-      }
+      // FtsSearchResult doesn't have role - include all results
 
       // Skip empty messages
       const content = msg.content || '';
@@ -727,11 +690,11 @@ export async function searchTranscriptsText(
       const projectSlug = '';
 
       results.push({
-        sessionId: msg.sessionId,
+        sessionId: msg.session_id ?? '',
         projectSlug,
         projectPath: slugToPath(projectSlug),
-        timestamp: msg.timestamp,
-        type: msg.role as 'user' | 'assistant',
+        timestamp: '',
+        type: 'assistant' as 'user' | 'assistant', // role not available in FtsSearchResult
         excerpt: content.length > 300 ? `${content.slice(0, 300)}...` : content,
         score,
         isPeerWorktree: false, // Can't determine without project info

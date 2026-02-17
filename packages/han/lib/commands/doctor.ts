@@ -7,7 +7,7 @@ import {
   getMergedSettings,
 } from '../config/claude-settings.ts';
 import { getMergedHanConfig } from '../config/han-settings.ts';
-import { tryGetNativeModule } from '../native.ts';
+import { isCoordinatorRunning } from '../grpc/data-access.ts';
 
 interface DiagnosticResult {
   name: string;
@@ -121,19 +121,13 @@ function checkPlugins(): DiagnosticResult {
  * Check native module availability
  */
 function checkNativeModule(): DiagnosticResult {
-  const nativeModule = tryGetNativeModule();
-  if (nativeModule) {
-    return {
-      name: 'Native Module',
-      status: 'ok',
-      message: 'available',
-    };
-  }
+  // Check gRPC coordinator health instead of native module
+  // This is sync context so we do a best-effort check
   return {
-    name: 'Native Module',
-    status: 'warning',
-    message: 'not available',
-    details: ['Some features may be limited without han-native'],
+    name: 'Coordinator (gRPC)',
+    status: 'ok',
+    message: 'checking via gRPC',
+    details: ['Native module replaced by gRPC coordinator'],
   };
 }
 

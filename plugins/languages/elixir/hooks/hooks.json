@@ -5,21 +5,21 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir format --async"
+            "command": "han hook run elixir format --async",
+            "async": true
           }
         ],
-        "matcher": "Edit|Write",
-        "async": true
+        "matcher": "Edit|Write"
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir test-changed --async"
+            "command": "han hook run elixir test-changed --async",
+            "async": true
           }
         ],
-        "matcher": "Edit|Write",
-        "async": true
+        "matcher": "Edit|Write"
       }
     ],
     "Stop": [
@@ -27,46 +27,46 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir format --async"
+            "command": "han hook run elixir format --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir build --async"
+            "command": "han hook run elixir build --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir test --async"
+            "command": "han hook run elixir test --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir typecheck --async"
+            "command": "han hook run elixir typecheck --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir coverage --async"
+            "command": "han hook run elixir coverage --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       }
     ],
     "SubagentStop": [
@@ -74,46 +74,46 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir format --async"
+            "command": "han hook run elixir format --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir build --async"
+            "command": "han hook run elixir build --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir test --async"
+            "command": "han hook run elixir test --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir typecheck --async"
+            "command": "han hook run elixir typecheck --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir coverage --async"
+            "command": "han hook run elixir coverage --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       }
     ]
   }

@@ -1,9 +1,6 @@
 /**/node_modules/
-/**/.next/packages/han-native/bun.lock
+/**/.next/
 client-bundle.generated.ts
-
-# Native modules are built in CI
-packages/han-native/*.node
 
 # Local config overrides (personal settings, not team-shared)
 *.local.*
@@ -25,7 +22,12 @@ tsconfig.tsbuildinfo
 
 # Build output
 packages/han/out/
+packages/han-rs/target/
+packages/han-native/
 plugins/**/dist/
+
+# Plugin lock files (managed per-plugin, not committed)
+plugins/**/bun.lock
 
 # Google Cloud credentials
 gcloud-credentials.json

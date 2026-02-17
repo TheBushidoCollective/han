@@ -10,8 +10,8 @@
  * - Minimum threshold for pattern reporting (prevents fingerprinting)
  */
 
-import type { Session } from '../db/index.ts';
-import { sessions as dbSessions, messages } from '../db/index.ts';
+import type { Session } from '../grpc/data-access.ts';
+import { sessions as dbSessions, messages } from '../grpc/data-access.ts';
 import type { UserPermissionContext } from './permission-filter.ts';
 import { filterSessionsByPermission } from './permission-filter.ts';
 import {
@@ -190,7 +190,7 @@ async function aggregatePatternsFromSessions(
             sessionPatterns.add(pattern);
 
             const existing = patternCounts.get(pattern);
-            const timestamp = new Date(msg.timestamp).getTime();
+            const timestamp = new Date(msg.timestamp ?? 0).getTime();
 
             if (existing) {
               existing.count++;

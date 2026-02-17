@@ -8,8 +8,8 @@
  * The coordinator handles JSONL → SQLite indexing.
  */
 
-import type { Message } from '../db/index.ts';
-import { messages, withFreshData } from '../db/index.ts';
+import type { Message } from '../grpc/data-access.ts';
+import { messages, withFreshData } from '../grpc/data-access.ts';
 
 /**
  * Hook execution record
@@ -91,18 +91,18 @@ interface HookEventData {
  */
 function parseHookExecutionFromMessage(msg: Message): HookExecution | null {
   // Try to parse the rawJson which contains the full event data
-  if (!msg.rawJson) {
+  if (!msg.raw_json) {
     return null;
   }
 
   try {
-    const event = JSON.parse(msg.rawJson) as HookEventData;
+    const event = JSON.parse(msg.raw_json) as HookEventData;
 
     // Process hook_execution events (from JSONL storage via metrics)
     if (event.type === 'hook_execution') {
       return {
-        id: msg.id || event.id || `hook-${msg.timestamp}-${msg.lineNumber}`,
-        sessionId: msg.sessionId || event.session_id || null,
+        id: msg.id || event.id || `hook-${msg.timestamp}-${msg.line_number}`,
+        sessionId: msg.session_id || event.session_id || null,
         taskId: event.task_id || null,
         hookType: event.hook_type || 'unknown',
         hookName: event.hook_name || 'unknown',
@@ -124,8 +124,8 @@ function parseHookExecutionFromMessage(msg: Message): HookExecution | null {
       const data = event.data || {};
 
       return {
-        id: msg.id || event.id || `hook-${msg.timestamp}-${msg.lineNumber}`,
-        sessionId: msg.sessionId || data.session_id || data.sessionId || null,
+        id: msg.id || event.id || `hook-${msg.timestamp}-${msg.line_number}`,
+        sessionId: msg.session_id || data.session_id || data.sessionId || null,
         taskId: data.task_id || data.taskId || null,
         hookType:
           data.hookType || data.hook_type || event.hook_type || 'unknown',
@@ -149,8 +149,8 @@ function parseHookExecutionFromMessage(msg: Message): HookExecution | null {
       const data = event.data || {};
 
       return {
-        id: msg.id || event.id || `hook-${msg.timestamp}-${msg.lineNumber}`,
-        sessionId: msg.sessionId || data.session_id || data.sessionId || null,
+        id: msg.id || event.id || `hook-${msg.timestamp}-${msg.line_number}`,
+        sessionId: msg.session_id || data.session_id || data.sessionId || null,
         taskId: data.task_id || data.taskId || null,
         hookType:
           data.hookType || data.hook_type || event.hook_type || 'unknown',
@@ -193,7 +193,7 @@ export async function getHookExecutionsForSession(
     // Query han_events for this session
     const hanEvents = await messages.list({
       sessionId,
-      messageType: 'han_event',
+      type: 'han_event',
     });
 
     const executions: HookExecution[] = [];
@@ -202,9 +202,9 @@ export async function getHookExecutionsForSession(
 
     // First pass: identify hook_result events and collect their hookRunId
     for (const msg of hanEvents) {
-      if (!msg.rawJson) continue;
+      if (!msg.raw_json) continue;
       try {
-        const event = JSON.parse(msg.rawJson) as HookEventData;
+        const event = JSON.parse(msg.raw_json) as HookEventData;
         if (event.type === 'hook_result' && event.data?.hookRunId) {
           hookRunIdsWithResults.add(event.data.hookRunId);
         }
@@ -215,9 +215,9 @@ export async function getHookExecutionsForSession(
 
     // Second pass: parse hook executions, skipping hook_run events that have a result
     for (const msg of hanEvents) {
-      if (!msg.rawJson) continue;
+      if (!msg.raw_json) continue;
       try {
-        const event = JSON.parse(msg.rawJson) as HookEventData;
+        const event = JSON.parse(msg.raw_json) as HookEventData;
 
         // Skip hook_run events that have a corresponding hook_result
         // (the hook_result has the complete data)
@@ -264,13 +264,35 @@ export async function getRecentHookExecutions(
     const executions: HookExecution[] = [];
 
     for (const msg of searchResults) {
-      if (msg.messageType !== 'han_event') {
+      // FtsSearchResult has limited fields - only source identifies han_event type
+      if (msg.source !== 'han_event') {
         continue;
       }
 
-      const execution = parseHookExecutionFromMessage(msg);
-      if (execution) {
+      // Parse the execution directly from the content field (which is raw_json)
+      try {
+        if (!msg.content) continue;
+        const event = JSON.parse(msg.content) as { type?: string; hook_type?: string; hook_name?: string; duration_ms?: number; exit_code?: number; passed?: boolean; output?: string; error?: string; session_id?: string; task_id?: string; timestamp?: string; id?: string; data?: Record<string, unknown> };
+        const execution: HookExecution = {
+          id: msg.id || `hook-${msg.session_id}-${Date.now()}`,
+          sessionId: (msg.session_id ?? null),
+          taskId: (event.task_id ?? null),
+          hookType: event.hook_type || 'unknown',
+          hookName: event.hook_name || 'unknown',
+          hookSource: null,
+          directory: null,
+          durationMs: event.duration_ms || 0,
+          exitCode: event.exit_code ?? 0,
+          passed: event.passed ?? true,
+          output: event.output || null,
+          error: event.error || null,
+          timestamp: event.timestamp || new Date().toISOString(),
+          ifChanged: null,
+          command: null,
+        };
         executions.push(execution);
+      } catch {
+        // Ignore parse errors
       }
     }
 

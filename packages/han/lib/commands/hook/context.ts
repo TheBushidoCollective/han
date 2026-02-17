@@ -8,7 +8,8 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import type { Command } from 'commander';
-import { hookExecutions, tasks } from '../../db/index.ts';
+import { isHooksEnabled } from '../../config/han-settings.ts';
+import { hookExecutions, tasks } from '../../grpc/data-access.ts';
 import { injectSessionContext } from '../../memory/index.ts';
 
 /**
@@ -71,13 +72,13 @@ async function generatePerformanceContext(
 ): Promise<string | null> {
   try {
     // Query task metrics from database
-    const metrics = await tasks.queryMetrics({ period: 'week' });
+    const metrics = await tasks.queryMetrics({});
 
     // Query hook stats
-    const hookStats = await hookExecutions.queryStats('week');
+    const hookStats = await hookExecutions.queryStats({});
 
     // No data case
-    if (metrics.totalTasks === 0) {
+    if (metrics.total_tasks === 0) {
       return null;
     }
 
@@ -85,55 +86,27 @@ async function generatePerformanceContext(
     lines.push('## Your Recent Performance (Last 7 Days)\n');
 
     // Overall stats
-    const successRate = Math.round(metrics.successRate * 100);
-    const calibrationScore = Math.round((metrics.calibrationScore ?? 0) * 100);
+    const successRate = metrics.total_tasks > 0 ? Math.round((metrics.completed_tasks / metrics.total_tasks) * 100) : 0;
+    const calibrationScore = 0; // calibration score not available in gRPC data layer
 
     lines.push(
-      `- **Tasks**: ${metrics.completedTasks} completed, ${successRate}% success rate`
+      `- **Tasks**: ${metrics.completed_tasks} completed, ${successRate}% success rate`
     );
     lines.push(
       `- **Calibration Score**: ${calibrationScore}% ${getCalibrationEmoji(calibrationScore)}`
     );
 
-    // Task type breakdown if available
-    if (metrics.byType) {
-      const types = Object.entries(metrics.byType);
-      const sorted = types.sort(
-        (a, b) =>
-          (b[1] as { successRate?: number }).successRate ??
-          0 - ((a[1] as { successRate?: number }).successRate ?? 0)
-      );
-      if (sorted.length > 0) {
-        const [bestType, bestStats] = sorted[0];
-        const bestRate = Math.round(
-          ((bestStats as { successRate?: number }).successRate ?? 0) * 100
-        );
-        lines.push(
-          `- **Best at**: \`${bestType}\` tasks (${bestRate}% success)`
-        );
-      }
-      if (sorted.length > 1) {
-        const [worstType, worstStats] = sorted[sorted.length - 1];
-        const worstRate = Math.round(
-          ((worstStats as { successRate?: number }).successRate ?? 0) * 100
-        );
-        if (worstRate < 80) {
-          lines.push(
-            `- **Needs improvement**: \`${worstType}\` tasks (${worstRate}% success)`
-          );
-        }
-      }
-    }
+    // Task type breakdown not available in gRPC data layer
 
     // Hook failure patterns with actionable guidance
-    if (hookStats.totalExecutions > 0 && hookStats.totalFailed > 0) {
+    if (hookStats.total_executions > 0 && hookStats.failure_count > 0) {
       const failureRate = Math.round(
-        (hookStats.totalFailed / hookStats.totalExecutions) * 100
+        (hookStats.failure_count / hookStats.total_executions) * 100
       );
       if (failureRate > 10) {
         lines.push(`\n### Hook Status\n`);
         lines.push(
-          `- ${hookStats.totalFailed}/${hookStats.totalExecutions} hook failures (${failureRate}%)`
+          `- ${hookStats.failure_count}/${hookStats.total_executions} hook failures (${failureRate}%)`
         );
 
         // Show general hook failure guidance
@@ -237,6 +210,9 @@ export function registerHookContext(hookCommand: Command): void {
         'Includes: session ID, performance metrics, and memory context.'
     )
     .action(async () => {
+      if (!isHooksEnabled()) {
+        process.exit(0);
+      }
       try {
         await outputContext();
       } catch (error) {

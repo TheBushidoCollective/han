@@ -38,14 +38,14 @@ export function executeHook(
       shouldSkipHook(hook.pluginName, hook.name, fp)
     );
     if (allCached) {
-      return {
+      return Promise.resolve({
         hook,
         exitCode: 0,
         stdout: '',
         stderr: '',
         durationMs: 0,
         skipped: true,
-      };
+      });
     }
   }
 
@@ -119,11 +119,11 @@ export function executeHook(
     let stdout = '';
     let stderr = '';
 
-    child.stdout.on('data', (data: Buffer) => {
+    child.stdout?.on('data', (data: Buffer) => {
       stdout += data.toString();
     });
 
-    child.stderr.on('data', (data: Buffer) => {
+    child.stderr?.on('data', (data: Buffer) => {
       stderr += data.toString();
     });
 

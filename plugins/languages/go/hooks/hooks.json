@@ -5,11 +5,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run go format --async"
+            "command": "han hook run go format --async",
+            "async": true
           }
         ],
-        "matcher": "Edit|Write",
-        "async": true
+        "matcher": "Edit|Write"
       }
     ],
     "Stop": [
@@ -17,28 +17,28 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run go format --async"
+            "command": "han hook run go format --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run go lint --async"
+            "command": "han hook run go lint --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run go test --async"
+            "command": "han hook run go test --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       }
     ],
     "SubagentStop": [
@@ -46,28 +46,28 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run go format --async"
+            "command": "han hook run go format --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run go lint --async"
+            "command": "han hook run go lint --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run go test --async"
+            "command": "han hook run go test --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       }
     ]
   }

@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/han-db",
+    "crates/han-indexer",
+    "crates/han-api",
+    "crates/han-proto",
+    "crates/han-coordinator",
+    "crates/han-server",
+]

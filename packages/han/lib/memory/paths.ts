@@ -11,7 +11,7 @@ import {
   getClaudeConfigDir,
   getHanDataDir,
 } from '../config/claude-settings.ts';
-import { getGitRemoteUrl } from '../native.ts';
+import { getGitRemoteUrl } from '../bun-utils.ts';
 
 /**
  * Override for memory root (used in tests)

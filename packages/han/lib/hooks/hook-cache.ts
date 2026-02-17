@@ -6,15 +6,15 @@ import {
   realpathSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { getClaudeConfigDir } from '../config/claude-settings.ts';
 import {
   getHookCache,
   sessionFileValidations,
   setHookCache,
-} from '../db/index.ts';
+} from '../grpc/data-access.ts';
 import type { EventLogger } from '../events/logger.ts';
-import { getGitRemoteUrl, getNativeModule } from '../native.ts';
+import { getGitRemoteUrl, globFilesSync } from '../bun-utils.ts';
 
 /**
  * Cache manifest structure stored per plugin/hook combination
@@ -31,9 +31,11 @@ export interface CacheManifest {
  */
 export function getProjectRoot(): string {
   const rawProjectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-  return existsSync(rawProjectRoot)
-    ? realpathSync(rawProjectRoot)
-    : rawProjectRoot;
+  try {
+    return realpathSync(rawProjectRoot);
+  } catch {
+    return rawProjectRoot;
+  }
 }
 
 /**
@@ -92,7 +94,8 @@ export function getCacheFilePath(pluginName: string, hookName: string): string {
  * Compute SHA256 hash of file contents
  */
 export function computeFileHash(filePath: string): string {
-  return getNativeModule().computeFileHash(filePath);
+  const content = readFileSync(filePath);
+  return createHash('sha256').update(content).digest('hex');
 }
 
 /**
@@ -125,7 +128,7 @@ export async function loadCacheManifestAsync(
   const cacheKey = generateCacheKey(pluginName, hookName);
 
   try {
-    const entry = await getHookCache(cacheKey);
+    const entry = await getHookCache('', cacheKey);
     if (entry?.result) {
       return JSON.parse(entry.result) as CacheManifest;
     }
@@ -171,10 +174,10 @@ export async function saveCacheManifestAsync(
 
   try {
     return await setHookCache({
-      cacheKey: cacheKey,
-      fileHash: manifestHash,
+      session_id: '',
+      hook_key: cacheKey,
+      file_hashes: manifestHash,
       result: manifestJson,
-      ttlSeconds: 7 * 24 * 60 * 60, // 7 days TTL
     });
   } catch (error) {
     console.debug(`Failed to save hook cache: ${error}`);
@@ -211,14 +214,154 @@ export function findFilesWithGlob(
   rootDir: string,
   patterns: string[]
 ): string[] {
-  return getNativeModule().findFilesWithGlob(rootDir, patterns);
+  const results: string[] = [];
+  // Build set of gitignore patterns for filtering
+  const ignoredDirs = getGitIgnoredDirs(rootDir);
+  for (const pattern of patterns) {
+    for (const file of globFilesSync(pattern, rootDir)) {
+      // Filter out files in gitignore'd directories
+      if (!isGitIgnored(file, ignoredDirs)) {
+        results.push(join(rootDir, file));
+      }
+    }
+  }
+  return results;
+}
+
+/**
+ * Build a map of directory -> ignored patterns from all .gitignore files
+ * Maps each directory (relative to rootDir) to its list of ignored patterns
+ */
+function buildGitIgnoreMap(rootDir: string): Map<string, string[]> {
+  const ignoreMap = new Map<string, string[]>();
+  // Scan for all .gitignore files in the directory tree
+  try {
+    // Use Bun.Glob directly with dot: true to find dotfiles like .gitignore
+    const gitignoreGlob = new Bun.Glob('**/.gitignore');
+    const gitignoreFiles = [...gitignoreGlob.scanSync({ cwd: rootDir, onlyFiles: true, dot: true })];
+    // Also check root .gitignore
+    if (existsSync(join(rootDir, '.gitignore'))) {
+      gitignoreFiles.push('.gitignore');
+    }
+    for (const gitignoreRelPath of [...new Set(gitignoreFiles)]) {
+      const gitignorePath = join(rootDir, gitignoreRelPath);
+      try {
+        const fileContent = readFileSync(gitignorePath, 'utf-8');
+        const patterns = fileContent
+          .split('\n')
+          .map((line) => line.trim())
+          .filter((line) => line && !line.startsWith('#'))
+          .map((line) => line.replace(/\/$/, '')); // Remove trailing slash
+        // Store relative to the directory containing the .gitignore
+        const gitignoreDir = gitignoreRelPath === '.gitignore'
+          ? ''
+          : gitignoreRelPath.replace('/.gitignore', '');
+        ignoreMap.set(gitignoreDir, patterns);
+      } catch {
+        // Skip unreadable files
+      }
+    }
+  } catch {
+    // If glob fails, try just root .gitignore
+    try {
+      const gitignorePath = join(rootDir, '.gitignore');
+      if (existsSync(gitignorePath)) {
+        const fileContent = readFileSync(gitignorePath, 'utf-8');
+        const patterns = fileContent
+          .split('\n')
+          .map((line) => line.trim())
+          .filter((line) => line && !line.startsWith('#'))
+          .map((line) => line.replace(/\/$/, ''));
+        ignoreMap.set('', patterns);
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return ignoreMap;
+}
+
+/**
+ * Get directories listed in .gitignore for filtering purposes
+ * Returns a set of directory patterns to exclude
+ * @deprecated Use buildGitIgnoreMap for nested support
+ */
+function getGitIgnoredDirs(rootDir: string): string[] {
+  const ignoreMap = buildGitIgnoreMap(rootDir);
+  // Flatten all patterns for backwards compat
+  const patterns: string[] = [];
+  for (const [dir, pats] of ignoreMap) {
+    if (dir === '') {
+      patterns.push(...pats);
+    }
+  }
+  return patterns;
+}
+
+/**
+ * Check if a relative file path should be ignored based on all gitignore rules
+ * Supports nested .gitignore files
+ */
+function isGitIgnoredWithMap(filePath: string, ignoreMap: Map<string, string[]>): boolean {
+  for (const [dir, patterns] of ignoreMap) {
+    // Check if this file is under the gitignore's directory
+    const prefix = dir === '' ? '' : dir + '/';
+    if (dir !== '' && !filePath.startsWith(prefix)) {
+      continue; // This .gitignore doesn't apply to this path
+    }
+    // Get the path relative to the gitignore's directory
+    const relPath = dir === '' ? filePath : filePath.slice(prefix.length);
+    for (const pattern of patterns) {
+      const parts = relPath.split('/');
+      // Check each path component
+      for (const part of parts) {
+        if (part === pattern) {
+          return true;
+        }
+      }
+      // Check if path starts with pattern
+      if (relPath.startsWith(pattern + '/') || relPath === pattern) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Check if a relative file path should be ignored based on gitignore patterns
+ */
+function isGitIgnored(filePath: string, ignoredPatterns: string[]): boolean {
+  const parts = filePath.split('/');
+  for (const pattern of ignoredPatterns) {
+    // Check if any directory in the path matches the pattern
+    for (const part of parts) {
+      if (part === pattern) {
+        return true;
+      }
+    }
+    // Check if the path starts with the pattern
+    if (filePath.startsWith(pattern + '/') || filePath === pattern) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
  * Build a manifest of file hashes for given files
  */
 export function buildManifest(files: string[], rootDir: string): CacheManifest {
-  return getNativeModule().buildManifest(files, rootDir);
+  const manifest: CacheManifest = {};
+  for (const filePath of files) {
+    try {
+      const key = rootDir ? relative(rootDir, filePath) : filePath;
+      manifest[key] = computeFileHash(filePath);
+    } catch {
+      // Skip files that can't be read
+    }
+  }
+  return manifest;
 }
 
 /**
@@ -233,7 +376,21 @@ function hasChanges(
   if (!cachedManifest) {
     return true;
   }
-  return getNativeModule().hasChanges(rootDir, patterns, cachedManifest);
+  const currentFiles = findFilesWithGlob(rootDir, patterns);
+  const currentManifest = buildManifest(currentFiles, rootDir);
+  // Check if any file hashes differ
+  for (const [filePath, hash] of Object.entries(currentManifest)) {
+    if (cachedManifest[filePath] !== hash) {
+      return true;
+    }
+  }
+  // Check if any cached files were deleted
+  for (const filePath of Object.keys(cachedManifest)) {
+    if (!(filePath in currentManifest)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -350,11 +507,8 @@ export async function trackFilesAsync(
 
   if (options.trackSessionChangesOnly) {
     // Only track files that the session has changed
-    const { getSessionFileChanges } = await import('../native.ts');
-    const { getDbPath } = await import('../db/index.ts');
-    const dbPath = getDbPath();
-
-    const sessionChanges = getSessionFileChanges(dbPath, options.sessionId);
+    const { sessionFileChanges: sfc } = await import('../grpc/data-access.ts');
+    const sessionChanges = await sfc.list(options.sessionId);
 
     // If no session changes, nothing to track
     if (sessionChanges.length === 0) {
@@ -362,7 +516,7 @@ export async function trackFilesAsync(
     }
 
     // Build manifest only for session-changed files
-    const changedFiles = sessionChanges.map((change) => change.filePath);
+    const changedFiles = sessionChanges.map((change) => change.file_path);
     manifest = buildManifest(changedFiles, rootDir);
   } else {
     // Always include han-config.yml (can override command or disable hook)
@@ -386,13 +540,11 @@ export async function trackFilesAsync(
 
     for (const [filePath, fileHash] of Object.entries(manifest)) {
       await sessionFileValidations.record({
-        sessionId: options.sessionId,
-        filePath,
-        fileHash,
-        pluginName,
-        hookName,
-        directory: canonicalDirectory,
-        commandHash: options.commandHash,
+        session_id: options.sessionId ?? '',
+        file_path: filePath,
+        hook_command: `${pluginName}/${hookName}`,
+        file_hash: fileHash,
+        command_hash: options.commandHash ?? '',
       });
     }
 
@@ -401,11 +553,7 @@ export async function trackFilesAsync(
     const currentFilePaths = Object.keys(manifest);
     const directory = canonicalDirectory;
     const deletedCount = await sessionFileValidations.deleteStale(
-      options.sessionId,
-      pluginName,
-      hookName,
-      directory,
-      currentFilePaths
+      options.sessionId ?? ''
     );
     if (deletedCount > 0) {
       console.debug(
@@ -465,11 +613,8 @@ export async function checkForChangesAsync(
 
   if (options.checkSessionChangesOnly) {
     // Only check files that the session has changed AND are within this directory
-    const { getSessionFileChanges } = await import('../native.ts');
-    const { getDbPath } = await import('../db/index.ts');
-    const dbPath = getDbPath();
-
-    const allSessionChanges = getSessionFileChanges(dbPath, options.sessionId);
+    const { sessionFileChanges: sfc } = await import('../grpc/data-access.ts');
+    const allSessionChanges = await sfc.list(options.sessionId);
 
     // Canonicalize rootDir to match canonicalized paths in session changes
     // (e.g., /Volumes/dev vs /Users/name/dev pointing to same location)
@@ -483,8 +628,8 @@ export async function checkForChangesAsync(
     // Filter to only changes within this hook's directory
     const sessionChanges = allSessionChanges.filter(
       (change) =>
-        change.filePath.startsWith(`${canonicalRootDir}/`) ||
-        change.filePath === canonicalRootDir
+        change.file_path.startsWith(`${canonicalRootDir}/`) ||
+        change.file_path === canonicalRootDir
     );
 
     // If no session changes in this directory, nothing to validate
@@ -493,7 +638,7 @@ export async function checkForChangesAsync(
     }
 
     // Build manifest only for session-changed files in this directory
-    const changedFiles = sessionChanges.map((change) => change.filePath);
+    const changedFiles = sessionChanges.map((change) => change.file_path);
     currentManifest = buildManifest(changedFiles, rootDir);
   } else {
     // Check all files matching patterns
@@ -513,10 +658,7 @@ export async function checkForChangesAsync(
     }
 
     const validations = await sessionFileValidations.list(
-      options.sessionId,
-      pluginName,
-      hookName,
-      canonicalDirectory
+      options.sessionId ?? ''
     );
 
     // If no validations exist yet, we need to check if any files in the manifest
@@ -530,12 +672,10 @@ export async function checkForChangesAsync(
       }
 
       // For pattern-based checks, see if any manifest files were changed in the session
-      const { getSessionFileChanges } = await import('../native.ts');
-      const { getDbPath } = await import('../db/index.ts');
-      const dbPath = getDbPath();
-      const sessionChanges = getSessionFileChanges(dbPath, options.sessionId);
+      const { sessionFileChanges: sfc2 } = await import('../grpc/data-access.ts');
+      const sessionChanges = await sfc2.list(options.sessionId);
       const sessionChangedPaths = new Set(
-        sessionChanges.map((c) => c.filePath)
+        sessionChanges.map((c) => c.file_path)
       );
 
       // Check if any files in the manifest were changed by the session
@@ -555,7 +695,7 @@ export async function checkForChangesAsync(
     // Build map of validated file paths to their hashes
     const validatedFiles = new Map<string, string>();
     for (const validation of validations) {
-      validatedFiles.set(validation.filePath, validation.fileHash);
+      validatedFiles.set(validation.file_path, validation.file_hash);
     }
 
     // Check if any current files differ from validated files
@@ -587,5 +727,20 @@ export function findDirectoriesWithMarkers(
   rootDir: string,
   markerPatterns: string[]
 ): string[] {
-  return getNativeModule().findDirectoriesWithMarkers(rootDir, markerPatterns);
+  const dirs = new Set<string>();
+  // Build gitignore map for filtering (supports nested .gitignore files)
+  const ignoreMap = buildGitIgnoreMap(rootDir);
+  for (const pattern of markerPatterns) {
+    // Ensure patterns are recursive by prepending **/ if not already a glob pattern
+    const recursivePattern = pattern.includes('/') || pattern.includes('*')
+      ? pattern
+      : `**/${pattern}`;
+    for (const file of globFilesSync(recursivePattern, rootDir)) {
+      // Filter out files in gitignore'd directories
+      if (!isGitIgnoredWithMap(file, ignoreMap)) {
+        dirs.add(dirname(join(rootDir, file)));
+      }
+    }
+  }
+  return Array.from(dirs);
 }

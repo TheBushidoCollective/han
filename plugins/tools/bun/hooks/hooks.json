@@ -5,19 +5,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run bun build --async"
+            "command": "han hook run bun build --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run bun test --async"
+            "command": "han hook run bun test --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       }
     ],
     "SubagentStop": [
@@ -25,19 +25,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run bun build --async"
+            "command": "han hook run bun build --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run bun test --async"
+            "command": "han hook run bun test --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       }
     ]
   }

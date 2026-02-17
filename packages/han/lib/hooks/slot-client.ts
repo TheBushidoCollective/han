@@ -38,7 +38,7 @@ async function isCoordinatorAvailable(): Promise<boolean> {
       }
     );
     if (!response.ok) return false;
-    const data = await response.json();
+    const data = await response.json() as Record<string, unknown>;
     return data.status === 'ok';
   } catch {
     return false;
@@ -95,17 +95,17 @@ async function acquireFromCoordinator(
       return null;
     }
 
-    const result = await response.json();
+    const result = await response.json() as Record<string, unknown>;
     if (result.errors) {
       debugLog(`GraphQL errors: ${JSON.stringify(result.errors)}`);
       return null;
     }
 
-    const data = result.data.acquireSlot;
+    const data = (result.data as Record<string, unknown>).acquireSlot as Record<string, unknown>;
     return {
-      granted: data.granted,
-      slotId: data.slotId,
-      waitingCount: data.waitingCount,
+      granted: data.granted as boolean,
+      slotId: data.slotId as number,
+      waitingCount: data.waitingCount as number,
       source: 'coordinator',
     };
   } catch (error) {
@@ -151,13 +151,13 @@ async function releaseToCoordinator(
       return false;
     }
 
-    const result = await response.json();
+    const result = await response.json() as Record<string, unknown>;
     if (result.errors) {
       debugLog(`GraphQL errors: ${JSON.stringify(result.errors)}`);
       return false;
     }
 
-    return result.data.releaseSlot.success;
+    return ((result.data as Record<string, unknown>).releaseSlot as Record<string, unknown>).success as boolean;
   } catch (error) {
     debugLog(`Failed to release to coordinator: ${error}`);
     return false;
@@ -359,10 +359,10 @@ export async function getSlotStatus(): Promise<{
 
     if (!response.ok) return null;
 
-    const result = await response.json();
+    const result = await response.json() as Record<string, unknown>;
     if (result.errors) return null;
 
-    return result.data.slots;
+    return ((result.data as Record<string, unknown>).slots) as { total: number; available: number; active: { slotId: number; sessionId: string; hookName: string; pluginName?: string; pid: number; heldForMs: number; }[] } | null;
   } catch {
     return null;
   }
