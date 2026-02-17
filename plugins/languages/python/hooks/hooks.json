@@ -5,11 +5,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust format --async",
+            "command": "han hook run python format --async",
             "async": true
           }
         ],
-        "matcher": "Edit|Write"
+        "matcher": "Edit|Write|NotebookEdit"
       }
     ],
     "Stop": [
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust format --async",
+            "command": "han hook run python format --async",
             "async": true
           }
         ]
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust lint --async",
+            "command": "han hook run python typecheck --async",
             "async": true
           }
         ]
@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust test --async",
+            "command": "han hook run python test --async",
             "async": true
           }
         ]
@@ -46,7 +46,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust format --async",
+            "command": "han hook run python format --async",
             "async": true
           }
         ]
@@ -55,7 +55,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust lint --async",
+            "command": "han hook run python typecheck --async",
             "async": true
           }
         ]
@@ -64,7 +64,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust test --async",
+            "command": "han hook run python test --async",
             "async": true
           }
         ]

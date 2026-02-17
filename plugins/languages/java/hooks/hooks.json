@@ -1,23 +1,11 @@
 {
   "hooks": {
-    "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han hook run crystal format --async",
-            "async": true
-          }
-        ],
-        "matcher": "Edit|Write"
-      }
-    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run crystal format --async",
+            "command": "han hook run java build --async",
             "async": true
           }
         ]
@@ -26,7 +14,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run crystal test --async",
+            "command": "han hook run java test --async",
             "async": true
           }
         ]
@@ -37,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run crystal format --async",
+            "command": "han hook run java build --async",
             "async": true
           }
         ]
@@ -46,7 +34,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run crystal test --async",
+            "command": "han hook run java test --async",
             "async": true
           }
         ]

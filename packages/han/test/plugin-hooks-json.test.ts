@@ -101,7 +101,9 @@ describe('Plugin hooks.json Files', () => {
       it(`${relativePath} has async: true on all PostToolUse hooks`, () => {
         const hooks = parseHooksJson(filePath);
         for (const entry of hooks.hooks.PostToolUse ?? []) {
-          expect(entry.async).toBe(true);
+          for (const hook of entry.hooks ?? []) {
+            expect(hook.async).toBe(true);
+          }
         }
       });
 

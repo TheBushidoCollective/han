@@ -15,16 +15,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run elixir build --async",
-            "async": true
-          }
-        ],
-        "matcher": "Edit|Write"
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "han hook run elixir test-changed --async",
             "async": true
           }

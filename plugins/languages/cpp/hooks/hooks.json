@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust format --async",
+            "command": "han hook run cpp format --async",
             "async": true
           }
         ],
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust format --async",
+            "command": "han hook run cpp format --async",
             "async": true
           }
         ]
@@ -26,16 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust lint --async",
-            "async": true
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han hook run rust test --async",
+            "command": "han hook run cpp build --async",
             "async": true
           }
         ]
@@ -46,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust format --async",
+            "command": "han hook run cpp format --async",
             "async": true
           }
         ]
@@ -55,16 +46,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run rust lint --async",
-            "async": true
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han hook run rust test --async",
+            "command": "han hook run cpp build --async",
             "async": true
           }
         ]
