@@ -19,8 +19,11 @@ import {
   getPluginHookSettings,
   isCacheEnabled,
 } from './config/han-settings.ts';
-import { getSessionModifiedFiles, sessionFileValidations } from './grpc/data-access.ts';
 import { getEventLogger } from './events/logger.ts';
+import {
+  getSessionModifiedFiles,
+  sessionFileValidations,
+} from './grpc/data-access.ts';
 import {
   createLockManager,
   isHookRunning,
@@ -927,6 +930,14 @@ export async function runConfiguredHook(
           );
 
           if (result.status !== 0) {
+            if (dep.optional) {
+              if (verbose) {
+                console.log(
+                  `[${pluginName}/${hookName}] Optional dependency "${dep.plugin}/${dep.hook}" failed (ignored)`
+                );
+              }
+              continue;
+            }
             console.error(
               `Error: Dependency hook "${dep.plugin}/${dep.hook}" failed.\n` +
                 `Fix the dependency first, then retry.`
@@ -1610,7 +1621,10 @@ export async function substituteHanFilesForStop(
   }
 
   try {
-    const sessionFiles = await getSessionModifiedFiles(sessionId, process.cwd());
+    const sessionFiles = await getSessionModifiedFiles(
+      sessionId,
+      process.cwd()
+    );
 
     if (sessionFiles.modifiedFiles.length === 0) {
       // No session files - replace with "."

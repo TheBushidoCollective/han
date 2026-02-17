@@ -5,19 +5,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run gleam format --async"
+            "command": "han hook run gleam format --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run gleam test --async"
+            "command": "han hook run gleam test --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       }
     ],
     "SubagentStop": [
@@ -25,19 +25,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run gleam format --async"
+            "command": "han hook run gleam format --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run gleam test --async"
+            "command": "han hook run gleam test --async",
+            "async": true
           }
-        ],
-        "async": true
+        ]
       }
     ]
   }
