@@ -58,6 +58,9 @@ async function build() {
 		],
 		define: {
 			"process.env.NODE_ENV": JSON.stringify("development"),
+			"import.meta.env.MODE": JSON.stringify("development"),
+			"import.meta.env.PROD": "false",
+			"import.meta.env.DEV": "true",
 			global: "globalThis",
 		},
 	});
