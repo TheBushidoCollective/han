@@ -2,7 +2,7 @@
 # Stage 1: Build the Rust binary
 # Stage 2: Minimal runtime image
 
-FROM rust:1.86-bookworm AS builder
+FROM rust:1-bookworm AS builder
 
 # Install protobuf compiler (required by han-proto's build.rs / tonic-build)
 RUN apt-get update && \
