@@ -321,7 +321,7 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(NativeTasks::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(NativeTasks::Id).string().not_null())
+                    .col(ColumnDef::new(NativeTasks::Id).string().primary_key())
                     .col(ColumnDef::new(NativeTasks::SessionId).string().not_null())
                     .col(ColumnDef::new(NativeTasks::MessageId).string().not_null())
                     .col(ColumnDef::new(NativeTasks::Subject).string().not_null())
@@ -335,7 +335,6 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(NativeTasks::UpdatedAt).string().not_null())
                     .col(ColumnDef::new(NativeTasks::CompletedAt).string().null())
                     .col(ColumnDef::new(NativeTasks::LineNumber).integer().not_null())
-                    .primary_key(Index::create().col(NativeTasks::Id))
                     .foreign_key(ForeignKey::create().from(NativeTasks::Table, NativeTasks::SessionId).to(Sessions::Table, Sessions::Id))
                     .to_owned(),
             )

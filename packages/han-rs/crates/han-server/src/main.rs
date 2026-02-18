@@ -60,13 +60,11 @@ async fn main() {
 
     info!("Connected to PostgreSQL");
 
-    // Run migrations
-    if let Err(e) = han_db::migration::run_migrations(&db).await {
-        error!("Migration failed: {e}");
-        std::process::exit(1);
+    // Run migrations (non-fatal — server can still serve healthcheck)
+    match han_db::migration::run_migrations(&db).await {
+        Ok(()) => info!("Migrations complete"),
+        Err(e) => error!("Migration failed (non-fatal, server will continue): {e}"),
     }
-
-    info!("Migrations complete");
 
     // Create NOTIFY triggers
     if let Err(e) = sync::pg_notify::create_notify_triggers(&db).await {
