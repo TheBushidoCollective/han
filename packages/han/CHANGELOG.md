@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.15.0] - 2026-02-18
+
+### Added
+
+- message timeline overhaul with Sentry, chronological results, subway lines, and chat alignment ([cc9af0cc](../../commit/cc9af0cc))
+- backend rearchitecture — Rust crates replace han-native (#70) ([877601e0](../../commit/877601e0))
+- support external marketplace installation (#68) ([a131b3a8](../../commit/a131b3a8))
+
+### Fixed
+
+- correct doctor test for hanBinary override detection ([11a66705](../../commit/11a66705))
+- add process.exit(0) to all han keep subcommands to prevent hanging ([a357b7fe](../../commit/a357b7fe))
+- move API Dockerfile into service directory for Railway build context ([75a8a4b9](../../commit/75a8a4b9))
+
+### Changed
+
+- simplify external marketplace installation to use Claude CLI (#69) ([4b451f23](../../commit/4b451f23))
+
+### Other
+
+- remove trailing blank line in han.test.ts ([87d2267a](../../commit/87d2267a))
+
 ## [3.14.2] - 2026-02-17
 
 ### Added
