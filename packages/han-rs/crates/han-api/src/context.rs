@@ -22,6 +22,7 @@ pub enum DbChangeEvent {
     SessionAdded {
         session_id: String,
         parent_id: Option<String>,
+        project_id: Option<String>,
     },
     /// A repo was added.
     RepoAdded { repo_id: String },
@@ -166,10 +167,12 @@ mod tests {
         let e = DbChangeEvent::SessionAdded {
             session_id: "s1".into(),
             parent_id: Some("p1".into()),
+            project_id: Some("proj-1".into()),
         };
-        if let DbChangeEvent::SessionAdded { session_id, parent_id } = e {
+        if let DbChangeEvent::SessionAdded { session_id, parent_id, project_id } = e {
             assert_eq!(session_id, "s1");
             assert_eq!(parent_id, Some("p1".into()));
+            assert_eq!(project_id, Some("proj-1".into()));
         }
     }
 

@@ -2,13 +2,19 @@
 //!
 //! Content blocks represent the different types of content within an assistant
 //! message: text, thinking, tool_use, tool_result, and image.
+//!
+//! ContentBlock is a GraphQL **interface** (not union) because the browse-client
+//! queries `type` as a shared field before using inline fragments on concrete types.
 
 use async_graphql::*;
 
 use super::enums::{ContentBlockType, ToolCategory};
 
-/// Content block interface - implemented by all block types.
-#[derive(Debug, Clone, Union)]
+/// Content block interface - shared `type` field across all block types.
+#[derive(Debug, Clone, Interface)]
+#[graphql(
+    field(name = "type", ty = "ContentBlockType", method = "block_type"),
+)]
 pub enum ContentBlock {
     Text(TextBlock),
     Thinking(ThinkingBlock),
@@ -18,103 +24,135 @@ pub enum ContentBlock {
 }
 
 /// A text content block.
-#[derive(Debug, Clone, SimpleObject)]
+#[derive(Debug, Clone)]
 pub struct TextBlock {
-    /// Block type discriminator.
-    #[graphql(name = "type")]
     pub block_type: ContentBlockType,
-    /// The text content.
     pub text: String,
 }
 
-/// A thinking/reasoning block.
-#[derive(Debug, Clone, SimpleObject)]
-pub struct ThinkingBlock {
-    /// Block type discriminator.
+#[Object]
+impl TextBlock {
     #[graphql(name = "type")]
+    async fn block_type(&self) -> ContentBlockType { self.block_type }
+    async fn text(&self) -> &str { &self.text }
+}
+
+/// A thinking/reasoning block.
+#[derive(Debug, Clone)]
+pub struct ThinkingBlock {
     pub block_type: ContentBlockType,
-    /// The full thinking content.
     pub thinking: String,
-    /// Truncated preview of the thinking.
     pub preview: String,
-    /// Signature for verification.
     pub signature: Option<String>,
 }
 
-/// A tool use block (Claude calling a tool).
-#[derive(Debug, Clone, SimpleObject)]
-pub struct ToolUseBlock {
-    /// Block type discriminator.
+#[Object]
+impl ThinkingBlock {
     #[graphql(name = "type")]
+    async fn block_type(&self) -> ContentBlockType { self.block_type }
+    async fn thinking(&self) -> &str { &self.thinking }
+    async fn preview(&self) -> &str { &self.preview }
+    async fn signature(&self) -> Option<&str> { self.signature.as_deref() }
+}
+
+/// A tool use block (Claude calling a tool).
+#[derive(Debug, Clone)]
+pub struct ToolUseBlock {
     pub block_type: ContentBlockType,
-    /// Tool call ID for correlation with result.
     pub tool_call_id: String,
-    /// Tool name.
     pub name: String,
-    /// JSON-stringified tool input.
     pub input: String,
-    /// Tool category for UI grouping.
     pub category: ToolCategory,
-    /// Icon identifier for the tool.
     pub icon: String,
-    /// Human-readable display name.
     pub display_name: String,
-    /// Color for UI rendering.
     pub color: String,
-    /// Session ID for resolving the result.
     pub session_id: Option<String>,
-    /// For Task tool calls, the spawned agent task ID.
     pub agent_task_id: Option<String>,
 }
 
-/// A tool result block (result from a tool call).
-#[derive(Debug, Clone, SimpleObject)]
-pub struct ToolResultBlock {
-    /// Block type discriminator.
+#[Object]
+impl ToolUseBlock {
     #[graphql(name = "type")]
+    async fn block_type(&self) -> ContentBlockType { self.block_type }
+    async fn tool_call_id(&self) -> &str { &self.tool_call_id }
+    async fn name(&self) -> &str { &self.name }
+    async fn input(&self) -> &str { &self.input }
+    async fn category(&self) -> ToolCategory { self.category }
+    async fn icon(&self) -> &str { &self.icon }
+    async fn display_name(&self) -> &str { &self.display_name }
+    async fn color(&self) -> &str { &self.color }
+    async fn session_id(&self) -> Option<&str> { self.session_id.as_deref() }
+    async fn agent_task_id(&self) -> Option<&str> { self.agent_task_id.as_deref() }
+
+    /// Tool result resolved inline (stub - will be populated via DataLoader).
+    async fn result(&self) -> Option<ToolResultBlock> { None }
+
+    /// Agent task reference (stub for backwards compatibility).
+    async fn agent_task(&self) -> Option<AgentTask> { None }
+}
+
+/// A tool result block (result from a tool call).
+#[derive(Debug, Clone)]
+pub struct ToolResultBlock {
     pub block_type: ContentBlockType,
-    /// Tool call ID linking back to the tool use.
     pub tool_call_id: String,
-    /// Full result content.
     pub content: String,
-    /// Whether the tool returned an error.
     pub is_error: bool,
-    /// Whether the content is long (>500 chars).
     pub is_long: bool,
-    /// Truncated preview of the content.
     pub preview: String,
-    /// Whether the result contains an image.
     pub has_image: bool,
 }
 
-/// An image content block.
-#[derive(Debug, Clone, SimpleObject)]
-pub struct ImageBlock {
-    /// Block type discriminator.
+#[Object]
+impl ToolResultBlock {
     #[graphql(name = "type")]
+    async fn block_type(&self) -> ContentBlockType { self.block_type }
+    async fn tool_call_id(&self) -> &str { &self.tool_call_id }
+    async fn content(&self) -> &str { &self.content }
+    async fn is_error(&self) -> bool { self.is_error }
+    async fn is_long(&self) -> bool { self.is_long }
+    async fn preview(&self) -> &str { &self.preview }
+    async fn has_image(&self) -> bool { self.has_image }
+}
+
+/// An image content block.
+#[derive(Debug, Clone)]
+pub struct ImageBlock {
     pub block_type: ContentBlockType,
-    /// MIME type of the image.
     pub media_type: String,
-    /// Data URL (data:image/png;base64,...).
     pub data_url: String,
+}
+
+#[Object]
+impl ImageBlock {
+    #[graphql(name = "type")]
+    async fn block_type(&self) -> ContentBlockType { self.block_type }
+    async fn media_type(&self) -> &str { &self.media_type }
+    async fn data_url(&self) -> &str { &self.data_url }
+}
+
+/// Agent task stub for ToolUseBlock.agentTask field.
+#[derive(Debug, Clone, SimpleObject)]
+pub struct AgentTask {
+    pub id: Option<String>,
 }
 
 /// Get tool metadata (category, icon, display name, color) from tool name.
 pub fn get_tool_metadata(tool_name: &str) -> (ToolCategory, &'static str, String, &'static str) {
     match tool_name {
-        "Read" => (ToolCategory::FileOperation, "file-text", "Read File".to_string(), "#3b82f6"),
-        "Write" => (ToolCategory::FileOperation, "file-plus", "Write File".to_string(), "#22c55e"),
-        "Edit" => (ToolCategory::FileOperation, "file-edit", "Edit File".to_string(), "#eab308"),
+        "Read" => (ToolCategory::File, "file-text", "Read File".to_string(), "#3b82f6"),
+        "Write" => (ToolCategory::File, "file-plus", "Write File".to_string(), "#22c55e"),
+        "Edit" => (ToolCategory::File, "file-edit", "Edit File".to_string(), "#eab308"),
         "Glob" => (ToolCategory::Search, "search", "Find Files".to_string(), "#8b5cf6"),
         "Grep" => (ToolCategory::Search, "search-code", "Search Code".to_string(), "#8b5cf6"),
-        "Bash" => (ToolCategory::CodeExecution, "terminal", "Run Command".to_string(), "#f97316"),
-        "Task" => (ToolCategory::TaskManagement, "git-branch", "Spawn Agent".to_string(), "#06b6d4"),
+        "Bash" => (ToolCategory::Shell, "terminal", "Run Command".to_string(), "#f97316"),
+        "Task" => (ToolCategory::Task, "git-branch", "Spawn Agent".to_string(), "#06b6d4"),
         "TodoWrite" | "TaskCreate" | "TaskUpdate" | "TaskList" | "TaskGet" => {
-            (ToolCategory::TaskManagement, "check-square", tool_name.to_string(), "#06b6d4")
+            (ToolCategory::Task, "check-square", tool_name.to_string(), "#06b6d4")
         }
-        "WebFetch" => (ToolCategory::Navigation, "globe", "Fetch URL".to_string(), "#ec4899"),
+        "WebFetch" => (ToolCategory::Web, "globe", "Fetch URL".to_string(), "#ec4899"),
         "WebSearch" => (ToolCategory::Search, "search", "Web Search".to_string(), "#ec4899"),
-        "NotebookEdit" => (ToolCategory::FileOperation, "book-open", "Edit Notebook".to_string(), "#eab308"),
+        "NotebookEdit" => (ToolCategory::File, "book-open", "Edit Notebook".to_string(), "#eab308"),
         name if name.starts_with("mcp__") => {
             (ToolCategory::Mcp, "plug", name.to_string(), "#a855f7")
         }
@@ -249,6 +287,28 @@ fn parse_single_block(
         }
         _ => None,
     }
+}
+
+fn extract_tool_result_content(block: &serde_json::Value) -> String {
+    if let Some(content) = block.get("content") {
+        if let Some(s) = content.as_str() {
+            return s.to_string();
+        }
+        if let Some(arr) = content.as_array() {
+            return arr
+                .iter()
+                .filter_map(|c| {
+                    if c.get("type")?.as_str()? == "text" {
+                        c.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+        }
+    }
+    String::new()
 }
 
 #[cfg(test)]
@@ -390,21 +450,21 @@ mod tests {
     #[test]
     fn test_get_tool_metadata_known_tools() {
         let (cat, icon, name, _) = get_tool_metadata("Read");
-        assert!(matches!(cat, ToolCategory::FileOperation));
+        assert!(matches!(cat, ToolCategory::File));
         assert_eq!(icon, "file-text");
         assert_eq!(name, "Read File");
 
         let (cat, _, _, _) = get_tool_metadata("Bash");
-        assert!(matches!(cat, ToolCategory::CodeExecution));
+        assert!(matches!(cat, ToolCategory::Shell));
 
         let (cat, _, _, _) = get_tool_metadata("Grep");
         assert!(matches!(cat, ToolCategory::Search));
 
         let (cat, _, _, _) = get_tool_metadata("Task");
-        assert!(matches!(cat, ToolCategory::TaskManagement));
+        assert!(matches!(cat, ToolCategory::Task));
 
         let (cat, _, _, _) = get_tool_metadata("WebFetch");
-        assert!(matches!(cat, ToolCategory::Navigation));
+        assert!(matches!(cat, ToolCategory::Web));
     }
 
     #[test]
@@ -446,26 +506,4 @@ mod tests {
             _ => panic!("Expected TextBlock"),
         }
     }
-}
-
-fn extract_tool_result_content(block: &serde_json::Value) -> String {
-    if let Some(content) = block.get("content") {
-        if let Some(s) = content.as_str() {
-            return s.to_string();
-        }
-        if let Some(arr) = content.as_array() {
-            return arr
-                .iter()
-                .filter_map(|c| {
-                    if c.get("type")?.as_str()? == "text" {
-                        c.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<_>>()
-                .join("\n");
-        }
-    }
-    String::new()
 }

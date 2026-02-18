@@ -2,8 +2,8 @@
  * Connection Gate
  *
  * Wraps the app and manages coordinator connectivity state.
- * When disconnected: shows a blurred MockDashboard with ConnectionOverlay.
- * When connected: fades out overlay, un-blurs, then mounts real app.
+ * When disconnected: shows ConnectionOverlay as a full-screen pane.
+ * When connected: fades out overlay, then mounts real app.
  * Handles mid-session disconnects by unmounting the real app and
  * resetting the Relay environment.
  */
@@ -14,12 +14,10 @@ import { useCoordinatorHealth } from "../../hooks/useCoordinatorHealth.ts";
 import { resetRelayEnvironment } from "../../relay/environment.ts";
 import { Box } from "../atoms/index.ts";
 import { ConnectionOverlay } from "./ConnectionOverlay.tsx";
-import { MockDashboard } from "./MockDashboard.tsx";
 
 type GatePhase = "disconnected" | "transitioning" | "connected";
 
 const OVERLAY_FADE_MS = 400;
-const BLUR_FADE_MS = 600;
 
 interface ConnectionGateProps {
 	children: React.ReactNode;
@@ -37,7 +35,7 @@ export function ConnectionGate({
 		setPhase("transitioning");
 		transitionTimerRef.current = setTimeout(() => {
 			setPhase("connected");
-		}, BLUR_FADE_MS);
+		}, OVERLAY_FADE_MS);
 	}, []);
 
 	useEffect(() => {
@@ -76,29 +74,18 @@ export function ConnectionGate({
 		return <>{children}</>;
 	}
 
-	// Disconnected or transitioning: show mock + overlay
+	// Disconnected or transitioning: show overlay as standalone pane
 	const isTransitioning = phase === "transitioning";
 
-	const mockContainerStyle = {
-		filter: isTransitioning ? "blur(0px)" : "blur(4px)",
-		transition: `filter ${BLUR_FADE_MS}ms ease`,
-	};
-
-	const pointerEvents: "none" | "auto" = isTransitioning ? "none" : "auto";
 	const overlayContainerStyle = {
 		opacity: isTransitioning ? 0 : 1,
 		transition: `opacity ${OVERLAY_FADE_MS}ms ease`,
-		pointerEvents,
+		pointerEvents: (isTransitioning ? "none" : "auto") as "none" | "auto",
 	};
 
 	return (
-		<>
-			<Box style={mockContainerStyle}>
-				<MockDashboard />
-			</Box>
-			<Box style={overlayContainerStyle}>
-				<ConnectionOverlay />
-			</Box>
-		</>
+		<Box style={overlayContainerStyle}>
+			<ConnectionOverlay />
+		</Box>
 	);
 }

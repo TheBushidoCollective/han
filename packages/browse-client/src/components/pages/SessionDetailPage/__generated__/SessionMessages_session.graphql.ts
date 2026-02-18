@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<55406ed765d5cc1790d721a38aea7f71>>
+ * @generated SignedSource<<909f0c2ed83065e62bcad4416fbef62b>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -12,23 +12,25 @@ import { ReaderFragment } from 'relay-runtime';
 import { FragmentRefs } from "relay-runtime";
 export type SessionMessages_session$data = {
   readonly id: string;
-  readonly messageCount: number | null | undefined;
+  readonly messageCount: number;
   readonly messages: {
     readonly __id: string;
     readonly edges: ReadonlyArray<{
-      readonly cursor: string | null | undefined;
+      readonly cursor: string;
       readonly node: {
-        readonly id: string | null | undefined;
+        readonly __typename: string;
+        readonly id: string;
+        readonly parentId: string | null | undefined;
         readonly searchText: string | null | undefined;
         readonly " $fragmentSpreads": FragmentRefs<"MessageCards_message">;
-      } | null | undefined;
-    }> | null | undefined;
+      };
+    }>;
     readonly pageInfo: {
       readonly endCursor: string | null | undefined;
-      readonly hasNextPage: boolean | null | undefined;
-    } | null | undefined;
-    readonly totalCount: number | null | undefined;
-  } | null | undefined;
+      readonly hasNextPage: boolean;
+    };
+    readonly totalCount: number;
+  };
   readonly " $fragmentType": "SessionMessages_session";
 };
 export type SessionMessages_session$key = {
@@ -129,6 +131,20 @@ return {
                   "alias": null,
                   "args": null,
                   "kind": "ScalarField",
+                  "name": "__typename",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "parentId",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
                   "name": "searchText",
                   "storageKey": null
                 },
@@ -136,13 +152,6 @@ return {
                   "args": null,
                   "kind": "FragmentSpread",
                   "name": "MessageCards_message"
-                },
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "__typename",
-                  "storageKey": null
                 }
               ],
               "storageKey": null
@@ -211,6 +220,6 @@ return {
 };
 })();
 
-(node as any).hash = "940090c0195e7fd7e7126d14782ed7fd";
+(node as any).hash = "b2f03fbae3fcb25d6b120c5c721d0fdf";
 
 export default node;

@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<4ba95949749656f3941e9655a0dcdc57>>
+ * @generated SignedSource<<9e1c2cbe4c347822fbb91316d462d88a>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -12,7 +12,8 @@ import { ReaderFragment } from 'relay-runtime';
 import { FragmentRefs } from "relay-runtime";
 export type MessageCards_message$data = {
   readonly __typename: string;
-  readonly id: string | null | undefined;
+  readonly id: string;
+  readonly parentId: string | null | undefined;
   readonly " $fragmentSpreads": FragmentRefs<"AssistantMessageCard_message" | "ExposedToolCallMessageCard_message" | "ExposedToolResultMessageCard_message" | "FileHistorySnapshotMessageCard_message" | "HookCheckStateMessageCard_message" | "HookDatetimeMessageCard_message" | "HookFileChangeMessageCard_message" | "HookReferenceMessageCard_message" | "HookResultMessageCard_message" | "HookRunMessageCard_message" | "HookScriptMessageCard_message" | "HookValidationCacheMessageCard_message" | "HookValidationMessageCard_message" | "McpToolCallMessageCard_message" | "McpToolResultMessageCard_message" | "MemoryLearnMessageCard_message" | "MemoryQueryMessageCard_message" | "QueueOperationMessageCard_message" | "SentimentAnalysisMessageCard_message" | "SummaryMessageCard_message" | "SystemMessageCard_message" | "UnknownEventMessageCard_message" | "UserMessageCard_message">;
   readonly " $fragmentType": "MessageCards_message";
 };
@@ -39,6 +40,13 @@ const node: ReaderFragment = {
       "args": null,
       "kind": "ScalarField",
       "name": "id",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "parentId",
       "storageKey": null
     },
     {
@@ -161,6 +169,6 @@ const node: ReaderFragment = {
   "abstractKey": "__isMessage"
 };
 
-(node as any).hash = "c7102b8c6d2119771e599f25abc7d4f2";
+(node as any).hash = "5502f1fb043f871aad1394734997f165";
 
 export default node;

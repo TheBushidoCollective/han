@@ -76,7 +76,7 @@ export function ToastContainer({
 			{toasts.map((toast) => (
 				<View
 					key={toast.id}
-					style={[toastBaseStyle, toastTypeStyles[toast.type]]}
+					style={{ ...toastBaseStyle, ...toastTypeStyles[toast.type] }}
 				>
 					<Text
 						style={{

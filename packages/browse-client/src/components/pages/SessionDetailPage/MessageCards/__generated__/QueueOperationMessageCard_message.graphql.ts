@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<21b54208a4f4b6b808026cc7324b377d>>
+ * @generated SignedSource<<2978e8452d730e4af9f4fa254d57ba5d>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -11,11 +11,11 @@
 import { ReaderFragment } from 'relay-runtime';
 import { FragmentRefs } from "relay-runtime";
 export type QueueOperationMessageCard_message$data = {
-  readonly id: string | null | undefined;
+  readonly id: string;
   readonly operation: string | null | undefined;
   readonly queueSessionId: string | null | undefined;
   readonly rawJson: string | null | undefined;
-  readonly timestamp: any | null | undefined;
+  readonly timestamp: string;
   readonly " $fragmentType": "QueueOperationMessageCard_message";
 };
 export type QueueOperationMessageCard_message$key = {

@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<50c1401c7262e3c5350f9d3858613652>>
+ * @generated SignedSource<<5af878c34b1824a5e4d074031a4578d2>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,7 +14,7 @@ export type MemoryPageRepoQuery$variables = {
 };
 export type MemoryPageRepoQuery$data = {
   readonly repo: {
-    readonly path: string | null | undefined;
+    readonly path: string;
   } | null | undefined;
 };
 export type MemoryPageRepoQuery = {

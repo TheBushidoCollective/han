@@ -148,7 +148,7 @@ impl WatcherService {
                     let _ = notify_tx.send(event);
                 }
             },
-            Config::default().with_poll_interval(Duration::from_secs(2)),
+            Config::default(),
         )?;
 
         watcher.watch(&path, RecursiveMode::Recursive)?;

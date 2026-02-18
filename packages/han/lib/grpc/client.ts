@@ -5,47 +5,48 @@
  * (connect-web, NOT connect-node which depends on Node http2).
  */
 
-import { type Client, createClient } from "@connectrpc/connect";
-import { createConnectTransport } from "@connectrpc/connect-web";
+import { type Client, createClient } from '@connectrpc/connect';
+import { createConnectTransport } from '@connectrpc/connect-web';
 import {
-	CoordinatorService,
-	HookService,
-	IndexerService,
-	MemoryService,
-	SessionService,
-	SlotService,
-} from "./generated/coordinator_pb.js";
+  CoordinatorService,
+  HookService,
+  IndexerService,
+  MemoryService,
+  SessionService,
+  SlotService,
+} from './generated/coordinator_pb.js';
 
 export type CoordinatorClients = {
-	coordinator: Client<typeof CoordinatorService>;
-	sessions: Client<typeof SessionService>;
-	indexer: Client<typeof IndexerService>;
-	hooks: Client<typeof HookService>;
-	slots: Client<typeof SlotService>;
-	memory: Client<typeof MemoryService>;
+  coordinator: Client<typeof CoordinatorService>;
+  sessions: Client<typeof SessionService>;
+  indexer: Client<typeof IndexerService>;
+  hooks: Client<typeof HookService>;
+  slots: Client<typeof SlotService>;
+  memory: Client<typeof MemoryService>;
 };
 
-const DEFAULT_PORT = 41956;
+const DEFAULT_PORT = 41957;
+const COORDINATOR_HOST = 'coordinator.local.han.guru';
 
 /**
  * Create typed gRPC clients for all coordinator services.
  */
 export function createCoordinatorClients(
-	port = DEFAULT_PORT,
+  port = DEFAULT_PORT
 ): CoordinatorClients {
-	const transport = createConnectTransport({
-		baseUrl: `http://127.0.0.1:${port}`,
-		useBinaryFormat: true,
-	});
+  const transport = createConnectTransport({
+    baseUrl: `https://${COORDINATOR_HOST}:${port}`,
+    useBinaryFormat: true,
+  });
 
-	return {
-		coordinator: createClient(CoordinatorService, transport),
-		sessions: createClient(SessionService, transport),
-		indexer: createClient(IndexerService, transport),
-		hooks: createClient(HookService, transport),
-		slots: createClient(SlotService, transport),
-		memory: createClient(MemoryService, transport),
-	};
+  return {
+    coordinator: createClient(CoordinatorService, transport),
+    sessions: createClient(SessionService, transport),
+    indexer: createClient(IndexerService, transport),
+    hooks: createClient(HookService, transport),
+    slots: createClient(SlotService, transport),
+    memory: createClient(MemoryService, transport),
+  };
 }
 
 // Lazy singleton — auto-starts coordinator on first use
@@ -57,10 +58,10 @@ let _port = DEFAULT_PORT;
  * Must be called before getCoordinatorClients() if non-default port is needed.
  */
 export function setCoordinatorPort(port: number): void {
-	if (_clients && _port !== port) {
-		_clients = null;
-	}
-	_port = port;
+  if (_clients && _port !== port) {
+    _clients = null;
+  }
+  _port = port;
 }
 
 /**
@@ -70,10 +71,10 @@ export function setCoordinatorPort(port: number): void {
  * (see coordinator-service.ts for lifecycle management).
  */
 export function getCoordinatorClients(): CoordinatorClients {
-	if (!_clients) {
-		_clients = createCoordinatorClients(_port);
-	}
-	return _clients;
+  if (!_clients) {
+    _clients = createCoordinatorClients(_port);
+  }
+  return _clients;
 }
 
 /**
@@ -81,38 +82,35 @@ export function getCoordinatorClients(): CoordinatorClients {
  * Returns true if healthy, false on any error.
  */
 export async function isCoordinatorHealthy(
-	port = DEFAULT_PORT,
-	timeoutMs = 2000,
+  port = DEFAULT_PORT,
+  timeoutMs = 2000
 ): Promise<boolean> {
-	try {
-		const clients = createCoordinatorClients(port);
-		const response = await clients.coordinator.health(
-			{},
-			{ timeoutMs },
-		);
-		return response.healthy;
-	} catch {
-		return false;
-	}
+  try {
+    const clients = createCoordinatorClients(port);
+    const response = await clients.coordinator.health({}, { timeoutMs });
+    return response.healthy;
+  } catch {
+    return false;
+  }
 }
 
 // Re-export generated types for convenience
 export type {
-	HealthResponse,
-	StatusResponse,
-	SessionData,
-	SessionResponse,
-	ListSessionsResponse,
-	ScanResponse,
-	IndexFileResponse,
-	ExecuteHooksRequest,
-	HookOutput,
-	HookComplete,
-	HookDefinition,
-	ListHooksResponse,
-	AcquireSlotResponse,
-	SlotInfo,
-	ListSlotsResponse,
-	MemorySearchResponse,
-	MemoryResult,
-} from "./generated/coordinator_pb.js";
+  AcquireSlotResponse,
+  ExecuteHooksRequest,
+  HealthResponse,
+  HookComplete,
+  HookDefinition,
+  HookOutput,
+  IndexFileResponse,
+  ListHooksResponse,
+  ListSessionsResponse,
+  ListSlotsResponse,
+  MemoryResult,
+  MemorySearchResponse,
+  ScanResponse,
+  SessionData,
+  SessionResponse,
+  SlotInfo,
+  StatusResponse,
+} from './generated/coordinator_pb.js';

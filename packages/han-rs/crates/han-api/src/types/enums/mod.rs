@@ -20,18 +20,16 @@ pub enum ContentBlockType {
 /// Tool category for UI grouping.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Enum)]
 pub enum ToolCategory {
-    #[graphql(name = "FILE_OPERATION")]
-    FileOperation,
-    #[graphql(name = "CODE_EXECUTION")]
-    CodeExecution,
+    #[graphql(name = "FILE")]
+    File,
     #[graphql(name = "SEARCH")]
     Search,
-    #[graphql(name = "NAVIGATION")]
-    Navigation,
-    #[graphql(name = "COMMUNICATION")]
-    Communication,
-    #[graphql(name = "TASK_MANAGEMENT")]
-    TaskManagement,
+    #[graphql(name = "SHELL")]
+    Shell,
+    #[graphql(name = "TASK")]
+    Task,
+    #[graphql(name = "WEB")]
+    Web,
     #[graphql(name = "MCP")]
     Mcp,
     #[graphql(name = "OTHER")]
@@ -41,11 +39,11 @@ pub enum ToolCategory {
 /// Memory event action type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Enum)]
 pub enum EventAction {
-    #[graphql(name = "created")]
+    #[graphql(name = "CREATED")]
     Created,
-    #[graphql(name = "updated")]
+    #[graphql(name = "UPDATED")]
     Updated,
-    #[graphql(name = "deleted")]
+    #[graphql(name = "DELETED")]
     Deleted,
 }
 
@@ -65,11 +63,11 @@ pub enum MemoryEventType {
 /// Plugin installation scope.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Enum)]
 pub enum PluginScope {
-    #[graphql(name = "user")]
+    #[graphql(name = "USER")]
     User,
-    #[graphql(name = "project")]
+    #[graphql(name = "PROJECT")]
     Project,
-    #[graphql(name = "local")]
+    #[graphql(name = "LOCAL")]
     Local,
 }
 
@@ -87,59 +85,47 @@ pub enum TodoStatus {
 /// Metrics period for filtering.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Enum)]
 pub enum MetricsPeriod {
-    #[graphql(name = "today")]
-    Today,
-    #[graphql(name = "week")]
+    #[graphql(name = "DAY")]
+    Day,
+    #[graphql(name = "WEEK")]
     Week,
-    #[graphql(name = "month")]
+    #[graphql(name = "MONTH")]
     Month,
-    #[graphql(name = "all")]
-    All,
 }
 
 /// Task status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Enum)]
 pub enum TaskStatus {
-    #[graphql(name = "active")]
+    #[graphql(name = "ACTIVE")]
     Active,
-    #[graphql(name = "completed")]
+    #[graphql(name = "COMPLETED")]
     Completed,
-    #[graphql(name = "abandoned")]
-    Abandoned,
+    #[graphql(name = "FAILED")]
+    Failed,
 }
 
 /// Task type classification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Enum)]
 pub enum TaskType {
-    #[graphql(name = "feature")]
-    Feature,
-    #[graphql(name = "bugfix")]
-    Bugfix,
-    #[graphql(name = "refactor")]
+    #[graphql(name = "FIX")]
+    Fix,
+    #[graphql(name = "IMPLEMENTATION")]
+    Implementation,
+    #[graphql(name = "REFACTOR")]
     Refactor,
-    #[graphql(name = "test")]
-    Test,
-    #[graphql(name = "docs")]
-    Docs,
-    #[graphql(name = "config")]
-    Config,
-    #[graphql(name = "research")]
+    #[graphql(name = "RESEARCH")]
     Research,
-    #[graphql(name = "other")]
-    Other,
 }
 
 /// Task outcome.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Enum)]
 pub enum TaskOutcome {
-    #[graphql(name = "success")]
+    #[graphql(name = "SUCCESS")]
     Success,
-    #[graphql(name = "partial")]
+    #[graphql(name = "PARTIAL")]
     Partial,
-    #[graphql(name = "abandoned")]
-    Abandoned,
-    #[graphql(name = "unknown")]
-    Unknown,
+    #[graphql(name = "FAILURE")]
+    Failure,
 }
 
 /// Memory layer.
@@ -237,12 +223,11 @@ mod tests {
     #[test]
     fn tool_category_variants() {
         let cats = [
-            ToolCategory::FileOperation,
-            ToolCategory::CodeExecution,
+            ToolCategory::File,
             ToolCategory::Search,
-            ToolCategory::Navigation,
-            ToolCategory::Communication,
-            ToolCategory::TaskManagement,
+            ToolCategory::Shell,
+            ToolCategory::Task,
+            ToolCategory::Web,
             ToolCategory::Mcp,
             ToolCategory::Other,
         ];
@@ -287,15 +272,14 @@ mod tests {
     fn task_status_variants() {
         assert_eq!(TaskStatus::Active, TaskStatus::Active);
         assert_ne!(TaskStatus::Active, TaskStatus::Completed);
-        assert_ne!(TaskStatus::Completed, TaskStatus::Abandoned);
+        assert_ne!(TaskStatus::Completed, TaskStatus::Failed);
     }
 
     #[test]
     fn task_type_all_variants_distinct() {
         let types = [
-            TaskType::Feature, TaskType::Bugfix, TaskType::Refactor,
-            TaskType::Test, TaskType::Docs, TaskType::Config,
-            TaskType::Research, TaskType::Other,
+            TaskType::Fix, TaskType::Implementation, TaskType::Refactor,
+            TaskType::Research,
         ];
         for (i, a) in types.iter().enumerate() {
             for (j, b) in types.iter().enumerate() {
@@ -307,8 +291,7 @@ mod tests {
     #[test]
     fn task_outcome_variants() {
         assert_ne!(TaskOutcome::Success, TaskOutcome::Partial);
-        assert_ne!(TaskOutcome::Partial, TaskOutcome::Abandoned);
-        assert_ne!(TaskOutcome::Abandoned, TaskOutcome::Unknown);
+        assert_ne!(TaskOutcome::Partial, TaskOutcome::Failure);
     }
 
     #[test]
@@ -359,8 +342,7 @@ mod tests {
 
     #[test]
     fn metrics_period_variants() {
-        assert_ne!(MetricsPeriod::Today, MetricsPeriod::Week);
+        assert_ne!(MetricsPeriod::Day, MetricsPeriod::Week);
         assert_ne!(MetricsPeriod::Week, MetricsPeriod::Month);
-        assert_ne!(MetricsPeriod::Month, MetricsPeriod::All);
     }
 }

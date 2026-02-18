@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<757cdf2a34c2be4ed10682b0c7a8b7a7>>
+ * @generated SignedSource<<a04d7802fe7a4e399e140559e1eb44a6>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -9,7 +9,7 @@
 // @ts-nocheck
 
 import { ConcreteRequest } from 'relay-runtime';
-export type Granularity = "DAY" | "MONTH" | "WEEK" | "%future added value";
+export type Granularity = "day" | "month" | "week" | "%future added value";
 export type TeamDashboardPageQuery$variables = {
   endDate?: string | null | undefined;
   granularity?: Granularity | null | undefined;
@@ -17,8 +17,8 @@ export type TeamDashboardPageQuery$variables = {
 };
 export type TeamDashboardPageQuery$data = {
   readonly projects: ReadonlyArray<{
-    readonly id: string | null | undefined;
-  }> | null | undefined;
+    readonly id: string;
+  }>;
   readonly teamMetrics: {
     readonly activityTimeline: ReadonlyArray<{
       readonly messageCount: number | null | undefined;

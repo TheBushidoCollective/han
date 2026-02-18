@@ -17,7 +17,7 @@ serde_json = "1"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4"] }
 tokio = { version = "1", features = ["full"] }
-notify = { version = "7", default-features = false, features = ["macos_kqueue"] }
+notify = "7"
 memmap2 = "0.9"
 bytecount = "0.6"
 vader_sentiment = "0.1"

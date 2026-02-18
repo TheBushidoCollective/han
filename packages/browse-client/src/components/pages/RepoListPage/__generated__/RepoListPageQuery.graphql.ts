@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<972ba24fac96037f3a49576b1f6a377d>>
+ * @generated SignedSource<<fb31b4c92695bffbbb5b6ca42c847b06>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -13,12 +13,12 @@ export type RepoListPageQuery$variables = Record<PropertyKey, never>;
 export type RepoListPageQuery$data = {
   readonly repos: ReadonlyArray<{
     readonly id: string;
-    readonly lastActivity: any | null | undefined;
-    readonly name: string | null | undefined;
-    readonly path: string | null | undefined;
-    readonly repoId: string | null | undefined;
+    readonly lastActivity: string | null | undefined;
+    readonly name: string;
+    readonly path: string;
+    readonly repoId: string;
     readonly totalSessions: number | null | undefined;
-  }> | null | undefined;
+  }>;
 };
 export type RepoListPageQuery = {
   response: RepoListPageQuery$data;

@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<0da60e0c8710d79bcb57d48bc7cdf82d>>
+ * @generated SignedSource<<26f6d7aa98e021d9ac5d92477c791a28>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -13,14 +13,14 @@ import { FragmentRefs } from "relay-runtime";
 export type DashboardPageActivity_query$data = {
   readonly activity: {
     readonly dailyActivity: ReadonlyArray<{
-      readonly cachedTokens: any | null | undefined;
+      readonly cachedTokens: number | null | undefined;
       readonly date: string | null | undefined;
       readonly filesChanged: number | null | undefined;
-      readonly inputTokens: any | null | undefined;
+      readonly inputTokens: number | null | undefined;
       readonly linesAdded: number | null | undefined;
       readonly linesRemoved: number | null | undefined;
       readonly messageCount: number | null | undefined;
-      readonly outputTokens: any | null | undefined;
+      readonly outputTokens: number | null | undefined;
       readonly sessionCount: number | null | undefined;
     }> | null | undefined;
     readonly dailyModelTokens: ReadonlyArray<{
@@ -28,9 +28,9 @@ export type DashboardPageActivity_query$data = {
       readonly models: ReadonlyArray<{
         readonly displayName: string | null | undefined;
         readonly model: string | null | undefined;
-        readonly tokens: any | null | undefined;
+        readonly tokens: number | null | undefined;
       }> | null | undefined;
-      readonly totalTokens: any | null | undefined;
+      readonly totalTokens: number | null | undefined;
     }> | null | undefined;
     readonly firstSessionDate: string | null | undefined;
     readonly hourlyActivity: ReadonlyArray<{
@@ -39,24 +39,24 @@ export type DashboardPageActivity_query$data = {
       readonly sessionCount: number | null | undefined;
     }> | null | undefined;
     readonly modelUsage: ReadonlyArray<{
-      readonly cacheCreationTokens: any | null | undefined;
-      readonly cacheReadTokens: any | null | undefined;
+      readonly cacheCreationTokens: number | null | undefined;
+      readonly cacheReadTokens: number | null | undefined;
       readonly costUsd: number | null | undefined;
       readonly displayName: string | null | undefined;
-      readonly inputTokens: any | null | undefined;
+      readonly inputTokens: number | null | undefined;
       readonly model: string | null | undefined;
-      readonly outputTokens: any | null | undefined;
-      readonly totalTokens: any | null | undefined;
+      readonly outputTokens: number | null | undefined;
+      readonly totalTokens: number | null | undefined;
     }> | null | undefined;
     readonly streakDays: number | null | undefined;
     readonly tokenUsage: {
       readonly estimatedCostUsd: number | null | undefined;
       readonly messageCount: number | null | undefined;
       readonly sessionCount: number | null | undefined;
-      readonly totalCachedTokens: any | null | undefined;
-      readonly totalInputTokens: any | null | undefined;
-      readonly totalOutputTokens: any | null | undefined;
-      readonly totalTokens: any | null | undefined;
+      readonly totalCachedTokens: number | null | undefined;
+      readonly totalInputTokens: number | null | undefined;
+      readonly totalOutputTokens: number | null | undefined;
+      readonly totalTokens: number | null | undefined;
     } | null | undefined;
     readonly totalActiveDays: number | null | undefined;
     readonly totalMessages: number | null | undefined;

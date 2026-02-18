@@ -18,7 +18,7 @@ const overlayStyle = {
 	right: 0,
 	bottom: 0,
 	zIndex: 100,
-	backgroundColor: "rgba(13, 17, 23, 0.85)",
+	backgroundColor: colors.bg.primary,
 	display: "flex" as const,
 	alignItems: "center" as const,
 	justifyContent: "center" as const,

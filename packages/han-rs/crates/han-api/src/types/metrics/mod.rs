@@ -28,6 +28,31 @@ impl Task {
     async fn task_id(&self) -> &str { &self.task_id }
     async fn description(&self) -> &str { &self.description }
     async fn task_type(&self) -> &str { &self.task_type }
+
+    /// Task type enum (FIX, IMPLEMENTATION, REFACTOR, RESEARCH).
+    #[graphql(name = "type")]
+    async fn type_enum(&self) -> Option<crate::types::enums::TaskType> {
+        match self.task_type.to_lowercase().as_str() {
+            "fix" | "bugfix" | "bug" => Some(crate::types::enums::TaskType::Fix),
+            "implementation" | "feature" | "implement" => Some(crate::types::enums::TaskType::Implementation),
+            "refactor" | "refactoring" => Some(crate::types::enums::TaskType::Refactor),
+            "research" | "investigate" => Some(crate::types::enums::TaskType::Research),
+            _ => Some(crate::types::enums::TaskType::Implementation),
+        }
+    }
+
+    /// Task status (ACTIVE, COMPLETED, FAILED).
+    async fn status(&self) -> crate::types::enums::TaskStatus {
+        if self.completed_at.is_some() {
+            match self.outcome.as_deref() {
+                Some("failure") | Some("failed") => crate::types::enums::TaskStatus::Failed,
+                _ => crate::types::enums::TaskStatus::Completed,
+            }
+        } else {
+            crate::types::enums::TaskStatus::Active
+        }
+    }
+
     async fn outcome(&self) -> Option<&str> { self.outcome.as_deref() }
     async fn confidence(&self) -> Option<f64> { self.confidence }
     async fn notes(&self) -> Option<&str> { self.notes.as_deref() }
@@ -37,6 +62,14 @@ impl Task {
     async fn tests_added(&self) -> Option<i32> { self.tests_added }
     async fn started_at(&self) -> &str { &self.started_at }
     async fn completed_at(&self) -> Option<&str> { self.completed_at.as_deref() }
+
+    /// Duration in seconds (computed from startedAt/completedAt).
+    async fn duration_seconds(&self) -> Option<i32> {
+        let completed = self.completed_at.as_ref()?;
+        let start = chrono::DateTime::parse_from_rfc3339(&self.started_at).ok()?;
+        let end = chrono::DateTime::parse_from_rfc3339(completed).ok()?;
+        Some(end.signed_duration_since(start).num_seconds() as i32)
+    }
 }
 
 impl From<han_db::entities::tasks::Model> for Task {
@@ -76,25 +109,31 @@ pub struct TaskConnection {
 /// Metrics data for a time period.
 #[derive(Debug, Clone, SimpleObject)]
 pub struct MetricsData {
-    pub total_tasks: i32,
-    pub completed_tasks: i32,
-    pub active_tasks: i32,
-    pub task_type_counts: Vec<TaskTypeCount>,
-    pub task_outcome_counts: Vec<TaskOutcomeCount>,
+    pub total_tasks: Option<i32>,
+    pub completed_tasks: Option<i32>,
+    pub success_rate: Option<f64>,
+    pub average_confidence: Option<f64>,
+    pub average_duration: Option<f64>,
+    pub calibration_score: Option<f64>,
+    pub significant_frustrations: Option<i32>,
+    pub significant_frustration_rate: Option<f64>,
+    pub tasks_by_type: Option<Vec<TaskTypeCount>>,
+    pub tasks_by_outcome: Option<Vec<TaskOutcomeCount>>,
 }
 
 /// Count of tasks by type.
 #[derive(Debug, Clone, SimpleObject)]
 pub struct TaskTypeCount {
-    pub task_type: String,
-    pub count: i32,
+    #[graphql(name = "type")]
+    pub task_type: Option<crate::types::enums::TaskType>,
+    pub count: Option<i32>,
 }
 
 /// Count of tasks by outcome.
 #[derive(Debug, Clone, SimpleObject)]
 pub struct TaskOutcomeCount {
-    pub outcome: String,
-    pub count: i32,
+    pub outcome: Option<crate::types::enums::TaskOutcome>,
+    pub count: Option<i32>,
 }
 
 #[cfg(test)]
@@ -312,42 +351,36 @@ mod tests {
     #[test]
     fn metrics_data_construction() {
         let md = MetricsData {
-            total_tasks: 50,
-            completed_tasks: 35,
-            active_tasks: 15,
-            task_type_counts: vec![
-                TaskTypeCount { task_type: "feature".into(), count: 20 },
-                TaskTypeCount { task_type: "bugfix".into(), count: 15 },
-            ],
-            task_outcome_counts: vec![
-                TaskOutcomeCount { outcome: "success".into(), count: 30 },
-                TaskOutcomeCount { outcome: "partial".into(), count: 5 },
-            ],
+            total_tasks: Some(50),
+            completed_tasks: Some(35),
+            success_rate: Some(0.7),
+            average_confidence: Some(0.85),
+            average_duration: None,
+            calibration_score: Some(0.9),
+            significant_frustrations: Some(3),
+            significant_frustration_rate: Some(0.06),
+            tasks_by_type: Some(vec![]),
+            tasks_by_outcome: Some(vec![]),
         };
-        assert_eq!(md.total_tasks, 50);
-        assert_eq!(md.completed_tasks, 35);
-        assert_eq!(md.active_tasks, 15);
-        assert_eq!(md.task_type_counts.len(), 2);
-        assert_eq!(md.task_outcome_counts.len(), 2);
+        assert_eq!(md.total_tasks, Some(50));
+        assert_eq!(md.completed_tasks, Some(35));
     }
 
     #[test]
     fn task_type_count_construction() {
         let tc = TaskTypeCount {
-            task_type: "refactor".into(),
-            count: 7,
+            task_type: Some(crate::types::enums::TaskType::Refactor),
+            count: Some(7),
         };
-        assert_eq!(tc.task_type, "refactor");
-        assert_eq!(tc.count, 7);
+        assert_eq!(tc.count, Some(7));
     }
 
     #[test]
     fn task_outcome_count_construction() {
         let oc = TaskOutcomeCount {
-            outcome: "abandoned".into(),
-            count: 2,
+            outcome: Some(crate::types::enums::TaskOutcome::Success),
+            count: Some(2),
         };
-        assert_eq!(oc.outcome, "abandoned");
-        assert_eq!(oc.count, 2);
+        assert_eq!(oc.count, Some(2));
     }
 }

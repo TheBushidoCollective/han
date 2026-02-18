@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<442cd609f0c775f361c7bd7feac617a9>>
+ * @generated SignedSource<<4bf7b144e9d94aa113695b069b18b65a>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,9 +14,9 @@ export type SessionDetailContentSubscription$variables = {
 };
 export type SessionDetailContentSubscription$data = {
   readonly sessionMessageAdded: {
-    readonly messageIndex: number | null | undefined;
-    readonly sessionId: string | null | undefined;
-  } | null | undefined;
+    readonly messageIndex: number;
+    readonly sessionId: string;
+  };
 };
 export type SessionDetailContentSubscription = {
   response: SessionDetailContentSubscription$data;
@@ -71,7 +71,7 @@ return {
     "metadata": null,
     "name": "SessionDetailContentSubscription",
     "selections": (v1/*: any*/),
-    "type": "Subscription",
+    "type": "SubscriptionRoot",
     "abstractKey": null
   },
   "kind": "Request",

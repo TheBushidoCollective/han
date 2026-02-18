@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<a54108e1a088c55880ef8c9fc75172b3>>
+ * @generated SignedSource<<0c1afe97d856c0dfb4128ad6d10168fa>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -26,7 +26,7 @@ export type PluginListPageQuery$data = {
   readonly plugins: ReadonlyArray<{
     readonly category: string | null | undefined;
     readonly enabled: boolean | null | undefined;
-    readonly id: string | null | undefined;
+    readonly id: string;
     readonly marketplace: string | null | undefined;
     readonly name: string | null | undefined;
     readonly scope: PluginScope | null | undefined;

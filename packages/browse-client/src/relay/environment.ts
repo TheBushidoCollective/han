@@ -304,7 +304,11 @@ const subscribeFn: SubscribeFunction = (request, variables) => {
  */
 function createEnvironment(): Environment {
 	const network = Network.create(fetchFn, subscribeFn);
-	const store = new Store(new RecordSource());
+	const store = new Store(new RecordSource(), {
+		// Keep records in the store longer to enable faster back-navigation
+		// and reduce re-fetching when switching between pages
+		gcReleaseBufferSize: 50,
+	});
 
 	return new Environment({
 		network,

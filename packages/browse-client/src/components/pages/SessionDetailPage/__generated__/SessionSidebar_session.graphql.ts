@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<d8d1fcf32cba594be37db8ab7ff93b41>>
+ * @generated SignedSource<<aa6a2571cd915da6cccb5be7ce4ef892>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -9,32 +9,30 @@
 // @ts-nocheck
 
 import { ReaderFragment } from 'relay-runtime';
-export type NativeTaskStatus = "completed" | "in_progress" | "pending" | "%future added value";
-export type TaskOutcome = "FAILURE" | "PARTIAL" | "SUCCESS" | "%future added value";
 export type TaskStatus = "ACTIVE" | "COMPLETED" | "FAILED" | "%future added value";
 export type TaskType = "FIX" | "IMPLEMENTATION" | "REFACTOR" | "RESEARCH" | "%future added value";
-export type TodoStatus = "COMPLETED" | "IN_PROGRESS" | "PENDING" | "%future added value";
+export type TodoStatus = "completed" | "in_progress" | "pending" | "%future added value";
 import { FragmentRefs } from "relay-runtime";
 export type SessionSidebar_session$data = {
   readonly activeTasks: {
     readonly edges: ReadonlyArray<{
       readonly node: {
-        readonly description: string | null | undefined;
-        readonly id: string | null | undefined;
-        readonly startedAt: any | null | undefined;
-        readonly status: TaskStatus | null | undefined;
-        readonly taskId: string | null | undefined;
+        readonly description: string;
+        readonly id: string;
+        readonly startedAt: string;
+        readonly status: TaskStatus;
+        readonly taskId: string;
         readonly type: TaskType | null | undefined;
-      } | null | undefined;
-    }> | null | undefined;
-    readonly totalCount: number | null | undefined;
+      };
+    }>;
+    readonly totalCount: number;
   } | null | undefined;
   readonly currentTask: {
-    readonly description: string | null | undefined;
-    readonly id: string | null | undefined;
-    readonly startedAt: any | null | undefined;
-    readonly status: TaskStatus | null | undefined;
-    readonly taskId: string | null | undefined;
+    readonly description: string;
+    readonly id: string;
+    readonly startedAt: string;
+    readonly status: TaskStatus;
+    readonly taskId: string;
     readonly type: TaskType | null | undefined;
   } | null | undefined;
   readonly currentTodo: {
@@ -68,32 +66,32 @@ export type SessionSidebar_session$data = {
     readonly blockedBy: ReadonlyArray<string> | null | undefined;
     readonly blocks: ReadonlyArray<string> | null | undefined;
     readonly completedAt: string | null | undefined;
-    readonly createdAt: string | null | undefined;
+    readonly createdAt: string;
     readonly description: string | null | undefined;
-    readonly id: string | null | undefined;
-    readonly messageId: string | null | undefined;
+    readonly id: string;
+    readonly messageId: string;
     readonly owner: string | null | undefined;
-    readonly sessionId: string | null | undefined;
-    readonly status: NativeTaskStatus | null | undefined;
-    readonly subject: string | null | undefined;
-    readonly updatedAt: string | null | undefined;
-  }> | null | undefined;
+    readonly sessionId: string;
+    readonly status: string;
+    readonly subject: string;
+    readonly updatedAt: string;
+  }>;
   readonly tasks: {
     readonly edges: ReadonlyArray<{
       readonly node: {
-        readonly completedAt: any | null | undefined;
+        readonly completedAt: string | null | undefined;
         readonly confidence: number | null | undefined;
-        readonly description: string | null | undefined;
+        readonly description: string;
         readonly durationSeconds: number | null | undefined;
-        readonly id: string | null | undefined;
-        readonly outcome: TaskOutcome | null | undefined;
-        readonly startedAt: any | null | undefined;
-        readonly status: TaskStatus | null | undefined;
-        readonly taskId: string | null | undefined;
+        readonly id: string;
+        readonly outcome: string | null | undefined;
+        readonly startedAt: string;
+        readonly status: TaskStatus;
+        readonly taskId: string;
         readonly type: TaskType | null | undefined;
-      } | null | undefined;
-    }> | null | undefined;
-    readonly totalCount: number | null | undefined;
+      };
+    }>;
+    readonly totalCount: number;
   } | null | undefined;
   readonly todoCounts: {
     readonly completed: number | null | undefined;
@@ -108,9 +106,9 @@ export type SessionSidebar_session$data = {
         readonly content: string | null | undefined;
         readonly id: string | null | undefined;
         readonly status: TodoStatus | null | undefined;
-      } | null | undefined;
-    }> | null | undefined;
-    readonly totalCount: number | null | undefined;
+      };
+    }>;
+    readonly totalCount: number;
   } | null | undefined;
   readonly " $fragmentSpreads": FragmentRefs<"SessionSidebar_fileChanges" | "SessionSidebar_hookExecutions">;
   readonly " $fragmentType": "SessionSidebar_session";

@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<ff49bb26302c63347eda400a2c406330>>
+ * @generated SignedSource<<6df2b5d55369837f00499546ce4ff0b2>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,12 +14,12 @@ export type McpToolCallMessageCardResultSubscription$variables = {
 };
 export type McpToolCallMessageCardResultSubscription$data = {
   readonly toolResultAdded: {
-    readonly callId: string | null | undefined;
-    readonly durationMs: number | null | undefined;
-    readonly sessionId: string | null | undefined;
-    readonly success: boolean | null | undefined;
-    readonly type: string | null | undefined;
-  } | null | undefined;
+    readonly callId: string;
+    readonly durationMs: number;
+    readonly sessionId: string;
+    readonly success: boolean;
+    readonly type: string;
+  };
 };
 export type McpToolCallMessageCardResultSubscription = {
   response: McpToolCallMessageCardResultSubscription$data;
@@ -95,7 +95,7 @@ return {
     "metadata": null,
     "name": "McpToolCallMessageCardResultSubscription",
     "selections": (v1/*: any*/),
-    "type": "Subscription",
+    "type": "SubscriptionRoot",
     "abstractKey": null
   },
   "kind": "Request",

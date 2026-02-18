@@ -11,25 +11,25 @@
  * file watching, JSONL indexing, SQLite, FTS, subscriptions.
  */
 
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import {
-	createCoordinatorClients,
-	isCoordinatorHealthy,
-} from "../grpc/client.ts";
+  createCoordinatorClients,
+  isCoordinatorHealthy,
+} from '../grpc/client.ts';
 
-const DEFAULT_PORT = 41956;
+const DEFAULT_PORT = 41957;
 
 /**
  * Get the han version from package.json
  */
 const getHanVersion = (): string => {
-	try {
-		const pkg = require("../../package.json");
-		return pkg.version || "0.0.0";
-	} catch {
-		return "0.0.0";
-	}
+  try {
+    const pkg = require('../../package.json');
+    return pkg.version || '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
 };
 
 export const COORDINATOR_VERSION = getHanVersion();
@@ -38,18 +38,26 @@ export const COORDINATOR_VERSION = getHanVersion();
  * Coordinator service state
  */
 interface CoordinatorState {
-	isRunning: boolean;
-	version: string;
-	process: ReturnType<typeof Bun.spawn> | null;
-	port: number;
+  isRunning: boolean;
+  version: string;
+  process: ReturnType<typeof Bun.spawn> | null;
+  port: number;
 }
 
 const state: CoordinatorState = {
-	isRunning: false,
-	version: COORDINATOR_VERSION,
-	process: null,
-	port: DEFAULT_PORT,
+  isRunning: false,
+  version: COORDINATOR_VERSION,
+  process: null,
+  port: DEFAULT_PORT,
 };
+
+/**
+ * Get the effective coordinator port.
+ * Reads HAN_COORDINATOR_PORT at call time (set by server.ts before startup).
+ */
+function getEffectivePort(): number {
+  return parseInt(process.env.HAN_COORDINATOR_PORT || '', 10) || state.port;
+}
 
 // ============================================================================
 // Binary Discovery
@@ -58,43 +66,61 @@ const state: CoordinatorState = {
 /**
  * Find the han-coordinator binary.
  * Search order:
+ * 0. Local Rust build output (dev mode only)
  * 1. ~/.han/bin/han-coordinator
  * 2. npm platform package bundled binary
  * 3. PATH
  */
 function findCoordinatorBinary(): string | null {
-	const home = process.env.HOME || process.env.USERPROFILE || "/tmp";
+  const home = process.env.HOME || process.env.USERPROFILE || '/tmp';
 
-	// 1. ~/.han/bin/han-coordinator
-	const hanBin = join(home, ".han", "bin", "han-coordinator");
-	if (existsSync(hanBin)) return hanBin;
+  // 0. Local Rust build (dev mode: running from .ts source)
+  const mainFile = process.argv[1] || '';
+  if (mainFile.endsWith('.ts') || mainFile.endsWith('.tsx')) {
+    // packages/han/lib/services/ -> packages/han-rs/target/
+    const pkgRoot = resolve(import.meta.dir, '..', '..', '..');
+    for (const profile of ['release', 'debug']) {
+      const localBin = join(
+        pkgRoot,
+        'han-rs',
+        'target',
+        profile,
+        'han-coordinator'
+      );
+      if (existsSync(localBin)) return localBin;
+    }
+  }
 
-	// 2. npm platform package
-	const arch = process.arch;
-	const platform = process.platform;
-	try {
-		const pkgName = `@thebushidocollective/han-${platform}-${arch}`;
-		const pkgPath = require.resolve(`${pkgName}/han-coordinator`);
-		if (existsSync(pkgPath)) return pkgPath;
-	} catch {
-		// Package not installed
-	}
+  // 1. ~/.han/bin/han-coordinator
+  const hanBin = join(home, '.han', 'bin', 'han-coordinator');
+  if (existsSync(hanBin)) return hanBin;
 
-	// 3. PATH lookup via which/where
-	try {
-		const result = Bun.spawnSync(
-			[process.platform === "win32" ? "where" : "which", "han-coordinator"],
-			{ stdout: "pipe", stderr: "ignore" },
-		);
-		if (result.exitCode === 0) {
-			const path = result.stdout.toString().trim();
-			if (path && existsSync(path)) return path;
-		}
-	} catch {
-		// Not in PATH
-	}
+  // 2. npm platform package
+  const arch = process.arch;
+  const platform = process.platform;
+  try {
+    const pkgName = `@thebushidocollective/han-${platform}-${arch}`;
+    const pkgPath = require.resolve(`${pkgName}/han-coordinator`);
+    if (existsSync(pkgPath)) return pkgPath;
+  } catch {
+    // Package not installed
+  }
 
-	return null;
+  // 3. PATH lookup via which/where
+  try {
+    const result = Bun.spawnSync(
+      [process.platform === 'win32' ? 'where' : 'which', 'han-coordinator'],
+      { stdout: 'pipe', stderr: 'ignore' }
+    );
+    if (result.exitCode === 0) {
+      const path = result.stdout.toString().trim();
+      if (path && existsSync(path)) return path;
+    }
+  } catch {
+    // Not in PATH
+  }
+
+  return null;
 }
 
 // ============================================================================
@@ -105,18 +131,15 @@ function findCoordinatorBinary(): string | null {
  * Wait for coordinator to become healthy with exponential backoff.
  * Retries: 100ms, 200ms, 400ms, 800ms, 1600ms (total ~3.1s)
  */
-async function waitForHealthy(
-	port: number,
-	maxRetries = 5,
-): Promise<boolean> {
-	for (let i = 0; i < maxRetries; i++) {
-		if (await isCoordinatorHealthy(port, 2000)) {
-			return true;
-		}
-		const delay = 100 * 2 ** i;
-		await Bun.sleep(delay);
-	}
-	return false;
+async function waitForHealthy(port: number, maxRetries = 5): Promise<boolean> {
+  for (let i = 0; i < maxRetries; i++) {
+    if (await isCoordinatorHealthy(port, 2000)) {
+      return true;
+    }
+    const delay = 100 * 2 ** i;
+    await Bun.sleep(delay);
+  }
+  return false;
 }
 
 // ============================================================================
@@ -130,57 +153,58 @@ async function waitForHealthy(
  * verifies connectivity. Otherwise, spawns the Rust binary as a daemon.
  */
 export async function startCoordinatorService(): Promise<void> {
-	if (state.isRunning) {
-		console.log("[coordinator] Already running");
-		return;
-	}
+  if (state.isRunning) {
+    console.log('[coordinator] Already running');
+    return;
+  }
 
-	// Check if coordinator is already running (from another process)
-	if (await isCoordinatorHealthy(state.port)) {
-		console.log("[coordinator] Coordinator already running, connecting...");
-		state.isRunning = true;
-		return;
-	}
+  const port = getEffectivePort();
 
-	// Find the binary
-	const binaryPath = findCoordinatorBinary();
-	if (!binaryPath) {
-		console.error(
-			"[coordinator] han-coordinator binary not found. " +
-				"Install via: curl -fsSL https://han.guru/install.sh | bash",
-		);
-		return;
-	}
+  // Check if coordinator is already running (from another process)
+  if (await isCoordinatorHealthy(port)) {
+    console.log('[coordinator] Coordinator already running, connecting...');
+    state.isRunning = true;
+    state.port = port;
+    return;
+  }
 
-	console.log(`[coordinator] Starting ${binaryPath} on port ${state.port}`);
+  // Find the binary
+  const binaryPath = findCoordinatorBinary();
+  if (!binaryPath) {
+    console.error(
+      '[coordinator] han-coordinator binary not found. ' +
+        'Install via: curl -fsSL https://han.guru/install.sh | bash'
+    );
+    return;
+  }
 
-	try {
-		// Spawn as daemon process
-		state.process = Bun.spawn(
-			[binaryPath, "--daemon", "--port", String(state.port)],
-			{
-				stdout: "ignore",
-				stderr: "ignore",
-			},
-		);
-		// Don't keep parent alive
-		state.process.unref();
+  console.log(`[coordinator] Starting ${binaryPath} on port ${port}`);
 
-		// Wait for it to become healthy
-		const healthy = await waitForHealthy(state.port);
-		if (healthy) {
-			state.isRunning = true;
-			console.log("[coordinator] Coordinator started and healthy");
-		} else {
-			console.error(
-				"[coordinator] Coordinator started but failed health check",
-			);
-			state.process = null;
-		}
-	} catch (error) {
-		console.error("[coordinator] Failed to start coordinator:", error);
-		state.process = null;
-	}
+  try {
+    // Spawn Rust coordinator binary (daemonizes by default, no --daemon flag)
+    state.process = Bun.spawn([binaryPath, '--port', String(port)], {
+      stdout: 'ignore',
+      stderr: 'ignore',
+    });
+    // Don't keep parent alive
+    state.process.unref();
+
+    // Wait for it to become healthy
+    const healthy = await waitForHealthy(port);
+    if (healthy) {
+      state.isRunning = true;
+      state.port = port;
+      console.log('[coordinator] Coordinator started and healthy');
+    } else {
+      console.error(
+        '[coordinator] Coordinator started but failed health check'
+      );
+      state.process = null;
+    }
+  } catch (error) {
+    console.error('[coordinator] Failed to start coordinator:', error);
+    state.process = null;
+  }
 }
 
 /**
@@ -188,49 +212,49 @@ export async function startCoordinatorService(): Promise<void> {
  * Sends graceful shutdown via gRPC, falls back to process kill.
  */
 export async function stopCoordinatorService(): Promise<void> {
-	if (!state.isRunning) return;
+  if (!state.isRunning) return;
 
-	state.isRunning = false;
+  state.isRunning = false;
 
-	try {
-		const clients = createCoordinatorClients(state.port);
-		await clients.coordinator.shutdown({
-			graceful: true,
-			timeoutSeconds: 5,
-		});
-		console.log("[coordinator] Graceful shutdown sent");
-	} catch {
-		// If gRPC shutdown fails, kill the process directly
-		if (state.process) {
-			state.process.kill();
-			console.log("[coordinator] Process killed");
-		}
-	}
+  try {
+    const clients = createCoordinatorClients(state.port);
+    await clients.coordinator.shutdown({
+      graceful: true,
+      timeoutSeconds: 5,
+    });
+    console.log('[coordinator] Graceful shutdown sent');
+  } catch {
+    // If gRPC shutdown fails, kill the process directly
+    if (state.process) {
+      state.process.kill();
+      console.log('[coordinator] Process killed');
+    }
+  }
 
-	state.process = null;
-	console.log("[coordinator] Service stopped");
+  state.process = null;
+  console.log('[coordinator] Service stopped');
 }
 
 /**
  * Check if coordinator is currently running and healthy.
  */
 export function isCoordinatorInstance(): boolean {
-	return state.isRunning;
+  return state.isRunning;
 }
 
 /**
  * Get the current coordinator version.
  */
 export function getCoordinatorVersion(): string {
-	return state.version;
+  return state.version;
 }
 
 /**
  * Get coordinator status via gRPC.
  */
 export async function getCoordinatorStatus() {
-	const clients = createCoordinatorClients(state.port);
-	return clients.coordinator.status({});
+  const clients = createCoordinatorClients(state.port);
+  return clients.coordinator.status({});
 }
 
 /**
@@ -238,16 +262,16 @@ export async function getCoordinatorStatus() {
  * Returns: -1 if a < b, 0 if a == b, 1 if a > b
  */
 function compareVersions(a: string, b: string): number {
-	const partsA = a.split(".").map((p) => Number.parseInt(p, 10) || 0);
-	const partsB = b.split(".").map((p) => Number.parseInt(p, 10) || 0);
+  const partsA = a.split('.').map((p) => Number.parseInt(p, 10) || 0);
+  const partsB = b.split('.').map((p) => Number.parseInt(p, 10) || 0);
 
-	for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
-		const partA = partsA[i] || 0;
-		const partB = partsB[i] || 0;
-		if (partA < partB) return -1;
-		if (partA > partB) return 1;
-	}
-	return 0;
+  for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+    const partA = partsA[i] || 0;
+    const partB = partsB[i] || 0;
+    if (partA < partB) return -1;
+    if (partA > partB) return 1;
+  }
+  return 0;
 }
 
 /**
@@ -255,39 +279,39 @@ function compareVersions(a: string, b: string): number {
  * If so, schedule a coordinator restart.
  */
 export function checkClientVersion(clientVersion: string): boolean {
-	if (!state.isRunning) return false;
+  if (!state.isRunning) return false;
 
-	const cmp = compareVersions(clientVersion, state.version);
-	if (cmp > 0) {
-		console.log(
-			`[coordinator] Client version ${clientVersion} > coordinator version ${state.version}, scheduling restart`,
-		);
-		// Schedule restart after a short delay
-		setTimeout(async () => {
-			console.log("[coordinator] Restarting for version upgrade...");
-			await stopCoordinatorService();
-			await startCoordinatorService();
-		}, 1000);
-		return true;
-	}
-	return false;
+  const cmp = compareVersions(clientVersion, state.version);
+  if (cmp > 0) {
+    console.log(
+      `[coordinator] Client version ${clientVersion} > coordinator version ${state.version}, scheduling restart`
+    );
+    // Schedule restart after a short delay
+    setTimeout(async () => {
+      console.log('[coordinator] Restarting for version upgrade...');
+      await stopCoordinatorService();
+      await startCoordinatorService();
+    }, 1000);
+    return true;
+  }
+  return false;
 }
 
 /**
  * Trigger indexing of a file via gRPC.
  */
 export async function indexFile(filePath: string): Promise<void> {
-	if (!state.isRunning) {
-		console.log("[coordinator] Not running, skipping index");
-		return;
-	}
+  if (!state.isRunning) {
+    console.log('[coordinator] Not running, skipping index');
+    return;
+  }
 
-	try {
-		const clients = createCoordinatorClients(state.port);
-		await clients.indexer.indexFile({ filePath });
-	} catch (error) {
-		console.error(`[coordinator] Failed to index ${filePath}:`, error);
-	}
+  try {
+    const clients = createCoordinatorClients(state.port);
+    await clients.indexer.indexFile({ filePath });
+  } catch (error) {
+    console.error(`[coordinator] Failed to index ${filePath}:`, error);
+  }
 }
 
 /**
@@ -295,10 +319,10 @@ export async function indexFile(filePath: string): Promise<void> {
  * Returns true if coordinator is available.
  */
 export async function ensureCoordinator(): Promise<boolean> {
-	if (state.isRunning && (await isCoordinatorHealthy(state.port))) {
-		return true;
-	}
+  if (state.isRunning && (await isCoordinatorHealthy(state.port))) {
+    return true;
+  }
 
-	await startCoordinatorService();
-	return state.isRunning;
+  await startCoordinatorService();
+  return state.isRunning;
 }

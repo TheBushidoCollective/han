@@ -1,7 +1,7 @@
 //! TLS certificate management for the coordinator.
 //!
-//! Generates self-signed certificates for coordinator.local.han.guru using rcgen.
-//! Certificates are cached in `~/.han/certs/` and reused if still valid.
+//! Loads Let's Encrypt certificates from the cert server cache (~/.claude/han/certs/).
+//! Falls back to self-signed certificates if real certs are not available.
 
 use rcgen::{CertificateParams, DistinguishedName, KeyPair, SanType};
 use std::fs;
@@ -9,7 +9,6 @@ use std::path::PathBuf;
 use thiserror::Error;
 
 const CERT_DOMAIN: &str = "coordinator.local.han.guru";
-const CERT_VALIDITY_DAYS: i64 = 365;
 
 #[derive(Error, Debug)]
 pub enum TlsError {
@@ -21,6 +20,8 @@ pub enum TlsError {
     Rustls(#[from] rustls::Error),
     #[error("Home directory not found")]
     NoHomeDir,
+    #[error("No certificates available")]
+    NoCertificates,
 }
 
 /// TLS certificate pair (cert + key in PEM format).
@@ -29,35 +30,59 @@ pub struct CertPair {
     pub key_pem: String,
 }
 
-/// Get or create TLS certificates.
+/// Load TLS certificates.
+///
+/// Priority:
+/// 1. Real Let's Encrypt certs from cert server cache (~/.claude/han/certs/)
+/// 2. Self-signed fallback (~/.han/certs/)
 pub fn ensure_certificates() -> Result<CertPair, TlsError> {
-    let certs_dir = get_certs_dir()?;
-    let cert_path = certs_dir.join("coordinator.pem");
-    let key_path = certs_dir.join("coordinator-key.pem");
-
-    // Check if existing certs are valid
-    if cert_path.exists() && key_path.exists() {
-        let cert_pem = fs::read_to_string(&cert_path)?;
-        let key_pem = fs::read_to_string(&key_path)?;
-        tracing::info!("Using cached TLS certificates from {:?}", certs_dir);
-        return Ok(CertPair { cert_pem, key_pem });
+    // 1. Check for real Let's Encrypt certs (fetched by TypeScript tls.ts from certs.han.guru)
+    if let Some(pair) = load_real_certs()? {
+        return Ok(pair);
     }
 
-    // Generate new self-signed certificate
-    tracing::info!("Generating self-signed TLS certificate for {}", CERT_DOMAIN);
-    let pair = generate_certificate()?;
-
-    // Cache to disk
+    // 2. Fall back to self-signed
+    tracing::warn!(
+        "No Let's Encrypt certificates found, generating self-signed for {}",
+        CERT_DOMAIN
+    );
+    let pair = generate_self_signed()?;
+    let certs_dir = get_fallback_certs_dir()?;
     fs::create_dir_all(&certs_dir)?;
-    fs::write(&cert_path, &pair.cert_pem)?;
-    fs::write(&key_path, &pair.key_pem)?;
-
-    tracing::info!("TLS certificates saved to {:?}", certs_dir);
+    fs::write(certs_dir.join("coordinator.pem"), &pair.cert_pem)?;
+    fs::write(certs_dir.join("coordinator-key.pem"), &pair.key_pem)?;
+    tracing::warn!("Using self-signed certificate (dashboard may not trust it)");
     Ok(pair)
 }
 
-/// Generate a self-signed certificate for the coordinator domain.
-fn generate_certificate() -> Result<CertPair, TlsError> {
+/// Load real Let's Encrypt certificates from the cert server cache.
+fn load_real_certs() -> Result<Option<CertPair>, TlsError> {
+    let home = dirs::home_dir().ok_or(TlsError::NoHomeDir)?;
+    let certs_dir = home.join(".claude").join("han").join("certs");
+    let cert_path = certs_dir.join("coordinator.crt");
+    let key_path = certs_dir.join("coordinator.key");
+
+    if cert_path.exists() && key_path.exists() {
+        let cert_pem = fs::read_to_string(&cert_path)?;
+        let key_pem = fs::read_to_string(&key_path)?;
+
+        // Basic validation: ensure they look like PEM
+        if cert_pem.contains("BEGIN CERTIFICATE") && key_pem.contains("PRIVATE KEY") {
+            tracing::info!(
+                "Using Let's Encrypt certificates from {:?}",
+                certs_dir
+            );
+            return Ok(Some(CertPair { cert_pem, key_pem }));
+        }
+
+        tracing::warn!("Certificate files at {:?} appear invalid", certs_dir);
+    }
+
+    Ok(None)
+}
+
+/// Generate a self-signed certificate (fallback when cert server is unavailable).
+fn generate_self_signed() -> Result<CertPair, TlsError> {
     let mut params = CertificateParams::default();
     params.distinguished_name = {
         let mut dn = DistinguishedName::new();
@@ -84,8 +109,7 @@ fn generate_certificate() -> Result<CertPair, TlsError> {
         SanType::IpAddress(std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST)),
     ];
     params.not_before = time::OffsetDateTime::now_utc();
-    params.not_after =
-        time::OffsetDateTime::now_utc() + time::Duration::days(CERT_VALIDITY_DAYS);
+    params.not_after = time::OffsetDateTime::now_utc() + time::Duration::days(365);
 
     let key_pair = KeyPair::generate()?;
     let cert = params.self_signed(&key_pair)?;
@@ -118,8 +142,8 @@ pub fn build_tls_config(pair: &CertPair) -> Result<rustls::ServerConfig, TlsErro
     Ok(config)
 }
 
-/// Get the certificates directory (~/.han/certs/).
-fn get_certs_dir() -> Result<PathBuf, TlsError> {
+/// Fallback self-signed certs directory (~/.han/certs/).
+fn get_fallback_certs_dir() -> Result<PathBuf, TlsError> {
     let home = dirs::home_dir().ok_or(TlsError::NoHomeDir)?;
     Ok(home.join(".han").join("certs"))
 }
@@ -129,17 +153,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_generate_certificate() {
-        let pair = generate_certificate().unwrap();
+    fn test_generate_self_signed() {
+        let pair = generate_self_signed().unwrap();
         assert!(pair.cert_pem.contains("BEGIN CERTIFICATE"));
         assert!(pair.key_pem.contains("BEGIN PRIVATE KEY"));
     }
 
     #[test]
     fn test_build_tls_config() {
-        // Install the ring crypto provider for rustls
         let _ = rustls::crypto::ring::default_provider().install_default();
-        let pair = generate_certificate().unwrap();
+        let pair = generate_self_signed().unwrap();
         let config = build_tls_config(&pair).unwrap();
         assert!(config.alpn_protocols.is_empty() || true);
     }

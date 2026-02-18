@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<bd91fcbf3f8a4cd3773a1acad2990125>>
+ * @generated SignedSource<<b65c2daace0b26c7c83d65d0a1c44301>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -15,12 +15,12 @@ export type CacheContentQuery$data = {
     readonly fileCount: number | null | undefined;
     readonly hookName: string | null | undefined;
     readonly id: string | null | undefined;
-    readonly lastModified: any | null | undefined;
+    readonly lastModified: string | null | undefined;
     readonly pluginName: string | null | undefined;
   }> | null | undefined;
   readonly cacheStats: {
-    readonly newestEntry: any | null | undefined;
-    readonly oldestEntry: any | null | undefined;
+    readonly newestEntry: string | null | undefined;
+    readonly oldestEntry: string | null | undefined;
     readonly totalEntries: number | null | undefined;
     readonly totalFiles: number | null | undefined;
   } | null | undefined;

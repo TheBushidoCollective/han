@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<8ea06e23f4b00e8401fae1c8e1b662e2>>
+ * @generated SignedSource<<86cb6e225a88d7b42f17dad0d390f4d3>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -108,7 +108,7 @@ return {
     "metadata": null,
     "name": "PluginListPageToggleMutation",
     "selections": (v4/*: any*/),
-    "type": "Mutation",
+    "type": "MutationRoot",
     "abstractKey": null
   },
   "kind": "Request",

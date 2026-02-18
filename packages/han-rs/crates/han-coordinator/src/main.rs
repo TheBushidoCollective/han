@@ -34,18 +34,15 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::{Mutex, RwLock, broadcast};
+use tokio_rustls::TlsAcceptor;
 use tonic::transport::Server as TonicServer;
 
 #[derive(Parser, Debug)]
 #[command(name = "han-coordinator", version, about = "Han coordinator daemon")]
 struct Cli {
-    /// Port for HTTP/WebSocket server.
-    #[arg(long, default_value = "41956")]
-    port: u16,
-
-    /// Port for HTTPS/TLS server.
+    /// Port for HTTPS/WebSocket server.
     #[arg(long, default_value = "41957")]
-    tls_port: u16,
+    port: u16,
 
     /// Port for gRPC server.
     #[arg(long, default_value = "41958")]
@@ -63,10 +60,6 @@ struct Cli {
     #[arg(long)]
     project_path: Option<String>,
 
-    /// Skip TLS server.
-    #[arg(long)]
-    no_tls: bool,
-
     /// Skip gRPC server.
     #[arg(long)]
     no_grpc: bool,
@@ -82,6 +75,41 @@ struct Cli {
     /// Write PID to file (daemon mode).
     #[arg(long)]
     pid_file: Option<String>,
+}
+
+/// TLS-wrapped TCP listener for axum::serve.
+///
+/// Accepts TCP connections, performs TLS handshake, and yields TLS streams.
+/// Failed handshakes are logged and retried (the listener keeps accepting).
+struct TlsListener {
+    inner: tokio::net::TcpListener,
+    acceptor: TlsAcceptor,
+}
+
+impl axum::serve::Listener for TlsListener {
+    type Io = tokio_rustls::server::TlsStream<tokio::net::TcpStream>;
+    type Addr = SocketAddr;
+
+    async fn accept(&mut self) -> (Self::Io, Self::Addr) {
+        loop {
+            match self.inner.accept().await {
+                Ok((tcp_stream, addr)) => match self.acceptor.accept(tcp_stream).await {
+                    Ok(tls_stream) => return (tls_stream, addr),
+                    Err(e) => {
+                        tracing::debug!("TLS handshake failed from {}: {}", addr, e);
+                    }
+                },
+                Err(e) => {
+                    tracing::error!("TCP accept error: {}", e);
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                }
+            }
+        }
+    }
+
+    fn local_addr(&self) -> std::io::Result<Self::Addr> {
+        self.inner.local_addr()
+    }
 }
 
 /// Resolve the database path.
@@ -109,6 +137,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
         )
         .init();
+
+    // Install ring crypto provider for rustls (must be before any TLS operations)
+    let _ = rustls::crypto::ring::default_provider().install_default();
 
     tracing::info!(
         "Han Coordinator v{} starting",
@@ -193,34 +224,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         slots: Arc::new(RwLock::new(HashMap::new())),
     });
 
-    // Start HTTP/WS server
-    let http_addr: SocketAddr = ([0, 0, 0, 0], cli.port).into();
+    // Start HTTPS server
+    let server_addr: SocketAddr = ([0, 0, 0, 0], cli.port).into();
     let router = server::build_router(schema.clone());
 
-    tracing::info!("HTTP/WS server listening on {}", http_addr);
-    let http_handle = tokio::spawn(async move {
-        let listener = tokio::net::TcpListener::bind(http_addr).await.unwrap();
-        axum::serve(listener, router).await.unwrap();
-    });
+    let certs = tls::ensure_certificates()?;
+    let tls_config = tls::build_tls_config(&certs)?;
+    let acceptor = TlsAcceptor::from(Arc::new(tls_config));
+    let tls_listener = tokio::net::TcpListener::bind(server_addr).await?;
 
-    // Start TLS server (optional, placeholder for now)
-    let tls_handle: Option<tokio::task::JoinHandle<()>> = if !cli.no_tls {
-        match tls::ensure_certificates() {
-            Ok(_certs) => {
-                // TLS server will be wired with axum-server or hyper-util in a follow-up.
-                // For now, log that certificates are available.
-                tracing::info!("TLS certificates available at ~/.han/certs/");
-                tracing::info!("HTTPS server not yet wired (use --no-tls to suppress)");
-                None
-            }
-            Err(e) => {
-                tracing::warn!("Failed to ensure TLS certs: {}, skipping HTTPS", e);
-                None
-            }
+    tracing::info!("HTTPS server listening on {}", server_addr);
+
+    let server_handle = tokio::spawn(async move {
+        let listener = TlsListener {
+            inner: tls_listener,
+            acceptor,
+        };
+        if let Err(e) = axum::serve(listener, router).await {
+            tracing::error!("HTTPS server error: {}", e);
         }
-    } else {
-        None
-    };
+    });
 
     // Start gRPC server
     let grpc_handle = if !cli.no_grpc {
@@ -262,13 +285,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     tracing::info!(
-        "Coordinator ready (HTTP={}, TLS={}, gRPC={})",
+        "Coordinator ready (HTTPS={}, gRPC={})",
         cli.port,
-        if cli.no_tls {
-            "disabled".to_string()
-        } else {
-            cli.tls_port.to_string()
-        },
         if cli.no_grpc {
             "disabled".to_string()
         } else {
@@ -283,17 +301,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ = shutdown => {
             tracing::info!("Received shutdown signal");
         }
-        _ = http_handle => {
-            tracing::info!("HTTP server stopped");
+        _ = server_handle => {
+            tracing::info!("Server stopped");
         }
     }
 
     // Cleanup
     tracing::info!("Shutting down...");
     if let Some(handle) = watcher_handle {
-        handle.abort();
-    }
-    if let Some(handle) = tls_handle {
         handle.abort();
     }
     if let Some(handle) = grpc_handle {
@@ -316,8 +331,6 @@ fn daemonize(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     let mut args = vec!["--foreground".to_string()];
     args.push("--port".to_string());
     args.push(cli.port.to_string());
-    args.push("--tls-port".to_string());
-    args.push(cli.tls_port.to_string());
     args.push("--grpc-port".to_string());
     args.push(cli.grpc_port.to_string());
 
@@ -328,9 +341,6 @@ fn daemonize(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(ref project) = cli.project_path {
         args.push("--project-path".to_string());
         args.push(project.clone());
-    }
-    if cli.no_tls {
-        args.push("--no-tls".to_string());
     }
     if cli.no_grpc {
         args.push("--no-grpc".to_string());
@@ -365,9 +375,9 @@ fn daemonize(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     // Wait a bit and check health
     std::thread::sleep(std::time::Duration::from_secs(2));
 
-    let health_url = format!("http://127.0.0.1:{}/health", cli.port);
+    let health_url = format!("https://coordinator.local.han.guru:{}/health", cli.port);
     match std::process::Command::new("curl")
-        .args(["-s", "-o", "/dev/null", "-w", "%{http_code}", &health_url])
+        .args(["-sk", "-o", "/dev/null", "-w", "%{http_code}", &health_url])
         .output()
     {
         Ok(output) => {
@@ -404,11 +414,9 @@ mod tests {
     #[test]
     fn test_cli_parse_defaults() {
         let cli = Cli::parse_from(["han-coordinator", "--foreground"]);
-        assert_eq!(cli.port, 41956);
-        assert_eq!(cli.tls_port, 41957);
+        assert_eq!(cli.port, 41957);
         assert_eq!(cli.grpc_port, 41958);
         assert!(cli.foreground);
-        assert!(!cli.no_tls);
         assert!(!cli.no_grpc);
         assert!(!cli.no_watcher);
     }
@@ -420,13 +428,11 @@ mod tests {
             "--foreground",
             "--port",
             "8080",
-            "--no-tls",
             "--no-grpc",
             "--db-path",
             "/tmp/test.db",
         ]);
         assert_eq!(cli.port, 8080);
-        assert!(cli.no_tls);
         assert!(cli.no_grpc);
         assert_eq!(cli.db_path, Some("/tmp/test.db".to_string()));
     }

@@ -2,12 +2,25 @@
 
 use async_graphql::*;
 use han_db::entities::messages;
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder};
+use sea_orm::{
+    ColumnTrait, DatabaseConnection, DbBackend, EntityTrait, FromQueryResult,
+    QueryFilter, QueryOrder, Statement,
+};
 
 use crate::connection::PageInfo;
 use crate::node::encode_global_id;
+use crate::types::content_blocks::ToolResultBlock;
+use crate::types::file_change::{FileChange, FileChangeConnection, FileChangeEdge};
+use crate::types::frustration::FrustrationSummary;
+use crate::types::hook_execution::{
+    HookExecution, HookExecutionConnection, HookExecutionEdge, HookStats, HookTypeStat,
+};
 use crate::types::messages::{MessageConnection, build_message_connection};
+use crate::types::metrics::{Task, TaskConnection, TaskEdge};
 use crate::types::native_task::NativeTask;
+use crate::types::search_result::MessageSearchResult;
+use crate::types::team::User;
+use crate::types::todo::{Todo, TodoConnection, TodoCounts};
 
 /// Session data for GraphQL resolution.
 #[derive(Debug, Clone)]
@@ -31,10 +44,10 @@ pub struct SessionData {
 }
 
 /// Session GraphQL type.
-#[Object]
+#[Object(name = "Session")]
 impl SessionData {
     /// Session global ID in format Session:{projectDir}:{sessionId}.
-    async fn id(&self) -> ID {
+    pub async fn id(&self) -> ID {
         let composite = if self.project_dir.is_empty() {
             self.session_id.clone()
         } else {
@@ -122,6 +135,11 @@ impl SessionData {
         self.version.as_deref()
     }
 
+    /// Session status (active, completed, etc.).
+    async fn status(&self) -> Option<&str> {
+        self.status.as_deref()
+    }
+
     /// Which CLAUDE_CONFIG_DIR this session originated from.
     async fn source_config_dir(&self) -> Option<&str> {
         self.source_config_dir.as_deref()
@@ -165,6 +183,345 @@ impl SessionData {
             .map_err(|e| Error::new(e.to_string()))?;
 
         Ok(tasks.into_iter().map(NativeTask::from).collect())
+    }
+
+    // ========================================================================
+    // Stub fields for browse-client backwards compatibility
+    // ========================================================================
+
+    /// Organization ID (only populated in hosted team mode).
+    async fn org_id(&self) -> Option<&str> { None }
+
+    /// Session owner (only populated in hosted team mode).
+    async fn owner(&self) -> Option<User> { None }
+
+    /// The project this session belongs to.
+    async fn project(&self) -> Option<crate::types::project::Project> { None }
+
+    /// The currently in-progress todo, if any.
+    async fn current_todo(&self) -> Option<Todo> { None }
+
+    /// The most recently started active task, if any.
+    async fn current_task(&self) -> Option<Task> { None }
+
+    /// IDs of agent tasks spawned during this session.
+    async fn agent_task_ids(&self) -> Option<Vec<String>> { Some(vec![]) }
+
+    /// All tasks tracked in this session via start_task MCP tool.
+    async fn tasks(
+        &self,
+        ctx: &Context<'_>,
+        first: Option<i32>,
+        _after: Option<String>,
+        _last: Option<i32>,
+        _before: Option<String>,
+    ) -> Result<Option<TaskConnection>> {
+        let db = ctx.data::<DatabaseConnection>()?;
+        let models = han_db::entities::tasks::Entity::find()
+            .filter(han_db::entities::tasks::Column::SessionId.eq(&self.session_id))
+            .order_by_asc(han_db::entities::tasks::Column::StartedAt)
+            .all(db)
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
+
+        let total_count = models.len() as i32;
+        let limit = first.unwrap_or(total_count) as usize;
+        let edges: Vec<TaskEdge> = models
+            .into_iter()
+            .take(limit)
+            .map(|m| {
+                let task = Task::from(m);
+                let cursor = task.task_id.clone();
+                TaskEdge { node: task, cursor }
+            })
+            .collect();
+
+        let has_next_page = (limit as i32) < total_count;
+        Ok(Some(TaskConnection {
+            page_info: PageInfo {
+                has_next_page,
+                has_previous_page: false,
+                start_cursor: edges.first().map(|e| e.cursor.clone()),
+                end_cursor: edges.last().map(|e| e.cursor.clone()),
+            },
+            edges,
+            total_count,
+        }))
+    }
+
+    /// Active (in-progress) tasks in this session.
+    async fn active_tasks(
+        &self,
+        ctx: &Context<'_>,
+        first: Option<i32>,
+        _after: Option<String>,
+        _last: Option<i32>,
+        _before: Option<String>,
+    ) -> Result<Option<TaskConnection>> {
+        let db = ctx.data::<DatabaseConnection>()?;
+        let models = han_db::entities::tasks::Entity::find()
+            .filter(han_db::entities::tasks::Column::SessionId.eq(&self.session_id))
+            .filter(han_db::entities::tasks::Column::CompletedAt.is_null())
+            .order_by_asc(han_db::entities::tasks::Column::StartedAt)
+            .all(db)
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
+
+        let total_count = models.len() as i32;
+        let limit = first.unwrap_or(total_count) as usize;
+        let edges: Vec<TaskEdge> = models
+            .into_iter()
+            .take(limit)
+            .map(|m| {
+                let task = Task::from(m);
+                let cursor = task.task_id.clone();
+                TaskEdge { node: task, cursor }
+            })
+            .collect();
+
+        let has_next_page = (limit as i32) < total_count;
+        Ok(Some(TaskConnection {
+            page_info: PageInfo {
+                has_next_page,
+                has_previous_page: false,
+                start_cursor: edges.first().map(|e| e.cursor.clone()),
+                end_cursor: edges.last().map(|e| e.cursor.clone()),
+            },
+            edges,
+            total_count,
+        }))
+    }
+
+    /// All todos from the most recent TodoWrite in this session.
+    async fn todos(
+        &self,
+        _first: Option<i32>,
+        _after: Option<String>,
+        _last: Option<i32>,
+        _before: Option<String>,
+    ) -> Option<TodoConnection> {
+        Some(TodoConnection::default())
+    }
+
+    /// Non-completed todos (pending or in-progress).
+    async fn active_todos(
+        &self,
+        _first: Option<i32>,
+        _after: Option<String>,
+        _last: Option<i32>,
+        _before: Option<String>,
+    ) -> Option<TodoConnection> {
+        Some(TodoConnection::default())
+    }
+
+    /// Counts of todos by status.
+    async fn todo_counts(&self) -> Option<TodoCounts> {
+        Some(TodoCounts::default())
+    }
+
+    /// Files that were changed during this session.
+    async fn file_changes(
+        &self,
+        ctx: &Context<'_>,
+        first: Option<i32>,
+        _after: Option<String>,
+        _last: Option<i32>,
+        _before: Option<String>,
+    ) -> Result<Option<FileChangeConnection>> {
+        let db = ctx.data::<DatabaseConnection>()?;
+        let models = han_db::entities::session_file_changes::Entity::find()
+            .filter(han_db::entities::session_file_changes::Column::SessionId.eq(&self.session_id))
+            .order_by_desc(han_db::entities::session_file_changes::Column::RecordedAt)
+            .all(db)
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
+
+        let total_count = models.len() as i32;
+        let limit = first.unwrap_or(total_count) as usize;
+
+        let edges: Vec<FileChangeEdge> = models
+            .into_iter()
+            .take(limit)
+            .map(|m| {
+                let action = match m.action.as_str() {
+                    "created" | "create" => Some(crate::types::enums::FileChangeAction::Created),
+                    "deleted" | "delete" => Some(crate::types::enums::FileChangeAction::Deleted),
+                    _ => Some(crate::types::enums::FileChangeAction::Modified),
+                };
+                let cursor = m.id.clone();
+                FileChangeEdge {
+                    node: FileChange {
+                        id: Some(m.id),
+                        file_path: Some(m.file_path),
+                        action,
+                        tool_name: m.tool_name,
+                        recorded_at: Some(m.recorded_at),
+                        session_id: Some(m.session_id),
+                        is_validated: None,
+                        file_hash_before: m.file_hash_before,
+                        file_hash_after: m.file_hash_after,
+                        validations: None,
+                        missing_validations: None,
+                    },
+                    cursor,
+                }
+            })
+            .collect();
+
+        let has_next_page = (limit as i32) < total_count;
+        Ok(Some(FileChangeConnection {
+            page_info: PageInfo {
+                has_next_page,
+                has_previous_page: false,
+                start_cursor: edges.first().map(|e| e.cursor.clone()),
+                end_cursor: edges.last().map(|e| e.cursor.clone()),
+            },
+            edges,
+            total_count,
+        }))
+    }
+
+    /// Number of unique files changed in this session.
+    async fn file_change_count(&self, ctx: &Context<'_>) -> Result<Option<i32>> {
+        let db = ctx.data::<DatabaseConnection>()?;
+        let count = han_db::entities::session_file_changes::Entity::find()
+            .filter(han_db::entities::session_file_changes::Column::SessionId.eq(&self.session_id))
+            .all(db)
+            .await
+            .map(|v| v.len() as i32)
+            .map_err(|e| Error::new(e.to_string()))?;
+        Ok(Some(count))
+    }
+
+    /// Hook executions that occurred during this session.
+    async fn hook_executions(
+        &self,
+        ctx: &Context<'_>,
+        first: Option<i32>,
+        _after: Option<String>,
+        _last: Option<i32>,
+        _before: Option<String>,
+    ) -> Result<Option<HookExecutionConnection>> {
+        let db = ctx.data::<DatabaseConnection>()?;
+        let models = han_db::entities::hook_executions::Entity::find()
+            .filter(han_db::entities::hook_executions::Column::SessionId.eq(&self.session_id))
+            .order_by_desc(han_db::entities::hook_executions::Column::ExecutedAt)
+            .all(db)
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
+
+        let total_count = models.len() as i32;
+        let limit = first.unwrap_or(total_count) as usize;
+
+        let edges: Vec<HookExecutionEdge> = models
+            .into_iter()
+            .take(limit)
+            .map(|m| {
+                let cursor = m.id.clone();
+                HookExecutionEdge {
+                    node: HookExecution::from(m),
+                    cursor,
+                }
+            })
+            .collect();
+
+        let has_next_page = (limit as i32) < total_count;
+        Ok(Some(HookExecutionConnection {
+            page_info: PageInfo {
+                has_next_page,
+                has_previous_page: false,
+                start_cursor: edges.first().map(|e| e.cursor.clone()),
+                end_cursor: edges.last().map(|e| e.cursor.clone()),
+            },
+            edges,
+            total_count,
+        }))
+    }
+
+    /// Hook execution statistics for this session.
+    async fn hook_stats(&self, ctx: &Context<'_>) -> Result<Option<HookStats>> {
+        let db = ctx.data::<DatabaseConnection>()?;
+
+        #[derive(Debug, FromQueryResult)]
+        struct HookTypeStatRow {
+            hook_type: String,
+            total: i64,
+            passed: i64,
+        }
+
+        let rows = HookTypeStatRow::find_by_statement(Statement::from_sql_and_values(
+            DbBackend::Sqlite,
+            "SELECT hook_type, COUNT(*) as total, \
+             SUM(CASE WHEN passed = 1 THEN 1 ELSE 0 END) as passed \
+             FROM hook_executions WHERE session_id = ? GROUP BY hook_type",
+            vec![self.session_id.clone().into()],
+        ))
+        .all(db)
+        .await
+        .unwrap_or_default();
+
+        let total_hooks: i32 = rows.iter().map(|r| r.total as i32).sum();
+        let passed_hooks: i32 = rows.iter().map(|r| r.passed as i32).sum();
+        let failed_hooks = total_hooks - passed_hooks;
+        let pass_rate = if total_hooks > 0 {
+            passed_hooks as f64 / total_hooks as f64
+        } else {
+            0.0
+        };
+
+        // Get total duration
+        #[derive(Debug, FromQueryResult)]
+        struct DurationRow {
+            total_ms: i64,
+        }
+        let dur = DurationRow::find_by_statement(Statement::from_sql_and_values(
+            DbBackend::Sqlite,
+            "SELECT COALESCE(SUM(duration_ms), 0) as total_ms FROM hook_executions WHERE session_id = ?",
+            vec![self.session_id.clone().into()],
+        ))
+        .one(db)
+        .await
+        .ok()
+        .flatten()
+        .map(|r| r.total_ms as i32)
+        .unwrap_or(0);
+
+        let by_hook_type: Vec<HookTypeStat> = rows
+            .into_iter()
+            .map(|r| HookTypeStat {
+                hook_type: Some(r.hook_type),
+                total: Some(r.total as i32),
+                passed: Some(r.passed as i32),
+            })
+            .collect();
+
+        Ok(Some(HookStats {
+            total_hooks: Some(total_hooks),
+            passed_hooks: Some(passed_hooks),
+            failed_hooks: Some(failed_hooks),
+            total_duration_ms: Some(dur),
+            pass_rate: Some(pass_rate),
+            by_hook_type: Some(by_hook_type),
+        }))
+    }
+
+    /// Aggregated frustration metrics for this session.
+    async fn frustration_summary(&self) -> Option<FrustrationSummary> {
+        Some(FrustrationSummary::default())
+    }
+
+    /// Search all messages in this session using FTS.
+    async fn search_messages(
+        &self,
+        _query: String,
+        _limit: Option<i32>,
+    ) -> Option<Vec<MessageSearchResult>> {
+        Some(vec![])
+    }
+
+    /// All tool results from this session.
+    async fn tool_results(&self) -> Option<Vec<ToolResultBlock>> {
+        Some(vec![])
     }
 }
 

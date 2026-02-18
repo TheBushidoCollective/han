@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<0f760c76cfa5bcb794b304d60aba9a57>>
+ * @generated SignedSource<<a7e43b704a7fb5b073ade31d1646f45f>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,25 +14,25 @@ export type SessionsContent_query$data = {
   readonly sessions: {
     readonly __id: string;
     readonly edges: ReadonlyArray<{
-      readonly cursor: string | null | undefined;
+      readonly cursor: string;
       readonly node: {
         readonly gitBranch: string | null | undefined;
         readonly id: string;
-        readonly projectName: string | null | undefined;
-        readonly sessionId: string | null | undefined;
-        readonly startedAt: any | null | undefined;
+        readonly projectName: string;
+        readonly sessionId: string;
+        readonly startedAt: string | null | undefined;
         readonly summary: string | null | undefined;
-        readonly updatedAt: any | null | undefined;
+        readonly updatedAt: string | null | undefined;
         readonly worktreeName: string | null | undefined;
         readonly " $fragmentSpreads": FragmentRefs<"SessionListItem_session">;
-      } | null | undefined;
-    }> | null | undefined;
+      };
+    }>;
     readonly pageInfo: {
       readonly endCursor: string | null | undefined;
-      readonly hasNextPage: boolean | null | undefined;
-    } | null | undefined;
-    readonly totalCount: number | null | undefined;
-  } | null | undefined;
+      readonly hasNextPage: boolean;
+    };
+    readonly totalCount: number;
+  };
   readonly " $fragmentType": "SessionsContent_query";
 };
 export type SessionsContent_query$key = {

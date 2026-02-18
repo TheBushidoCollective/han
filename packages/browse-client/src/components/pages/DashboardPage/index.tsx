@@ -228,7 +228,10 @@ export const DashboardActivityFragment = graphql`
  * Note: projectId filter is used for repo-specific dashboards
  */
 export const DashboardPageQuery = graphql`
-  query DashboardPageQuery($projectId: String) {
+  query DashboardPageQuery($projectId: String, $repoId: String!, $hasRepoId: Boolean!) {
+    repo(id: $repoId) @include(if: $hasRepoId) {
+      name
+    }
     projects(first: 100) {
       id
     }
@@ -290,6 +293,8 @@ export default function DashboardPage({
 			query={DashboardPageQuery}
 			variables={{
 				projectId: repoId || null,
+				repoId: repoId || "",
+				hasRepoId: !!repoId,
 			}}
 			loadingMessage="Loading dashboard..."
 		>

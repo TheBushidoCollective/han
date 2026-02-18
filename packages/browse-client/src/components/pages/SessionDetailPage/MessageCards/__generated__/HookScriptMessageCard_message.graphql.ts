@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<461583b486765437c2c52e81dd362164>>
+ * @generated SignedSource<<afecedd9653d6c2a8c4e8f7c00782225>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,12 +14,12 @@ export type HookScriptMessageCard_message$data = {
   readonly command: string | null | undefined;
   readonly durationMs: number | null | undefined;
   readonly exitCode: number | null | undefined;
-  readonly id: string | null | undefined;
+  readonly id: string;
   readonly output: string | null | undefined;
   readonly plugin: string | null | undefined;
   readonly rawJson: string | null | undefined;
   readonly success: boolean | null | undefined;
-  readonly timestamp: any | null | undefined;
+  readonly timestamp: string;
   readonly " $fragmentType": "HookScriptMessageCard_message";
 };
 export type HookScriptMessageCard_message$key = {

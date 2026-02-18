@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<889652d8e851f85cc59a7054202e4e0f>>
+ * @generated SignedSource<<ba635ad2a7ccdf74ede60f84ebe4ec97>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -9,16 +9,14 @@
 // @ts-nocheck
 
 import { ConcreteRequest } from 'relay-runtime';
-export type EventAction = "CREATED" | "DELETED" | "UPDATED" | "%future added value";
-export type MemoryEventType = "OBSERVATION" | "RELOAD" | "RULE" | "SESSION" | "SUMMARY" | "%future added value";
 export type DashboardContentSubscription$variables = Record<PropertyKey, never>;
 export type DashboardContentSubscription$data = {
   readonly memoryUpdated: {
-    readonly action: EventAction | null | undefined;
+    readonly action: string | null | undefined;
     readonly path: string | null | undefined;
     readonly timestamp: string | null | undefined;
-    readonly type: MemoryEventType | null | undefined;
-  } | null | undefined;
+    readonly type: string | null | undefined;
+  };
 };
 export type DashboardContentSubscription = {
   response: DashboardContentSubscription$data;
@@ -30,7 +28,7 @@ var v0 = [
   {
     "alias": null,
     "args": null,
-    "concreteType": "MemoryEvent",
+    "concreteType": "MemoryUpdatedPayload",
     "kind": "LinkedField",
     "name": "memoryUpdated",
     "plural": false,
@@ -74,7 +72,7 @@ return {
     "metadata": null,
     "name": "DashboardContentSubscription",
     "selections": (v0/*: any*/),
-    "type": "Subscription",
+    "type": "SubscriptionRoot",
     "abstractKey": null
   },
   "kind": "Request",

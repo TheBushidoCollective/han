@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<60a45cceb4c148740b1ac43cee4f7abb>>
+ * @generated SignedSource<<c3c1f1cd076138f6f9db61ee400c54d8>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -13,42 +13,42 @@ export type ContentBlockType = "IMAGE" | "TEXT" | "THINKING" | "TOOL_RESULT" | "
 export type ToolCategory = "FILE" | "MCP" | "OTHER" | "SEARCH" | "SHELL" | "TASK" | "WEB" | "%future added value";
 import { FragmentRefs } from "relay-runtime";
 export type AssistantMessageCard_message$data = {
-  readonly cachedTokens: any | null | undefined;
+  readonly cachedTokens: number | null | undefined;
   readonly content: string | null | undefined;
   readonly contentBlocks: ReadonlyArray<{
-    readonly category?: ToolCategory | null | undefined;
-    readonly color?: string | null | undefined;
-    readonly dataUrl?: string | null | undefined;
-    readonly displayName?: string | null | undefined;
-    readonly icon?: string | null | undefined;
-    readonly input?: string | null | undefined;
-    readonly mediaType?: string | null | undefined;
-    readonly name?: string | null | undefined;
-    readonly preview?: string | null | undefined;
+    readonly category?: ToolCategory;
+    readonly color?: string;
+    readonly dataUrl?: string;
+    readonly displayName?: string;
+    readonly icon?: string;
+    readonly input?: string;
+    readonly mediaType?: string;
+    readonly name?: string;
+    readonly preview?: string;
     readonly result?: {
-      readonly content: string | null | undefined;
-      readonly hasImage: boolean | null | undefined;
-      readonly isError: boolean | null | undefined;
-      readonly isLong: boolean | null | undefined;
-      readonly preview: string | null | undefined;
-      readonly toolCallId: string | null | undefined;
+      readonly content: string;
+      readonly hasImage: boolean;
+      readonly isError: boolean;
+      readonly isLong: boolean;
+      readonly preview: string;
+      readonly toolCallId: string;
     } | null | undefined;
     readonly signature?: string | null | undefined;
-    readonly text?: string | null | undefined;
-    readonly thinking?: string | null | undefined;
-    readonly toolCallId?: string | null | undefined;
-    readonly type: ContentBlockType | null | undefined;
+    readonly text?: string;
+    readonly thinking?: string;
+    readonly toolCallId?: string;
+    readonly type: ContentBlockType;
   }> | null | undefined;
   readonly hasThinking: boolean | null | undefined;
   readonly hasToolUse: boolean | null | undefined;
-  readonly id: string | null | undefined;
-  readonly inputTokens: any | null | undefined;
+  readonly id: string;
+  readonly inputTokens: number | null | undefined;
   readonly isToolOnly: boolean | null | undefined;
   readonly model: string | null | undefined;
-  readonly outputTokens: any | null | undefined;
+  readonly outputTokens: number | null | undefined;
   readonly rawJson: string | null | undefined;
   readonly thinkingCount: number | null | undefined;
-  readonly timestamp: any | null | undefined;
+  readonly timestamp: string;
   readonly toolUseCount: number | null | undefined;
   readonly " $fragmentType": "AssistantMessageCard_message";
 };

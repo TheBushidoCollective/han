@@ -40,6 +40,8 @@ impl HookExecution {
     async fn command(&self) -> Option<&str> { self.command.as_deref() }
     async fn executed_at(&self) -> &str { &self.executed_at }
     async fn status(&self) -> Option<&str> { self.status.as_deref() }
+    /// Timestamp alias for executed_at (browse-client compat).
+    async fn timestamp(&self) -> &str { &self.executed_at }
 }
 
 impl From<han_db::entities::hook_executions::Model> for HookExecution {
@@ -83,11 +85,20 @@ pub struct HookExecutionConnection {
 /// Hook statistics for a session.
 #[derive(Debug, Clone, SimpleObject)]
 pub struct HookStats {
-    pub total_executions: i32,
-    pub passed: i32,
-    pub failed: i32,
-    pub total_duration_ms: i64,
-    pub average_duration_ms: f64,
+    pub total_hooks: Option<i32>,
+    pub passed_hooks: Option<i32>,
+    pub failed_hooks: Option<i32>,
+    pub total_duration_ms: Option<i32>,
+    pub pass_rate: Option<f64>,
+    pub by_hook_type: Option<Vec<HookTypeStat>>,
+}
+
+/// Hook type statistics breakdown.
+#[derive(Debug, Clone, SimpleObject)]
+pub struct HookTypeStat {
+    pub hook_type: Option<String>,
+    pub total: Option<i32>,
+    pub passed: Option<i32>,
 }
 
 #[cfg(test)]
@@ -193,16 +204,19 @@ mod tests {
     #[test]
     fn hook_stats_construction() {
         let stats = HookStats {
-            total_executions: 10,
-            passed: 8,
-            failed: 2,
-            total_duration_ms: 5000,
-            average_duration_ms: 500.0,
+            total_hooks: Some(10),
+            passed_hooks: Some(8),
+            failed_hooks: Some(2),
+            total_duration_ms: Some(5000),
+            pass_rate: Some(0.8),
+            by_hook_type: Some(vec![HookTypeStat {
+                hook_type: Some("Stop".into()),
+                total: Some(10),
+                passed: Some(8),
+            }]),
         };
-        assert_eq!(stats.total_executions, 10);
-        assert_eq!(stats.passed, 8);
-        assert_eq!(stats.failed, 2);
-        assert_eq!(stats.total_duration_ms, 5000);
-        assert!((stats.average_duration_ms - 500.0).abs() < f64::EPSILON);
+        assert_eq!(stats.total_hooks, Some(10));
+        assert_eq!(stats.passed_hooks, Some(8));
+        assert_eq!(stats.failed_hooks, Some(2));
     }
 }

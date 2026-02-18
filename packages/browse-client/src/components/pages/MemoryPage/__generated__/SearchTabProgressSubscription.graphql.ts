@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<c9ebc873bcf6bee99672e3dbe722ef5b>>
+ * @generated SignedSource<<7adda8c6e1f2ab40cc897a73ef22d42a>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -9,7 +9,6 @@
 // @ts-nocheck
 
 import { ConcreteRequest } from 'relay-runtime';
-export type MemoryAgentProgressType = "COMPLETE" | "ERROR" | "FOUND" | "SEARCHING" | "SYNTHESIZING" | "%future added value";
 export type SearchTabProgressSubscription$variables = {
   sessionId: string;
 };
@@ -19,9 +18,9 @@ export type SearchTabProgressSubscription$data = {
     readonly layer: string | null | undefined;
     readonly resultCount: number | null | undefined;
     readonly sessionId: string | null | undefined;
-    readonly timestamp: any | null | undefined;
-    readonly type: MemoryAgentProgressType | null | undefined;
-  } | null | undefined;
+    readonly timestamp: string | null | undefined;
+    readonly type: string | null | undefined;
+  };
 };
 export type SearchTabProgressSubscription = {
   response: SearchTabProgressSubscription$data;
@@ -46,7 +45,7 @@ v1 = [
         "variableName": "sessionId"
       }
     ],
-    "concreteType": "MemoryAgentProgress",
+    "concreteType": "MemoryAgentProgressPayload",
     "kind": "LinkedField",
     "name": "memoryAgentProgress",
     "plural": false,
@@ -104,7 +103,7 @@ return {
     "metadata": null,
     "name": "SearchTabProgressSubscription",
     "selections": (v1/*: any*/),
-    "type": "Subscription",
+    "type": "SubscriptionRoot",
     "abstractKey": null
   },
   "kind": "Request",

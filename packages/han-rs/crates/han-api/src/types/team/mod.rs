@@ -15,9 +15,9 @@ pub struct User {
 #[Object]
 impl User {
     async fn id(&self) -> ID { encode_global_id("User", &self.user_id) }
-    async fn display_name(&self) -> Option<&str> { self.display_name.as_deref() }
+    async fn name(&self) -> Option<&str> { self.display_name.as_deref() }
     async fn email(&self) -> Option<&str> { self.email.as_deref() }
-    async fn role(&self) -> &str { &self.role }
+    async fn avatar_url(&self) -> Option<&str> { None }
 }
 
 /// Organization data (hosted mode).
@@ -54,13 +54,91 @@ impl TeamMember {
     async fn joined_at(&self) -> Option<&str> { self.joined_at.as_deref() }
 }
 
-/// Team metrics data.
+/// Team metrics data (browse-client compatible).
 #[derive(Debug, Clone, SimpleObject)]
 pub struct TeamMetrics {
-    pub total_sessions: i32,
-    pub total_messages: i32,
-    pub active_users: i32,
-    pub avg_session_duration_secs: f64,
+    pub total_sessions: Option<i32>,
+    pub total_tasks: Option<i32>,
+    pub total_tokens: Option<i64>,
+    pub estimated_cost_usd: Option<f64>,
+    pub sessions_by_period: Option<Vec<PeriodSessionCount>>,
+    pub sessions_by_project: Option<Vec<ProjectSessionCount>>,
+    pub top_contributors: Option<Vec<ContributorMetrics>>,
+    pub activity_timeline: Option<Vec<ActivityTimelineEntry>>,
+    pub token_usage_aggregation: Option<TokenUsageAggregation>,
+    pub task_completion_metrics: Option<TaskCompletionMetrics>,
+}
+
+/// Session count for a time period.
+#[derive(Debug, Clone, SimpleObject)]
+pub struct PeriodSessionCount {
+    pub period: Option<String>,
+    pub count: Option<i32>,
+    pub session_count: Option<i32>,
+    pub task_count: Option<i32>,
+    pub token_usage: Option<i64>,
+}
+
+/// Session count by project.
+#[derive(Debug, Clone, SimpleObject)]
+pub struct ProjectSessionCount {
+    pub project_id: Option<String>,
+    pub project_name: Option<String>,
+    pub count: Option<i32>,
+    pub session_count: Option<i32>,
+    pub task_count: Option<i32>,
+    pub success_rate: Option<f64>,
+}
+
+/// Contributor metrics (anonymized).
+#[derive(Debug, Clone, SimpleObject)]
+pub struct ContributorMetrics {
+    pub user_id: Option<String>,
+    pub contributor_id: Option<String>,
+    pub display_name: Option<String>,
+    pub session_count: Option<i32>,
+    pub task_count: Option<i32>,
+    pub token_count: Option<i32>,
+    pub success_rate: Option<f64>,
+}
+
+/// Activity timeline entry.
+#[derive(Debug, Clone, SimpleObject)]
+pub struct ActivityTimelineEntry {
+    pub date: Option<String>,
+    pub period: Option<String>,
+    pub sessions: Option<i32>,
+    pub session_count: Option<i32>,
+    pub tasks: Option<i32>,
+    pub task_count: Option<i32>,
+    pub tokens: Option<i32>,
+    pub message_count: Option<i32>,
+}
+
+/// Token usage aggregation.
+#[derive(Debug, Clone, SimpleObject)]
+pub struct TokenUsageAggregation {
+    pub total_input_tokens: Option<i64>,
+    pub total_output_tokens: Option<i64>,
+    pub total_cache_read_tokens: Option<i64>,
+    pub total_cached_tokens: Option<i64>,
+    pub total_cache_creation_tokens: Option<i64>,
+    pub total_tokens: Option<i64>,
+    pub estimated_cost_usd: Option<f64>,
+}
+
+/// Task completion metrics.
+#[derive(Debug, Clone, SimpleObject)]
+pub struct TaskCompletionMetrics {
+    pub total_tasks: Option<i32>,
+    pub total_created: Option<i32>,
+    pub total_completed: Option<i32>,
+    pub completed_tasks: Option<i32>,
+    pub success_count: Option<i32>,
+    pub partial_count: Option<i32>,
+    pub failure_count: Option<i32>,
+    pub success_rate: Option<f64>,
+    pub average_confidence: Option<f64>,
 }
 
 #[cfg(test)]
@@ -207,27 +285,35 @@ mod tests {
     #[test]
     fn team_metrics_construction() {
         let m = TeamMetrics {
-            total_sessions: 100,
-            total_messages: 5000,
-            active_users: 12,
-            avg_session_duration_secs: 1800.5,
+            total_sessions: Some(100),
+            total_tasks: Some(50),
+            total_tokens: Some(100000i64),
+            estimated_cost_usd: Some(5.0),
+            sessions_by_period: Some(vec![]),
+            sessions_by_project: Some(vec![]),
+            top_contributors: Some(vec![]),
+            activity_timeline: Some(vec![]),
+            token_usage_aggregation: None,
+            task_completion_metrics: None,
         };
-        assert_eq!(m.total_sessions, 100);
-        assert_eq!(m.total_messages, 5000);
-        assert_eq!(m.active_users, 12);
-        assert!((m.avg_session_duration_secs - 1800.5).abs() < f64::EPSILON);
+        assert_eq!(m.total_sessions, Some(100));
     }
 
     #[test]
     fn team_metrics_clone() {
         let m = TeamMetrics {
-            total_sessions: 50,
-            total_messages: 2500,
-            active_users: 8,
-            avg_session_duration_secs: 900.0,
+            total_sessions: Some(50),
+            total_tasks: None,
+            total_tokens: None,
+            estimated_cost_usd: None,
+            sessions_by_period: None,
+            sessions_by_project: None,
+            top_contributors: None,
+            activity_timeline: None,
+            token_usage_aggregation: None,
+            task_completion_metrics: None,
         };
         let m2 = m.clone();
         assert_eq!(m.total_sessions, m2.total_sessions);
-        assert_eq!(m.active_users, m2.active_users);
     }
 }

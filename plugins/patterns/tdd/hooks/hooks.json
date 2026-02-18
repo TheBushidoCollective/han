@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook reference hooks/enforce-tdd.md --must-read-first \"test-driven development enforcement\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -21,6 +21,7 @@
 		"test:report": "playwright show-report"
 	},
 	"dependencies": {
+		"@sentry/react": "^10.39.0",
 		"anser": "^2.3.5",
 		"graphql": "^16.9.0",
 		"graphql-ws": "^5.16.0",

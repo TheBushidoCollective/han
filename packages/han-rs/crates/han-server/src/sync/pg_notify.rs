@@ -88,6 +88,7 @@ fn map_notify_to_event(payload: &NotifyPayload) -> Option<DbChangeEvent> {
             Some(DbChangeEvent::SessionAdded {
                 session_id: session_id.clone(),
                 parent_id: None,
+                project_id: None,
             })
         }
         "message_added" => {
@@ -148,9 +149,10 @@ mod tests {
         let event = map_notify_to_event(&payload);
         assert!(event.is_some());
         match event.unwrap() {
-            DbChangeEvent::SessionAdded { session_id, parent_id } => {
+            DbChangeEvent::SessionAdded { session_id, parent_id, project_id } => {
                 assert_eq!(session_id, "sess-456");
                 assert!(parent_id.is_none());
+                assert!(project_id.is_none());
             }
             other => panic!("Expected SessionAdded, got {:?}", other),
         }

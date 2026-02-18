@@ -5,7 +5,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/hooks/agent-bushido.md\""
+            "command": "han hook reference hooks/agent-bushido.md --must-read-first \"bushido virtues and principles\"",
+            "timeout": 5
           }
         ]
       }

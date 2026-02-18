@@ -3,10 +3,16 @@
 //! Uses tokio broadcast channels for real-time event delivery.
 
 use async_graphql::*;
+use han_db::entities::{messages, projects, sessions};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, QuerySelect};
 use tokio::sync::broadcast;
 use tokio_stream::{Stream, StreamExt, wrappers::BroadcastStream};
 
 use crate::context::DbChangeEvent;
+use crate::node::{decode_global_id, encode_message_cursor, encode_session_cursor};
+use crate::query::{enrich_single_session, session_model_to_data};
+use crate::types::messages::{MessageData, MessageEdge, discriminate_message};
+use crate::types::sessions::{SessionData, SessionEdge};
 
 /// Subscription root type.
 pub struct SubscriptionRoot;
@@ -16,7 +22,7 @@ pub struct SubscriptionRoot;
 // ============================================================================
 
 /// Node updated payload.
-#[derive(Debug, Clone, SimpleObject)]
+#[derive(Debug, Clone)]
 pub struct NodeUpdatedPayload {
     /// Global ID of the updated node.
     pub id: String,
@@ -24,8 +30,43 @@ pub struct NodeUpdatedPayload {
     pub typename: String,
 }
 
+#[Object]
+impl NodeUpdatedPayload {
+    async fn id(&self) -> &str { &self.id }
+    async fn typename(&self) -> &str { &self.typename }
+
+    /// The updated node, loaded from the database.
+    async fn node(&self, ctx: &Context<'_>) -> Result<Option<crate::types::node::Node>> {
+        let db = ctx.data::<DatabaseConnection>()?;
+        let parsed = match decode_global_id(&self.id) {
+            Some(p) => p,
+            None => return Ok(None),
+        };
+
+        match parsed.typename.as_str() {
+            "Session" => {
+                // ID is project_dir:session_id — extract session_id (last segment)
+                let session_id = parsed.id.rsplit(':').next().unwrap_or(&parsed.id);
+                let session = sessions::Entity::find_by_id(session_id)
+                    .one(db)
+                    .await
+                    .map_err(|e| Error::new(e.to_string()))?;
+                match session {
+                    Some(s) => {
+                        let mut data = session_model_to_data(s);
+                        enrich_single_session(db, &mut data).await?;
+                        Ok(Some(crate::types::node::Node::Session(data)))
+                    }
+                    None => Ok(None),
+                }
+            }
+            _ => Ok(None),
+        }
+    }
+}
+
 /// Session message added payload.
-#[derive(Debug, Clone, SimpleObject)]
+#[derive(Debug, Clone)]
 pub struct SessionMessageAddedPayload {
     /// Session ID.
     pub session_id: String,
@@ -33,13 +74,105 @@ pub struct SessionMessageAddedPayload {
     pub message_index: i32,
 }
 
+#[Object]
+impl SessionMessageAddedPayload {
+    async fn session_id(&self) -> &str { &self.session_id }
+    async fn message_index(&self) -> i32 { self.message_index }
+
+    /// The newest message edge for Relay @prependEdge.
+    ///
+    /// Loads the latest non-paired message from the database and returns it
+    /// as a MessageEdge so Relay can insert it into the connection.
+    async fn new_message_edge(&self, ctx: &Context<'_>) -> Result<Option<MessageEdge>> {
+        let db = ctx.data::<DatabaseConnection>()?;
+
+        // Look up the session to get the project_dir for cursor encoding
+        let session = sessions::Entity::find_by_id(&self.session_id)
+            .one(db)
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
+        let session = match session {
+            Some(s) => s,
+            None => return Ok(None),
+        };
+
+        let project_dir = if let Some(ref pid) = session.project_id {
+            projects::Entity::find_by_id(pid)
+                .one(db)
+                .await
+                .map_err(|e| Error::new(e.to_string()))?
+                .map(|p| p.path)
+                .unwrap_or_default()
+        } else {
+            String::new()
+        };
+
+        // Get the latest few messages for this session (newest by line_number)
+        // We fetch a small batch because some may be paired events we need to skip
+        let recent_msgs = messages::Entity::find()
+            .filter(messages::Column::SessionId.eq(&self.session_id))
+            .order_by_desc(messages::Column::LineNumber)
+            .limit(10)
+            .all(db)
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
+
+        // Find the first message with content
+        let msg = recent_msgs.iter().find(|m| {
+            m.content.as_ref().map(|c| !c.is_empty()).unwrap_or(false)
+                || m.message_type == "summary"
+                || m.message_type == "han_event"
+        });
+
+        match msg {
+            Some(msg) => {
+                let data = MessageData::from_model(msg, &project_dir);
+                let cursor = encode_message_cursor(&project_dir, &msg.session_id, msg.line_number);
+                Ok(Some(MessageEdge {
+                    node: discriminate_message(data),
+                    cursor,
+                }))
+            }
+            None => Ok(None),
+        }
+    }
+}
+
 /// Session added payload.
-#[derive(Debug, Clone, SimpleObject)]
+#[derive(Debug, Clone)]
 pub struct SessionAddedPayload {
     /// ID of the new session.
     pub session_id: String,
     /// Parent project ID.
     pub parent_id: Option<String>,
+    /// Project ID for filtering.
+    pub project_id: Option<String>,
+}
+
+#[Object]
+impl SessionAddedPayload {
+    async fn session_id(&self) -> &str { &self.session_id }
+    async fn parent_id(&self) -> Option<&str> { self.parent_id.as_deref() }
+    async fn project_id(&self) -> Option<&str> { self.project_id.as_deref() }
+
+    /// The new session edge for Relay @prependEdge.
+    async fn new_session_edge(&self, ctx: &Context<'_>) -> Result<Option<SessionEdge>> {
+        let db = ctx.data::<DatabaseConnection>()?;
+        let session = sessions::Entity::find_by_id(&self.session_id)
+            .one(db)
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
+
+        match session {
+            Some(s) => {
+                let mut data = session_model_to_data(s);
+                enrich_single_session(db, &mut data).await?;
+                let cursor = encode_session_cursor(&data.session_id, &data.date);
+                Ok(Some(SessionEdge { node: data, cursor }))
+            }
+            None => Ok(None),
+        }
+    }
 }
 
 /// Tool result added payload.
@@ -281,22 +414,30 @@ impl SubscriptionRoot {
             }))
     }
 
-    /// Subscribe to new sessions.
+    /// Subscribe to new sessions. Filter by projectId or receive all.
     async fn session_added(
         &self,
         ctx: &Context<'_>,
         parent_id: Option<ID>,
+        project_id: Option<ID>,
     ) -> Result<impl Stream<Item = SessionAddedPayload>> {
         let sender = ctx.data::<broadcast::Sender<DbChangeEvent>>()?;
         let receiver = sender.subscribe();
-        let target = parent_id.map(|id| id.to_string());
+        let target_parent = parent_id.map(|id| id.to_string());
+        let target_project = project_id.map(|id| id.to_string());
 
         Ok(BroadcastStream::new(receiver)
             .filter_map(move |event| {
-                if let Ok(DbChangeEvent::SessionAdded { session_id, parent_id }) = event {
-                    if target.is_none() || parent_id == target {
-                        return Some(SessionAddedPayload { session_id, parent_id });
+                if let Ok(DbChangeEvent::SessionAdded { session_id, parent_id, project_id }) = event {
+                    // Filter by parent_id if specified
+                    if target_parent.is_some() && parent_id != target_parent {
+                        return None;
                     }
+                    // Filter by project_id if specified
+                    if target_project.is_some() && project_id != target_project {
+                        return None;
+                    }
+                    return Some(SessionAddedPayload { session_id, parent_id, project_id });
                 }
                 None
             }))
@@ -339,6 +480,82 @@ impl SubscriptionRoot {
                 None
             }))
     }
+
+    // ========================================================================
+    // Stub subscriptions for browse-client backwards compatibility
+    // ========================================================================
+
+    /// Subscribe to memory updates (stub).
+    async fn memory_updated(
+        &self,
+        ctx: &Context<'_>,
+    ) -> Result<impl Stream<Item = MemoryUpdatedPayload>> {
+        let sender = ctx.data::<broadcast::Sender<DbChangeEvent>>()?;
+        let receiver = sender.subscribe();
+        // This subscription never fires - it's a stub for schema compatibility
+        Ok(BroadcastStream::new(receiver).filter_map(|_| None::<MemoryUpdatedPayload>))
+    }
+
+    /// Subscribe to memory agent progress (stub).
+    async fn memory_agent_progress(
+        &self,
+        ctx: &Context<'_>,
+        _session_id: Option<String>,
+    ) -> Result<impl Stream<Item = MemoryAgentProgressPayload>> {
+        let sender = ctx.data::<broadcast::Sender<DbChangeEvent>>()?;
+        let receiver = sender.subscribe();
+        Ok(BroadcastStream::new(receiver).filter_map(|_| None::<MemoryAgentProgressPayload>))
+    }
+
+    /// Subscribe to memory agent results (stub).
+    async fn memory_agent_result(
+        &self,
+        ctx: &Context<'_>,
+        _session_id: Option<String>,
+    ) -> Result<impl Stream<Item = MemoryAgentResultPayload>> {
+        let sender = ctx.data::<broadcast::Sender<DbChangeEvent>>()?;
+        let receiver = sender.subscribe();
+        Ok(BroadcastStream::new(receiver).filter_map(|_| None::<MemoryAgentResultPayload>))
+    }
+}
+
+/// Memory updated payload (stub).
+#[derive(Debug, Clone, SimpleObject)]
+pub struct MemoryUpdatedPayload {
+    #[graphql(name = "type")]
+    pub event_type: Option<String>,
+    pub action: Option<String>,
+    pub path: Option<String>,
+    pub timestamp: Option<String>,
+}
+
+/// Memory agent progress payload (stub).
+#[derive(Debug, Clone, SimpleObject)]
+pub struct MemoryAgentProgressPayload {
+    pub query_id: Option<String>,
+    pub session_id: Option<String>,
+    #[graphql(name = "type")]
+    pub progress_type: Option<String>,
+    pub progress: Option<String>,
+    pub message: Option<String>,
+    pub layer: Option<String>,
+    pub content: Option<String>,
+    pub result_count: Option<i32>,
+    pub timestamp: Option<String>,
+}
+
+/// Memory agent result payload (stub).
+#[derive(Debug, Clone, SimpleObject)]
+pub struct MemoryAgentResultPayload {
+    pub query_id: Option<String>,
+    pub session_id: Option<String>,
+    pub result: Option<String>,
+    pub answer: Option<String>,
+    pub confidence: Option<String>,
+    pub citations: Option<Vec<crate::types::settings::Citation>>,
+    pub searched_layers: Option<Vec<String>>,
+    pub success: Option<bool>,
+    pub error: Option<String>,
 }
 
 #[cfg(test)]
@@ -378,9 +595,11 @@ mod tests {
         let p = SessionAddedPayload {
             session_id: "s1".into(),
             parent_id: Some("proj-1".into()),
+            project_id: Some("proj-1".into()),
         };
         assert_eq!(p.session_id, "s1");
         assert_eq!(p.parent_id, Some("proj-1".into()));
+        assert_eq!(p.project_id, Some("proj-1".into()));
     }
 
     #[test]
@@ -388,8 +607,10 @@ mod tests {
         let p = SessionAddedPayload {
             session_id: "s1".into(),
             parent_id: None,
+            project_id: None,
         };
         assert!(p.parent_id.is_none());
+        assert!(p.project_id.is_none());
     }
 
     #[test]
@@ -476,7 +697,7 @@ mod tests {
     fn all_payloads_implement_debug() {
         let _ = format!("{:?}", NodeUpdatedPayload { id: "".into(), typename: "".into() });
         let _ = format!("{:?}", SessionMessageAddedPayload { session_id: "".into(), message_index: 0 });
-        let _ = format!("{:?}", SessionAddedPayload { session_id: "".into(), parent_id: None });
+        let _ = format!("{:?}", SessionAddedPayload { session_id: "".into(), parent_id: None, project_id: None });
         let _ = format!("{:?}", ToolResultAddedPayload { session_id: "".into(), call_id: "".into(), result_type: "".into(), success: false, duration_ms: 0 });
         let _ = format!("{:?}", HookResultAddedPayload { session_id: "".into(), hook_run_id: "".into(), plugin_name: "".into(), hook_name: "".into(), success: false, duration_ms: 0 });
         let _ = format!("{:?}", SessionTodosChangedPayload { session_id: "".into(), todo_count: 0, in_progress_count: 0, completed_count: 0 });

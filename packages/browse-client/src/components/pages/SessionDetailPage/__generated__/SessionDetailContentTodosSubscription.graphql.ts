@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<c380d03cca9f2322d188c6624b1a615a>>
+ * @generated SignedSource<<8b7b5de841d8f40c9f585d28b7828903>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,11 +14,11 @@ export type SessionDetailContentTodosSubscription$variables = {
 };
 export type SessionDetailContentTodosSubscription$data = {
   readonly sessionTodosChanged: {
-    readonly completedCount: number | null | undefined;
-    readonly inProgressCount: number | null | undefined;
-    readonly sessionId: string | null | undefined;
-    readonly todoCount: number | null | undefined;
-  } | null | undefined;
+    readonly completedCount: number;
+    readonly inProgressCount: number;
+    readonly sessionId: string;
+    readonly todoCount: number;
+  };
 };
 export type SessionDetailContentTodosSubscription = {
   response: SessionDetailContentTodosSubscription$data;
@@ -87,7 +87,7 @@ return {
     "metadata": null,
     "name": "SessionDetailContentTodosSubscription",
     "selections": (v1/*: any*/),
-    "type": "Subscription",
+    "type": "SubscriptionRoot",
     "abstractKey": null
   },
   "kind": "Request",

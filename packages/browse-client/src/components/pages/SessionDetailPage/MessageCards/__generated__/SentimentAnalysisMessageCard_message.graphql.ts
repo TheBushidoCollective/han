@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<c694a6581401da732555ad018500a6f8>>
+ * @generated SignedSource<<865fce68cae859b65d912b463c9486a3>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,12 +14,12 @@ export type SentimentAnalysisMessageCard_message$data = {
   readonly analyzedMessageId: string | null | undefined;
   readonly frustrationLevel: string | null | undefined;
   readonly frustrationScore: number | null | undefined;
-  readonly id: string | null | undefined;
+  readonly id: string;
   readonly rawJson: string | null | undefined;
   readonly sentimentLevel: string | null | undefined;
   readonly sentimentScore: number | null | undefined;
   readonly signals: ReadonlyArray<string> | null | undefined;
-  readonly timestamp: any | null | undefined;
+  readonly timestamp: string;
   readonly " $fragmentType": "SentimentAnalysisMessageCard_message";
 };
 export type SentimentAnalysisMessageCard_message$key = {

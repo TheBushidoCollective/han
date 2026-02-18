@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<38f23b4b7b2dff311b8fe0f57f016a63>>
+ * @generated SignedSource<<d4d5b922944592192585ea683f07865a>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -18,7 +18,7 @@ export type SessionListItemSubscription$data = {
     readonly node: {
       readonly " $fragmentSpreads": FragmentRefs<"SessionListItem_session">;
     } | null | undefined;
-  } | null | undefined;
+  };
 };
 export type SessionListItemSubscription = {
   response: SessionListItemSubscription$data;
@@ -103,7 +103,7 @@ return {
         "storageKey": null
       }
     ],
-    "type": "Subscription",
+    "type": "SubscriptionRoot",
     "abstractKey": null
   },
   "kind": "Request",

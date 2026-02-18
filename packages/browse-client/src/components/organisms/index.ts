@@ -79,7 +79,6 @@ export {
 	MarkdownContent,
 	stripAnsi,
 } from "./MarkdownContent.tsx";
-export { MockDashboard } from "./MockDashboard.tsx";
 export { NavCard } from "./NavCard.tsx";
 export { NavItem } from "./NavItem.tsx";
 export { ProjectCardItem } from "./ProjectCardItem.tsx";

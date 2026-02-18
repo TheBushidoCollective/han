@@ -24,6 +24,7 @@ export { Link, type LinkProps } from "./Link.tsx";
 export { Pressable, type PressableProps } from "./Pressable.tsx";
 export { Skeleton } from "./Skeleton.tsx";
 export { Spinner } from "./Spinner.tsx";
+export { SubwayLine } from "./SubwayLine.tsx";
 export {
 	SyntaxHighlightedCode,
 	type SyntaxHighlightedCodeProps,

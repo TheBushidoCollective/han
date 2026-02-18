@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<071f49f0c6c033bcd0653acbc93bbb20>>
+ * @generated SignedSource<<b9af96ca70e43daa39cb96a547c12f94>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,10 +14,10 @@ export type SessionDetailContentFilesSubscription$variables = {
 };
 export type SessionDetailContentFilesSubscription$data = {
   readonly sessionFilesChanged: {
-    readonly fileCount: number | null | undefined;
-    readonly sessionId: string | null | undefined;
-    readonly toolName: string | null | undefined;
-  } | null | undefined;
+    readonly fileCount: number;
+    readonly sessionId: string;
+    readonly toolName: string;
+  };
 };
 export type SessionDetailContentFilesSubscription = {
   response: SessionDetailContentFilesSubscription$data;
@@ -79,7 +79,7 @@ return {
     "metadata": null,
     "name": "SessionDetailContentFilesSubscription",
     "selections": (v1/*: any*/),
-    "type": "Subscription",
+    "type": "SubscriptionRoot",
     "abstractKey": null
   },
   "kind": "Request",

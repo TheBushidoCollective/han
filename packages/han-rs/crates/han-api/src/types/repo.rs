@@ -1,6 +1,8 @@
 //! Repo (git repository) GraphQL type.
 
 use async_graphql::*;
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+
 use crate::node::encode_global_id;
 
 /// Repo data for GraphQL resolution.
@@ -17,7 +19,7 @@ pub struct Repo {
 #[Object]
 impl Repo {
     /// Repo global ID.
-    async fn id(&self) -> ID {
+    pub async fn id(&self) -> ID {
         encode_global_id("Repo", &self.raw_id)
     }
 
@@ -35,6 +37,52 @@ impl Repo {
 
     /// Updated timestamp.
     async fn updated_at(&self) -> &str { &self.updated_at }
+
+    // Backwards-compatible fields for browse-client
+    /// Alias for raw_id.
+    async fn repo_id(&self) -> &str { &self.raw_id }
+    /// Repo path (uses remote).
+    async fn path(&self) -> &str { &self.remote }
+
+    /// Total sessions count across all projects in this repo.
+    async fn total_sessions(&self, ctx: &Context<'_>) -> Result<Option<i32>> {
+        let db = ctx.data::<DatabaseConnection>()?;
+        // Get project IDs for this repo, then count sessions
+        let project_ids: Vec<String> = han_db::entities::projects::Entity::find()
+            .filter(han_db::entities::projects::Column::RepoId.eq(&self.raw_id))
+            .all(db)
+            .await
+            .map_err(|e| Error::new(e.to_string()))?
+            .into_iter()
+            .map(|p| p.id)
+            .collect();
+
+        if project_ids.is_empty() {
+            return Ok(Some(0));
+        }
+
+        let count = han_db::entities::sessions::Entity::find()
+            .filter(han_db::entities::sessions::Column::ProjectId.is_in(project_ids))
+            .all(db)
+            .await
+            .map(|v| v.len() as i32)
+            .map_err(|e| Error::new(e.to_string()))?;
+        Ok(Some(count))
+    }
+
+    /// Last activity timestamp.
+    async fn last_activity(&self) -> Option<&str> { Some(&self.updated_at) }
+
+    /// Projects in this repo.
+    async fn projects(&self, ctx: &Context<'_>) -> Result<Option<Vec<crate::types::project::Project>>> {
+        let db = ctx.data::<DatabaseConnection>()?;
+        let models = han_db::entities::projects::Entity::find()
+            .filter(han_db::entities::projects::Column::RepoId.eq(&self.raw_id))
+            .all(db)
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
+        Ok(Some(models.into_iter().map(crate::types::project::Project::from).collect()))
+    }
 }
 
 impl From<han_db::entities::repos::Model> for Repo {

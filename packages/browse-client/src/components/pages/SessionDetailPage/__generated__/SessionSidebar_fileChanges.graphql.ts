@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<26b3a3e910bde9f186e50667b35dd486>>
+ * @generated SignedSource<<6707594a93223b406904f7feffc73f97>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -9,7 +9,7 @@
 // @ts-nocheck
 
 import { ReaderFragment } from 'relay-runtime';
-export type FileChangeAction = "CREATED" | "DELETED" | "MODIFIED" | "%future added value";
+export type FileChangeAction = "created" | "deleted" | "modified" | "%future added value";
 import { FragmentRefs } from "relay-runtime";
 export type SessionSidebar_fileChanges$data = {
   readonly fileChangeCount: number | null | undefined;
@@ -24,20 +24,20 @@ export type SessionSidebar_fileChanges$data = {
           readonly hookName: string | null | undefined;
           readonly pluginName: string | null | undefined;
         }> | null | undefined;
-        readonly recordedAt: any | null | undefined;
+        readonly recordedAt: string | null | undefined;
         readonly toolName: string | null | undefined;
         readonly validations: ReadonlyArray<{
           readonly hookName: string | null | undefined;
           readonly pluginName: string | null | undefined;
-          readonly validatedAt: any | null | undefined;
+          readonly validatedAt: string | null | undefined;
         }> | null | undefined;
-      } | null | undefined;
-    }> | null | undefined;
+      };
+    }>;
     readonly pageInfo: {
       readonly endCursor: string | null | undefined;
-      readonly hasNextPage: boolean | null | undefined;
-    } | null | undefined;
-    readonly totalCount: number | null | undefined;
+      readonly hasNextPage: boolean;
+    };
+    readonly totalCount: number;
   } | null | undefined;
   readonly id: string;
   readonly " $fragmentType": "SessionSidebar_fileChanges";

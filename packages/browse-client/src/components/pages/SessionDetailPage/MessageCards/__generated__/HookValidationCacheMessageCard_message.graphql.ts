@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<04367137681e1667baac959ed78d2962>>
+ * @generated SignedSource<<9bd8d752ee53aa91ca46bcc6dc01b51c>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,10 +14,10 @@ export type HookValidationCacheMessageCard_message$data = {
   readonly directory: string | null | undefined;
   readonly fileCount: number | null | undefined;
   readonly hook: string | null | undefined;
-  readonly id: string | null | undefined;
+  readonly id: string;
   readonly plugin: string | null | undefined;
   readonly rawJson: string | null | undefined;
-  readonly timestamp: any | null | undefined;
+  readonly timestamp: string;
   readonly " $fragmentType": "HookValidationCacheMessageCard_message";
 };
 export type HookValidationCacheMessageCard_message$key = {

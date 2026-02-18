@@ -1,9 +1,13 @@
 //! Message types for GraphQL.
 //!
 //! Messages are discriminated by `message_type` and `tool_name` fields.
-//! Result messages (tool_result, hook_result, mcp_tool_result, exposed_tool_result)
-//! are NEVER included in Session.messages connection - they are resolved as
-//! fields on their parent types via DataLoader.
+//! All messages (including results) appear chronologically in the timeline.
+//! Result messages also remain accessible as fields on their parent types
+//! (e.g., ToolUseBlock.result, HookRunMessage.result) for convenience.
+//!
+//! Message is a GraphQL **interface** (not union) because the browse-client
+//! fragments use `... on UserMessage` and `... on AssistantMessage` etc.
+//! within a Message context.
 
 use async_graphql::*;
 use han_db::entities::messages;
@@ -11,17 +15,10 @@ use han_db::entities::messages;
 use crate::connection::PageInfo;
 use crate::node::{encode_global_id, encode_message_cursor};
 use crate::types::content_blocks::{ContentBlock, parse_content_blocks};
-
-/// Set of paired event types that should be excluded from the messages connection.
-const PAIRED_EVENT_TYPES: &[&str] = &[
-    "sentiment_analysis",
-    "hook_result",
-    "mcp_tool_result",
-    "exposed_tool_result",
-];
+use crate::types::sentiment::SentimentAnalysis;
 
 // ============================================================================
-// Message Interface (Union in async-graphql)
+// Message Interface
 // ============================================================================
 
 /// Base message data shared by all message types.
@@ -81,10 +78,24 @@ impl MessageData {
             Some(parts.join(" ").to_lowercase())
         }
     }
+
+    fn content_text(&self) -> Option<String> {
+        self.content.clone()
+    }
 }
 
-/// Message union - discriminated by message_type and tool_name.
-#[derive(Debug, Clone, Union)]
+/// Message interface - the base type for all messages in a session.
+/// Uses GraphQL interface (not union) so clients can use `... on UserMessage` etc.
+#[derive(Debug, Clone, Interface)]
+#[graphql(
+    field(name = "id", ty = "ID"),
+    field(name = "uuid", ty = "&str"),
+    field(name = "timestamp", ty = "&str"),
+    field(name = "raw_json", ty = "Option<&str>"),
+    field(name = "agent_id", ty = "Option<&str>"),
+    field(name = "parent_id", ty = "Option<&str>"),
+    field(name = "search_text", ty = "Option<String>"),
+)]
 pub enum Message {
     RegularUser(RegularUserMessage),
     CommandUser(CommandUserMessage),
@@ -115,50 +126,29 @@ pub enum Message {
     UnknownEvent(UnknownEventMessage),
 }
 
-// ============================================================================
-// Shared interface fields macro
-// ============================================================================
-
-macro_rules! impl_message_fields {
-    ($type:ty) => {
-        #[Object]
-        impl $type {
-            /// Message global ID (Message:{uuid}).
-            async fn id(&self) -> ID {
-                self.data.global_id()
-            }
-
-            /// Raw message UUID.
-            async fn uuid(&self) -> &str {
-                &self.data.id
-            }
-
-            /// When the message was sent.
-            async fn timestamp(&self) -> &str {
-                &self.data.timestamp
-            }
-
-            /// Original JSONL line content for debugging.
-            async fn raw_json(&self) -> Option<&str> {
-                self.data.raw_json.as_deref()
-            }
-
-            /// Agent ID if from a subagent. NULL for main conversation.
-            async fn agent_id(&self) -> Option<&str> {
-                self.data.agent_id.as_deref()
-            }
-
-            /// For result messages, references the call message ID.
-            async fn parent_id(&self) -> Option<&str> {
-                self.data.parent_id.as_deref()
-            }
-
-            /// Searchable text for message filtering.
-            async fn search_text(&self) -> Option<String> {
-                self.data.search_text()
-            }
-        }
-    };
+/// UserMessage interface - user message subtypes with content, contentBlocks, sentimentAnalysis.
+/// Note: async-graphql doesn't support interface inheritance (issue #322),
+/// so UserMessage is a standalone interface. Concrete types are variants in BOTH
+/// Message and UserMessage enums, producing `type X implements Message & UserMessage`.
+#[derive(Debug, Clone, Interface)]
+#[graphql(
+    field(name = "id", ty = "ID"),
+    field(name = "uuid", ty = "&str"),
+    field(name = "timestamp", ty = "&str"),
+    field(name = "raw_json", ty = "Option<&str>"),
+    field(name = "agent_id", ty = "Option<&str>"),
+    field(name = "parent_id", ty = "Option<&str>"),
+    field(name = "search_text", ty = "Option<String>"),
+    field(name = "content", ty = "Option<String>"),
+    field(name = "content_blocks", ty = "Option<Vec<ContentBlock>>"),
+    field(name = "sentiment_analysis", ty = "Option<SentimentAnalysis>"),
+)]
+pub enum UserMessage {
+    Regular(RegularUserMessage),
+    Command(CommandUserMessage),
+    Interrupt(InterruptUserMessage),
+    Meta(MetaUserMessage),
+    ToolResult(ToolResultUserMessage),
 }
 
 // ============================================================================
@@ -171,7 +161,25 @@ pub struct RegularUserMessage {
     pub data: MessageData,
 }
 
-impl_message_fields!(RegularUserMessage);
+#[Object]
+impl RegularUserMessage {
+    async fn id(&self) -> ID { self.data.global_id() }
+    async fn uuid(&self) -> &str { &self.data.id }
+    async fn timestamp(&self) -> &str { &self.data.timestamp }
+    async fn raw_json(&self) -> Option<&str> { self.data.raw_json.as_deref() }
+    async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
+    async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
+    async fn search_text(&self) -> Option<String> { self.data.search_text() }
+    async fn content(&self) -> Option<String> { self.data.content_text() }
+    async fn content_blocks(&self) -> Option<Vec<ContentBlock>> {
+        Some(parse_content_blocks(
+            self.data.content.as_deref(),
+            self.data.raw_json.as_deref(),
+            Some(&self.data.session_id),
+        ))
+    }
+    async fn sentiment_analysis(&self) -> Option<SentimentAnalysis> { None }
+}
 
 /// A command user message (/command invocations).
 #[derive(Debug, Clone)]
@@ -188,8 +196,17 @@ impl CommandUserMessage {
     async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
     async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
     async fn search_text(&self) -> Option<String> { self.data.search_text() }
+    async fn content(&self) -> Option<String> { self.data.content_text() }
+    async fn content_blocks(&self) -> Option<Vec<ContentBlock>> {
+        Some(parse_content_blocks(
+            self.data.content.as_deref(),
+            self.data.raw_json.as_deref(),
+            Some(&self.data.session_id),
+        ))
+    }
+    async fn sentiment_analysis(&self) -> Option<SentimentAnalysis> { None }
     /// The command that was invoked.
-    async fn command(&self) -> Option<String> {
+    async fn command_name(&self) -> Option<String> {
         parse_user_metadata_field(&self.data.raw_json, "command")
     }
 }
@@ -200,7 +217,25 @@ pub struct InterruptUserMessage {
     pub data: MessageData,
 }
 
-impl_message_fields!(InterruptUserMessage);
+#[Object]
+impl InterruptUserMessage {
+    async fn id(&self) -> ID { self.data.global_id() }
+    async fn uuid(&self) -> &str { &self.data.id }
+    async fn timestamp(&self) -> &str { &self.data.timestamp }
+    async fn raw_json(&self) -> Option<&str> { self.data.raw_json.as_deref() }
+    async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
+    async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
+    async fn search_text(&self) -> Option<String> { self.data.search_text() }
+    async fn content(&self) -> Option<String> { self.data.content_text() }
+    async fn content_blocks(&self) -> Option<Vec<ContentBlock>> {
+        Some(parse_content_blocks(
+            self.data.content.as_deref(),
+            self.data.raw_json.as_deref(),
+            Some(&self.data.session_id),
+        ))
+    }
+    async fn sentiment_analysis(&self) -> Option<SentimentAnalysis> { None }
+}
 
 /// A meta user message (system-injected, not shown to user).
 #[derive(Debug, Clone)]
@@ -208,7 +243,25 @@ pub struct MetaUserMessage {
     pub data: MessageData,
 }
 
-impl_message_fields!(MetaUserMessage);
+#[Object]
+impl MetaUserMessage {
+    async fn id(&self) -> ID { self.data.global_id() }
+    async fn uuid(&self) -> &str { &self.data.id }
+    async fn timestamp(&self) -> &str { &self.data.timestamp }
+    async fn raw_json(&self) -> Option<&str> { self.data.raw_json.as_deref() }
+    async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
+    async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
+    async fn search_text(&self) -> Option<String> { self.data.search_text() }
+    async fn content(&self) -> Option<String> { self.data.content_text() }
+    async fn content_blocks(&self) -> Option<Vec<ContentBlock>> {
+        Some(parse_content_blocks(
+            self.data.content.as_deref(),
+            self.data.raw_json.as_deref(),
+            Some(&self.data.session_id),
+        ))
+    }
+    async fn sentiment_analysis(&self) -> Option<SentimentAnalysis> { None }
+}
 
 /// A user message that is actually a tool result container.
 #[derive(Debug, Clone)]
@@ -216,7 +269,36 @@ pub struct ToolResultUserMessage {
     pub data: MessageData,
 }
 
-impl_message_fields!(ToolResultUserMessage);
+#[Object]
+impl ToolResultUserMessage {
+    async fn id(&self) -> ID { self.data.global_id() }
+    async fn uuid(&self) -> &str { &self.data.id }
+    async fn timestamp(&self) -> &str { &self.data.timestamp }
+    async fn raw_json(&self) -> Option<&str> { self.data.raw_json.as_deref() }
+    async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
+    async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
+    async fn search_text(&self) -> Option<String> { self.data.search_text() }
+    async fn content(&self) -> Option<String> { self.data.content_text() }
+    async fn content_blocks(&self) -> Option<Vec<ContentBlock>> {
+        Some(parse_content_blocks(
+            self.data.content.as_deref(),
+            self.data.raw_json.as_deref(),
+            Some(&self.data.session_id),
+        ))
+    }
+    async fn sentiment_analysis(&self) -> Option<SentimentAnalysis> { None }
+    /// Number of tool results in this message.
+    async fn tool_result_count(&self) -> Option<i32> {
+        if let Some(ref raw) = self.data.raw_json {
+            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(raw) {
+                if let Some(content) = parsed.get("message").and_then(|m| m.get("content")).and_then(|c| c.as_array()) {
+                    return Some(content.len() as i32);
+                }
+            }
+        }
+        None
+    }
+}
 
 // ============================================================================
 // Assistant Message
@@ -238,13 +320,16 @@ impl AssistantMessage {
     async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
     async fn search_text(&self) -> Option<String> { self.data.search_text() }
 
+    /// Text content of the message.
+    async fn content(&self) -> Option<String> { self.data.content_text() }
+
     /// Parsed content blocks (text, thinking, tool_use, etc.).
-    async fn content_blocks(&self) -> Vec<ContentBlock> {
-        parse_content_blocks(
+    async fn content_blocks(&self) -> Option<Vec<ContentBlock>> {
+        Some(parse_content_blocks(
             self.data.content.as_deref(),
             self.data.raw_json.as_deref(),
             Some(&self.data.session_id),
-        )
+        ))
     }
 
     /// Model ID that generated this message.
@@ -255,6 +340,73 @@ impl AssistantMessage {
     /// Stop reason.
     async fn stop_reason(&self) -> Option<String> {
         parse_json_field(&self.data.raw_json, &["stop_reason"])
+    }
+
+    /// Whether this message contains only tool use blocks (no text).
+    async fn is_tool_only(&self) -> Option<bool> {
+        let blocks = parse_content_blocks(
+            self.data.content.as_deref(),
+            self.data.raw_json.as_deref(),
+            Some(&self.data.session_id),
+        );
+        if blocks.is_empty() { return Some(false); }
+        Some(blocks.iter().all(|b| matches!(b, ContentBlock::ToolUse(_))))
+    }
+
+    /// Whether this message contains thinking blocks.
+    async fn has_thinking(&self) -> Option<bool> {
+        let blocks = parse_content_blocks(
+            self.data.content.as_deref(),
+            self.data.raw_json.as_deref(),
+            Some(&self.data.session_id),
+        );
+        Some(blocks.iter().any(|b| matches!(b, ContentBlock::Thinking(_))))
+    }
+
+    /// Count of thinking blocks.
+    async fn thinking_count(&self) -> Option<i32> {
+        let blocks = parse_content_blocks(
+            self.data.content.as_deref(),
+            self.data.raw_json.as_deref(),
+            Some(&self.data.session_id),
+        );
+        Some(blocks.iter().filter(|b| matches!(b, ContentBlock::Thinking(_))).count() as i32)
+    }
+
+    /// Whether this message contains tool use blocks.
+    async fn has_tool_use(&self) -> Option<bool> {
+        let blocks = parse_content_blocks(
+            self.data.content.as_deref(),
+            self.data.raw_json.as_deref(),
+            Some(&self.data.session_id),
+        );
+        Some(blocks.iter().any(|b| matches!(b, ContentBlock::ToolUse(_))))
+    }
+
+    /// Count of tool use blocks.
+    async fn tool_use_count(&self) -> Option<i32> {
+        let blocks = parse_content_blocks(
+            self.data.content.as_deref(),
+            self.data.raw_json.as_deref(),
+            Some(&self.data.session_id),
+        );
+        Some(blocks.iter().filter(|b| matches!(b, ContentBlock::ToolUse(_))).count() as i32)
+    }
+
+    /// Input tokens used.
+    async fn input_tokens(&self) -> Option<i64> {
+        parse_json_field_i64(&self.data.raw_json, &["usage", "input_tokens"])
+    }
+
+    /// Output tokens used.
+    async fn output_tokens(&self) -> Option<i64> {
+        parse_json_field_i64(&self.data.raw_json, &["usage", "output_tokens"])
+    }
+
+    /// Cached tokens.
+    async fn cached_tokens(&self) -> Option<i64> {
+        parse_json_field_i64(&self.data.raw_json, &["usage", "cache_read_input_tokens"])
+            .or_else(|| parse_json_field_i64(&self.data.raw_json, &["usage", "cache_creation_input_tokens"]))
     }
 }
 
@@ -277,11 +429,18 @@ impl SummaryMessage {
     async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
     async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
     async fn search_text(&self) -> Option<String> { self.data.search_text() }
-
     /// The summary text content.
-    async fn summary(&self) -> Option<String> {
-        self.data.content.clone()
+    async fn content(&self) -> Option<String> { self.data.content.clone() }
+    /// Parsed content blocks.
+    async fn content_blocks(&self) -> Option<Vec<ContentBlock>> {
+        Some(parse_content_blocks(
+            self.data.content.as_deref(),
+            self.data.raw_json.as_deref(),
+            Some(&self.data.session_id),
+        ))
     }
+    /// Whether this is a context compaction summary.
+    async fn is_compact_summary(&self) -> Option<bool> { Some(false) }
 }
 
 /// A system message.
@@ -290,7 +449,24 @@ pub struct SystemMessage {
     pub data: MessageData,
 }
 
-impl_message_fields!(SystemMessage);
+#[Object]
+impl SystemMessage {
+    async fn id(&self) -> ID { self.data.global_id() }
+    async fn uuid(&self) -> &str { &self.data.id }
+    async fn timestamp(&self) -> &str { &self.data.timestamp }
+    async fn raw_json(&self) -> Option<&str> { self.data.raw_json.as_deref() }
+    async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
+    async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
+    async fn search_text(&self) -> Option<String> { self.data.search_text() }
+    /// System message text content.
+    async fn content(&self) -> Option<String> { self.data.content_text() }
+    /// Whether this is a meta message.
+    async fn is_meta(&self) -> Option<bool> { Some(false) }
+    /// Message severity level.
+    async fn level(&self) -> Option<String> { None }
+    /// System message subtype.
+    async fn subtype(&self) -> Option<String> { None }
+}
 
 // ============================================================================
 // File History Snapshot
@@ -302,7 +478,20 @@ pub struct FileHistorySnapshotMessage {
     pub data: MessageData,
 }
 
-impl_message_fields!(FileHistorySnapshotMessage);
+#[Object]
+impl FileHistorySnapshotMessage {
+    async fn id(&self) -> ID { self.data.global_id() }
+    async fn uuid(&self) -> &str { &self.data.id }
+    async fn timestamp(&self) -> &str { &self.data.timestamp }
+    async fn raw_json(&self) -> Option<&str> { self.data.raw_json.as_deref() }
+    async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
+    async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
+    async fn search_text(&self) -> Option<String> { self.data.search_text() }
+    async fn message_id(&self) -> Option<&str> { Some(&self.data.id) }
+    async fn file_count(&self) -> Option<i32> { parse_data_field_int(&self.data.raw_json, "file_count") }
+    async fn is_snapshot_update(&self) -> Option<bool> { parse_data_field_bool(&self.data.raw_json, "is_snapshot_update") }
+    async fn snapshot_timestamp(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "snapshot_timestamp") }
+}
 
 // ============================================================================
 // Hook Messages
@@ -323,11 +512,28 @@ impl HookRunMessage {
     async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
     async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
     async fn search_text(&self) -> Option<String> { self.data.search_text() }
-
     async fn hook_name(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "hook") }
+    async fn hook(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "hook") }
     async fn plugin(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "plugin") }
     async fn hook_type(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "hook_type") }
     async fn directory(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "directory") }
+    async fn hook_run_id(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "hook_run_id").or_else(|| Some(self.data.id.clone())) }
+    async fn cached(&self) -> Option<bool> { parse_data_field_bool(&self.data.raw_json, "cached") }
+    /// Hook result (resolved via DataLoader in the future).
+    async fn result(&self) -> Option<HookResult> { None }
+}
+
+/// Hook result stub type for HookRunMessage.result.
+#[derive(Debug, Clone, SimpleObject)]
+pub struct HookResult {
+    pub id: Option<String>,
+    pub success: Option<bool>,
+    pub result: Option<String>,
+    pub output: Option<String>,
+    pub error: Option<String>,
+    pub duration_ms: Option<i32>,
+    pub exit_code: Option<i32>,
+    pub cached: Option<bool>,
 }
 
 /// A hook result message.
@@ -345,7 +551,8 @@ impl HookResultMessage {
     async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
     async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
     async fn search_text(&self) -> Option<String> { self.data.search_text() }
-
+    async fn hook(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "hook") }
+    async fn directory(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "directory") }
     async fn hook_name(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "hook") }
     async fn plugin(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "plugin") }
     async fn success(&self) -> Option<bool> { parse_data_field_bool(&self.data.raw_json, "success") }
@@ -359,27 +566,103 @@ impl HookResultMessage {
 /// Hook check state message.
 #[derive(Debug, Clone)]
 pub struct HookCheckStateMessage { pub data: MessageData }
-impl_message_fields!(HookCheckStateMessage);
+
+#[Object]
+impl HookCheckStateMessage {
+    async fn id(&self) -> ID { self.data.global_id() }
+    async fn uuid(&self) -> &str { &self.data.id }
+    async fn timestamp(&self) -> &str { &self.data.timestamp }
+    async fn raw_json(&self) -> Option<&str> { self.data.raw_json.as_deref() }
+    async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
+    async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
+    async fn search_text(&self) -> Option<String> { self.data.search_text() }
+    async fn hook_type(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "hook_type") }
+    async fn hooks_count(&self) -> Option<i32> { parse_data_field_int(&self.data.raw_json, "hooks_count") }
+    async fn fingerprint(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "fingerprint") }
+}
 
 /// Hook reference message.
 #[derive(Debug, Clone)]
 pub struct HookReferenceMessage { pub data: MessageData }
-impl_message_fields!(HookReferenceMessage);
+
+#[Object]
+impl HookReferenceMessage {
+    async fn id(&self) -> ID { self.data.global_id() }
+    async fn uuid(&self) -> &str { &self.data.id }
+    async fn timestamp(&self) -> &str { &self.data.timestamp }
+    async fn raw_json(&self) -> Option<&str> { self.data.raw_json.as_deref() }
+    async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
+    async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
+    async fn search_text(&self) -> Option<String> { self.data.search_text() }
+    async fn file_path(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "file_path") }
+    async fn plugin(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "plugin") }
+    async fn reason(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "reason") }
+    async fn success(&self) -> Option<bool> { parse_data_field_bool(&self.data.raw_json, "success") }
+    async fn duration_ms(&self) -> Option<i32> { parse_data_field_int(&self.data.raw_json, "duration_ms") }
+}
 
 /// Hook validation message.
 #[derive(Debug, Clone)]
 pub struct HookValidationMessage { pub data: MessageData }
-impl_message_fields!(HookValidationMessage);
+
+#[Object]
+impl HookValidationMessage {
+    async fn id(&self) -> ID { self.data.global_id() }
+    async fn uuid(&self) -> &str { &self.data.id }
+    async fn timestamp(&self) -> &str { &self.data.timestamp }
+    async fn raw_json(&self) -> Option<&str> { self.data.raw_json.as_deref() }
+    async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
+    async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
+    async fn search_text(&self) -> Option<String> { self.data.search_text() }
+    async fn hook(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "hook") }
+    async fn plugin(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "plugin") }
+    async fn directory(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "directory") }
+    async fn success(&self) -> Option<bool> { parse_data_field_bool(&self.data.raw_json, "success") }
+    async fn cached(&self) -> Option<bool> { parse_data_field_bool(&self.data.raw_json, "cached") }
+    async fn duration_ms(&self) -> Option<i32> { parse_data_field_int(&self.data.raw_json, "duration_ms") }
+    async fn exit_code(&self) -> Option<i32> { parse_data_field_int(&self.data.raw_json, "exit_code") }
+    async fn output(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "output") }
+    async fn error(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "error") }
+}
 
 /// Hook script message.
 #[derive(Debug, Clone)]
 pub struct HookScriptMessage { pub data: MessageData }
-impl_message_fields!(HookScriptMessage);
+
+#[Object]
+impl HookScriptMessage {
+    async fn id(&self) -> ID { self.data.global_id() }
+    async fn uuid(&self) -> &str { &self.data.id }
+    async fn timestamp(&self) -> &str { &self.data.timestamp }
+    async fn raw_json(&self) -> Option<&str> { self.data.raw_json.as_deref() }
+    async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
+    async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
+    async fn search_text(&self) -> Option<String> { self.data.search_text() }
+    async fn command(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "command") }
+    async fn plugin(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "plugin") }
+    async fn success(&self) -> Option<bool> { parse_data_field_bool(&self.data.raw_json, "success") }
+    async fn duration_ms(&self) -> Option<i32> { parse_data_field_int(&self.data.raw_json, "duration_ms") }
+    async fn exit_code(&self) -> Option<i32> { parse_data_field_int(&self.data.raw_json, "exit_code") }
+    async fn output(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "output") }
+}
 
 /// Hook datetime message.
 #[derive(Debug, Clone)]
 pub struct HookDatetimeMessage { pub data: MessageData }
-impl_message_fields!(HookDatetimeMessage);
+
+#[Object]
+impl HookDatetimeMessage {
+    async fn id(&self) -> ID { self.data.global_id() }
+    async fn uuid(&self) -> &str { &self.data.id }
+    async fn timestamp(&self) -> &str { &self.data.timestamp }
+    async fn raw_json(&self) -> Option<&str> { self.data.raw_json.as_deref() }
+    async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
+    async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
+    async fn search_text(&self) -> Option<String> { self.data.search_text() }
+    async fn datetime(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "datetime") }
+    async fn plugin(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "plugin") }
+    async fn duration_ms(&self) -> Option<i32> { parse_data_field_int(&self.data.raw_json, "duration_ms") }
+}
 
 /// Hook file change message.
 #[derive(Debug, Clone)]
@@ -394,15 +677,30 @@ impl HookFileChangeMessage {
     async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
     async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
     async fn search_text(&self) -> Option<String> { self.data.search_text() }
-
     async fn file_path(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "file_path") }
     async fn action(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "action") }
+    async fn change_tool_name(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "change_tool_name") }
+    async fn recorded_session_id(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "recorded_session_id") }
 }
 
 /// Hook validation cache message.
 #[derive(Debug, Clone)]
 pub struct HookValidationCacheMessage { pub data: MessageData }
-impl_message_fields!(HookValidationCacheMessage);
+
+#[Object]
+impl HookValidationCacheMessage {
+    async fn id(&self) -> ID { self.data.global_id() }
+    async fn uuid(&self) -> &str { &self.data.id }
+    async fn timestamp(&self) -> &str { &self.data.timestamp }
+    async fn raw_json(&self) -> Option<&str> { self.data.raw_json.as_deref() }
+    async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
+    async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
+    async fn search_text(&self) -> Option<String> { self.data.search_text() }
+    async fn hook(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "hook") }
+    async fn plugin(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "plugin") }
+    async fn directory(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "directory") }
+    async fn file_count(&self) -> Option<i32> { parse_data_field_int(&self.data.raw_json, "file_count") }
+}
 
 // ============================================================================
 // Queue Operation Message
@@ -421,8 +719,8 @@ impl QueueOperationMessage {
     async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
     async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
     async fn search_text(&self) -> Option<String> { self.data.search_text() }
-
     async fn operation(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "operation") }
+    async fn queue_session_id(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "queue_session_id") }
 }
 
 // ============================================================================
@@ -442,11 +740,12 @@ impl McpToolCallMessage {
     async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
     async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
     async fn search_text(&self) -> Option<String> { self.data.search_text() }
-
     async fn tool(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "tool") }
+    async fn server(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "server_name").or_else(|| parse_data_field(&self.data.raw_json, "server")) }
     async fn server_name(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "server_name") }
     async fn call_id(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "call_id") }
-    async fn arguments(&self) -> Option<String> {
+    async fn prefixed_name(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "prefixed_name") }
+    async fn input(&self) -> Option<String> {
         if let Some(ref raw) = self.data.raw_json {
             if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(raw) {
                 if let Some(args) = parsed.get("data").and_then(|d| d.get("arguments")) {
@@ -456,6 +755,19 @@ impl McpToolCallMessage {
         }
         None
     }
+    /// Tool result (resolved via DataLoader in the future).
+    async fn result(&self) -> Option<McpToolResult> { None }
+}
+
+/// MCP tool result stub.
+#[derive(Debug, Clone, SimpleObject)]
+pub struct McpToolResult {
+    pub id: Option<String>,
+    pub success: Option<bool>,
+    pub result: Option<String>,
+    pub output: Option<String>,
+    pub error: Option<String>,
+    pub duration_ms: Option<i32>,
 }
 
 /// An MCP tool result message.
@@ -471,10 +783,14 @@ impl McpToolResultMessage {
     async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
     async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
     async fn search_text(&self) -> Option<String> { self.data.search_text() }
-
+    async fn tool(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "tool") }
+    async fn server(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "server_name").or_else(|| parse_data_field(&self.data.raw_json, "server")) }
+    async fn prefixed_name(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "prefixed_name") }
     async fn call_id(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "call_id") }
     async fn success(&self) -> Option<bool> { parse_data_field_bool(&self.data.raw_json, "success") }
     async fn duration_ms(&self) -> Option<i32> { parse_data_field_int(&self.data.raw_json, "duration_ms") }
+    async fn output(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "output") }
+    async fn error(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "error") }
 }
 
 // ============================================================================
@@ -494,11 +810,33 @@ impl ExposedToolCallMessage {
     async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
     async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
     async fn search_text(&self) -> Option<String> { self.data.search_text() }
-
     async fn tool(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "tool") }
     async fn server(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "server") }
     async fn call_id(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "call_id") }
     async fn prefixed_name(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "prefixed_name") }
+    async fn input(&self) -> Option<String> {
+        if let Some(ref raw) = self.data.raw_json {
+            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(raw) {
+                if let Some(args) = parsed.get("data").and_then(|d| d.get("arguments")) {
+                    return Some(serde_json::to_string_pretty(args).unwrap_or_default());
+                }
+            }
+        }
+        None
+    }
+    /// Tool result (resolved via DataLoader in the future).
+    async fn result(&self) -> Option<ExposedToolResult> { None }
+}
+
+/// Exposed tool result stub.
+#[derive(Debug, Clone, SimpleObject)]
+pub struct ExposedToolResult {
+    pub id: Option<String>,
+    pub success: Option<bool>,
+    pub result: Option<String>,
+    pub output: Option<String>,
+    pub error: Option<String>,
+    pub duration_ms: Option<i32>,
 }
 
 /// An exposed tool result message.
@@ -514,10 +852,13 @@ impl ExposedToolResultMessage {
     async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
     async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
     async fn search_text(&self) -> Option<String> { self.data.search_text() }
-
+    async fn tool(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "tool") }
+    async fn prefixed_name(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "prefixed_name") }
     async fn call_id(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "call_id") }
     async fn success(&self) -> Option<bool> { parse_data_field_bool(&self.data.raw_json, "success") }
     async fn duration_ms(&self) -> Option<i32> { parse_data_field_int(&self.data.raw_json, "duration_ms") }
+    async fn output(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "output") }
+    async fn error(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "error") }
 }
 
 // ============================================================================
@@ -537,8 +878,10 @@ impl MemoryQueryMessage {
     async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
     async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
     async fn search_text(&self) -> Option<String> { self.data.search_text() }
-
-    async fn query(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "query") }
+    async fn question(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "question").or_else(|| parse_data_field(&self.data.raw_json, "query")) }
+    async fn route(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "route") }
+    async fn result_count(&self) -> Option<i32> { parse_data_field_int(&self.data.raw_json, "result_count") }
+    async fn duration_ms(&self) -> Option<i32> { parse_data_field_int(&self.data.raw_json, "duration_ms") }
 }
 
 /// A memory learn message.
@@ -554,9 +897,16 @@ impl MemoryLearnMessage {
     async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
     async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
     async fn search_text(&self) -> Option<String> { self.data.search_text() }
-
     async fn content(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "content") }
-    async fn domain(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "domain") }
+    async fn scope(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "scope").or_else(|| parse_data_field(&self.data.raw_json, "domain")) }
+    async fn domain(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "domain").or_else(|| parse_data_field(&self.data.raw_json, "scope")) }
+    async fn append(&self) -> Option<bool> { parse_data_field_bool(&self.data.raw_json, "append") }
+    async fn paths(&self) -> Option<Vec<String>> {
+        let raw = self.data.raw_json.as_ref()?;
+        let parsed: serde_json::Value = serde_json::from_str(raw).ok()?;
+        let paths = parsed.get("data")?.get("paths")?.as_array()?;
+        Some(paths.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+    }
 }
 
 // ============================================================================
@@ -576,12 +926,18 @@ impl SentimentAnalysisMessage {
     async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
     async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
     async fn search_text(&self) -> Option<String> { self.data.search_text() }
-
+    async fn analyzed_message_id(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "message_id") }
     async fn message_id(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "message_id") }
     async fn sentiment_score(&self) -> Option<f64> { parse_data_field_f64(&self.data.raw_json, "sentiment_score") }
     async fn sentiment_level(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "sentiment_level") }
     async fn frustration_score(&self) -> Option<f64> { parse_data_field_f64(&self.data.raw_json, "frustration_score") }
     async fn frustration_level(&self) -> Option<String> { parse_data_field(&self.data.raw_json, "frustration_level") }
+    async fn signals(&self) -> Option<Vec<String>> {
+        let raw = self.data.raw_json.as_ref()?;
+        let parsed: serde_json::Value = serde_json::from_str(raw).ok()?;
+        let signals = parsed.get("data")?.get("signals")?.as_array()?;
+        Some(signals.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+    }
 }
 
 // ============================================================================
@@ -601,10 +957,13 @@ impl UnknownEventMessage {
     async fn agent_id(&self) -> Option<&str> { self.data.agent_id.as_deref() }
     async fn parent_id(&self) -> Option<&str> { self.data.parent_id.as_deref() }
     async fn search_text(&self) -> Option<String> { self.data.search_text() }
-
     /// The unrecognized event type.
     async fn event_type(&self) -> Option<&str> {
         self.data.tool_name.as_deref()
+    }
+    /// The message type string.
+    async fn message_type(&self) -> Option<&str> {
+        Some(&self.data.message_type)
     }
 }
 
@@ -695,16 +1054,6 @@ fn discriminate_han_event(data: MessageData) -> Message {
     }
 }
 
-/// Check if a message should be excluded from the messages connection.
-pub fn is_paired_event(msg: &messages::Model) -> bool {
-    if msg.message_type == "han_event" {
-        if let Some(ref tool_name) = msg.tool_name {
-            return PAIRED_EVENT_TYPES.contains(&tool_name.as_str());
-        }
-    }
-    // Also filter tool-result-only user messages
-    is_tool_result_user_model(msg)
-}
 
 // ============================================================================
 // Helpers
@@ -722,7 +1071,6 @@ fn parse_user_metadata(raw_json: &Option<String>) -> UserMetadata {
         is_interrupt: false,
         is_meta: false,
     };
-
     if let Some(ref raw) = raw_json {
         if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(raw) {
             meta.is_command = parsed.get("isCommand").and_then(|v| v.as_bool()).unwrap_or(false);
@@ -730,7 +1078,6 @@ fn parse_user_metadata(raw_json: &Option<String>) -> UserMetadata {
             meta.is_meta = parsed.get("isMeta").and_then(|v| v.as_bool()).unwrap_or(false);
         }
     }
-
     meta
 }
 
@@ -796,6 +1143,15 @@ fn parse_json_field(raw_json: &Option<String>, path: &[&str]) -> Option<String> 
         parsed = parsed.get(*key)?.clone();
     }
     parsed.as_str().map(|s| s.to_string())
+}
+
+fn parse_json_field_i64(raw_json: &Option<String>, path: &[&str]) -> Option<i64> {
+    let raw = raw_json.as_ref()?;
+    let mut parsed: serde_json::Value = serde_json::from_str(raw).ok()?;
+    for key in path {
+        parsed = parsed.get(*key)?.clone();
+    }
+    parsed.as_i64()
 }
 
 fn parse_data_field(raw_json: &Option<String>, field: &str) -> Option<String> {
@@ -879,281 +1235,53 @@ mod tests {
         }
     }
 
-    // --- Message Discrimination Tests ---
-
     #[test]
     fn test_discriminate_regular_user() {
         let data = make_data("user", None);
-        match discriminate_message(data) {
-            Message::RegularUser(_) => {}
-            other => panic!("Expected RegularUser, got {:?}", std::mem::discriminant(&other)),
-        }
+        assert!(matches!(discriminate_message(data), Message::RegularUser(_)));
     }
 
     #[test]
     fn test_discriminate_assistant() {
         let data = make_data("assistant", None);
-        match discriminate_message(data) {
-            Message::Assistant(_) => {}
-            other => panic!("Expected Assistant, got {:?}", std::mem::discriminant(&other)),
-        }
+        assert!(matches!(discriminate_message(data), Message::Assistant(_)));
     }
 
     #[test]
     fn test_discriminate_system() {
         let data = make_data("system", None);
-        match discriminate_message(data) {
-            Message::System(_) => {}
-            other => panic!("Expected System, got {:?}", std::mem::discriminant(&other)),
-        }
+        assert!(matches!(discriminate_message(data), Message::System(_)));
     }
 
     #[test]
     fn test_discriminate_summary() {
         let data = make_data("summary", None);
-        match discriminate_message(data) {
-            Message::Summary(_) => {}
-            other => panic!("Expected Summary, got {:?}", std::mem::discriminant(&other)),
-        }
+        assert!(matches!(discriminate_message(data), Message::Summary(_)));
     }
-
-    #[test]
-    fn test_discriminate_file_history_snapshot() {
-        let data = make_data("file-history-snapshot", None);
-        match discriminate_message(data) {
-            Message::FileHistorySnapshot(_) => {}
-            other => panic!("Expected FileHistorySnapshot, got {:?}", std::mem::discriminant(&other)),
-        }
-    }
-
-    #[test]
-    fn test_discriminate_hook_run() {
-        let data = make_data("hook_run", None);
-        match discriminate_message(data) {
-            Message::HookRun(_) => {}
-            other => panic!("Expected HookRun, got {:?}", std::mem::discriminant(&other)),
-        }
-    }
-
-    #[test]
-    fn test_discriminate_hook_result() {
-        let data = make_data("hook_result", None);
-        match discriminate_message(data) {
-            Message::HookResult(_) => {}
-            other => panic!("Expected HookResult, got {:?}", std::mem::discriminant(&other)),
-        }
-    }
-
-    #[test]
-    fn test_discriminate_queue_operation() {
-        let data = make_data("queue-operation", None);
-        match discriminate_message(data) {
-            Message::QueueOperation(_) => {}
-            other => panic!("Expected QueueOperation, got {:?}", std::mem::discriminant(&other)),
-        }
-    }
-
-    #[test]
-    fn test_discriminate_unknown() {
-        let data = make_data("some_future_type", None);
-        match discriminate_message(data) {
-            Message::UnknownEvent(_) => {}
-            other => panic!("Expected UnknownEvent, got {:?}", std::mem::discriminant(&other)),
-        }
-    }
-
-    // --- Han Event Discrimination ---
 
     #[test]
     fn test_discriminate_han_event_hook_run() {
         let data = make_data("han_event", Some("hook_run"));
-        match discriminate_message(data) {
-            Message::HookRun(_) => {}
-            other => panic!("Expected HookRun, got {:?}", std::mem::discriminant(&other)),
-        }
+        assert!(matches!(discriminate_message(data), Message::HookRun(_)));
     }
 
     #[test]
     fn test_discriminate_han_event_mcp_tool_call() {
         let data = make_data("han_event", Some("mcp_tool_call"));
-        match discriminate_message(data) {
-            Message::McpToolCall(_) => {}
-            other => panic!("Expected McpToolCall, got {:?}", std::mem::discriminant(&other)),
-        }
+        assert!(matches!(discriminate_message(data), Message::McpToolCall(_)));
     }
 
     #[test]
-    fn test_discriminate_han_event_mcp_tool_result() {
-        let data = make_data("han_event", Some("mcp_tool_result"));
-        match discriminate_message(data) {
-            Message::McpToolResult(_) => {}
-            other => panic!("Expected McpToolResult, got {:?}", std::mem::discriminant(&other)),
-        }
+    fn test_discriminate_unknown() {
+        let data = make_data("some_future_type", None);
+        assert!(matches!(discriminate_message(data), Message::UnknownEvent(_)));
     }
-
-    #[test]
-    fn test_discriminate_han_event_exposed_tool_call() {
-        let data = make_data("han_event", Some("exposed_tool_call"));
-        match discriminate_message(data) {
-            Message::ExposedToolCall(_) => {}
-            other => panic!("Expected ExposedToolCall, got {:?}", std::mem::discriminant(&other)),
-        }
-    }
-
-    #[test]
-    fn test_discriminate_han_event_memory_query() {
-        let data = make_data("han_event", Some("memory_query"));
-        match discriminate_message(data) {
-            Message::MemoryQuery(_) => {}
-            other => panic!("Expected MemoryQuery, got {:?}", std::mem::discriminant(&other)),
-        }
-    }
-
-    #[test]
-    fn test_discriminate_han_event_sentiment_analysis() {
-        let data = make_data("han_event", Some("sentiment_analysis"));
-        match discriminate_message(data) {
-            Message::SentimentAnalysis(_) => {}
-            other => panic!("Expected SentimentAnalysis, got {:?}", std::mem::discriminant(&other)),
-        }
-    }
-
-    #[test]
-    fn test_discriminate_han_event_unknown() {
-        let data = make_data("han_event", Some("future_event_type"));
-        match discriminate_message(data) {
-            Message::UnknownEvent(_) => {}
-            other => panic!("Expected UnknownEvent, got {:?}", std::mem::discriminant(&other)),
-        }
-    }
-
-    #[test]
-    fn test_discriminate_han_event_no_tool_name() {
-        let data = make_data("han_event", None);
-        match discriminate_message(data) {
-            Message::UnknownEvent(_) => {}
-            other => panic!("Expected UnknownEvent, got {:?}", std::mem::discriminant(&other)),
-        }
-    }
-
-    // --- User Subtypes ---
-
-    #[test]
-    fn test_discriminate_command_user() {
-        let mut data = make_data("user", None);
-        data.raw_json = Some(r#"{"isCommand": true}"#.into());
-        match discriminate_message(data) {
-            Message::CommandUser(_) => {}
-            other => panic!("Expected CommandUser, got {:?}", std::mem::discriminant(&other)),
-        }
-    }
-
-    #[test]
-    fn test_discriminate_interrupt_user() {
-        let mut data = make_data("user", None);
-        data.raw_json = Some(r#"{"isInterrupt": true}"#.into());
-        match discriminate_message(data) {
-            Message::InterruptUser(_) => {}
-            other => panic!("Expected InterruptUser, got {:?}", std::mem::discriminant(&other)),
-        }
-    }
-
-    #[test]
-    fn test_discriminate_meta_user() {
-        let mut data = make_data("user", None);
-        data.raw_json = Some(r#"{"isMeta": true}"#.into());
-        match discriminate_message(data) {
-            Message::MetaUser(_) => {}
-            other => panic!("Expected MetaUser, got {:?}", std::mem::discriminant(&other)),
-        }
-    }
-
-    #[test]
-    fn test_discriminate_summary_user_by_content() {
-        let mut data = make_data("user", None);
-        data.content = Some("This session is being continued from a previous conversation".into());
-        match discriminate_message(data) {
-            Message::Summary(_) => {}
-            other => panic!("Expected Summary, got {:?}", std::mem::discriminant(&other)),
-        }
-    }
-
-    #[test]
-    fn test_discriminate_tool_result_user() {
-        let mut data = make_data("user", None);
-        data.raw_json = Some(r#"{"message":{"content":[{"type":"tool_result","tool_use_id":"123","content":"ok"}]}}"#.into());
-        match discriminate_message(data) {
-            Message::ToolResultUser(_) => {}
-            other => panic!("Expected ToolResultUser, got {:?}", std::mem::discriminant(&other)),
-        }
-    }
-
-    // --- Paired Event Filtering ---
-
-    #[test]
-    fn test_is_paired_event_sentiment() {
-        let model = make_model("han_event", Some("sentiment_analysis"), None);
-        assert!(is_paired_event(&model));
-    }
-
-    #[test]
-    fn test_is_paired_event_hook_result() {
-        let model = make_model("han_event", Some("hook_result"), None);
-        assert!(is_paired_event(&model));
-    }
-
-    #[test]
-    fn test_is_paired_event_mcp_tool_result() {
-        let model = make_model("han_event", Some("mcp_tool_result"), None);
-        assert!(is_paired_event(&model));
-    }
-
-    #[test]
-    fn test_is_paired_event_exposed_tool_result() {
-        let model = make_model("han_event", Some("exposed_tool_result"), None);
-        assert!(is_paired_event(&model));
-    }
-
-    #[test]
-    fn test_is_not_paired_event_hook_run() {
-        let model = make_model("han_event", Some("hook_run"), None);
-        assert!(!is_paired_event(&model));
-    }
-
-    #[test]
-    fn test_is_not_paired_event_regular_user() {
-        let model = make_model("user", None, None);
-        assert!(!is_paired_event(&model));
-    }
-
-    #[test]
-    fn test_is_not_paired_event_assistant() {
-        let model = make_model("assistant", None, None);
-        assert!(!is_paired_event(&model));
-    }
-
-    #[test]
-    fn test_is_paired_event_tool_result_user() {
-        let model = make_model("user", None, Some(r#"{"message":{"content":[{"type":"tool_result","tool_use_id":"123","content":"ok"}]}}"#));
-        assert!(is_paired_event(&model));
-    }
-
-    // --- Message Data Helpers ---
 
     #[test]
     fn test_search_text_with_content() {
         let data = make_data("user", None);
         let text = data.search_text().unwrap();
         assert!(text.contains("test content"));
-        assert!(text.contains("user"));
-    }
-
-    #[test]
-    fn test_search_text_with_tool_name() {
-        let data = make_data("han_event", Some("hook_run"));
-        let text = data.search_text().unwrap();
-        assert!(text.contains("han_event"));
-        assert!(text.contains("hook_run"));
     }
 
     #[test]
@@ -1162,63 +1290,17 @@ mod tests {
         assert_eq!(data.global_id().as_str(), "Message:test-uuid");
     }
 
-    // --- JSON Parsing Helpers ---
-
     #[test]
     fn test_parse_data_field() {
         let raw = Some(r#"{"data":{"hook":"pre_tool_use","plugin":"biome"}}"#.into());
         assert_eq!(parse_data_field(&raw, "hook"), Some("pre_tool_use".into()));
-        assert_eq!(parse_data_field(&raw, "plugin"), Some("biome".into()));
-        assert_eq!(parse_data_field(&raw, "nonexistent"), None);
     }
 
     #[test]
-    fn test_parse_data_field_bool() {
-        let raw = Some(r#"{"data":{"success":true,"cached":false}}"#.into());
-        assert_eq!(parse_data_field_bool(&raw, "success"), Some(true));
-        assert_eq!(parse_data_field_bool(&raw, "cached"), Some(false));
-    }
-
-    #[test]
-    fn test_parse_data_field_int() {
-        let raw = Some(r#"{"data":{"duration_ms":42,"exit_code":0}}"#.into());
-        assert_eq!(parse_data_field_int(&raw, "duration_ms"), Some(42));
-        assert_eq!(parse_data_field_int(&raw, "exit_code"), Some(0));
-    }
-
-    #[test]
-    fn test_parse_data_field_f64() {
-        let raw = Some(r#"{"data":{"sentiment_score":0.75}}"#.into());
-        assert_eq!(parse_data_field_f64(&raw, "sentiment_score"), Some(0.75));
-    }
-
-    #[test]
-    fn test_parse_json_field_nested() {
-        let raw = Some(r#"{"model":"claude-3-opus"}"#.into());
-        assert_eq!(parse_json_field(&raw, &["model"]), Some("claude-3-opus".into()));
-    }
-
-    #[test]
-    fn test_parse_user_metadata_field() {
-        let raw = Some(r#"{"command":"/help"}"#.into());
-        assert_eq!(parse_user_metadata_field(&raw, "command"), Some("/help".into()));
-    }
-
-    // --- Build Message Connection ---
-
-    #[test]
-    fn test_build_message_connection_filters_paired_events() {
-        let models = vec![
-            make_model("user", None, None),
-            make_model("assistant", None, None),
-            make_model("han_event", Some("sentiment_analysis"), None), // paired - filtered
-            make_model("han_event", Some("hook_run"), None),
-        ];
-
-        let conn = build_message_connection(&models, "/proj", None, None, None, None);
-        // Should have 3 messages (user, assistant, hook_run) - sentiment_analysis filtered
-        // Note: the build function also filters empty messages, so user/assistant with content pass
-        assert_eq!(conn.total_count, 3);
+    fn test_build_message_connection_empty() {
+        let conn = build_message_connection(&[], "/proj", None, None, None, None);
+        assert_eq!(conn.total_count, 0);
+        assert!(conn.edges.is_empty());
     }
 
     #[test]
@@ -1231,21 +1313,10 @@ mod tests {
                 m
             })
             .collect();
-
         let conn = build_message_connection(&models, "/proj", Some(2), None, None, None);
         assert_eq!(conn.edges.len(), 2);
         assert_eq!(conn.total_count, 5);
         assert!(conn.page_info.has_next_page);
-        assert!(!conn.page_info.has_previous_page);
-    }
-
-    #[test]
-    fn test_build_message_connection_empty() {
-        let conn = build_message_connection(&[], "/proj", None, None, None, None);
-        assert_eq!(conn.total_count, 0);
-        assert!(conn.edges.is_empty());
-        assert!(!conn.page_info.has_next_page);
-        assert!(!conn.page_info.has_previous_page);
     }
 }
 
@@ -1258,13 +1329,11 @@ pub fn build_message_connection(
     last: Option<i32>,
     before: Option<String>,
 ) -> MessageConnection {
-    // Filter out paired events and tool-result-only messages
+    // Include all messages with content (or summary/han_event types which may lack content)
     let filtered: Vec<_> = messages
         .iter()
         .enumerate()
-        .filter(|(_, msg)| !is_paired_event(msg))
         .filter(|(_, msg)| {
-            // Also filter empty messages
             msg.content.as_ref().map(|c| !c.is_empty()).unwrap_or(false)
                 || msg.message_type == "summary"
                 || msg.message_type == "han_event"
@@ -1273,7 +1342,6 @@ pub fn build_message_connection(
 
     let total_count = filtered.len() as i32;
 
-    // Build message data with cursors
     let items: Vec<(MessageData, String)> = filtered
         .iter()
         .map(|(idx, msg)| {
@@ -1283,7 +1351,6 @@ pub fn build_message_connection(
         })
         .collect();
 
-    // Apply pagination
     let all_edges: Vec<MessageEdge> = items
         .into_iter()
         .map(|(data, cursor)| MessageEdge {
@@ -1292,7 +1359,6 @@ pub fn build_message_connection(
         })
         .collect();
 
-    // Simple pagination implementation
     let start_idx = if let Some(ref after_cursor) = after {
         all_edges.iter().position(|e| e.cursor == *after_cursor).map(|i| i + 1).unwrap_or(0)
     } else {

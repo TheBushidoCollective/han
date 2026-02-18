@@ -180,14 +180,12 @@ function VirtualListInner<T>(
 
 	return (
 		<View
-			style={[
-				{
-					width: typeof width === "number" ? width : "100%",
-					height: typeof height === "number" ? height : "100%",
-					flex: 1,
-				},
-				style as object,
-			]}
+			style={{
+				width: typeof width === "number" ? width : "100%",
+				height: typeof height === "number" ? height : "100%",
+				flex: 1,
+				...(style as object),
+			}}
 		>
 			<FlatList
 				ref={listRef}

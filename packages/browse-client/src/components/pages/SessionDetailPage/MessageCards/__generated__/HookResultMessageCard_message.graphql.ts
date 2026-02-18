@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<a0a1494c27ab76ab2e171937bbca8d27>>
+ * @generated SignedSource<<a3548e84b6eb7f33bed7b69854aef208>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -17,12 +17,12 @@ export type HookResultMessageCard_message$data = {
   readonly error: string | null | undefined;
   readonly exitCode: number | null | undefined;
   readonly hook: string | null | undefined;
-  readonly id: string | null | undefined;
+  readonly id: string;
   readonly output: string | null | undefined;
   readonly plugin: string | null | undefined;
   readonly rawJson: string | null | undefined;
   readonly success: boolean | null | undefined;
-  readonly timestamp: any | null | undefined;
+  readonly timestamp: string;
   readonly " $fragmentType": "HookResultMessageCard_message";
 };
 export type HookResultMessageCard_message$key = {

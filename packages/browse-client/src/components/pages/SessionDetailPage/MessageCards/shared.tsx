@@ -376,7 +376,9 @@ export function MessageWrapper({
 	};
 
 	return (
-		<Box style={{ ...baseStyle, ...messageTypeStyles[type] }}>{children}</Box>
+		<Box style={{ ...baseStyle, ...messageTypeStyles[type] }}>
+			{children}
+		</Box>
 	);
 }
 

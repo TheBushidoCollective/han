@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<260130ad02e6509f2dce45d9292eb093>>
+ * @generated SignedSource<<4102d1be9223337652f4c6c3931aaf78>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -13,12 +13,12 @@ import { FragmentRefs } from "relay-runtime";
 export type HookReferenceMessageCard_message$data = {
   readonly durationMs: number | null | undefined;
   readonly filePath: string | null | undefined;
-  readonly id: string | null | undefined;
+  readonly id: string;
   readonly plugin: string | null | undefined;
   readonly rawJson: string | null | undefined;
   readonly reason: string | null | undefined;
   readonly success: boolean | null | undefined;
-  readonly timestamp: any | null | undefined;
+  readonly timestamp: string;
   readonly " $fragmentType": "HookReferenceMessageCard_message";
 };
 export type HookReferenceMessageCard_message$key = {

@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<c220856f489482ad65b8fcd552f84ac7>>
+ * @generated SignedSource<<39052f9a428acdec12c8d4e7b35e57c8>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -11,20 +11,20 @@
 import { ReaderFragment } from 'relay-runtime';
 export type TaskStatus = "ACTIVE" | "COMPLETED" | "FAILED" | "%future added value";
 export type TaskType = "FIX" | "IMPLEMENTATION" | "REFACTOR" | "RESEARCH" | "%future added value";
-export type TodoStatus = "COMPLETED" | "IN_PROGRESS" | "PENDING" | "%future added value";
+export type TodoStatus = "completed" | "in_progress" | "pending" | "%future added value";
 import { FragmentRefs } from "relay-runtime";
 export type SessionListItem_session$data = {
   readonly activeTasks: {
     readonly edges: ReadonlyArray<{
       readonly node: {
-        readonly description: string | null | undefined;
-        readonly id: string | null | undefined;
-        readonly status: TaskStatus | null | undefined;
-        readonly taskId: string | null | undefined;
+        readonly description: string;
+        readonly id: string;
+        readonly status: TaskStatus;
+        readonly taskId: string;
         readonly type: TaskType | null | undefined;
-      } | null | undefined;
-    }> | null | undefined;
-    readonly totalCount: number | null | undefined;
+      };
+    }>;
+    readonly totalCount: number;
   } | null | undefined;
   readonly currentTodo: {
     readonly activeForm: string | null | undefined;
@@ -32,19 +32,19 @@ export type SessionListItem_session$data = {
     readonly status: TodoStatus | null | undefined;
   } | null | undefined;
   readonly id: string;
-  readonly messageCount: number | null | undefined;
-  readonly name: string | null | undefined;
+  readonly messageCount: number;
+  readonly name: string;
   readonly owner: {
     readonly avatarUrl: string | null | undefined;
     readonly email: string | null | undefined;
-    readonly id: string | null | undefined;
+    readonly id: string;
     readonly name: string | null | undefined;
   } | null | undefined;
   readonly projectId: string | null | undefined;
-  readonly projectName: string | null | undefined;
+  readonly projectName: string;
   readonly projectSlug: string | null | undefined;
-  readonly sessionId: string | null | undefined;
-  readonly startedAt: any | null | undefined;
+  readonly sessionId: string;
+  readonly startedAt: string | null | undefined;
   readonly summary: string | null | undefined;
   readonly todoCounts: {
     readonly completed: number | null | undefined;
@@ -52,7 +52,7 @@ export type SessionListItem_session$data = {
     readonly pending: number | null | undefined;
     readonly total: number | null | undefined;
   } | null | undefined;
-  readonly updatedAt: any | null | undefined;
+  readonly updatedAt: string | null | undefined;
   readonly worktreeName: string | null | undefined;
   readonly " $fragmentType": "SessionListItem_session";
 };

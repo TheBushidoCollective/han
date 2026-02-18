@@ -33,8 +33,10 @@ import { Center } from "@/components/atoms/Center.tsx";
 import { HStack } from "@/components/atoms/HStack.tsx";
 import { Input } from "@/components/atoms/Input.tsx";
 import { Spinner } from "@/components/atoms/Spinner.tsx";
+import { SubwayLine } from "@/components/atoms/SubwayLine.tsx";
 import { Text } from "@/components/atoms/Text.tsx";
 import { VStack } from "@/components/atoms/VStack.tsx";
+import { useMessageGroups } from "@/hooks/useMessageGroups.ts";
 import { VirtualList, type VirtualListRef } from "@/lists/index.ts";
 import { colors, spacing } from "@/theme.ts";
 import type { SessionMessages_session$key } from "./__generated__/SessionMessages_session.graphql.ts";
@@ -42,6 +44,17 @@ import type { SessionMessagesPaginationQuery } from "./__generated__/SessionMess
 import type { SessionMessagesSearchQuery } from "./__generated__/SessionMessagesSearchQuery.graphql.ts";
 import type { SessionMessagesSubscription } from "./__generated__/SessionMessagesSubscription.graphql.ts";
 import { MessageCard } from "./MessageCards/index.tsx";
+
+/** Right-aligned message types (real user input) */
+const RIGHT_ALIGNED_TYPES = new Set([
+	"RegularUserMessage",
+	"CommandUserMessage",
+	"InterruptUserMessage",
+]);
+
+function getMessageAlignment(typename: string): "left" | "right" {
+	return RIGHT_ALIGNED_TYPES.has(typename) ? "right" : "left";
+}
 
 /**
  * Query for server-side message search
@@ -90,6 +103,8 @@ const SessionMessagesFragment = graphql`
       edges {
         node {
           id
+          __typename
+          parentId
           searchText
           ...MessageCards_message
         }
@@ -126,6 +141,8 @@ const SessionMessagesSubscriptionDef = graphql`
       newMessageEdge @prependEdge(connections: $connections) {
         node {
           id
+          __typename
+          parentId
           searchText
           ...MessageCards_message
         }
@@ -259,6 +276,9 @@ export function SessionMessages({
 		[data?.messages?.edges],
 	);
 
+	// Build subway line group info from parent-child relationships
+	const messageGroups = useMessageGroups(messageNodes);
+
 	// Track message count changes for auto-scroll
 	useEffect(() => {
 		const currentCount = messageNodes.length;
@@ -341,10 +361,14 @@ export function SessionMessages({
 		[searchResults, selectedResultIndex, jumpToMessage],
 	);
 
-	// Render a single message item
+	// Render a single message item with subway lines and alignment
 	const renderMessage = useCallback(
 		(node: NonNullable<(typeof messageNodes)[number]>, index: number) => {
 			const isHighlighted = highlightedIndex === index;
+			const groupInfo = messageGroups.get(node.id);
+			const alignment = getMessageAlignment(node.__typename);
+			const isRight = alignment === "right";
+
 			return (
 				<Box
 					ref={(el: HTMLDivElement | null) => {
@@ -353,18 +377,41 @@ export function SessionMessages({
 					style={{
 						paddingVertical: spacing.xs,
 						paddingHorizontal: spacing.sm,
-						borderRadius: 6,
-						borderWidth: isHighlighted ? 2 : 0,
-						borderColor: isHighlighted ? colors.accent.primary : "transparent",
-						borderStyle: "solid",
 						width: "100%",
 					}}
 				>
-					<MessageCard fragmentRef={node} />
+					<HStack
+						style={{
+							alignSelf: isRight ? "flex-end" : "flex-start",
+							maxWidth: "85%",
+							width: "100%",
+						}}
+					>
+						{groupInfo && (
+							<SubwayLine
+								color={groupInfo.groupColor}
+								isParent={groupInfo.isParent}
+								isChild={groupInfo.isChild}
+							/>
+						)}
+						<Box
+							style={{
+								flex: 1,
+								borderRadius: 6,
+								borderWidth: isHighlighted ? 2 : 0,
+								borderColor: isHighlighted
+									? colors.accent.primary
+									: "transparent",
+								borderStyle: "solid",
+							}}
+						>
+							<MessageCard fragmentRef={node} />
+						</Box>
+					</HStack>
 				</Box>
 			);
 		},
-		[highlightedIndex],
+		[highlightedIndex, messageGroups],
 	);
 
 	return (
@@ -537,10 +584,28 @@ export function SessionMessages({
 				ref={listRef}
 				data={messageNodes}
 				renderItem={(node, index) => renderMessage(node, index)}
-				itemHeight={200}
+				itemHeight={(_item: unknown, _index: number) => 120}
 				inverted
 				onEndReached={handleLoadOlder}
+				endReachedThreshold={1.5}
 				onTailStateChange={handleTailStateChange}
+				ListFooterComponent={
+					hasNext ? (
+						<Center style={{ padding: spacing.md }}>
+							{isLoadingNext || isPending ? (
+								<Spinner />
+							) : (
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleLoadOlder}
+								>
+									<Text size="sm">Load older messages...</Text>
+								</Button>
+							)}
+						</Center>
+					) : undefined
+				}
 				ListEmptyComponent={
 					<Center style={{ height: "100%" }}>
 						<Text color="muted">No messages in this session.</Text>

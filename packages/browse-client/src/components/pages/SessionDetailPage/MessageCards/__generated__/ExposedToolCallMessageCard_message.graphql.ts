@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<ef29e70bc3114e610573de7b7b83782c>>
+ * @generated SignedSource<<50c8f283b7a0432d8caa1dd50b07ac79>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -12,7 +12,7 @@ import { ReaderFragment } from 'relay-runtime';
 import { FragmentRefs } from "relay-runtime";
 export type ExposedToolCallMessageCard_message$data = {
   readonly callId: string | null | undefined;
-  readonly id: string | null | undefined;
+  readonly id: string;
   readonly input: string | null | undefined;
   readonly prefixedName: string | null | undefined;
   readonly rawJson: string | null | undefined;
@@ -23,7 +23,7 @@ export type ExposedToolCallMessageCard_message$data = {
     readonly result: string | null | undefined;
     readonly success: boolean | null | undefined;
   } | null | undefined;
-  readonly timestamp: any | null | undefined;
+  readonly timestamp: string;
   readonly tool: string | null | undefined;
   readonly " $fragmentType": "ExposedToolCallMessageCard_message";
 };

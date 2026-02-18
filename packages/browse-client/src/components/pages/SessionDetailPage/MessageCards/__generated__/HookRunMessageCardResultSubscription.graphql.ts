@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<842c3f7c626b8e30f56be42ca585e0c7>>
+ * @generated SignedSource<<479efd1d5f4a3eb1ae2fe08aba5d24d5>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,13 +14,13 @@ export type HookRunMessageCardResultSubscription$variables = {
 };
 export type HookRunMessageCardResultSubscription$data = {
   readonly hookResultAdded: {
-    readonly durationMs: number | null | undefined;
-    readonly hookName: string | null | undefined;
-    readonly hookRunId: string | null | undefined;
-    readonly pluginName: string | null | undefined;
-    readonly sessionId: string | null | undefined;
-    readonly success: boolean | null | undefined;
-  } | null | undefined;
+    readonly durationMs: number;
+    readonly hookName: string;
+    readonly hookRunId: string;
+    readonly pluginName: string;
+    readonly sessionId: string;
+    readonly success: boolean;
+  };
 };
 export type HookRunMessageCardResultSubscription = {
   response: HookRunMessageCardResultSubscription$data;
@@ -103,7 +103,7 @@ return {
     "metadata": null,
     "name": "HookRunMessageCardResultSubscription",
     "selections": (v1/*: any*/),
-    "type": "Subscription",
+    "type": "SubscriptionRoot",
     "abstractKey": null
   },
   "kind": "Request",

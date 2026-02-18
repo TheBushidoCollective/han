@@ -1,6 +1,8 @@
 //! Project GraphQL type.
 
 use async_graphql::*;
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+
 use crate::node::encode_global_id;
 
 /// Project data for GraphQL resolution.
@@ -20,7 +22,7 @@ pub struct Project {
 #[Object]
 impl Project {
     /// Project global ID.
-    async fn id(&self) -> ID {
+    pub async fn id(&self) -> ID {
         encode_global_id("Project", &self.raw_id)
     }
 
@@ -47,6 +49,36 @@ impl Project {
 
     /// Updated timestamp.
     async fn updated_at(&self) -> &str { &self.updated_at }
+
+    // Backwards-compatible fields for browse-client
+    /// Alias for raw_id.
+    async fn project_id(&self) -> &str { &self.raw_id }
+
+    /// Total sessions count.
+    async fn total_sessions(&self, ctx: &Context<'_>) -> Result<Option<i32>> {
+        let db = ctx.data::<DatabaseConnection>()?;
+        let count = han_db::entities::sessions::Entity::find()
+            .filter(han_db::entities::sessions::Column::ProjectId.eq(&self.raw_id))
+            .all(db)
+            .await
+            .map(|v| v.len() as i32)
+            .map_err(|e| Error::new(e.to_string()))?;
+        Ok(Some(count))
+    }
+
+    /// Session count.
+    async fn session_count(&self, ctx: &Context<'_>) -> Result<Option<i32>> {
+        self.total_sessions(ctx).await
+    }
+
+    /// Last activity timestamp.
+    async fn last_activity(&self) -> Option<&str> { Some(&self.updated_at) }
+    /// Worktrees (stub).
+    async fn worktrees(&self) -> Option<Vec<Project>> { Some(vec![]) }
+    /// Subdirectory projects (stub).
+    async fn subdirs(&self) -> Option<Vec<Project>> { Some(vec![]) }
+    /// Installed plugins (stub).
+    async fn plugins(&self) -> Option<Vec<crate::types::plugin::Plugin>> { Some(vec![]) }
 }
 
 impl From<han_db::entities::projects::Model> for Project {

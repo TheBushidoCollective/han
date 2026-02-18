@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<f8e0b95d20b74009c134dff9a80f9a3d>>
+ * @generated SignedSource<<728043129b3c19a5932a9fb70d2d5f42>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -13,13 +13,13 @@ import { FragmentRefs } from "relay-runtime";
 export type McpToolResultMessageCard_message$data = {
   readonly durationMs: number | null | undefined;
   readonly error: string | null | undefined;
-  readonly id: string | null | undefined;
+  readonly id: string;
   readonly output: string | null | undefined;
   readonly prefixedName: string | null | undefined;
   readonly rawJson: string | null | undefined;
   readonly server: string | null | undefined;
   readonly success: boolean | null | undefined;
-  readonly timestamp: any | null | undefined;
+  readonly timestamp: string;
   readonly tool: string | null | undefined;
   readonly " $fragmentType": "McpToolResultMessageCard_message";
 };

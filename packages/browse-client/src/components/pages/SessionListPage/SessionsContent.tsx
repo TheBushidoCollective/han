@@ -9,7 +9,13 @@
 import type React from "react";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import type { PreloadedQuery } from "react-relay";
-import { graphql, usePaginationFragment, usePreloadedQuery } from "react-relay";
+import {
+	graphql,
+	usePaginationFragment,
+	usePreloadedQuery,
+	useSubscription,
+} from "react-relay";
+import type { GraphQLSubscriptionConfig } from "relay-runtime";
 import { theme } from "@/components/atoms";
 import { Box } from "@/components/atoms/Box.tsx";
 import { Heading } from "@/components/atoms/Heading.tsx";
@@ -22,6 +28,7 @@ import { SessionListItem } from "@/components/organisms/SessionListItem.tsx";
 import type { SessionListPageQuery } from "./__generated__/SessionListPageQuery.graphql.ts";
 import type { SessionsContent_query$key } from "./__generated__/SessionsContent_query.graphql.ts";
 import type { SessionsContentPaginationQuery } from "./__generated__/SessionsContentPaginationQuery.graphql.ts";
+import type { SessionsContentSubscription } from "./__generated__/SessionsContentSubscription.graphql.ts";
 import { SessionListPageQuery as SessionListPageQueryDef } from "./index.tsx";
 
 /**
@@ -68,6 +75,36 @@ const SessionsConnectionFragment = graphql`
   }
 `;
 
+/**
+ * Subscription for new sessions being added.
+ * Uses @prependEdge to add new sessions to the connection.
+ */
+const SessionsContentSubscriptionDef = graphql`
+  subscription SessionsContentSubscription(
+    $connections: [ID!]!
+    $projectId: ID
+  ) {
+    sessionAdded(projectId: $projectId) {
+      sessionId
+      projectId
+      newSessionEdge @prependEdge(connections: $connections) {
+        node {
+          id
+          sessionId
+          projectName
+          worktreeName
+          summary
+          updatedAt
+          startedAt
+          gitBranch
+          ...SessionListItem_session
+        }
+        cursor
+      }
+    }
+  }
+`;
+
 interface SessionsContentProps {
 	queryRef: PreloadedQuery<SessionListPageQuery>;
 	projectId: string | null;
@@ -93,6 +130,28 @@ export function SessionsContent({
 		SessionsContentPaginationQuery,
 		SessionsContent_query$key
 	>(SessionsConnectionFragment, preloadedData);
+
+	// Get connection ID for @prependEdge
+	const connectionId = data.sessions?.__id;
+
+	// Subscribe to new sessions being added
+	const subscriptionConfig = useMemo<
+		GraphQLSubscriptionConfig<SessionsContentSubscription>
+	>(
+		() => ({
+			subscription: SessionsContentSubscriptionDef,
+			variables: {
+				connections: connectionId ? [connectionId] : [],
+				projectId: projectId || undefined,
+			},
+			onError: (err: Error) => {
+				console.warn("SessionsContent subscription error:", err);
+			},
+		}),
+		[connectionId, projectId],
+	);
+
+	useSubscription<SessionsContentSubscription>(subscriptionConfig);
 
 	// Extract session edges and sort by updatedAt (most recent first)
 	type SessionEdge = NonNullable<

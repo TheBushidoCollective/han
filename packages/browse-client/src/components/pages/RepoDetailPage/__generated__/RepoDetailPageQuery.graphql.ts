@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<f063493f4f4f98b1578c11b2479aa66c>>
+ * @generated SignedSource<<a8c74d4cc631d5cb657e7b6787a8cfd4>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -15,23 +15,23 @@ export type RepoDetailPageQuery$variables = {
 export type RepoDetailPageQuery$data = {
   readonly repo: {
     readonly id: string;
-    readonly lastActivity: any | null | undefined;
-    readonly name: string | null | undefined;
-    readonly path: string | null | undefined;
+    readonly lastActivity: string | null | undefined;
+    readonly name: string;
+    readonly path: string;
     readonly projects: ReadonlyArray<{
-      readonly id: string | null | undefined;
-      readonly lastActivity: any | null | undefined;
-      readonly name: string | null | undefined;
-      readonly projectId: string | null | undefined;
+      readonly id: string;
+      readonly lastActivity: string | null | undefined;
+      readonly name: string;
+      readonly projectId: string;
       readonly totalSessions: number | null | undefined;
       readonly worktrees: ReadonlyArray<{
-        readonly isWorktree: boolean | null | undefined;
-        readonly name: string | null | undefined;
-        readonly path: string | null | undefined;
+        readonly isWorktree: boolean;
+        readonly name: string;
+        readonly path: string;
         readonly sessionCount: number | null | undefined;
       }> | null | undefined;
     }> | null | undefined;
-    readonly repoId: string | null | undefined;
+    readonly repoId: string;
     readonly totalSessions: number | null | undefined;
   } | null | undefined;
 };
@@ -48,109 +48,123 @@ var v0 = [
     "name": "id"
   }
 ],
-v1 = {
+v1 = [
+  {
+    "kind": "Variable",
+    "name": "id",
+    "variableName": "id"
+  }
+],
+v2 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "id",
   "storageKey": null
 },
-v2 = {
-  "alias": null,
-  "args": null,
-  "kind": "ScalarField",
-  "name": "name",
-  "storageKey": null
-},
 v3 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "path",
+  "name": "repoId",
   "storageKey": null
 },
 v4 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "totalSessions",
+  "name": "name",
   "storageKey": null
 },
 v5 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
+  "name": "path",
+  "storageKey": null
+},
+v6 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "totalSessions",
+  "storageKey": null
+},
+v7 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
   "name": "lastActivity",
   "storageKey": null
 },
-v6 = [
-  {
-    "alias": null,
-    "args": [
-      {
-        "kind": "Variable",
-        "name": "id",
-        "variableName": "id"
-      }
-    ],
-    "concreteType": "Repo",
-    "kind": "LinkedField",
-    "name": "repo",
-    "plural": false,
+v8 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "projectId",
+  "storageKey": null
+},
+v9 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "isWorktree",
+  "storageKey": null
+},
+v10 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "sessionCount",
+  "storageKey": null
+};
+return {
+  "fragment": {
+    "argumentDefinitions": (v0/*: any*/),
+    "kind": "Fragment",
+    "metadata": null,
+    "name": "RepoDetailPageQuery",
     "selections": [
-      (v1/*: any*/),
       {
         "alias": null,
-        "args": null,
-        "kind": "ScalarField",
-        "name": "repoId",
-        "storageKey": null
-      },
-      (v2/*: any*/),
-      (v3/*: any*/),
-      (v4/*: any*/),
-      (v5/*: any*/),
-      {
-        "alias": null,
-        "args": null,
-        "concreteType": "Project",
+        "args": (v1/*: any*/),
+        "concreteType": "Repo",
         "kind": "LinkedField",
-        "name": "projects",
-        "plural": true,
+        "name": "repo",
+        "plural": false,
         "selections": [
-          (v1/*: any*/),
-          {
-            "alias": null,
-            "args": null,
-            "kind": "ScalarField",
-            "name": "projectId",
-            "storageKey": null
-          },
           (v2/*: any*/),
+          (v3/*: any*/),
           (v4/*: any*/),
           (v5/*: any*/),
+          (v6/*: any*/),
+          (v7/*: any*/),
           {
             "alias": null,
             "args": null,
-            "concreteType": "Worktree",
+            "concreteType": "Project",
             "kind": "LinkedField",
-            "name": "worktrees",
+            "name": "projects",
             "plural": true,
             "selections": [
               (v2/*: any*/),
-              (v3/*: any*/),
+              (v8/*: any*/),
+              (v4/*: any*/),
+              (v6/*: any*/),
+              (v7/*: any*/),
               {
                 "alias": null,
                 "args": null,
-                "kind": "ScalarField",
-                "name": "isWorktree",
-                "storageKey": null
-              },
-              {
-                "alias": null,
-                "args": null,
-                "kind": "ScalarField",
-                "name": "sessionCount",
+                "concreteType": "Project",
+                "kind": "LinkedField",
+                "name": "worktrees",
+                "plural": true,
+                "selections": [
+                  (v4/*: any*/),
+                  (v5/*: any*/),
+                  (v9/*: any*/),
+                  (v10/*: any*/)
+                ],
                 "storageKey": null
               }
             ],
@@ -160,16 +174,6 @@ v6 = [
         "storageKey": null
       }
     ],
-    "storageKey": null
-  }
-];
-return {
-  "fragment": {
-    "argumentDefinitions": (v0/*: any*/),
-    "kind": "Fragment",
-    "metadata": null,
-    "name": "RepoDetailPageQuery",
-    "selections": (v6/*: any*/),
     "type": "Query",
     "abstractKey": null
   },
@@ -178,15 +182,65 @@ return {
     "argumentDefinitions": (v0/*: any*/),
     "kind": "Operation",
     "name": "RepoDetailPageQuery",
-    "selections": (v6/*: any*/)
+    "selections": [
+      {
+        "alias": null,
+        "args": (v1/*: any*/),
+        "concreteType": "Repo",
+        "kind": "LinkedField",
+        "name": "repo",
+        "plural": false,
+        "selections": [
+          (v2/*: any*/),
+          (v3/*: any*/),
+          (v4/*: any*/),
+          (v5/*: any*/),
+          (v6/*: any*/),
+          (v7/*: any*/),
+          {
+            "alias": null,
+            "args": null,
+            "concreteType": "Project",
+            "kind": "LinkedField",
+            "name": "projects",
+            "plural": true,
+            "selections": [
+              (v2/*: any*/),
+              (v8/*: any*/),
+              (v4/*: any*/),
+              (v6/*: any*/),
+              (v7/*: any*/),
+              {
+                "alias": null,
+                "args": null,
+                "concreteType": "Project",
+                "kind": "LinkedField",
+                "name": "worktrees",
+                "plural": true,
+                "selections": [
+                  (v4/*: any*/),
+                  (v5/*: any*/),
+                  (v9/*: any*/),
+                  (v10/*: any*/),
+                  (v2/*: any*/)
+                ],
+                "storageKey": null
+              }
+            ],
+            "storageKey": null
+          }
+        ],
+        "storageKey": null
+      }
+    ]
   },
   "params": {
-    "cacheID": "b74d08b63cad7c7751ac07e0e42c233d",
+    "cacheID": "6c21e4e21d015f03c64fb492a544a943",
     "id": null,
     "metadata": {},
     "name": "RepoDetailPageQuery",
     "operationKind": "query",
-    "text": "query RepoDetailPageQuery(\n  $id: String!\n) {\n  repo(id: $id) {\n    id\n    repoId\n    name\n    path\n    totalSessions\n    lastActivity\n    projects {\n      id\n      projectId\n      name\n      totalSessions\n      lastActivity\n      worktrees {\n        name\n        path\n        isWorktree\n        sessionCount\n      }\n    }\n  }\n}\n"
+    "text": "query RepoDetailPageQuery(\n  $id: String!\n) {\n  repo(id: $id) {\n    id\n    repoId\n    name\n    path\n    totalSessions\n    lastActivity\n    projects {\n      id\n      projectId\n      name\n      totalSessions\n      lastActivity\n      worktrees {\n        name\n        path\n        isWorktree\n        sessionCount\n        id\n      }\n    }\n  }\n}\n"
   }
 };
 })();

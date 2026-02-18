@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<8b74a90b1670bfea69323dc03109c105>>
+ * @generated SignedSource<<9846a894d5d00696186b43c6ddc43c46>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -12,10 +12,10 @@ import { ReaderFragment } from 'relay-runtime';
 import { FragmentRefs } from "relay-runtime";
 export type UnknownEventMessageCard_message$data = {
   readonly eventType: string | null | undefined;
-  readonly id: string | null | undefined;
+  readonly id: string;
   readonly messageType: string | null | undefined;
   readonly rawJson: string | null | undefined;
-  readonly timestamp: any | null | undefined;
+  readonly timestamp: string;
   readonly " $fragmentType": "UnknownEventMessageCard_message";
 };
 export type UnknownEventMessageCard_message$key = {

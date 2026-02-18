@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<457f49fab718fb2c0b959ab22f11c0b6>>
+ * @generated SignedSource<<fb94e40995c4574b3e2063406411fce9>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -9,8 +9,6 @@
 // @ts-nocheck
 
 import { ConcreteRequest } from 'relay-runtime';
-export type Confidence = "HIGH" | "LOW" | "MEDIUM" | "%future added value";
-export type MemoryLayer = "OBSERVATIONS" | "RULES" | "SUMMARIES" | "TEAM" | "TRANSCRIPTS" | "%future added value";
 export type SearchTabResultSubscription$variables = {
   sessionId: string;
 };
@@ -20,18 +18,18 @@ export type SearchTabResultSubscription$data = {
     readonly citations: ReadonlyArray<{
       readonly author: string | null | undefined;
       readonly excerpt: string | null | undefined;
-      readonly layer: MemoryLayer | null | undefined;
+      readonly layer: string | null | undefined;
       readonly projectName: string | null | undefined;
       readonly projectPath: string | null | undefined;
       readonly source: string | null | undefined;
-      readonly timestamp: any | null | undefined;
+      readonly timestamp: string | null | undefined;
     }> | null | undefined;
-    readonly confidence: Confidence | null | undefined;
+    readonly confidence: string | null | undefined;
     readonly error: string | null | undefined;
-    readonly searchedLayers: ReadonlyArray<MemoryLayer> | null | undefined;
+    readonly searchedLayers: ReadonlyArray<string> | null | undefined;
     readonly sessionId: string | null | undefined;
     readonly success: boolean | null | undefined;
-  } | null | undefined;
+  };
 };
 export type SearchTabResultSubscription = {
   response: SearchTabResultSubscription$data;
@@ -56,7 +54,7 @@ v1 = [
         "variableName": "sessionId"
       }
     ],
-    "concreteType": "MemoryAgentResult",
+    "concreteType": "MemoryAgentResultPayload",
     "kind": "LinkedField",
     "name": "memoryAgentResult",
     "plural": false,
@@ -174,7 +172,7 @@ return {
     "metadata": null,
     "name": "SearchTabResultSubscription",
     "selections": (v1/*: any*/),
-    "type": "Subscription",
+    "type": "SubscriptionRoot",
     "abstractKey": null
   },
   "kind": "Request",

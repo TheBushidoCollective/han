@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<eb1fbc43cab4a23a04b243b605bf3be7>>
+ * @generated SignedSource<<c372bf3d33e5aa7ae73f932655e159d5>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,9 +14,9 @@ export type HookCheckStateMessageCard_message$data = {
   readonly fingerprint: string | null | undefined;
   readonly hookType: string | null | undefined;
   readonly hooksCount: number | null | undefined;
-  readonly id: string | null | undefined;
+  readonly id: string;
   readonly rawJson: string | null | undefined;
-  readonly timestamp: any | null | undefined;
+  readonly timestamp: string;
   readonly " $fragmentType": "HookCheckStateMessageCard_message";
 };
 export type HookCheckStateMessageCard_message$key = {

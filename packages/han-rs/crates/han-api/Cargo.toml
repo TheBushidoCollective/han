@@ -19,6 +19,7 @@ chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4"] }
 sea-orm = { version = "1", features = ["macros", "with-chrono", "with-json"] }
 base64 = "0.22"
+dirs = "5"
 tracing = "0.1"
 thiserror = "2"
 tokio-stream = { version = "0.1", features = ["sync"] }

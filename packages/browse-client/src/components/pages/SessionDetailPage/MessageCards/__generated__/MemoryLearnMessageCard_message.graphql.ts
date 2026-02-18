@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<d280cbf631d07b8d749f12a3b0cd2bdb>>
+ * @generated SignedSource<<5859b9724629fbc521a64abc8f98537e>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -13,11 +13,11 @@ import { FragmentRefs } from "relay-runtime";
 export type MemoryLearnMessageCard_message$data = {
   readonly append: boolean | null | undefined;
   readonly domain: string | null | undefined;
-  readonly id: string | null | undefined;
+  readonly id: string;
   readonly paths: ReadonlyArray<string> | null | undefined;
   readonly rawJson: string | null | undefined;
   readonly scope: string | null | undefined;
-  readonly timestamp: any | null | undefined;
+  readonly timestamp: string;
   readonly " $fragmentType": "MemoryLearnMessageCard_message";
 };
 export type MemoryLearnMessageCard_message$key = {

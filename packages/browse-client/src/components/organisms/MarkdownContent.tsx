@@ -14,11 +14,18 @@ import Anser from "anser";
 import hljs from "highlight.js/lib/core";
 import bash from "highlight.js/lib/languages/bash";
 import css from "highlight.js/lib/languages/css";
+import diff from "highlight.js/lib/languages/diff";
+import dockerfile from "highlight.js/lib/languages/dockerfile";
+import go from "highlight.js/lib/languages/go";
+import graphql from "highlight.js/lib/languages/graphql";
+import ini from "highlight.js/lib/languages/ini";
 import javascript from "highlight.js/lib/languages/javascript";
 import json from "highlight.js/lib/languages/json";
+import markdown from "highlight.js/lib/languages/markdown";
 import plaintext from "highlight.js/lib/languages/plaintext";
 import python from "highlight.js/lib/languages/python";
 import rust from "highlight.js/lib/languages/rust";
+import sql from "highlight.js/lib/languages/sql";
 import typescript from "highlight.js/lib/languages/typescript";
 import xml from "highlight.js/lib/languages/xml";
 import yaml from "highlight.js/lib/languages/yaml";
@@ -31,20 +38,39 @@ import { AnsiText, containsAnsi } from "@/components/atoms/AnsiText.tsx";
 hljs.registerLanguage("bash", bash);
 hljs.registerLanguage("shell", bash);
 hljs.registerLanguage("sh", bash);
-hljs.registerLanguage("javascript", javascript);
-hljs.registerLanguage("js", javascript);
-hljs.registerLanguage("typescript", typescript);
-hljs.registerLanguage("ts", typescript);
-hljs.registerLanguage("python", python);
-hljs.registerLanguage("py", python);
-hljs.registerLanguage("json", json);
-hljs.registerLanguage("yaml", yaml);
-hljs.registerLanguage("yml", yaml);
+hljs.registerLanguage("zsh", bash);
+hljs.registerLanguage("css", css);
+hljs.registerLanguage("diff", diff);
+hljs.registerLanguage("patch", diff);
+hljs.registerLanguage("dockerfile", dockerfile);
+hljs.registerLanguage("docker", dockerfile);
+hljs.registerLanguage("go", go);
+hljs.registerLanguage("golang", go);
+hljs.registerLanguage("graphql", graphql);
+hljs.registerLanguage("gql", graphql);
 hljs.registerLanguage("html", xml);
 hljs.registerLanguage("xml", xml);
-hljs.registerLanguage("css", css);
-hljs.registerLanguage("rust", rust);
+hljs.registerLanguage("ini", ini);
+hljs.registerLanguage("toml", ini);
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("js", javascript);
+hljs.registerLanguage("jsx", javascript);
+hljs.registerLanguage("json", json);
+hljs.registerLanguage("markdown", markdown);
+hljs.registerLanguage("md", markdown);
 hljs.registerLanguage("plaintext", plaintext);
+hljs.registerLanguage("text", plaintext);
+hljs.registerLanguage("txt", plaintext);
+hljs.registerLanguage("python", python);
+hljs.registerLanguage("py", python);
+hljs.registerLanguage("rust", rust);
+hljs.registerLanguage("rs", rust);
+hljs.registerLanguage("sql", sql);
+hljs.registerLanguage("typescript", typescript);
+hljs.registerLanguage("ts", typescript);
+hljs.registerLanguage("tsx", typescript);
+hljs.registerLanguage("yaml", yaml);
+hljs.registerLanguage("yml", yaml);
 
 // Configure marked for safe rendering with syntax highlighting
 // Note: breaks: false to avoid extra <br> tags in lists
@@ -91,13 +117,36 @@ const markdownStyles: CSSProperties = {
  * These styles target elements inside the markdown container
  */
 const scopedMarkdownCSS = `
-.markdown-content .markdown-body h1,
-.markdown-content .markdown-body h2,
-.markdown-content .markdown-body h3,
+.markdown-content .markdown-body h1 {
+  color: #f0f6fc;
+  font-size: 1.75em;
+  margin-top: 1.5em;
+  margin-bottom: 0.75em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #21262d;
+  font-weight: 600;
+}
+.markdown-content .markdown-body h2 {
+  color: #f0f6fc;
+  font-size: 1.4em;
+  margin-top: 1.25em;
+  margin-bottom: 0.5em;
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid #21262d;
+  font-weight: 600;
+}
+.markdown-content .markdown-body h3 {
+  color: #f0f6fc;
+  font-size: 1.15em;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
 .markdown-content .markdown-body h4,
 .markdown-content .markdown-body h5,
 .markdown-content .markdown-body h6 {
   color: #f0f6fc;
+  font-size: 1em;
   margin-top: 1em;
   margin-bottom: 0.5em;
   font-weight: 600;
@@ -113,12 +162,45 @@ const scopedMarkdownCSS = `
 .markdown-content .markdown-body li {
   margin: 0.25em 0;
 }
+.markdown-content .markdown-body li > ul,
+.markdown-content .markdown-body li > ol {
+  margin: 0.15em 0;
+}
 .markdown-content .markdown-body a {
   color: #58a6ff;
   text-decoration: none;
 }
 .markdown-content .markdown-body a:hover {
   text-decoration: underline;
+}
+.markdown-content .markdown-body strong {
+  color: #f0f6fc;
+  font-weight: 600;
+}
+.markdown-content .markdown-body hr {
+  border: none;
+  border-top: 1px solid #30363d;
+  margin: 1.5em 0;
+}
+.markdown-content .markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75em 0;
+  font-size: 0.85em;
+}
+.markdown-content .markdown-body table th,
+.markdown-content .markdown-body table td {
+  border: 1px solid #30363d;
+  padding: 6px 12px;
+  text-align: left;
+}
+.markdown-content .markdown-body table th {
+  background-color: #161b22;
+  color: #f0f6fc;
+  font-weight: 600;
+}
+.markdown-content .markdown-body table tr:nth-child(even) {
+  background-color: rgba(22, 27, 34, 0.5);
 }
 .markdown-content .markdown-body code {
   background-color: #21262d;
@@ -133,7 +215,7 @@ const scopedMarkdownCSS = `
   border-radius: 6px;
   padding: 12px;
   overflow-x: auto;
-  margin: 0.5em 0;
+  margin: 0.75em 0;
 }
 .markdown-content .markdown-body pre code {
   background: none;
@@ -145,6 +227,10 @@ const scopedMarkdownCSS = `
   padding-left: 12px;
   margin: 0.5em 0;
   color: #8b949e;
+}
+.markdown-content .markdown-body img {
+  max-width: 100%;
+  border-radius: 6px;
 }
 .markdown-content .terminal-output {
   background-color: #161b22;
@@ -199,6 +285,18 @@ const scopedMarkdownCSS = `
 .markdown-content .hljs-variable { color: #ffa657; }
 .markdown-content .hljs-attr { color: #79c0ff; }
 .markdown-content .hljs-built_in { color: #ffa657; }
+.markdown-content .hljs-title { color: #d2a8ff; }
+.markdown-content .hljs-params { color: #c9d1d9; }
+.markdown-content .hljs-literal { color: #79c0ff; }
+.markdown-content .hljs-type { color: #ffa657; }
+.markdown-content .hljs-meta { color: #79c0ff; }
+.markdown-content .hljs-selector-class { color: #7ee787; }
+.markdown-content .hljs-selector-id { color: #7ee787; }
+.markdown-content .hljs-selector-tag { color: #ff7b72; }
+.markdown-content .hljs-tag { color: #7ee787; }
+.markdown-content .hljs-name { color: #7ee787; }
+.markdown-content .hljs-addition { color: #aff5b4; background-color: rgba(46, 160, 67, 0.15); }
+.markdown-content .hljs-deletion { color: #ffdcd7; background-color: rgba(248, 81, 73, 0.15); }
 `;
 
 /**
@@ -324,8 +422,9 @@ export function MarkdownContent({
 				);
 
 			case "markdown": {
-				// Strip ANSI codes if present, then collapse all multiple newlines to single
-				const cleanContent = stripAnsi(displayContent).replace(/\n{2}/g, "\n");
+				// Strip ANSI codes if present, then collapse excessive newlines (3+) to double
+				// Note: double newlines are meaningful in markdown (paragraph breaks)
+				const cleanContent = stripAnsi(displayContent).replace(/\n{3,}/g, "\n\n");
 				const html = marked.parse(cleanContent) as string;
 
 				// Post-process to handle ANSI code blocks

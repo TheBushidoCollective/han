@@ -103,9 +103,8 @@ export function DashboardContent({
 
 	// Determine if we're viewing a project-specific dashboard
 	const isProjectView = !!repoId;
-	// Format the repoId for display (e.g., 'github-com-org-repo' -> 'org/repo')
-	const repoDisplayName =
-		repoId?.replace(/^[^-]+-[^-]+-/, "").replace(/-/g, "/") || repoId;
+	// Use the repo name from GraphQL query (falls back to repoId)
+	const repoDisplayName = data.repo?.name || repoId;
 
 	// Subscription config for live updates
 	const subscriptionConfig = useMemo<

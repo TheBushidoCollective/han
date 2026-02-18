@@ -23,7 +23,7 @@ use crate::types::{
 use chrono::{DateTime, Duration, Utc};
 use han_db::crud;
 use han_db::entities::messages;
-use sea_orm::{DatabaseConnection, Set};
+use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, Set, Statement};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -1449,6 +1449,11 @@ pub async fn index_session_file(
 
     let total_messages = crud::messages::get_count(db, &session_id).await?;
 
+    // Update pre-aggregated tables if new messages were indexed
+    if total_indexed > 0 {
+        update_aggregates(db, &session_id).await;
+    }
+
     Ok(IndexResult {
         session_id,
         messages_indexed: total_indexed,
@@ -1456,6 +1461,54 @@ pub async fn index_session_file(
         is_new_session,
         error: None,
     })
+}
+
+/// Update pre-aggregated daily/hourly/global tables after indexing new messages.
+/// Uses INSERT OR REPLACE to rebuild affected rows from the messages table.
+/// This is fast because it only touches dates/hours that this session contributed to.
+async fn update_aggregates(db: &DatabaseConnection, session_id: &str) {
+    // Rebuild daily aggregates for dates this session has messages on
+    let _ = db.execute(Statement::from_sql_and_values(
+        DbBackend::Sqlite,
+        "INSERT OR REPLACE INTO daily_aggregates (date, session_count, message_count, input_tokens, output_tokens, cache_read_tokens, lines_added, lines_removed, files_changed) \
+         SELECT DATE(m.timestamp), COUNT(DISTINCT m.session_id), COUNT(*), \
+                COALESCE(SUM(m.input_tokens), 0), COALESCE(SUM(m.output_tokens), 0), \
+                COALESCE(SUM(m.cache_read_tokens), 0), COALESCE(SUM(m.lines_added), 0), \
+                COALESCE(SUM(m.lines_removed), 0), COALESCE(SUM(m.files_changed), 0) \
+         FROM messages m \
+         WHERE DATE(m.timestamp) IN (SELECT DISTINCT DATE(timestamp) FROM messages WHERE session_id = ?) \
+         GROUP BY DATE(m.timestamp)",
+        vec![session_id.into()],
+    )).await;
+
+    // Rebuild hourly aggregates for hours this session has messages on
+    let _ = db.execute(Statement::from_sql_and_values(
+        DbBackend::Sqlite,
+        "INSERT OR REPLACE INTO hourly_aggregates (hour, session_count, message_count, input_tokens, output_tokens, cache_read_tokens) \
+         SELECT CAST(strftime('%H', m.timestamp) AS INTEGER), COUNT(DISTINCT m.session_id), COUNT(*), \
+                COALESCE(SUM(m.input_tokens), 0), COALESCE(SUM(m.output_tokens), 0), \
+                COALESCE(SUM(m.cache_read_tokens), 0) \
+         FROM messages m \
+         WHERE CAST(strftime('%H', m.timestamp) AS INTEGER) IN \
+               (SELECT DISTINCT CAST(strftime('%H', timestamp) AS INTEGER) FROM messages WHERE session_id = ?) \
+         GROUP BY CAST(strftime('%H', m.timestamp) AS INTEGER)",
+        vec![session_id.into()],
+    )).await;
+
+    // Rebuild global aggregates (single row — always a full refresh but only touches small tables + one COUNT/SUM)
+    let _ = db.execute(Statement::from_string(
+        DbBackend::Sqlite,
+        "INSERT OR REPLACE INTO global_aggregates (id, total_sessions, total_messages, total_input_tokens, total_output_tokens, total_cache_read_tokens, total_tasks, total_completed_tasks, last_updated) \
+         SELECT 1, \
+                (SELECT COUNT(*) FROM sessions), \
+                (SELECT SUM(message_count) FROM daily_aggregates), \
+                (SELECT SUM(input_tokens) FROM daily_aggregates), \
+                (SELECT SUM(output_tokens) FROM daily_aggregates), \
+                (SELECT SUM(cache_read_tokens) FROM daily_aggregates), \
+                (SELECT COUNT(*) FROM tasks) + (SELECT COUNT(*) FROM native_tasks), \
+                (SELECT COUNT(*) FROM tasks WHERE completed_at IS NOT NULL) + (SELECT COUNT(*) FROM native_tasks WHERE status = 'completed'), \
+                datetime('now')".to_string(),
+    )).await;
 }
 
 /// Generate a sentiment analysis event message for a user message.

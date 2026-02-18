@@ -39,6 +39,10 @@ impl NativeTask {
     async fn created_at(&self) -> &str { &self.created_at }
     async fn updated_at(&self) -> &str { &self.updated_at }
     async fn completed_at(&self) -> Option<&str> { self.completed_at.as_deref() }
+    /// Session ID this task belongs to.
+    async fn session_id(&self) -> &str { &self.session_id }
+    /// Message ID that created/updated this task.
+    async fn message_id(&self) -> &str { &self.message_id }
 }
 
 impl From<han_db::entities::native_tasks::Model> for NativeTask {

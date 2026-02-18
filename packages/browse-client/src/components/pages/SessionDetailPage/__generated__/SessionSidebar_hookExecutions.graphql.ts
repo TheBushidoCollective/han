@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<8d0ea9940af956f40d17622da7aadaf7>>
+ * @generated SignedSource<<9aec5dedbfe3e713764c308b791264bb>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -15,22 +15,22 @@ export type SessionSidebar_hookExecutions$data = {
     readonly edges: ReadonlyArray<{
       readonly node: {
         readonly directory: string | null | undefined;
-        readonly durationMs: number | null | undefined;
+        readonly durationMs: number;
         readonly error: string | null | undefined;
-        readonly hookName: string | null | undefined;
+        readonly hookName: string;
         readonly hookSource: string | null | undefined;
-        readonly hookType: string | null | undefined;
-        readonly id: string | null | undefined;
+        readonly hookType: string;
+        readonly id: string;
         readonly output: string | null | undefined;
-        readonly passed: boolean | null | undefined;
-        readonly timestamp: string | null | undefined;
-      } | null | undefined;
-    }> | null | undefined;
+        readonly passed: boolean;
+        readonly timestamp: string;
+      };
+    }>;
     readonly pageInfo: {
       readonly endCursor: string | null | undefined;
-      readonly hasNextPage: boolean | null | undefined;
-    } | null | undefined;
-    readonly totalCount: number | null | undefined;
+      readonly hasNextPage: boolean;
+    };
+    readonly totalCount: number;
   } | null | undefined;
   readonly id: string;
   readonly " $fragmentType": "SessionSidebar_hookExecutions";

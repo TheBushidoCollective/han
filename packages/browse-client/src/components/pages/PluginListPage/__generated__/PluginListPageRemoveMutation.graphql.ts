@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<29a0d504d93a95c241de2c6bd87d7b6c>>
+ * @generated SignedSource<<484651549819782c016f28f03a0e224c>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -96,7 +96,7 @@ return {
     "metadata": null,
     "name": "PluginListPageRemoveMutation",
     "selections": (v3/*: any*/),
-    "type": "Mutation",
+    "type": "MutationRoot",
     "abstractKey": null
   },
   "kind": "Request",

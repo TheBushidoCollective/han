@@ -9,6 +9,24 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook reference hooks/blueprint-system-info.md --must-read-first \"blueprint system available\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "han hook reference hooks/ensure-blueprints.md --must-read-first \"blueprints documentation requirements\"",
+            "timeout": 5
+          }
+        ]
       }
     ]
   }

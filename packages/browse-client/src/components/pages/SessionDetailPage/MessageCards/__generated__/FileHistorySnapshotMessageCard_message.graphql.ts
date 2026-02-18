@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<a546b9e5c1bf2b7fe28a31f043f6399e>>
+ * @generated SignedSource<<7e2045493584fc83c6787bd76e46bc98>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -12,12 +12,12 @@ import { ReaderFragment } from 'relay-runtime';
 import { FragmentRefs } from "relay-runtime";
 export type FileHistorySnapshotMessageCard_message$data = {
   readonly fileCount: number | null | undefined;
-  readonly id: string | null | undefined;
+  readonly id: string;
   readonly isSnapshotUpdate: boolean | null | undefined;
   readonly messageId: string | null | undefined;
   readonly rawJson: string | null | undefined;
-  readonly snapshotTimestamp: any | null | undefined;
-  readonly timestamp: any | null | undefined;
+  readonly snapshotTimestamp: string | null | undefined;
+  readonly timestamp: string;
   readonly " $fragmentType": "FileHistorySnapshotMessageCard_message";
 };
 export type FileHistorySnapshotMessageCard_message$key = {

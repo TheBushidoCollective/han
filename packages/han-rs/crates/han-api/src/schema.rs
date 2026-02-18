@@ -20,6 +20,12 @@ pub fn build_schema(
     Schema::build(QueryRoot, MutationRoot, SubscriptionRoot)
         .data(db)
         .data(event_sender)
+        // Manually register types not directly reachable from root queries
+        // but needed for fragments in browse-client.
+        .register_output_type::<crate::types::messages::UserMessage>()
+        .register_output_type::<crate::types::node::Node>()
+        // Register enums used in browse-client queries but not referenced by root args
+        .register_output_type::<crate::types::enums::Granularity>()
         .finish()
 }
 
@@ -39,7 +45,11 @@ mod tests {
         use crate::query::QueryRoot;
         use crate::subscription::SubscriptionRoot;
 
-        Schema::build(QueryRoot, MutationRoot, SubscriptionRoot).finish()
+        Schema::build(QueryRoot, MutationRoot, SubscriptionRoot)
+            .register_output_type::<crate::types::messages::UserMessage>()
+            .register_output_type::<crate::types::node::Node>()
+            .register_output_type::<crate::types::enums::Granularity>()
+            .finish()
     }
 
     #[test]
@@ -53,7 +63,7 @@ mod tests {
         let sdl = export_sdl(&schema);
 
         // Verify core types exist in SDL
-        assert!(sdl.contains("type QueryRoot"), "Missing QueryRoot");
+        assert!(sdl.contains("type Query"), "Missing Query");
         assert!(sdl.contains("type MutationRoot"), "Missing MutationRoot");
         assert!(sdl.contains("type SubscriptionRoot"), "Missing SubscriptionRoot");
 
@@ -64,19 +74,20 @@ mod tests {
         assert!(sdl.contains("coordinatorStatus"), "Missing coordinatorStatus");
 
         // Verify Session type
-        assert!(sdl.contains("type SessionData"), "Missing SessionData type");
+        assert!(sdl.contains("type Session"), "Missing Session type");
         assert!(sdl.contains("sessionId"), "Missing sessionId field");
         assert!(sdl.contains("messages("), "Missing messages connection");
 
-        // Verify Message union
-        assert!(sdl.contains("union Message"), "Missing Message union");
+        // Verify Message and UserMessage interfaces
+        assert!(sdl.contains("interface Message"), "Missing Message interface");
+        assert!(sdl.contains("interface UserMessage"), "Missing UserMessage interface");
         assert!(sdl.contains("RegularUserMessage"), "Missing RegularUserMessage");
         assert!(sdl.contains("AssistantMessage"), "Missing AssistantMessage");
         assert!(sdl.contains("HookRunMessage"), "Missing HookRunMessage");
         assert!(sdl.contains("McpToolCallMessage"), "Missing McpToolCallMessage");
 
         // Verify Content Block types
-        assert!(sdl.contains("union ContentBlock"), "Missing ContentBlock union");
+        assert!(sdl.contains("interface ContentBlock"), "Missing ContentBlock interface");
         assert!(sdl.contains("TextBlock"), "Missing TextBlock");
         assert!(sdl.contains("ThinkingBlock"), "Missing ThinkingBlock");
         assert!(sdl.contains("ToolUseBlock"), "Missing ToolUseBlock");

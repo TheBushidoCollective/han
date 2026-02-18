@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<5568f79b5de806180660a860d008cd77>>
+ * @generated SignedSource<<1d4e1881736e22617b16c13e50d0c5d6>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -12,12 +12,12 @@ import { ReaderFragment } from 'relay-runtime';
 import { FragmentRefs } from "relay-runtime";
 export type MemoryQueryMessageCard_message$data = {
   readonly durationMs: number | null | undefined;
-  readonly id: string | null | undefined;
+  readonly id: string;
   readonly question: string | null | undefined;
   readonly rawJson: string | null | undefined;
   readonly resultCount: number | null | undefined;
   readonly route: string | null | undefined;
-  readonly timestamp: any | null | undefined;
+  readonly timestamp: string;
   readonly " $fragmentType": "MemoryQueryMessageCard_message";
 };
 export type MemoryQueryMessageCard_message$key = {

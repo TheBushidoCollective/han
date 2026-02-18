@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<e98dfd6022e713ae3c0999cf8e3ef383>>
+ * @generated SignedSource<<98d5ab5e228891b71d82eb59ef0581b1>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -103,7 +103,7 @@ return {
     "metadata": null,
     "name": "SearchTabStartMutation",
     "selections": (v3/*: any*/),
-    "type": "Mutation",
+    "type": "MutationRoot",
     "abstractKey": null
   },
   "kind": "Request",

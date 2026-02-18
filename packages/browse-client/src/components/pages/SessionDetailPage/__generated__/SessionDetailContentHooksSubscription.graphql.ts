@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<962d9ddcf6ffeebfd225ac53a80db9ab>>
+ * @generated SignedSource<<fd6f52e4665351316a6c85c30ca489f1>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,11 +14,11 @@ export type SessionDetailContentHooksSubscription$variables = {
 };
 export type SessionDetailContentHooksSubscription$data = {
   readonly sessionHooksChanged: {
-    readonly eventType: string | null | undefined;
-    readonly hookName: string | null | undefined;
-    readonly pluginName: string | null | undefined;
-    readonly sessionId: string | null | undefined;
-  } | null | undefined;
+    readonly eventType: string;
+    readonly hookName: string;
+    readonly pluginName: string;
+    readonly sessionId: string;
+  };
 };
 export type SessionDetailContentHooksSubscription = {
   response: SessionDetailContentHooksSubscription$data;
@@ -87,7 +87,7 @@ return {
     "metadata": null,
     "name": "SessionDetailContentHooksSubscription",
     "selections": (v1/*: any*/),
-    "type": "Subscription",
+    "type": "SubscriptionRoot",
     "abstractKey": null
   },
   "kind": "Request",

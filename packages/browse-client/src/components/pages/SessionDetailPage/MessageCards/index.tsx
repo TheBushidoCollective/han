@@ -8,6 +8,7 @@
  * to all child components without prop drilling.
  */
 
+import * as Sentry from "@sentry/react";
 import type React from "react";
 import { useMemo } from "react";
 import { graphql, useFragment } from "react-relay";
@@ -83,6 +84,7 @@ const MessageCardsFragment = graphql`
   fragment MessageCards_message on Message {
     __typename
     id
+    parentId
     ...UserMessageCard_message
     ...AssistantMessageCard_message
     ...SummaryMessageCard_message
@@ -163,8 +165,10 @@ export function MessageCard({
 	);
 
 	if (!CardComponent) {
-		// Handle %other (future types) gracefully
-		console.warn(`Unknown message type: ${data.__typename}`);
+		Sentry.captureMessage(`Unknown message type: ${data.__typename}`, {
+			level: "warning",
+			tags: { typename: data.__typename ?? "null" },
+		});
 		return null;
 	}
 

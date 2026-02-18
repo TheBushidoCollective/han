@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<64535028720206f4f718f6728a6aae8c>>
+ * @generated SignedSource<<3f5a4f99bbbfd68711f7de6cc103aa7b>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -11,7 +11,9 @@
 import { ConcreteRequest } from 'relay-runtime';
 import { FragmentRefs } from "relay-runtime";
 export type DashboardPageQuery$variables = {
+  hasRepoId: boolean;
   projectId?: string | null | undefined;
+  repoId: string;
 };
 export type DashboardPageQuery$data = {
   readonly metrics: {
@@ -35,17 +37,20 @@ export type DashboardPageQuery$data = {
     readonly userPlugins: number | null | undefined;
   } | null | undefined;
   readonly projects: ReadonlyArray<{
-    readonly id: string | null | undefined;
-  }> | null | undefined;
+    readonly id: string;
+  }>;
+  readonly repo?: {
+    readonly name: string;
+  } | null | undefined;
   readonly sessions: {
     readonly __id: string;
     readonly edges: ReadonlyArray<{
       readonly node: {
         readonly id: string;
         readonly " $fragmentSpreads": FragmentRefs<"SessionListItem_session">;
-      } | null | undefined;
-    }> | null | undefined;
-  } | null | undefined;
+      };
+    }>;
+  };
   readonly " $fragmentSpreads": FragmentRefs<"DashboardPageActivity_query" | "DashboardPageAnalytics_query">;
 };
 export type DashboardPageQuery = {
@@ -54,21 +59,43 @@ export type DashboardPageQuery = {
 };
 
 const node: ConcreteRequest = (function(){
-var v0 = [
+var v0 = {
+  "defaultValue": null,
+  "kind": "LocalArgument",
+  "name": "hasRepoId"
+},
+v1 = {
+  "defaultValue": null,
+  "kind": "LocalArgument",
+  "name": "projectId"
+},
+v2 = {
+  "defaultValue": null,
+  "kind": "LocalArgument",
+  "name": "repoId"
+},
+v3 = [
   {
-    "defaultValue": null,
-    "kind": "LocalArgument",
-    "name": "projectId"
+    "kind": "Variable",
+    "name": "id",
+    "variableName": "repoId"
   }
 ],
-v1 = {
+v4 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "name",
+  "storageKey": null
+},
+v5 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "id",
   "storageKey": null
 },
-v2 = {
+v6 = {
   "alias": null,
   "args": [
     {
@@ -82,30 +109,30 @@ v2 = {
   "name": "projects",
   "plural": true,
   "selections": [
-    (v1/*: any*/)
+    (v5/*: any*/)
   ],
   "storageKey": "projects(first:100)"
 },
-v3 = {
+v7 = {
   "kind": "Variable",
   "name": "projectId",
   "variableName": "projectId"
 },
-v4 = {
+v8 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "__typename",
   "storageKey": null
 },
-v5 = {
+v9 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "cursor",
   "storageKey": null
 },
-v6 = {
+v10 = {
   "alias": null,
   "args": null,
   "concreteType": "PageInfo",
@@ -130,7 +157,7 @@ v6 = {
   ],
   "storageKey": null
 },
-v7 = {
+v11 = {
   "kind": "ClientExtension",
   "selections": [
     {
@@ -142,7 +169,7 @@ v7 = {
     }
   ]
 },
-v8 = {
+v12 = {
   "alias": null,
   "args": [
     {
@@ -208,7 +235,7 @@ v8 = {
   ],
   "storageKey": "metrics(period:\"WEEK\")"
 },
-v9 = {
+v13 = {
   "alias": null,
   "args": null,
   "concreteType": "PluginStats",
@@ -254,14 +281,14 @@ v9 = {
   ],
   "storageKey": null
 },
-v10 = {
+v14 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "count",
   "storageKey": null
 },
-v11 = {
+v15 = {
   "alias": null,
   "args": null,
   "concreteType": "PluginCategory",
@@ -276,155 +303,148 @@ v11 = {
       "name": "category",
       "storageKey": null
     },
-    (v10/*: any*/)
+    (v14/*: any*/)
   ],
   "storageKey": null
 },
-v12 = [
+v16 = [
   {
     "kind": "Literal",
     "name": "first",
     "value": 5
   },
-  (v3/*: any*/)
+  (v7/*: any*/)
 ],
-v13 = {
+v17 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "sessionId",
   "storageKey": null
 },
-v14 = {
-  "alias": null,
-  "args": null,
-  "kind": "ScalarField",
-  "name": "name",
-  "storageKey": null
-},
-v15 = {
+v18 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "summary",
   "storageKey": null
 },
-v16 = {
+v19 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "messageCount",
   "storageKey": null
 },
-v17 = {
+v20 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "startedAt",
   "storageKey": null
 },
-v18 = {
+v21 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "status",
   "storageKey": null
 },
-v19 = {
+v22 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "date",
   "storageKey": null
 },
-v20 = {
+v23 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "sessionCount",
   "storageKey": null
 },
-v21 = {
+v24 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "inputTokens",
   "storageKey": null
 },
-v22 = {
+v25 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "outputTokens",
   "storageKey": null
 },
-v23 = {
+v26 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "totalTokens",
   "storageKey": null
 },
-v24 = {
+v27 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "estimatedCostUsd",
   "storageKey": null
 },
-v25 = {
+v28 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "model",
   "storageKey": null
 },
-v26 = {
+v29 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "displayName",
   "storageKey": null
 },
-v27 = {
+v30 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "cacheReadTokens",
   "storageKey": null
 },
-v28 = {
+v31 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "costUsd",
   "storageKey": null
 },
-v29 = {
+v32 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "totalSessions",
   "storageKey": null
 },
-v30 = {
+v33 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "totalMessages",
   "storageKey": null
 },
-v31 = {
+v34 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "slug",
   "storageKey": null
 },
-v32 = [
-  (v13/*: any*/),
-  (v31/*: any*/),
-  (v15/*: any*/),
+v35 = [
+  (v17/*: any*/),
+  (v34/*: any*/),
+  (v18/*: any*/),
   {
     "alias": null,
     "args": null,
@@ -474,30 +494,30 @@ v32 = [
     "name": "focusScore",
     "storageKey": null
   },
-  (v17/*: any*/)
+  (v20/*: any*/)
 ],
-v33 = {
+v36 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "isEstimated",
   "storageKey": null
 },
-v34 = {
+v37 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "cacheSavingsUsd",
   "storageKey": null
 },
-v35 = {
+v38 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "costUtilizationPercent",
   "storageKey": null
 },
-v36 = {
+v39 = {
   "alias": null,
   "args": null,
   "concreteType": "DailyCost",
@@ -505,13 +525,13 @@ v36 = {
   "name": "dailyCostTrend",
   "plural": true,
   "selections": [
-    (v19/*: any*/),
-    (v28/*: any*/),
-    (v20/*: any*/)
+    (v22/*: any*/),
+    (v31/*: any*/),
+    (v23/*: any*/)
   ],
   "storageKey": null
 },
-v37 = {
+v40 = {
   "alias": null,
   "args": null,
   "concreteType": "WeeklyCost",
@@ -533,8 +553,8 @@ v37 = {
       "name": "weekLabel",
       "storageKey": null
     },
-    (v28/*: any*/),
-    (v20/*: any*/),
+    (v31/*: any*/),
+    (v23/*: any*/),
     {
       "alias": null,
       "args": null,
@@ -545,7 +565,7 @@ v37 = {
   ],
   "storageKey": null
 },
-v38 = {
+v41 = {
   "alias": null,
   "args": null,
   "concreteType": "SessionCost",
@@ -553,39 +573,39 @@ v38 = {
   "name": "topSessionsByCost",
   "plural": true,
   "selections": [
-    (v13/*: any*/),
+    (v17/*: any*/),
+    (v34/*: any*/),
     (v31/*: any*/),
-    (v28/*: any*/),
-    (v21/*: any*/),
-    (v22/*: any*/),
-    (v27/*: any*/),
-    (v16/*: any*/),
-    (v17/*: any*/)
+    (v24/*: any*/),
+    (v25/*: any*/),
+    (v30/*: any*/),
+    (v19/*: any*/),
+    (v20/*: any*/)
   ],
   "storageKey": null
 },
-v39 = {
+v42 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "costPerSession",
   "storageKey": null
 },
-v40 = {
+v43 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "cacheHitRate",
   "storageKey": null
 },
-v41 = {
+v44 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "potentialSavingsUsd",
   "storageKey": null
 },
-v42 = {
+v45 = {
   "alias": null,
   "args": null,
   "concreteType": "SubscriptionComparison",
@@ -638,7 +658,7 @@ v42 = {
   ],
   "storageKey": null
 },
-v43 = {
+v46 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
@@ -647,16 +667,39 @@ v43 = {
 };
 return {
   "fragment": {
-    "argumentDefinitions": (v0/*: any*/),
+    "argumentDefinitions": [
+      (v0/*: any*/),
+      (v1/*: any*/),
+      (v2/*: any*/)
+    ],
     "kind": "Fragment",
     "metadata": null,
     "name": "DashboardPageQuery",
     "selections": [
-      (v2/*: any*/),
+      {
+        "condition": "hasRepoId",
+        "kind": "Condition",
+        "passingValue": true,
+        "selections": [
+          {
+            "alias": null,
+            "args": (v3/*: any*/),
+            "concreteType": "Repo",
+            "kind": "LinkedField",
+            "name": "repo",
+            "plural": false,
+            "selections": [
+              (v4/*: any*/)
+            ],
+            "storageKey": null
+          }
+        ]
+      },
+      (v6/*: any*/),
       {
         "alias": "sessions",
         "args": [
-          (v3/*: any*/)
+          (v7/*: any*/)
         ],
         "concreteType": "SessionConnection",
         "kind": "LinkedField",
@@ -679,28 +722,28 @@ return {
                 "name": "node",
                 "plural": false,
                 "selections": [
-                  (v1/*: any*/),
+                  (v5/*: any*/),
                   {
                     "args": null,
                     "kind": "FragmentSpread",
                     "name": "SessionListItem_session"
                   },
-                  (v4/*: any*/)
+                  (v8/*: any*/)
                 ],
                 "storageKey": null
               },
-              (v5/*: any*/)
+              (v9/*: any*/)
             ],
             "storageKey": null
           },
-          (v6/*: any*/),
-          (v7/*: any*/)
+          (v10/*: any*/),
+          (v11/*: any*/)
         ],
         "storageKey": null
       },
-      (v8/*: any*/),
-      (v9/*: any*/),
-      (v11/*: any*/),
+      (v12/*: any*/),
+      (v13/*: any*/),
+      (v15/*: any*/),
       {
         "args": null,
         "kind": "FragmentSpread",
@@ -717,14 +760,38 @@ return {
   },
   "kind": "Request",
   "operation": {
-    "argumentDefinitions": (v0/*: any*/),
+    "argumentDefinitions": [
+      (v1/*: any*/),
+      (v2/*: any*/),
+      (v0/*: any*/)
+    ],
     "kind": "Operation",
     "name": "DashboardPageQuery",
     "selections": [
-      (v2/*: any*/),
+      {
+        "condition": "hasRepoId",
+        "kind": "Condition",
+        "passingValue": true,
+        "selections": [
+          {
+            "alias": null,
+            "args": (v3/*: any*/),
+            "concreteType": "Repo",
+            "kind": "LinkedField",
+            "name": "repo",
+            "plural": false,
+            "selections": [
+              (v4/*: any*/),
+              (v5/*: any*/)
+            ],
+            "storageKey": null
+          }
+        ]
+      },
+      (v6/*: any*/),
       {
         "alias": null,
-        "args": (v12/*: any*/),
+        "args": (v16/*: any*/),
         "concreteType": "SessionConnection",
         "kind": "LinkedField",
         "name": "sessions",
@@ -746,9 +813,9 @@ return {
                 "name": "node",
                 "plural": false,
                 "selections": [
-                  (v1/*: any*/),
-                  (v13/*: any*/),
-                  (v14/*: any*/),
+                  (v5/*: any*/),
+                  (v17/*: any*/),
+                  (v4/*: any*/),
                   {
                     "alias": null,
                     "args": null,
@@ -777,9 +844,9 @@ return {
                     "name": "worktreeName",
                     "storageKey": null
                   },
-                  (v15/*: any*/),
-                  (v16/*: any*/),
-                  (v17/*: any*/),
+                  (v18/*: any*/),
+                  (v19/*: any*/),
+                  (v20/*: any*/),
                   {
                     "alias": null,
                     "args": null,
@@ -795,8 +862,8 @@ return {
                     "name": "owner",
                     "plural": false,
                     "selections": [
-                      (v1/*: any*/),
-                      (v14/*: any*/),
+                      (v5/*: any*/),
+                      (v4/*: any*/),
                       {
                         "alias": null,
                         "args": null,
@@ -836,8 +903,8 @@ return {
                         "name": "activeForm",
                         "storageKey": null
                       },
-                      (v18/*: any*/),
-                      (v1/*: any*/)
+                      (v21/*: any*/),
+                      (v5/*: any*/)
                     ],
                     "storageKey": null
                   },
@@ -872,7 +939,7 @@ return {
                             "name": "node",
                             "plural": false,
                             "selections": [
-                              (v1/*: any*/),
+                              (v5/*: any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -894,7 +961,7 @@ return {
                                 "name": "type",
                                 "storageKey": null
                               },
-                              (v18/*: any*/)
+                              (v21/*: any*/)
                             ],
                             "storageKey": null
                           }
@@ -943,22 +1010,22 @@ return {
                     ],
                     "storageKey": null
                   },
-                  (v4/*: any*/)
+                  (v8/*: any*/)
                 ],
                 "storageKey": null
               },
-              (v5/*: any*/)
+              (v9/*: any*/)
             ],
             "storageKey": null
           },
-          (v6/*: any*/),
-          (v7/*: any*/)
+          (v10/*: any*/),
+          (v11/*: any*/)
         ],
         "storageKey": null
       },
       {
         "alias": null,
-        "args": (v12/*: any*/),
+        "args": (v16/*: any*/),
         "filters": [
           "projectId"
         ],
@@ -967,9 +1034,9 @@ return {
         "kind": "LinkedHandle",
         "name": "sessions"
       },
-      (v8/*: any*/),
-      (v9/*: any*/),
-      (v11/*: any*/),
+      (v12/*: any*/),
+      (v13/*: any*/),
+      (v15/*: any*/),
       {
         "alias": null,
         "args": [
@@ -992,11 +1059,11 @@ return {
             "name": "dailyActivity",
             "plural": true,
             "selections": [
-              (v19/*: any*/),
-              (v20/*: any*/),
-              (v16/*: any*/),
-              (v21/*: any*/),
               (v22/*: any*/),
+              (v23/*: any*/),
+              (v19/*: any*/),
+              (v24/*: any*/),
+              (v25/*: any*/),
               {
                 "alias": null,
                 "args": null,
@@ -1043,8 +1110,8 @@ return {
                 "name": "hour",
                 "storageKey": null
               },
-              (v20/*: any*/),
-              (v16/*: any*/)
+              (v23/*: any*/),
+              (v19/*: any*/)
             ],
             "storageKey": null
           },
@@ -1077,10 +1144,10 @@ return {
                 "name": "totalCachedTokens",
                 "storageKey": null
               },
-              (v23/*: any*/),
-              (v24/*: any*/),
-              (v16/*: any*/),
-              (v20/*: any*/)
+              (v26/*: any*/),
+              (v27/*: any*/),
+              (v19/*: any*/),
+              (v23/*: any*/)
             ],
             "storageKey": null
           },
@@ -1092,7 +1159,7 @@ return {
             "name": "dailyModelTokens",
             "plural": true,
             "selections": [
-              (v19/*: any*/),
+              (v22/*: any*/),
               {
                 "alias": null,
                 "args": null,
@@ -1101,8 +1168,8 @@ return {
                 "name": "models",
                 "plural": true,
                 "selections": [
-                  (v25/*: any*/),
-                  (v26/*: any*/),
+                  (v28/*: any*/),
+                  (v29/*: any*/),
                   {
                     "alias": null,
                     "args": null,
@@ -1113,7 +1180,7 @@ return {
                 ],
                 "storageKey": null
               },
-              (v23/*: any*/)
+              (v26/*: any*/)
             ],
             "storageKey": null
           },
@@ -1125,11 +1192,11 @@ return {
             "name": "modelUsage",
             "plural": true,
             "selections": [
+              (v28/*: any*/),
+              (v29/*: any*/),
+              (v24/*: any*/),
               (v25/*: any*/),
-              (v26/*: any*/),
-              (v21/*: any*/),
-              (v22/*: any*/),
-              (v27/*: any*/),
+              (v30/*: any*/),
               {
                 "alias": null,
                 "args": null,
@@ -1137,13 +1204,13 @@ return {
                 "name": "cacheCreationTokens",
                 "storageKey": null
               },
-              (v23/*: any*/),
-              (v28/*: any*/)
+              (v26/*: any*/),
+              (v31/*: any*/)
             ],
             "storageKey": null
           },
-          (v29/*: any*/),
-          (v30/*: any*/),
+          (v32/*: any*/),
+          (v33/*: any*/),
           {
             "alias": null,
             "args": null,
@@ -1197,7 +1264,7 @@ return {
                 "name": "subagentType",
                 "storageKey": null
               },
-              (v10/*: any*/)
+              (v14/*: any*/)
             ],
             "storageKey": null
           },
@@ -1268,7 +1335,7 @@ return {
             "kind": "LinkedField",
             "name": "topSessions",
             "plural": true,
-            "selections": (v32/*: any*/),
+            "selections": (v35/*: any*/),
             "storageKey": null
           },
           {
@@ -1278,7 +1345,7 @@ return {
             "kind": "LinkedField",
             "name": "bottomSessions",
             "plural": true,
-            "selections": (v32/*: any*/),
+            "selections": (v35/*: any*/),
             "storageKey": null
           },
           {
@@ -1296,7 +1363,7 @@ return {
                 "name": "toolName",
                 "storageKey": null
               },
-              (v10/*: any*/)
+              (v14/*: any*/)
             ],
             "storageKey": null
           },
@@ -1361,8 +1428,8 @@ return {
             "name": "costAnalysis",
             "plural": false,
             "selections": [
-              (v24/*: any*/),
-              (v33/*: any*/),
+              (v27/*: any*/),
+              (v36/*: any*/),
               {
                 "alias": null,
                 "args": null,
@@ -1370,7 +1437,7 @@ return {
                 "name": "billingType",
                 "storageKey": null
               },
-              (v34/*: any*/),
+              (v37/*: any*/),
               {
                 "alias": null,
                 "args": null,
@@ -1378,11 +1445,11 @@ return {
                 "name": "maxSubscriptionCostUsd",
                 "storageKey": null
               },
-              (v35/*: any*/),
-              (v36/*: any*/),
-              (v37/*: any*/),
               (v38/*: any*/),
               (v39/*: any*/),
+              (v40/*: any*/),
+              (v41/*: any*/),
+              (v42/*: any*/),
               {
                 "alias": null,
                 "args": null,
@@ -1390,10 +1457,10 @@ return {
                 "name": "costPerCompletedTask",
                 "storageKey": null
               },
-              (v40/*: any*/),
-              (v41/*: any*/),
-              (v42/*: any*/),
               (v43/*: any*/),
+              (v44/*: any*/),
+              (v45/*: any*/),
+              (v46/*: any*/),
               {
                 "alias": null,
                 "args": null,
@@ -1416,11 +1483,11 @@ return {
                     "name": "configDirName",
                     "storageKey": null
                   },
-                  (v24/*: any*/),
+                  (v27/*: any*/),
+                  (v36/*: any*/),
+                  (v37/*: any*/),
+                  (v32/*: any*/),
                   (v33/*: any*/),
-                  (v34/*: any*/),
-                  (v29/*: any*/),
-                  (v30/*: any*/),
                   {
                     "alias": null,
                     "args": null,
@@ -1428,15 +1495,15 @@ return {
                     "name": "modelCount",
                     "storageKey": null
                   },
-                  (v39/*: any*/),
-                  (v40/*: any*/),
-                  (v41/*: any*/),
-                  (v35/*: any*/),
-                  (v36/*: any*/),
-                  (v37/*: any*/),
                   (v42/*: any*/),
                   (v43/*: any*/),
-                  (v38/*: any*/)
+                  (v44/*: any*/),
+                  (v38/*: any*/),
+                  (v39/*: any*/),
+                  (v40/*: any*/),
+                  (v45/*: any*/),
+                  (v46/*: any*/),
+                  (v41/*: any*/)
                 ],
                 "storageKey": null
               }
@@ -1449,7 +1516,7 @@ return {
     ]
   },
   "params": {
-    "cacheID": "1ebe5ed7561acd7ba0d2278d7480c10b",
+    "cacheID": "29c78dbe8a9005a26ae435870c6807fe",
     "id": null,
     "metadata": {
       "connection": [
@@ -1465,11 +1532,11 @@ return {
     },
     "name": "DashboardPageQuery",
     "operationKind": "query",
-    "text": "query DashboardPageQuery(\n  $projectId: String\n) {\n  projects(first: 100) {\n    id\n  }\n  sessions(first: 5, projectId: $projectId) {\n    edges {\n      node {\n        id\n        ...SessionListItem_session\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      endCursor\n      hasNextPage\n    }\n  }\n  metrics(period: WEEK) {\n    totalTasks\n    completedTasks\n    successRate\n    averageConfidence\n    calibrationScore\n    significantFrustrations\n    significantFrustrationRate\n  }\n  pluginStats {\n    totalPlugins\n    userPlugins\n    projectPlugins\n    localPlugins\n    enabledPlugins\n  }\n  pluginCategories {\n    category\n    count\n  }\n  ...DashboardPageActivity_query\n  ...DashboardPageAnalytics_query\n}\n\nfragment DashboardPageActivity_query on Query {\n  activity(days: 730) {\n    dailyActivity {\n      date\n      sessionCount\n      messageCount\n      inputTokens\n      outputTokens\n      cachedTokens\n      linesAdded\n      linesRemoved\n      filesChanged\n    }\n    hourlyActivity {\n      hour\n      sessionCount\n      messageCount\n    }\n    tokenUsage {\n      totalInputTokens\n      totalOutputTokens\n      totalCachedTokens\n      totalTokens\n      estimatedCostUsd\n      messageCount\n      sessionCount\n    }\n    dailyModelTokens {\n      date\n      models {\n        model\n        displayName\n        tokens\n      }\n      totalTokens\n    }\n    modelUsage {\n      model\n      displayName\n      inputTokens\n      outputTokens\n      cacheReadTokens\n      cacheCreationTokens\n      totalTokens\n      costUsd\n    }\n    totalSessions\n    totalMessages\n    firstSessionDate\n    streakDays\n    totalActiveDays\n  }\n}\n\nfragment DashboardPageAnalytics_query on Query {\n  dashboardAnalytics(days: 30) {\n    subagentUsage {\n      subagentType\n      count\n    }\n    compactionStats {\n      totalCompactions\n      sessionsWithCompactions\n      sessionsWithoutCompactions\n      avgCompactionsPerSession\n      autoCompactCount\n      manualCompactCount\n      continuationCount\n    }\n    topSessions {\n      sessionId\n      slug\n      summary\n      score\n      sentimentTrend\n      avgSentimentScore\n      turnCount\n      taskCompletionRate\n      compactionCount\n      focusScore\n      startedAt\n    }\n    bottomSessions {\n      sessionId\n      slug\n      summary\n      score\n      sentimentTrend\n      avgSentimentScore\n      turnCount\n      taskCompletionRate\n      compactionCount\n      focusScore\n      startedAt\n    }\n    toolUsage {\n      toolName\n      count\n    }\n    hookHealth {\n      hookName\n      totalRuns\n      passCount\n      failCount\n      passRate\n      avgDurationMs\n    }\n    costAnalysis {\n      estimatedCostUsd\n      isEstimated\n      billingType\n      cacheSavingsUsd\n      maxSubscriptionCostUsd\n      costUtilizationPercent\n      dailyCostTrend {\n        date\n        costUsd\n        sessionCount\n      }\n      weeklyCostTrend {\n        weekStart\n        weekLabel\n        costUsd\n        sessionCount\n        avgDailyCost\n      }\n      topSessionsByCost {\n        sessionId\n        slug\n        costUsd\n        inputTokens\n        outputTokens\n        cacheReadTokens\n        messageCount\n        startedAt\n      }\n      costPerSession\n      costPerCompletedTask\n      cacheHitRate\n      potentialSavingsUsd\n      subscriptionComparisons {\n        tierName\n        monthlyCostUsd\n        apiCreditCostUsd\n        savingsUsd\n        savingsPercent\n        recommendation\n      }\n      breakEvenDailySpend\n      configDirBreakdowns {\n        configDirId\n        configDirName\n        estimatedCostUsd\n        isEstimated\n        cacheSavingsUsd\n        totalSessions\n        totalMessages\n        modelCount\n        costPerSession\n        cacheHitRate\n        potentialSavingsUsd\n        costUtilizationPercent\n        dailyCostTrend {\n          date\n          costUsd\n          sessionCount\n        }\n        weeklyCostTrend {\n          weekStart\n          weekLabel\n          costUsd\n          sessionCount\n          avgDailyCost\n        }\n        subscriptionComparisons {\n          tierName\n          monthlyCostUsd\n          apiCreditCostUsd\n          savingsUsd\n          savingsPercent\n          recommendation\n        }\n        breakEvenDailySpend\n        topSessionsByCost {\n          sessionId\n          slug\n          costUsd\n          inputTokens\n          outputTokens\n          cacheReadTokens\n          messageCount\n          startedAt\n        }\n      }\n    }\n  }\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  owner {\n    id\n    name\n    email\n    avatarUrl\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n}\n"
+    "text": "query DashboardPageQuery(\n  $projectId: String\n  $repoId: String!\n  $hasRepoId: Boolean!\n) {\n  repo(id: $repoId) @include(if: $hasRepoId) {\n    name\n    id\n  }\n  projects(first: 100) {\n    id\n  }\n  sessions(first: 5, projectId: $projectId) {\n    edges {\n      node {\n        id\n        ...SessionListItem_session\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      endCursor\n      hasNextPage\n    }\n  }\n  metrics(period: WEEK) {\n    totalTasks\n    completedTasks\n    successRate\n    averageConfidence\n    calibrationScore\n    significantFrustrations\n    significantFrustrationRate\n  }\n  pluginStats {\n    totalPlugins\n    userPlugins\n    projectPlugins\n    localPlugins\n    enabledPlugins\n  }\n  pluginCategories {\n    category\n    count\n  }\n  ...DashboardPageActivity_query\n  ...DashboardPageAnalytics_query\n}\n\nfragment DashboardPageActivity_query on Query {\n  activity(days: 730) {\n    dailyActivity {\n      date\n      sessionCount\n      messageCount\n      inputTokens\n      outputTokens\n      cachedTokens\n      linesAdded\n      linesRemoved\n      filesChanged\n    }\n    hourlyActivity {\n      hour\n      sessionCount\n      messageCount\n    }\n    tokenUsage {\n      totalInputTokens\n      totalOutputTokens\n      totalCachedTokens\n      totalTokens\n      estimatedCostUsd\n      messageCount\n      sessionCount\n    }\n    dailyModelTokens {\n      date\n      models {\n        model\n        displayName\n        tokens\n      }\n      totalTokens\n    }\n    modelUsage {\n      model\n      displayName\n      inputTokens\n      outputTokens\n      cacheReadTokens\n      cacheCreationTokens\n      totalTokens\n      costUsd\n    }\n    totalSessions\n    totalMessages\n    firstSessionDate\n    streakDays\n    totalActiveDays\n  }\n}\n\nfragment DashboardPageAnalytics_query on Query {\n  dashboardAnalytics(days: 30) {\n    subagentUsage {\n      subagentType\n      count\n    }\n    compactionStats {\n      totalCompactions\n      sessionsWithCompactions\n      sessionsWithoutCompactions\n      avgCompactionsPerSession\n      autoCompactCount\n      manualCompactCount\n      continuationCount\n    }\n    topSessions {\n      sessionId\n      slug\n      summary\n      score\n      sentimentTrend\n      avgSentimentScore\n      turnCount\n      taskCompletionRate\n      compactionCount\n      focusScore\n      startedAt\n    }\n    bottomSessions {\n      sessionId\n      slug\n      summary\n      score\n      sentimentTrend\n      avgSentimentScore\n      turnCount\n      taskCompletionRate\n      compactionCount\n      focusScore\n      startedAt\n    }\n    toolUsage {\n      toolName\n      count\n    }\n    hookHealth {\n      hookName\n      totalRuns\n      passCount\n      failCount\n      passRate\n      avgDurationMs\n    }\n    costAnalysis {\n      estimatedCostUsd\n      isEstimated\n      billingType\n      cacheSavingsUsd\n      maxSubscriptionCostUsd\n      costUtilizationPercent\n      dailyCostTrend {\n        date\n        costUsd\n        sessionCount\n      }\n      weeklyCostTrend {\n        weekStart\n        weekLabel\n        costUsd\n        sessionCount\n        avgDailyCost\n      }\n      topSessionsByCost {\n        sessionId\n        slug\n        costUsd\n        inputTokens\n        outputTokens\n        cacheReadTokens\n        messageCount\n        startedAt\n      }\n      costPerSession\n      costPerCompletedTask\n      cacheHitRate\n      potentialSavingsUsd\n      subscriptionComparisons {\n        tierName\n        monthlyCostUsd\n        apiCreditCostUsd\n        savingsUsd\n        savingsPercent\n        recommendation\n      }\n      breakEvenDailySpend\n      configDirBreakdowns {\n        configDirId\n        configDirName\n        estimatedCostUsd\n        isEstimated\n        cacheSavingsUsd\n        totalSessions\n        totalMessages\n        modelCount\n        costPerSession\n        cacheHitRate\n        potentialSavingsUsd\n        costUtilizationPercent\n        dailyCostTrend {\n          date\n          costUsd\n          sessionCount\n        }\n        weeklyCostTrend {\n          weekStart\n          weekLabel\n          costUsd\n          sessionCount\n          avgDailyCost\n        }\n        subscriptionComparisons {\n          tierName\n          monthlyCostUsd\n          apiCreditCostUsd\n          savingsUsd\n          savingsPercent\n          recommendation\n        }\n        breakEvenDailySpend\n        topSessionsByCost {\n          sessionId\n          slug\n          costUsd\n          inputTokens\n          outputTokens\n          cacheReadTokens\n          messageCount\n          startedAt\n        }\n      }\n    }\n  }\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  owner {\n    id\n    name\n    email\n    avatarUrl\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n}\n"
   }
 };
 })();
 
-(node as any).hash = "e3a5f2f5f6f13b9d6629659e4cbe0a9e";
+(node as any).hash = "4702caed9737cb6ac95aeb65944e377a";
 
 export default node;

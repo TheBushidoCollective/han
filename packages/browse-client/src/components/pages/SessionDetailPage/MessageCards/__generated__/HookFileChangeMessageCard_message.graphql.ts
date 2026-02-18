@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<826ccd77916497e68fd745b600e285ad>>
+ * @generated SignedSource<<061a8abe75ee3a8dd457e4be757407fd>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -13,10 +13,10 @@ import { FragmentRefs } from "relay-runtime";
 export type HookFileChangeMessageCard_message$data = {
   readonly changeToolName: string | null | undefined;
   readonly filePath: string | null | undefined;
-  readonly id: string | null | undefined;
+  readonly id: string;
   readonly rawJson: string | null | undefined;
   readonly recordedSessionId: string | null | undefined;
-  readonly timestamp: any | null | undefined;
+  readonly timestamp: string;
   readonly " $fragmentType": "HookFileChangeMessageCard_message";
 };
 export type HookFileChangeMessageCard_message$key = {

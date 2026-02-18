@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<30919a6e874739dd1a612075c5006fcc>>
+ * @generated SignedSource<<338ad06efcea0df14809868f3d6d9afb>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -9,7 +9,6 @@
 // @ts-nocheck
 
 import { ConcreteRequest } from 'relay-runtime';
-export type RuleScope = "PROJECT" | "USER" | "%future added value";
 export type RulesContentQuery$variables = Record<PropertyKey, never>;
 export type RulesContentQuery$data = {
   readonly memory: {
@@ -20,7 +19,7 @@ export type RulesContentQuery$data = {
       readonly path: string | null | undefined;
       readonly projectName: string | null | undefined;
       readonly projectPath: string | null | undefined;
-      readonly scope: RuleScope | null | undefined;
+      readonly scope: string | null | undefined;
       readonly size: number | null | undefined;
     }> | null | undefined;
   } | null | undefined;
@@ -43,7 +42,7 @@ var v0 = [
       {
         "alias": null,
         "args": null,
-        "concreteType": "Rule",
+        "concreteType": "MemoryRule",
         "kind": "LinkedField",
         "name": "rules",
         "plural": true,
