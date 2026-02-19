@@ -165,6 +165,17 @@ export function registerHookRun(hookCommand: Command): void {
           );
         }
 
+        // Structured output when: --async is set, NOT under dispatch, NOT PostToolUse
+        // (PostToolUse with tool_input is handled separately by runAsyncPostToolUse)
+        const hookEventName =
+          options.async &&
+          process.env.HAN_DISPATCH !== '1' &&
+          !payload?.tool_input
+            ? typeof payload?.hook_event_name === 'string'
+              ? payload.hook_event_name
+              : undefined
+            : undefined;
+
         const separatorIndex = process.argv.indexOf('--');
         const isLegacyFormat = separatorIndex !== -1;
 
@@ -206,6 +217,7 @@ export function registerHookRun(hookCommand: Command): void {
             testDir: options.testDir || null,
             command: quotedArgs.join(' '),
             verbose,
+            hookEventName,
           });
         } else {
           // New format: han hook run <plugin-name> <hook-name>
@@ -261,6 +273,7 @@ export function registerHookRun(hookCommand: Command): void {
                 : undefined,
               cwd:
                 typeof payload?.cwd === 'string' ? payload.cwd : process.cwd(),
+              hookEventName,
             });
             // executeHooksAndExit calls process.exit() internally
           }
@@ -313,6 +326,7 @@ export function registerHookRun(hookCommand: Command): void {
             skipDeps: options.skipDeps,
             sessionId, // Pass sessionId for cache tracking
             async: options.async,
+            hookEventName,
           });
           // Safety net: runConfiguredHook calls process.exit() internally,
           // but if bun doesn't actually exit (open handles), force it

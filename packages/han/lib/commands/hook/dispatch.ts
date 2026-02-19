@@ -379,6 +379,7 @@ function executeCommandHook(
       ...(stdinContent ? { input: stdinContent } : {}),
       env: {
         ...process.env,
+        HAN_DISPATCH: '1',
         CLAUDE_PLUGIN_ROOT: pluginRoot,
         CLAUDE_PROJECT_DIR: process.cwd(),
         // Pass session ID for event logging

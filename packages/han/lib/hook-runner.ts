@@ -170,6 +170,7 @@ interface ValidateOptions {
   testDir?: string | null;
   command: string;
   verbose?: boolean;
+  hookEventName?: string;
 }
 
 /**
@@ -445,6 +446,16 @@ export async function validate(options: ValidateOptions): Promise<void> {
       return runCommandSync(rootDir, commandToRun, verbose);
     });
     if (!success) {
+      if (options.hookEventName) {
+        outputStructuredResult({
+          systemMessage: `The command \`${commandToRun}\` failed.`,
+          additionalContext:
+            `Spawn a subagent to run the command, review the output, and fix all issues.\n` +
+            `Do NOT ask the user any questions - proceed directly with fixing the issues.`,
+          decision: 'block',
+          hookSpecificOutput: { hookEventName: options.hookEventName },
+        });
+      }
       console.error(
         `\n❌ The command \`${commandToRun}\` failed.\n\n` +
           `Spawn a subagent to run the command, review the output, and fix all issues.\n` +
@@ -453,6 +464,9 @@ export async function validate(options: ValidateOptions): Promise<void> {
       process.exit(2);
     }
     // Silent success - no need for a message when running a single command
+    if (options.hookEventName) {
+      outputStructuredSuccess(options.hookEventName);
+    }
     process.exit(0);
   }
 
@@ -492,11 +506,33 @@ export async function validate(options: ValidateOptions): Promise<void> {
   }
 
   if (processedCount === 0) {
+    if (options.hookEventName) {
+      outputStructuredSuccess(options.hookEventName);
+    }
     console.log(`No directories found with ${dirsWith}`);
     process.exit(0);
   }
 
   if (failures.length > 0) {
+    if (options.hookEventName) {
+      const failureDetails = failures
+        .map((dir) => {
+          const cmdStr =
+            dir === '.' ? commandToRun : `cd ${dir} && ${commandToRun}`;
+          return `  • \`${cmdStr}\``;
+        })
+        .join('\n');
+      outputStructuredResult({
+        systemMessage: `${failures.length} director${failures.length === 1 ? 'y' : 'ies'} failed validation.`,
+        additionalContext:
+          `Spawn ${failures.length === 1 ? 'a subagent' : 'subagents in parallel'} to fix the following:\n` +
+          `${failureDetails}\n\n` +
+          `Each subagent should run the command, review the output, and fix all issues.\n` +
+          `Do NOT ask the user any questions - proceed directly with fixing the issues.`,
+        decision: 'block',
+        hookSpecificOutput: { hookEventName: options.hookEventName },
+      });
+    }
     console.error(
       `\n❌ ${failures.length} director${failures.length === 1 ? 'y' : 'ies'} failed validation.\n\n` +
         `Spawn ${failures.length === 1 ? 'a subagent' : 'subagents in parallel'} to fix the following:\n`
@@ -513,6 +549,9 @@ export async function validate(options: ValidateOptions): Promise<void> {
     process.exit(2);
   }
 
+  if (options.hookEventName) {
+    outputStructuredSuccess(options.hookEventName);
+  }
   console.log(
     `\n✅ All ${processedCount} director${processedCount === 1 ? 'y' : 'ies'} passed validation`
   );
@@ -739,6 +778,11 @@ export interface RunConfiguredHookOptions {
    * For Stop hooks: substitutes with session-modified files filtered by hook rules.
    */
   async?: boolean;
+  /**
+   * When set, output structured JSON instead of stderr text.
+   * Used when Claude Code invokes hooks directly (not via dispatch).
+   */
+  hookEventName?: string;
 }
 
 /**
@@ -1048,8 +1092,11 @@ export async function runConfiguredHook(
   }
 
   // Handle edge cases before acquiring lock
-  // Use stderr for informational messages so async hooks don't pollute stdout
+  // Structured mode exits with JSON before any stderr to keep output clean
   if (totalFound === 0) {
+    if (options.hookEventName) {
+      outputStructuredSuccess(options.hookEventName);
+    }
     console.error(
       `No directories found for hook "${hookName}" in plugin "${pluginName}"`
     );
@@ -1057,6 +1104,9 @@ export async function runConfiguredHook(
   }
 
   if (disabledCount === totalFound) {
+    if (options.hookEventName) {
+      outputStructuredSuccess(options.hookEventName);
+    }
     console.error(
       `All directories have hook "${hookName}" disabled via han-config.yml`
     );
@@ -1064,6 +1114,9 @@ export async function runConfiguredHook(
   }
 
   if (configsToRun.length === 0 && skippedCount > 0) {
+    if (options.hookEventName) {
+      outputStructuredSuccess(options.hookEventName);
+    }
     console.error(
       `Skipped ${skippedCount} director${skippedCount === 1 ? 'y' : 'ies'} (no changes detected)`
     );
@@ -1215,6 +1268,34 @@ export async function runConfiguredHook(
   }
 
   if (failures.length > 0) {
+    if (options.hookEventName) {
+      const failureDetails = failures
+        .map((f) => {
+          const location = f.dir === '.' ? '(project root)' : f.dir;
+          const rerunCmd = buildHookCommand(pluginName, hookName, {
+            cached: cache,
+            only: f.dir === '.' ? undefined : f.dir,
+          });
+          let msg = `- ${location}`;
+          if (f.outputFile) msg += `\n  Output: ${f.outputFile}`;
+          msg += `\n  Re-run: ${rerunCmd}`;
+          return msg;
+        })
+        .join('\n');
+
+      outputStructuredResult({
+        systemMessage: `${pluginName}/${hookName} failed in ${failures.length} director${failures.length === 1 ? 'y' : 'ies'}.`,
+        additionalContext:
+          `Fix the validation errors and re-run:\n${failureDetails}\n\n` +
+          (failures.length === 1
+            ? 'Read the output file, fix the issues, and re-run.'
+            : 'Spawn subagents in parallel to fix each failure above.') +
+          '\nDo NOT ask the user any questions - proceed directly with fixing the issues.',
+        decision: 'block',
+        hookSpecificOutput: { hookEventName: options.hookEventName },
+      });
+    }
+
     const idleTimeoutFailures = failures.filter((f) => f.idleTimedOut);
     const regularFailures = failures.filter((f) => !f.idleTimedOut);
 
@@ -1271,6 +1352,9 @@ export async function runConfiguredHook(
     process.exit(2);
   }
 
+  if (options.hookEventName) {
+    outputStructuredSuccess(options.hookEventName);
+  }
   // Silent success on stdout - only failures should produce stdout output
   // that gets fed back to the model. Log to stderr for debugging.
   console.error(
@@ -1398,17 +1482,36 @@ export interface RunAsyncPostToolUseOptions {
  * Async hook output format per Claude Code protocol.
  * Output as JSON to stdout with exit code 0.
  */
-interface AsyncHookOutput {
+export interface AsyncHookOutput {
   /** Error context shown to the agent */
-  systemMessage: string;
+  systemMessage?: string;
   /** Instructions for fixing, including raw command */
-  additionalContext: string;
+  additionalContext?: string;
   /** Optional: block the agent from continuing */
   decision?: string;
-  /** Optional: hook-specific output for PostToolUse */
+  /** Optional: suppress hook output from agent context */
+  suppressOutput?: boolean;
+  /** Optional: hook-specific output */
   hookSpecificOutput?: {
     hookEventName: string;
   };
+}
+
+/** Output structured JSON result to stdout and exit 0 (per async hook protocol) */
+export function outputStructuredResult(output: AsyncHookOutput): never {
+  console.log(JSON.stringify(output));
+  process.exit(0);
+}
+
+/** Structured success — tells Claude Code to suppress hook output from agent context */
+export function outputStructuredSuccess(hookEventName: string): never {
+  console.log(
+    JSON.stringify({
+      suppressOutput: true,
+      hookSpecificOutput: { hookEventName },
+    })
+  );
+  process.exit(0);
 }
 
 /**
