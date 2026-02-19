@@ -14,19 +14,26 @@ use axum::{
 };
 use han_api::HanSchema;
 use std::sync::Arc;
+use std::time::Instant;
 use tower_http::cors::{Any, CorsLayer};
 
 /// Shared server state.
 #[derive(Clone)]
 pub struct AppState {
     pub schema: HanSchema,
+    pub start_time: Instant,
 }
 
 /// Health check response.
-async fn health_handler() -> impl IntoResponse {
+///
+/// Returns `pid` and `uptime` so the TypeScript daemon manager can track the process.
+async fn health_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let uptime_secs = state.start_time.elapsed().as_secs();
     axum::Json(serde_json::json!({
         "status": "ok",
         "version": env!("CARGO_PKG_VERSION"),
+        "pid": std::process::id(),
+        "uptime": uptime_secs,
     }))
 }
 
@@ -155,9 +162,10 @@ async fn graphiql_handler() -> impl IntoResponse {
 }
 
 /// Build the Axum router with GraphQL endpoints.
-pub fn build_router(schema: HanSchema) -> Router {
+pub fn build_router(schema: HanSchema, start_time: Instant) -> Router {
     let state = Arc::new(AppState {
         schema: schema.clone(),
+        start_time,
     });
 
     let cors = CorsLayer::new()
@@ -203,7 +211,7 @@ mod tests {
     #[tokio::test]
     async fn test_health_endpoint() {
         let schema = test_schema();
-        let app = build_router(schema);
+        let app = build_router(schema, Instant::now());
 
         let req = Request::builder()
             .uri("/health")
@@ -217,7 +225,7 @@ mod tests {
     #[tokio::test]
     async fn test_graphql_post() {
         let schema = test_schema();
-        let app = build_router(schema);
+        let app = build_router(schema, Instant::now());
 
         let req = Request::builder()
             .method(axum::http::Method::POST)
@@ -233,7 +241,7 @@ mod tests {
     #[tokio::test]
     async fn test_graphiql_handler_returns_html() {
         let schema = test_schema();
-        let app = build_router(schema);
+        let app = build_router(schema, Instant::now());
 
         let req = Request::builder()
             .uri("/graphiql")

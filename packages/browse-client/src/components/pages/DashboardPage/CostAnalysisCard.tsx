@@ -16,6 +16,10 @@ import { Pressable } from "@/components/atoms/Pressable.tsx";
 import { Text } from "@/components/atoms/Text.tsx";
 import { VStack } from "@/components/atoms/VStack.tsx";
 import { SessionRow } from "@/components/molecules/SessionRow.tsx";
+import {
+	formatCount,
+	formatWholeNumber,
+} from "@/components/helpers/formatters.ts";
 
 // =============================================================================
 // Interfaces
@@ -144,8 +148,6 @@ const currencyFormatterWhole = new Intl.NumberFormat(undefined, {
 	maximumFractionDigits: 0,
 });
 
-const numberFormatter = new Intl.NumberFormat();
-
 function formatCost(usd: number): string {
 	if (usd < 0.01) return "< $0.01";
 	if (usd >= 100) return currencyFormatterWhole.format(usd);
@@ -154,17 +156,6 @@ function formatCost(usd: number): string {
 
 function formatPercent(value: number): string {
 	return `${value.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
-}
-
-function formatNumber(value: number): string {
-	return numberFormatter.format(value);
-}
-
-function formatTokenCount(num: number): string {
-	if (num >= 1_000_000_000) return `${(num / 1_000_000_000).toFixed(1)}B`;
-	if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
-	if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
-	return num.toLocaleString();
 }
 
 // =============================================================================
@@ -691,25 +682,25 @@ function CostDetailView({
 					<HStack gap="lg" wrap>
 						<TokenStat
 							label="Input"
-							value={formatTokenCount(tokenUsage.totalInputTokens)}
+							value={formatCount(tokenUsage.totalInputTokens)}
 							color="#3b82f6"
 							subValue={`${inputPercent.toFixed(0)}%`}
 						/>
 						<TokenStat
 							label="Output"
-							value={formatTokenCount(tokenUsage.totalOutputTokens)}
+							value={formatCount(tokenUsage.totalOutputTokens)}
 							color="#10b981"
 							subValue={`${outputPercent.toFixed(0)}%`}
 						/>
 						<TokenStat
 							label="Cached"
-							value={formatTokenCount(tokenUsage.totalCachedTokens)}
+							value={formatCount(tokenUsage.totalCachedTokens)}
 							color="#8b5cf6"
 							subValue={`${cachedPercent.toFixed(0)}%`}
 						/>
 						<TokenStat
 							label="Total"
-							value={formatTokenCount(tokenUsage.totalTokens)}
+							value={formatCount(tokenUsage.totalTokens)}
 							color={theme.colors.text.primary}
 						/>
 					</HStack>
@@ -886,7 +877,7 @@ function CostDetailView({
 												{formatCost(week.displayCost)}
 											</Text>
 											<Text color="muted" size="xs">
-												{formatNumber(week.sessionCount)} sessions
+												{formatWholeNumber(week.sessionCount)} sessions
 											</Text>
 										</HStack>
 									</HStack>

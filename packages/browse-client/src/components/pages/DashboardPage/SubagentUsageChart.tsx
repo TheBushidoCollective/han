@@ -12,6 +12,7 @@ import { Box } from "@/components/atoms/Box.tsx";
 import { HStack } from "@/components/atoms/HStack.tsx";
 import { Text } from "@/components/atoms/Text.tsx";
 import { VStack } from "@/components/atoms/VStack.tsx";
+import { formatCount } from "@/components/helpers/formatters.ts";
 
 interface SubagentUsageStats {
 	readonly subagentType: string;
@@ -51,19 +52,6 @@ function getAgentColor(agentType: string): string {
 	}
 
 	return DEFAULT_COLOR;
-}
-
-/**
- * Format count with K/M suffix
- */
-function formatCount(num: number): string {
-	if (num >= 1_000_000) {
-		return `${(num / 1_000_000).toFixed(1)}M`;
-	}
-	if (num >= 1_000) {
-		return `${(num / 1_000).toFixed(1)}K`;
-	}
-	return num.toString();
 }
 
 export function SubagentUsageChart({

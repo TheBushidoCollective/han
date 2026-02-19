@@ -11,6 +11,7 @@ import { Box } from "@/components/atoms/Box.tsx";
 import { HStack } from "@/components/atoms/HStack.tsx";
 import { Text } from "@/components/atoms/Text.tsx";
 import { VStack } from "@/components/atoms/VStack.tsx";
+import { formatCount as formatNumber } from "@/components/helpers/formatters.ts";
 
 interface DailyActivity {
 	readonly date: string;
@@ -30,16 +31,6 @@ const COLORS = {
 	removed: "#ef4444", // Red for removals
 	neutral: "#6b7280", // Gray for no changes
 };
-
-/**
- * Format number with K suffix for thousands
- */
-function formatNumber(num: number): string {
-	if (num >= 1000) {
-		return `${(num / 1000).toFixed(1)}k`;
-	}
-	return num.toString();
-}
 
 /**
  * Aggregate daily activity into weeks for cleaner visualization

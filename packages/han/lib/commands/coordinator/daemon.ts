@@ -248,6 +248,56 @@ export async function startDaemon(
 }
 
 /**
+ * Find PID of process listening on a port (fallback when health check has no PID).
+ */
+function findPidOnPort(port: number): number | null {
+  try {
+    const result = Bun.spawnSync(
+      ['lsof', '-ti', `tcp:${port}`],
+      { stdout: 'pipe', stderr: 'ignore' }
+    );
+    if (result.exitCode === 0) {
+      const pids = result.stdout
+        .toString()
+        .trim()
+        .split('\n')
+        .map((s) => parseInt(s, 10))
+        .filter((n) => !Number.isNaN(n) && n > 0);
+      return pids[0] ?? null;
+    }
+  } catch {
+    // lsof not available
+  }
+  return null;
+}
+
+/**
+ * Kill a process by PID with graceful shutdown and forced kill fallback.
+ */
+async function killProcess(pid: number): Promise<void> {
+  try {
+    process.kill(pid, 'SIGTERM');
+
+    // Wait for process to stop
+    let attempts = 0;
+    while (attempts < 50 && isProcessRunning(pid)) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      attempts++;
+    }
+
+    // Force kill if still running
+    if (isProcessRunning(pid)) {
+      console.log('[coordinator] Force killing...');
+      process.kill(pid, 'SIGKILL');
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') {
+      throw error;
+    }
+  }
+}
+
+/**
  * Stop coordinator daemon
  */
 export async function stopDaemon(port?: number): Promise<void> {
@@ -260,27 +310,25 @@ export async function stopDaemon(port?: number): Promise<void> {
     return;
   }
 
-  if (status.pid) {
-    console.log(`[coordinator] Stopping (PID: ${status.pid})...`);
-    try {
-      process.kill(status.pid, 'SIGTERM');
+  // Resolve the PID: prefer health response, then PID file, then port scan
+  const pid = status.pid ?? readPid() ?? findPidOnPort(effectivePort);
 
-      // Wait for process to stop
-      let attempts = 0;
-      while (attempts < 50 && isProcessRunning(status.pid)) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        attempts++;
-      }
-
-      // Force kill if still running
-      if (isProcessRunning(status.pid)) {
-        console.log('[coordinator] Force killing...');
-        process.kill(status.pid, 'SIGKILL');
-      }
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ESRCH') {
-        throw error;
-      }
+  if (pid) {
+    console.log(`[coordinator] Stopping (PID: ${pid})...`);
+    await killProcess(pid);
+  } else if (status.running) {
+    // Health check says running but we can't find the PID at all
+    console.warn(
+      '[coordinator] Running but PID unknown. Trying port-based kill...'
+    );
+    const portPid = findPidOnPort(effectivePort);
+    if (portPid) {
+      await killProcess(portPid);
+    } else {
+      console.error(
+        `[coordinator] Could not find process on port ${effectivePort}. ` +
+          `Try: lsof -ti tcp:${effectivePort} | xargs kill -9`
+      );
     }
   }
 

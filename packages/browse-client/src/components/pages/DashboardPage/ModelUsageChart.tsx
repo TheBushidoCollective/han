@@ -11,6 +11,7 @@ import { Box } from "@/components/atoms/Box.tsx";
 import { HStack } from "@/components/atoms/HStack.tsx";
 import { Text } from "@/components/atoms/Text.tsx";
 import { VStack } from "@/components/atoms/VStack.tsx";
+import { formatCount } from "@/components/helpers/formatters.ts";
 
 interface ModelTokenEntry {
 	readonly model: string;
@@ -48,19 +49,6 @@ const FAMILY_HUES: Record<string, number> = {
 };
 
 const DEFAULT_COLOR = "#6b7280"; // Gray fallback
-
-/**
- * Format number with K/M suffix
- */
-function formatNumber(num: number): string {
-	if (num >= 1_000_000) {
-		return `${(num / 1_000_000).toFixed(1)}M`;
-	}
-	if (num >= 1000) {
-		return `${(num / 1000).toFixed(1)}K`;
-	}
-	return num.toString();
-}
 
 /**
  * Format date as compact string (e.g., "12/1")
@@ -247,7 +235,7 @@ export function ModelUsageChart({
 							</Text>
 						</HStack>
 						<Text weight="semibold" size="sm">
-							{formatNumber(totalsByModel.get(modelName)?.tokens || 0)}
+							{formatCount(totalsByModel.get(modelName)?.tokens || 0)}
 						</Text>
 						{(totalsByModel.get(modelName)?.costUsd ?? 0) > 0 && (
 							<Text color="muted" size="xs">

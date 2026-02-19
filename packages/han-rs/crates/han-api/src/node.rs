@@ -44,6 +44,26 @@ pub fn encode_message_cursor(project_dir: &str, session_id: &str, line_number: i
     format!("Message:{project_dir}:{session_id}:{line_number}")
 }
 
+/// Encode a message pagination cursor from timestamp and database ID.
+/// Format: `MC:{timestamp}|{id}`
+/// This cursor is stable across re-indexing because it uses immutable message properties.
+pub fn encode_msg_cursor(timestamp: &str, id: &str) -> String {
+    format!("MC:{timestamp}|{id}")
+}
+
+/// Decode a message pagination cursor to (timestamp, id).
+/// Returns None for invalid or old-format cursors.
+pub fn decode_msg_cursor(cursor: &str) -> Option<(String, String)> {
+    let content = cursor.strip_prefix("MC:")?;
+    let pipe_idx = content.find('|')?;
+    let timestamp = content[..pipe_idx].to_string();
+    let id = content[pipe_idx + 1..].to_string();
+    if timestamp.is_empty() || id.is_empty() {
+        return None;
+    }
+    Some((timestamp, id))
+}
+
 /// Encode a session cursor using base64.
 pub fn encode_session_cursor(session_id: &str, date: &str) -> String {
     use base64::Engine;
@@ -105,5 +125,27 @@ mod tests {
         let (session_id, date) = decode_session_cursor(&cursor).unwrap();
         assert_eq!(session_id, "sess123");
         assert_eq!(date, "2024-01-01");
+    }
+
+    #[test]
+    fn test_msg_cursor_roundtrip() {
+        let cursor = encode_msg_cursor("2024-01-15T10:30:00Z", "abc-123-def");
+        let (ts, id) = decode_msg_cursor(&cursor).unwrap();
+        assert_eq!(ts, "2024-01-15T10:30:00Z");
+        assert_eq!(id, "abc-123-def");
+    }
+
+    #[test]
+    fn test_msg_cursor_rejects_old_format() {
+        assert!(decode_msg_cursor("Message:proj:sess:42").is_none());
+    }
+
+    #[test]
+    fn test_msg_cursor_rejects_invalid() {
+        assert!(decode_msg_cursor("MC:").is_none());
+        assert!(decode_msg_cursor("MC:|").is_none());
+        assert!(decode_msg_cursor("MC:ts|").is_none());
+        assert!(decode_msg_cursor("MC:|id").is_none());
+        assert!(decode_msg_cursor("garbage").is_none());
     }
 }

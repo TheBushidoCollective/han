@@ -17,8 +17,8 @@ use crate::types::config_dir::ConfigDir;
 use crate::types::dashboard::{
     ActivityData, CostAnalysis, CoordinatorStatus, DailyActivity, DailyCost,
     DailyModelTokens, DashboardAnalytics, HookHealthStats, HourlyActivity,
-    ModelTokenEntry, ModelUsageStats, StatsCache, TokenUsageStats,
-    ToolUsageStats, estimate_cost_for_model, estimate_cost_usd,
+    ModelTokenEntry, ModelUsageStats, SessionCost, StatsCache, TokenUsageStats,
+    ToolUsageStats, WeeklyCost, estimate_cost_for_model, estimate_cost_usd,
     model_display_name,
 };
 use crate::types::enums::MetricsPeriod;
@@ -527,15 +527,47 @@ impl QueryRoot {
             0.0
         };
 
+        // Phase 5: Sentiment aggregation for agent health
+        let sentiment_row = db
+            .query_one(Statement::from_string(
+                DbBackend::Sqlite,
+                "SELECT \
+                 AVG(sentiment_score) as avg_sentiment, \
+                 COUNT(CASE WHEN frustration_level IN ('high', 'critical') THEN 1 END) as significant_frustrations, \
+                 COUNT(CASE WHEN frustration_level IS NOT NULL THEN 1 END) as total_frustration_events \
+                 FROM messages \
+                 WHERE sentiment_score IS NOT NULL"
+                    .to_string(),
+            ))
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
+
+        let (avg_sentiment, significant_frustrations, total_frustration_events) = sentiment_row
+            .map(|r| {
+                let avg: f64 = r.try_get("", "avg_sentiment").unwrap_or(0.0);
+                let sig: i64 = r.try_get("", "significant_frustrations").unwrap_or(0);
+                let tot: i64 = r.try_get("", "total_frustration_events").unwrap_or(0);
+                (avg, sig as i32, tot as i32)
+            })
+            .unwrap_or((0.0, 0, 0));
+
+        // Normalize sentiment (-1..1) to confidence (0..1)
+        let average_confidence = (avg_sentiment + 1.0) / 2.0;
+        let frustration_rate = if total_frustration_events > 0 {
+            significant_frustrations as f64 / total_frustration_events as f64
+        } else {
+            0.0
+        };
+
         Ok(Some(MetricsData {
             total_tasks: Some(total),
             completed_tasks: Some(completed),
             success_rate: Some(success_rate),
-            average_confidence: None,
+            average_confidence: Some(average_confidence),
             average_duration: None,
             calibration_score: None,
-            significant_frustrations: Some(0),
-            significant_frustration_rate: Some(0.0),
+            significant_frustrations: Some(significant_frustrations),
+            significant_frustration_rate: Some(frustration_rate),
             tasks_by_type: Some(vec![]),
             tasks_by_outcome: Some(vec![]),
         }))
@@ -762,7 +794,212 @@ impl QueryRoot {
             })
             .collect();
 
-        // Cost analysis from global aggregates
+        // ====================================================================
+        // Phase 1: Compaction Stats
+        // ====================================================================
+        #[derive(Debug, FromQueryResult)]
+        struct CompactionRow {
+            total_compactions: i64,
+            sessions_with_compactions: i64,
+            auto_compact_count: i64,
+            manual_compact_count: i64,
+            continuation_count: i64,
+        }
+
+        let compaction_row = CompactionRow::find_by_statement(Statement::from_string(
+            DbBackend::Sqlite,
+            "SELECT \
+             COUNT(*) as total_compactions, \
+             COUNT(DISTINCT session_id) as sessions_with_compactions, \
+             SUM(CASE WHEN compact_type = 'auto_compact' THEN 1 ELSE 0 END) as auto_compact_count, \
+             SUM(CASE WHEN compact_type = 'compact' THEN 1 ELSE 0 END) as manual_compact_count, \
+             SUM(CASE WHEN compact_type = 'continuation' THEN 1 ELSE 0 END) as continuation_count \
+             FROM session_compacts"
+                .to_string(),
+        ))
+        .one(db)
+        .await
+        .unwrap_or(None);
+
+        // Get total sessions from global_aggregates for compaction calculations
+        #[derive(Debug, FromQueryResult)]
+        struct GlobalSessionCount {
+            total_sessions: i64,
+        }
+        let global_sessions = GlobalSessionCount::find_by_statement(Statement::from_string(
+            DbBackend::Sqlite,
+            "SELECT total_sessions FROM global_aggregates WHERE id = 1".to_string(),
+        ))
+        .one(db)
+        .await
+        .unwrap_or(None)
+        .map(|r| r.total_sessions)
+        .unwrap_or(0);
+
+        let compaction_stats = compaction_row.map(|r| {
+            let sessions_without = (global_sessions - r.sessions_with_compactions).max(0);
+            let avg_per_session = if global_sessions > 0 {
+                r.total_compactions as f64 / global_sessions as f64
+            } else {
+                0.0
+            };
+            crate::types::dashboard::CompactionStats {
+                total_compactions: Some(r.total_compactions as i32),
+                sessions_with_compactions: Some(r.sessions_with_compactions as i32),
+                sessions_without_compactions: Some(sessions_without as i32),
+                avg_compactions_per_session: Some(avg_per_session),
+                auto_compact_count: Some(r.auto_compact_count as i32),
+                manual_compact_count: Some(r.manual_compact_count as i32),
+                continuation_count: Some(r.continuation_count as i32),
+            }
+        });
+
+        // ====================================================================
+        // Phase 2: Subagent Usage
+        // ====================================================================
+        #[derive(Debug, FromQueryResult)]
+        struct SubagentRow {
+            subagent_type: Option<String>,
+            count: i64,
+        }
+
+        let subagent_rows = SubagentRow::find_by_statement(Statement::from_sql_and_values(
+            DbBackend::Sqlite,
+            "SELECT \
+             json_extract(tool_input, '$.subagent_type') as subagent_type, \
+             COUNT(*) as count \
+             FROM messages \
+             WHERE tool_name = 'Task' \
+             AND tool_input IS NOT NULL \
+             AND timestamp >= date('now', ? || ' days') \
+             GROUP BY subagent_type \
+             ORDER BY count DESC",
+            vec![format!("-{days}").into()],
+        ))
+        .all(db)
+        .await
+        .unwrap_or_default();
+
+        let subagent_usage: Vec<crate::types::dashboard::SubagentUsageStats> = subagent_rows
+            .into_iter()
+            .filter(|r| r.subagent_type.is_some())
+            .map(|r| crate::types::dashboard::SubagentUsageStats {
+                subagent_type: r.subagent_type,
+                count: Some(r.count as i32),
+            })
+            .collect();
+
+        // ====================================================================
+        // Phase 3: Session Effectiveness (Top/Bottom Sessions)
+        // ====================================================================
+        #[derive(Debug, FromQueryResult)]
+        struct EffectivenessRow {
+            session_id: String,
+            slug: Option<String>,
+            summary: Option<String>,
+            started_at: Option<String>,
+            turn_count: i64,
+            avg_sentiment: Option<f64>,
+            completed_tasks: i64,
+            total_tasks: i64,
+            compaction_count: i64,
+        }
+
+        let effectiveness_rows = EffectivenessRow::find_by_statement(Statement::from_sql_and_values(
+            DbBackend::Sqlite,
+            "SELECT \
+             s.id as session_id, \
+             s.slug, \
+             (SELECT content FROM messages WHERE session_id = s.id AND role = 'user' ORDER BY timestamp ASC LIMIT 1) as summary, \
+             MIN(m.timestamp) as started_at, \
+             COUNT(DISTINCT CASE WHEN m.role = 'user' THEN m.id END) as turn_count, \
+             AVG(m.sentiment_score) as avg_sentiment, \
+             COALESCE(tc.completed_tasks, 0) as completed_tasks, \
+             COALESCE(tc.total_tasks, 0) as total_tasks, \
+             COALESCE(cc.compaction_count, 0) as compaction_count \
+             FROM sessions s \
+             JOIN messages m ON m.session_id = s.id \
+             LEFT JOIN ( \
+               SELECT session_id, \
+                 SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_tasks, \
+                 COUNT(*) as total_tasks \
+               FROM native_tasks GROUP BY session_id \
+             ) tc ON tc.session_id = s.id \
+             LEFT JOIN ( \
+               SELECT session_id, COUNT(*) as compaction_count \
+               FROM session_compacts GROUP BY session_id \
+             ) cc ON cc.session_id = s.id \
+             WHERE m.timestamp >= date('now', ? || ' days') \
+             GROUP BY s.id \
+             HAVING turn_count >= 2",
+            vec![format!("-{days}").into()],
+        ))
+        .all(db)
+        .await
+        .unwrap_or_default();
+
+        // Find max turn count for focus score normalization
+        let max_turn_count = effectiveness_rows
+            .iter()
+            .map(|r| r.turn_count)
+            .max()
+            .unwrap_or(1)
+            .max(1) as f64;
+
+        // Score each session
+        let mut scored_sessions: Vec<(f64, crate::types::dashboard::SessionEffectiveness)> = effectiveness_rows
+            .into_iter()
+            .map(|r| {
+                let task_completion_rate = if r.total_tasks > 0 {
+                    r.completed_tasks as f64 / r.total_tasks as f64
+                } else {
+                    0.5 // neutral if no tasks
+                };
+                let compaction_penalty = (r.compaction_count as f64 / 3.0).min(1.0);
+                let sentiment_normalized = r.avg_sentiment.map(|s| (s + 1.0) / 2.0).unwrap_or(0.5);
+                let focus_score = 1.0 - (r.turn_count as f64 / max_turn_count);
+
+                let score = task_completion_rate * 0.4
+                    + (1.0 - compaction_penalty) * 0.2
+                    + sentiment_normalized * 0.2
+                    + focus_score * 0.2;
+
+                let sentiment_trend = match r.avg_sentiment {
+                    Some(s) if s > 0.3 => "improving",
+                    Some(s) if s < -0.3 => "declining",
+                    _ => "neutral",
+                };
+
+                let summary_truncated = r.summary.map(|s| {
+                    if s.len() > 120 { format!("{}...", &s[..120]) } else { s }
+                });
+
+                (score, crate::types::dashboard::SessionEffectiveness {
+                    session_id: Some(r.session_id),
+                    slug: r.slug,
+                    summary: summary_truncated,
+                    started_at: r.started_at,
+                    score: Some((score * 100.0).round()),
+                    sentiment_trend: Some(sentiment_trend.to_string()),
+                    avg_sentiment_score: r.avg_sentiment,
+                    turn_count: Some(r.turn_count as i32),
+                    task_completion_rate: Some(task_completion_rate),
+                    compaction_count: Some(r.compaction_count as i32),
+                    focus_score: Some(focus_score),
+                })
+            })
+            .collect();
+
+        // Top 5 (highest score)
+        scored_sessions.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+        let top_sessions: Vec<_> = scored_sessions.iter().take(5).map(|(_, s)| s.clone()).collect();
+
+        // Bottom 5 (lowest score)
+        let bottom_sessions: Vec<_> = scored_sessions.iter().rev().take(5).map(|(_, s)| s.clone()).collect();
+
+        // ====================================================================
+        // Phase 4: Cost Analysis Improvements
+        // ====================================================================
         #[derive(Debug, FromQueryResult)]
         struct CostAgg {
             total_sessions: i64,
@@ -796,12 +1033,82 @@ impl QueryRoot {
         .await
         .unwrap_or_default();
 
+        // Phase 4a: Use per-model pricing from stats-cache.json
+        let (model_usage, _) = load_stats_cache_model_data();
+        let total_per_model_cost: f64 = model_usage.iter().filter_map(|m| m.cost_usd).sum();
+
+        // Phase 4b: Infer subscription from model usage
+        let has_opus = model_usage.iter().any(|m|
+            m.model.as_deref().unwrap_or("").contains("opus")
+        );
+        let (billing_type, max_subscription) = if has_opus {
+            ("max_subscription".to_string(), 200.0)
+        } else {
+            ("pro_subscription".to_string(), 20.0)
+        };
+
+        // Phase 4d: Top sessions by cost
+        #[derive(Debug, FromQueryResult)]
+        struct SessionCostRow {
+            session_id: String,
+            slug: Option<String>,
+            input_tokens: i64,
+            output_tokens: i64,
+            cache_read_tokens: i64,
+            message_count: i64,
+            started_at: Option<String>,
+        }
+
+        let top_cost_rows = SessionCostRow::find_by_statement(Statement::from_sql_and_values(
+            DbBackend::Sqlite,
+            "SELECT m.session_id, s.slug, \
+             SUM(m.input_tokens) as input_tokens, \
+             SUM(m.output_tokens) as output_tokens, \
+             SUM(m.cache_read_tokens) as cache_read_tokens, \
+             COUNT(*) as message_count, \
+             MIN(m.timestamp) as started_at \
+             FROM messages m \
+             JOIN sessions s ON s.id = m.session_id \
+             WHERE m.timestamp >= date('now', ? || ' days') \
+             GROUP BY m.session_id \
+             ORDER BY (SUM(m.input_tokens) * 3.0 + SUM(m.output_tokens) * 15.0 + SUM(m.cache_read_tokens) * 0.3) DESC \
+             LIMIT 5",
+            vec![format!("-{days}").into()],
+        ))
+        .all(db)
+        .await
+        .unwrap_or_default();
+
+        let top_sessions_by_cost: Vec<SessionCost> = top_cost_rows
+            .into_iter()
+            .map(|r| {
+                let cost = estimate_cost_usd(r.input_tokens, r.output_tokens, r.cache_read_tokens);
+                SessionCost {
+                    session_id: Some(r.session_id),
+                    slug: r.slug,
+                    cost_usd: Some(cost),
+                    input_tokens: Some(r.input_tokens as i32),
+                    output_tokens: Some(r.output_tokens as i32),
+                    cache_read_tokens: Some(r.cache_read_tokens as i32),
+                    message_count: Some(r.message_count as i32),
+                    started_at: r.started_at,
+                }
+            })
+            .collect();
+
         let cost_analysis = cost_agg.map(|agg| {
-            let total_cost = estimate_cost_usd(
+            let sonnet_cost = estimate_cost_usd(
                 agg.total_input_tokens,
                 agg.total_output_tokens,
                 agg.total_cache_read_tokens,
             );
+            // Use per-model cost when available, fall back to Sonnet estimate
+            let (total_cost, is_estimated) = if total_per_model_cost > 0.0 {
+                (total_per_model_cost, false)
+            } else {
+                (sonnet_cost, true)
+            };
+
             let total_tokens = agg.total_input_tokens + agg.total_output_tokens + agg.total_cache_read_tokens;
             let cache_hit_rate = if total_tokens > 0 {
                 agg.total_cache_read_tokens as f64 / total_tokens as f64
@@ -824,9 +1131,36 @@ impl QueryRoot {
                 })
                 .collect();
 
+            // Phase 4c: Weekly cost trend from daily data
+            let weekly_cost_trend: Vec<WeeklyCost> = daily_cost_trend
+                .chunks(7)
+                .map(|week| {
+                    let cost: f64 = week.iter().filter_map(|d| d.cost_usd).sum();
+                    let sessions: i32 = week.iter().filter_map(|d| d.session_count).sum();
+                    let week_start = week.first().and_then(|d| d.date.clone());
+                    let week_end = week.last().and_then(|d| d.date.clone());
+                    let week_label = match (&week_start, &week_end) {
+                        (Some(start), Some(end)) => {
+                            let s = start.get(5..).unwrap_or(start);
+                            let e = end.get(5..).unwrap_or(end);
+                            format!("{s} - {e}")
+                        }
+                        (Some(start), None) => start.clone(),
+                        _ => String::new(),
+                    };
+                    WeeklyCost {
+                        week_start,
+                        week_label: Some(week_label),
+                        cost_usd: Some(cost),
+                        session_count: Some(sessions),
+                        avg_daily_cost: Some(cost / week.len() as f64),
+                    }
+                })
+                .collect();
+
             CostAnalysis {
                 estimated_cost_usd: Some(total_cost),
-                is_estimated: Some(true),
+                is_estimated: Some(is_estimated),
                 cache_hit_rate: Some(cache_hit_rate),
                 cache_savings_usd: Some(cache_savings),
                 cost_per_session: Some(if agg.total_sessions > 0 {
@@ -839,13 +1173,13 @@ impl QueryRoot {
                 } else {
                     0.0
                 }),
-                max_subscription_cost_usd: Some(200.0),
-                cost_utilization_percent: Some((total_cost / 200.0) * 100.0),
-                break_even_daily_spend: None,
-                billing_type: Some("api".to_string()),
+                max_subscription_cost_usd: Some(max_subscription),
+                cost_utilization_percent: Some((total_cost / max_subscription) * 100.0),
+                break_even_daily_spend: Some(max_subscription / 30.0),
+                billing_type: Some(billing_type.clone()),
                 daily_cost_trend: Some(daily_cost_trend),
-                weekly_cost_trend: Some(vec![]),
-                top_sessions_by_cost: Some(vec![]),
+                weekly_cost_trend: Some(weekly_cost_trend),
+                top_sessions_by_cost: Some(top_sessions_by_cost),
                 potential_savings_usd: Some(0.0),
                 subscription_comparisons: Some(vec![]),
                 config_dir_breakdowns: Some(vec![]),
@@ -853,12 +1187,12 @@ impl QueryRoot {
         });
 
         Ok(Some(DashboardAnalytics {
-            top_sessions: Some(vec![]),
-            bottom_sessions: Some(vec![]),
-            compaction_stats: None,
+            top_sessions: Some(top_sessions),
+            bottom_sessions: Some(bottom_sessions),
+            compaction_stats,
             cost_analysis,
             hook_health: Some(hook_health),
-            subagent_usage: Some(vec![]),
+            subagent_usage: Some(subagent_usage),
             tool_usage: Some(tool_usage),
         }))
     }

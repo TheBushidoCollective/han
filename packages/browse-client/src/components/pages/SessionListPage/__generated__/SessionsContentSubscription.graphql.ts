@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<dc76af5284b9e8796ac4c2d195c32905>>
+ * @generated SignedSource<<cebdf6d92d0a2e440fe46603fadf3895>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -414,6 +414,34 @@ return {
                       }
                     ],
                     "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "turnCount",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "compactionCount",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "estimatedCostUsd",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "duration",
+                    "storageKey": null
                   }
                 ],
                 "storageKey": null
@@ -444,12 +472,12 @@ return {
     ]
   },
   "params": {
-    "cacheID": "e29f489c0ce89bddb7bdfb496b850877",
+    "cacheID": "b802e1061ac1117ca283238b77839d12",
     "id": null,
     "metadata": {},
     "name": "SessionsContentSubscription",
     "operationKind": "subscription",
-    "text": "subscription SessionsContentSubscription(\n  $projectId: ID\n) {\n  sessionAdded(projectId: $projectId) {\n    sessionId\n    projectId\n    newSessionEdge {\n      node {\n        id\n        sessionId\n        projectName\n        worktreeName\n        summary\n        updatedAt\n        startedAt\n        gitBranch\n        ...SessionListItem_session\n      }\n      cursor\n    }\n  }\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  owner {\n    id\n    name\n    email\n    avatarUrl\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n}\n"
+    "text": "subscription SessionsContentSubscription(\n  $projectId: ID\n) {\n  sessionAdded(projectId: $projectId) {\n    sessionId\n    projectId\n    newSessionEdge {\n      node {\n        id\n        sessionId\n        projectName\n        worktreeName\n        summary\n        updatedAt\n        startedAt\n        gitBranch\n        ...SessionListItem_session\n      }\n      cursor\n    }\n  }\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  owner {\n    id\n    name\n    email\n    avatarUrl\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n  turnCount\n  compactionCount\n  estimatedCostUsd\n  duration\n}\n"
   }
 };
 })();

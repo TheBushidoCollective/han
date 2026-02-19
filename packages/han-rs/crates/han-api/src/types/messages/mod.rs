@@ -13,7 +13,7 @@ use async_graphql::*;
 use han_db::entities::messages;
 
 use crate::connection::PageInfo;
-use crate::node::{encode_global_id, encode_message_cursor};
+use crate::node::{encode_global_id, encode_msg_cursor};
 use crate::types::content_blocks::{ContentBlock, parse_content_blocks};
 use crate::types::sentiment::SentimentAnalysis;
 
@@ -1344,9 +1344,9 @@ pub fn build_message_connection(
 
     let items: Vec<(MessageData, String)> = filtered
         .iter()
-        .map(|(idx, msg)| {
+        .map(|(_, msg)| {
             let data = MessageData::from_model(msg, project_dir);
-            let cursor = encode_message_cursor(project_dir, &msg.session_id, (*idx as i32) + 1);
+            let cursor = encode_msg_cursor(&msg.timestamp, &msg.id);
             (data, cursor)
         })
         .collect();

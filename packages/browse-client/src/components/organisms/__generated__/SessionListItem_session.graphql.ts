@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<39052f9a428acdec12c8d4e7b35e57c8>>
+ * @generated SignedSource<<93704ec122f40359b0cf64de54fe9150>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -26,11 +26,14 @@ export type SessionListItem_session$data = {
     }>;
     readonly totalCount: number;
   } | null | undefined;
+  readonly compactionCount: number | null | undefined;
   readonly currentTodo: {
     readonly activeForm: string | null | undefined;
     readonly content: string | null | undefined;
     readonly status: TodoStatus | null | undefined;
   } | null | undefined;
+  readonly duration: number | null | undefined;
+  readonly estimatedCostUsd: number | null | undefined;
   readonly id: string;
   readonly messageCount: number;
   readonly name: string;
@@ -52,6 +55,7 @@ export type SessionListItem_session$data = {
     readonly pending: number | null | undefined;
     readonly total: number | null | undefined;
   } | null | undefined;
+  readonly turnCount: number | null | undefined;
   readonly updatedAt: string | null | undefined;
   readonly worktreeName: string | null | undefined;
   readonly " $fragmentType": "SessionListItem_session";
@@ -308,6 +312,34 @@ return {
         }
       ],
       "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "turnCount",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "compactionCount",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "estimatedCostUsd",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "duration",
+      "storageKey": null
     }
   ],
   "type": "Session",
@@ -315,6 +347,6 @@ return {
 };
 })();
 
-(node as any).hash = "bf2cd6f346e5bc435eb7467f8d49273c";
+(node as any).hash = "c5b840d4651024825c559ed7f8159567";
 
 export default node;

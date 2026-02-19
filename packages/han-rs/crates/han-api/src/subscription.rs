@@ -9,7 +9,7 @@ use tokio::sync::broadcast;
 use tokio_stream::{Stream, StreamExt, wrappers::BroadcastStream};
 
 use crate::context::DbChangeEvent;
-use crate::node::{decode_global_id, encode_message_cursor, encode_session_cursor};
+use crate::node::{decode_global_id, encode_msg_cursor, encode_session_cursor};
 use crate::query::{enrich_single_session, session_model_to_data};
 use crate::types::messages::{MessageData, MessageEdge, discriminate_message};
 use crate::types::sessions::{SessionData, SessionEdge};
@@ -127,7 +127,7 @@ impl SessionMessageAddedPayload {
         match msg {
             Some(msg) => {
                 let data = MessageData::from_model(msg, &project_dir);
-                let cursor = encode_message_cursor(&project_dir, &msg.session_id, msg.line_number);
+                let cursor = encode_msg_cursor(&msg.timestamp, &msg.id);
                 Ok(Some(MessageEdge {
                     node: discriminate_message(data),
                     cursor,

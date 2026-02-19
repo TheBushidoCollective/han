@@ -1424,6 +1424,18 @@ type Session implements Node {
 
   """All tool results from this session."""
   toolResults: [ToolResultBlock!]
+
+  """Number of user turns in this session."""
+  turnCount: Int
+
+  """Number of compactions in this session."""
+  compactionCount: Int
+
+  """Estimated cost in USD based on token usage."""
+  estimatedCostUsd: Float
+
+  """Duration of session in seconds (first to last message)."""
+  duration: Int
 }
 
 type SessionAddedPayload {

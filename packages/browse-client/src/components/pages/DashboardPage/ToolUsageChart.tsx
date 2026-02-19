@@ -12,6 +12,7 @@ import { Box } from "@/components/atoms/Box.tsx";
 import { HStack } from "@/components/atoms/HStack.tsx";
 import { Text } from "@/components/atoms/Text.tsx";
 import { VStack } from "@/components/atoms/VStack.tsx";
+import { formatCount } from "@/components/helpers/formatters.ts";
 
 interface ToolUsageStats {
 	readonly toolName: string;
@@ -63,19 +64,6 @@ const CATEGORY_LEGEND: Array<{ label: string; color: string }> = [
 	{ label: "Plan", color: "#ec4899" },
 	{ label: "Other", color: "#6b7280" },
 ];
-
-/**
- * Format count with K/M suffix
- */
-function formatCount(num: number): string {
-	if (num >= 1_000_000) {
-		return `${(num / 1_000_000).toFixed(1)}M`;
-	}
-	if (num >= 1_000) {
-		return `${(num / 1_000).toFixed(1)}K`;
-	}
-	return num.toString();
-}
 
 export function ToolUsageChart({
 	toolUsage,

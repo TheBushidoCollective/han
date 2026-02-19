@@ -11,6 +11,7 @@ import { Box } from "@/components/atoms/Box.tsx";
 import { HStack } from "@/components/atoms/HStack.tsx";
 import { Text } from "@/components/atoms/Text.tsx";
 import { VStack } from "@/components/atoms/VStack.tsx";
+import { formatCount } from "@/components/helpers/formatters.ts";
 
 interface TokenUsageStats {
 	readonly totalInputTokens: number;
@@ -25,19 +26,6 @@ interface TokenUsageStats {
 interface TokenUsageCardProps {
 	tokenUsage: TokenUsageStats;
 	cacheSavingsUsd?: number;
-}
-
-/**
- * Format large numbers with K/M suffix
- */
-function formatNumber(num: number): string {
-	if (num >= 1_000_000) {
-		return `${(num / 1_000_000).toFixed(1)}M`;
-	}
-	if (num >= 1_000) {
-		return `${(num / 1_000).toFixed(1)}K`;
-	}
-	return num.toLocaleString();
 }
 
 /**
@@ -161,7 +149,7 @@ export function TokenUsageCard({
 				>
 					{inputPercent > 0 && (
 						<div
-							title={`Input: ${formatNumber(tokenUsage.totalInputTokens)} tokens (${inputPercent.toFixed(1)}%)`}
+							title={`Input: ${formatCount(tokenUsage.totalInputTokens)} tokens (${inputPercent.toFixed(1)}%)`}
 							style={{
 								width: `${inputPercent}%`,
 								backgroundColor: "#3b82f6",
@@ -171,7 +159,7 @@ export function TokenUsageCard({
 					)}
 					{outputPercent > 0 && (
 						<div
-							title={`Output: ${formatNumber(tokenUsage.totalOutputTokens)} tokens (${outputPercent.toFixed(1)}%)`}
+							title={`Output: ${formatCount(tokenUsage.totalOutputTokens)} tokens (${outputPercent.toFixed(1)}%)`}
 							style={{
 								width: `${outputPercent}%`,
 								backgroundColor: "#10b981",
@@ -181,7 +169,7 @@ export function TokenUsageCard({
 					)}
 					{cachedPercent > 0 && (
 						<div
-							title={`Cached: ${formatNumber(tokenUsage.totalCachedTokens)} tokens (${cachedPercent.toFixed(1)}%)`}
+							title={`Cached: ${formatCount(tokenUsage.totalCachedTokens)} tokens (${cachedPercent.toFixed(1)}%)`}
 							style={{
 								width: `${cachedPercent}%`,
 								backgroundColor: "#8b5cf6",
@@ -196,27 +184,27 @@ export function TokenUsageCard({
 			<HStack gap="lg" wrap>
 				<TokenStat
 					label="Input"
-					value={formatNumber(tokenUsage.totalInputTokens)}
+					value={formatCount(tokenUsage.totalInputTokens)}
 					color="#3b82f6"
 					subValue={`${inputPercent.toFixed(0)}% of total`}
 				/>
 				<TokenStat
 					label="Output"
-					value={formatNumber(tokenUsage.totalOutputTokens)}
+					value={formatCount(tokenUsage.totalOutputTokens)}
 					color="#10b981"
 					subValue={`${outputPercent.toFixed(0)}% of total`}
 				/>
 				<TokenStat
 					label="Cached"
-					value={formatNumber(tokenUsage.totalCachedTokens)}
+					value={formatCount(tokenUsage.totalCachedTokens)}
 					color="#8b5cf6"
 					subValue={`${cachedPercent.toFixed(0)}% of total`}
 				/>
 				<TokenStat
 					label="Total"
-					value={formatNumber(tokenUsage.totalTokens)}
+					value={formatCount(tokenUsage.totalTokens)}
 					color={theme.colors.text.primary}
-					subValue={`${formatNumber(avgTokensPerSession)} / session`}
+					subValue={`${formatCount(avgTokensPerSession)} / session`}
 				/>
 			</HStack>
 

@@ -56,7 +56,8 @@
     "relay@han": true,
     "rust@han": true,
     "shellcheck@han": true,
-    "typescript@han": true
+    "typescript@han": true,
+    "scratch@han": true
   },
   "extraKnownMarketplaces": {
     "han": {

@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<d4d5b922944592192585ea683f07865a>>
+ * @generated SignedSource<<26d408233c136a56acaa1fe098d35e54>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -358,6 +358,34 @@ return {
                       }
                     ],
                     "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "turnCount",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "compactionCount",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "estimatedCostUsd",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
+                    "name": "duration",
+                    "storageKey": null
                   }
                 ],
                 "type": "Session",
@@ -372,12 +400,12 @@ return {
     ]
   },
   "params": {
-    "cacheID": "6cdd25979033772dbb1e4504abd7e059",
+    "cacheID": "d6b8a1e84f2831b6e0479b4a35a5b83a",
     "id": null,
     "metadata": {},
     "name": "SessionListItemSubscription",
     "operationKind": "subscription",
-    "text": "subscription SessionListItemSubscription(\n  $id: ID!\n) {\n  nodeUpdated(id: $id) {\n    node {\n      __typename\n      ... on Session {\n        ...SessionListItem_session\n      }\n      id\n    }\n  }\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  owner {\n    id\n    name\n    email\n    avatarUrl\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n}\n"
+    "text": "subscription SessionListItemSubscription(\n  $id: ID!\n) {\n  nodeUpdated(id: $id) {\n    node {\n      __typename\n      ... on Session {\n        ...SessionListItem_session\n      }\n      id\n    }\n  }\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  owner {\n    id\n    name\n    email\n    avatarUrl\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n  turnCount\n  compactionCount\n  estimatedCostUsd\n  duration\n}\n"
   }
 };
 })();

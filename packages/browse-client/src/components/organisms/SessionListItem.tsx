@@ -12,6 +12,7 @@ import { graphql, useFragment, useSubscription } from "react-relay";
 import { Link } from "react-router-dom";
 import type { GraphQLSubscriptionConfig } from "relay-runtime";
 import { Badge, HStack, Text, theme, VStack } from "../atoms/index.ts";
+import { formatDuration, formatWholeNumber } from "../helpers/formatters.ts";
 import type { SessionListItem_session$key } from "./__generated__/SessionListItem_session.graphql.ts";
 import type { SessionListItemSubscription } from "./__generated__/SessionListItemSubscription.graphql.ts";
 
@@ -61,6 +62,10 @@ export const SessionListItemFragment = graphql`
       inProgress
       completed
     }
+    turnCount
+    compactionCount
+    estimatedCostUsd
+    duration
   }
 `;
 
@@ -264,8 +269,20 @@ export function SessionListItem({
 							</Badge>
 						</HStack>
 					)}
-					<HStack gap="sm" align="center">
-						<Badge variant="default">{session.messageCount} msgs</Badge>
+					<HStack gap="sm" align="center" style={{ flexWrap: "wrap" }}>
+						<Badge variant="default">{formatWholeNumber(session.messageCount)} msgs</Badge>
+						{session.turnCount != null && session.turnCount > 0 && (
+							<Badge variant="default">{session.turnCount} turns</Badge>
+						)}
+						{session.duration != null && session.duration > 0 && (
+							<Badge variant="default">{formatDuration(session.duration)}</Badge>
+						)}
+						{session.compactionCount != null && session.compactionCount > 0 && (
+							<Badge variant="warning">{session.compactionCount} compactions</Badge>
+						)}
+						{session.estimatedCostUsd != null && session.estimatedCostUsd >= 0.01 && (
+							<Badge variant="info">${session.estimatedCostUsd.toFixed(2)}</Badge>
+						)}
 						{todoProgress !== null && (
 							<Badge variant={todoProgress === 100 ? "success" : "default"}>
 								{todoProgress}% ({completed}/{total})

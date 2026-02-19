@@ -226,7 +226,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start HTTPS server
     let server_addr: SocketAddr = ([0, 0, 0, 0], cli.port).into();
-    let router = server::build_router(schema.clone());
+    let router = server::build_router(schema.clone(), coordinator_state.start_time);
 
     let certs = tls::ensure_certificates()?;
     let tls_config = tls::build_tls_config(&certs)?;

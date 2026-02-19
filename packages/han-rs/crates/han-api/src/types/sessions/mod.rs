@@ -3,19 +3,21 @@
 use async_graphql::*;
 use han_db::entities::messages;
 use sea_orm::{
-    ColumnTrait, DatabaseConnection, DbBackend, EntityTrait, FromQueryResult,
-    QueryFilter, QueryOrder, Statement,
+    ColumnTrait, Condition, DatabaseConnection, DbBackend, EntityTrait, FromQueryResult,
+    PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Statement,
 };
 
 use crate::connection::PageInfo;
-use crate::node::encode_global_id;
+use crate::node::{encode_global_id, encode_msg_cursor, decode_msg_cursor};
 use crate::types::content_blocks::ToolResultBlock;
 use crate::types::file_change::{FileChange, FileChangeConnection, FileChangeEdge};
 use crate::types::frustration::FrustrationSummary;
 use crate::types::hook_execution::{
     HookExecution, HookExecutionConnection, HookExecutionEdge, HookStats, HookTypeStat,
 };
-use crate::types::messages::{MessageConnection, build_message_connection};
+use crate::types::messages::{
+    MessageConnection, MessageData, MessageEdge, discriminate_message,
+};
 use crate::types::metrics::{Task, TaskConnection, TaskEdge};
 use crate::types::native_task::NativeTask;
 use crate::types::search_result::MessageSearchResult;
@@ -146,6 +148,9 @@ impl SessionData {
     }
 
     /// Paginated messages in this session.
+    ///
+    /// Uses SQL-level keyset pagination with stable cursors (timestamp|id)
+    /// instead of loading all messages and paginating in memory.
     async fn messages(
         &self,
         ctx: &Context<'_>,
@@ -155,21 +160,127 @@ impl SessionData {
         before: Option<String>,
     ) -> Result<MessageConnection> {
         let db = ctx.data::<DatabaseConnection>()?;
-        let msgs = messages::Entity::find()
+
+        // Content filter: non-empty content, or summary/han_event message types
+        let content_filter = Condition::any()
+            .add(
+                Condition::all()
+                    .add(messages::Column::Content.is_not_null())
+                    .add(messages::Column::Content.ne("")),
+            )
+            .add(messages::Column::MessageType.eq("summary"))
+            .add(messages::Column::MessageType.eq("han_event"));
+
+        // Total count of matching messages (for UI display)
+        let total_count = messages::Entity::find()
             .filter(messages::Column::SessionId.eq(&self.session_id))
-            .order_by_desc(messages::Column::Timestamp)
+            .filter(content_filter.clone())
+            .count(db)
+            .await
+            .map_err(|e| Error::new(e.to_string()))? as i32;
+
+        let limit = first.or(last).unwrap_or(50) as usize;
+
+        // Build query with content filter
+        let mut query = messages::Entity::find()
+            .filter(messages::Column::SessionId.eq(&self.session_id))
+            .filter(content_filter);
+
+        // Apply cursor-based keyset filtering for `after` cursor.
+        // Messages are ordered (timestamp DESC, id ASC), so "after" means
+        // messages that come later in this order = older timestamps.
+        if let Some(ref after_cursor) = after {
+            if let Some((ts, id)) = decode_msg_cursor(after_cursor) {
+                query = query.filter(
+                    Condition::any()
+                        .add(messages::Column::Timestamp.lt(&ts))
+                        .add(
+                            Condition::all()
+                                .add(messages::Column::Timestamp.eq(&ts))
+                                .add(messages::Column::Id.gt(&id)),
+                        ),
+                );
+            }
+        }
+
+        // Apply cursor-based keyset filtering for `before` cursor.
+        if let Some(ref before_cursor) = before {
+            if let Some((ts, id)) = decode_msg_cursor(before_cursor) {
+                query = query.filter(
+                    Condition::any()
+                        .add(messages::Column::Timestamp.gt(&ts))
+                        .add(
+                            Condition::all()
+                                .add(messages::Column::Timestamp.eq(&ts))
+                                .add(messages::Column::Id.lt(&id)),
+                        ),
+                );
+            }
+        }
+
+        // Deterministic ordering: timestamp DESC, id ASC
+        // For `last` without `after`, fetch from the oldest end (reversed order)
+        let reverse_fetch = last.is_some() && after.is_none();
+        if reverse_fetch {
+            query = query
+                .order_by_asc(messages::Column::Timestamp)
+                .order_by_desc(messages::Column::Id);
+        } else {
+            query = query
+                .order_by_desc(messages::Column::Timestamp)
+                .order_by_asc(messages::Column::Id);
+        }
+
+        // Fetch limit+1 to detect if more pages exist
+        let mut msgs: Vec<messages::Model> = query
+            .limit(Some((limit + 1) as u64))
             .all(db)
             .await
             .map_err(|e| Error::new(e.to_string()))?;
 
-        Ok(build_message_connection(
-            &msgs,
-            &self.project_dir,
-            first,
-            after,
-            last,
-            before,
-        ))
+        let has_more = msgs.len() > limit;
+        if has_more {
+            msgs.truncate(limit);
+        }
+
+        // If fetched in reverse order, reverse back to DESC order for display
+        if reverse_fetch {
+            msgs.reverse();
+        }
+
+        // Build edges with stable cursors (timestamp|id)
+        let edges: Vec<MessageEdge> = msgs
+            .iter()
+            .map(|msg| {
+                let data = MessageData::from_model(msg, &self.project_dir);
+                let cursor = encode_msg_cursor(&msg.timestamp, &msg.id);
+                MessageEdge {
+                    node: discriminate_message(data),
+                    cursor,
+                }
+            })
+            .collect();
+
+        // Determine page info
+        let (has_next_page, has_previous_page) = if last.is_some() {
+            (before.is_some(), has_more)
+        } else {
+            (has_more, after.is_some())
+        };
+
+        let start_cursor = edges.first().map(|e| e.cursor.clone());
+        let end_cursor = edges.last().map(|e| e.cursor.clone());
+
+        Ok(MessageConnection {
+            edges,
+            page_info: PageInfo {
+                has_next_page,
+                has_previous_page,
+                start_cursor,
+                end_cursor,
+            },
+            total_count,
+        })
     }
 
     /// Native tasks (Claude Code's built-in task system).
@@ -522,6 +633,73 @@ impl SessionData {
     /// All tool results from this session.
     async fn tool_results(&self) -> Option<Vec<ToolResultBlock>> {
         Some(vec![])
+    }
+
+    /// Number of user turns (user-role messages) in this session.
+    async fn turn_count(&self, ctx: &Context<'_>) -> Result<Option<i32>> {
+        let db = ctx.data::<DatabaseConnection>()?;
+        #[derive(Debug, FromQueryResult)]
+        struct CountRow { count: i64 }
+        let row = CountRow::find_by_statement(Statement::from_sql_and_values(
+            DbBackend::Sqlite,
+            "SELECT COUNT(*) as count FROM messages WHERE session_id = ? AND role = 'user'",
+            vec![self.session_id.clone().into()],
+        ))
+        .one(db)
+        .await
+        .map_err(|e| Error::new(e.to_string()))?;
+        Ok(row.map(|r| r.count as i32))
+    }
+
+    /// Number of context compactions in this session.
+    async fn compaction_count(&self, ctx: &Context<'_>) -> Result<Option<i32>> {
+        let db = ctx.data::<DatabaseConnection>()?;
+        #[derive(Debug, FromQueryResult)]
+        struct CountRow { count: i64 }
+        let row = CountRow::find_by_statement(Statement::from_sql_and_values(
+            DbBackend::Sqlite,
+            "SELECT COUNT(*) as count FROM session_compacts WHERE session_id = ?",
+            vec![self.session_id.clone().into()],
+        ))
+        .one(db)
+        .await
+        .map_err(|e| Error::new(e.to_string()))?;
+        Ok(row.map(|r| r.count as i32))
+    }
+
+    /// Estimated cost in USD based on token usage.
+    async fn estimated_cost_usd(&self, ctx: &Context<'_>) -> Result<Option<f64>> {
+        let db = ctx.data::<DatabaseConnection>()?;
+        #[derive(Debug, FromQueryResult)]
+        struct TokenRow { input_tokens: i64, output_tokens: i64, cache_read_tokens: i64 }
+        let row = TokenRow::find_by_statement(Statement::from_sql_and_values(
+            DbBackend::Sqlite,
+            "SELECT \
+             COALESCE(SUM(input_tokens), 0) as input_tokens, \
+             COALESCE(SUM(output_tokens), 0) as output_tokens, \
+             COALESCE(SUM(cache_read_tokens), 0) as cache_read_tokens \
+             FROM messages WHERE session_id = ?",
+            vec![self.session_id.clone().into()],
+        ))
+        .one(db)
+        .await
+        .map_err(|e| Error::new(e.to_string()))?;
+        Ok(row.map(|r| crate::types::dashboard::estimate_cost_usd(r.input_tokens, r.output_tokens, r.cache_read_tokens)))
+    }
+
+    /// Session duration in seconds (first to last message).
+    async fn duration(&self) -> Option<i32> {
+        let start = self.started_at.as_ref()?;
+        let end = self.updated_at.as_ref()?;
+        let start_dt = chrono::DateTime::parse_from_rfc3339(start)
+            .or_else(|_| chrono::NaiveDateTime::parse_from_str(start, "%Y-%m-%dT%H:%M:%S%.f")
+                .map(|dt| dt.and_utc().fixed_offset()))
+            .ok()?;
+        let end_dt = chrono::DateTime::parse_from_rfc3339(end)
+            .or_else(|_| chrono::NaiveDateTime::parse_from_str(end, "%Y-%m-%dT%H:%M:%S%.f")
+                .map(|dt| dt.and_utc().fixed_offset()))
+            .ok()?;
+        Some(end_dt.signed_duration_since(start_dt).num_seconds() as i32)
     }
 }
 
