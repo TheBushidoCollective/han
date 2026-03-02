@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<ec664e104d70df358df4552bada030e1>>
+ * @generated SignedSource<<609cc9dd80a1e8c4bde4f14d3a15e170>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -43,6 +43,8 @@ export type OverviewTab_session$data = {
     readonly status: string;
     readonly subject: string;
   }>;
+  readonly startedAt: string | null | undefined;
+  readonly status: string | null | undefined;
   readonly todoCounts: {
     readonly completed: number | null | undefined;
     readonly inProgress: number | null | undefined;
@@ -50,6 +52,8 @@ export type OverviewTab_session$data = {
     readonly total: number | null | undefined;
   } | null | undefined;
   readonly turnCount: number | null | undefined;
+  readonly updatedAt: string | null | undefined;
+  readonly version: string | null | undefined;
   readonly " $fragmentType": "OverviewTab_session";
 };
 export type OverviewTab_session$key = {
@@ -59,6 +63,13 @@ export type OverviewTab_session$key = {
 
 const node: ReaderFragment = (function(){
 var v0 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "status",
+  "storageKey": null
+},
+v1 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
@@ -106,6 +117,28 @@ return {
       "name": "compactionCount",
       "storageKey": null
     },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "version",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "startedAt",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
+      "name": "updatedAt",
+      "storageKey": null
+    },
+    (v0/*: any*/),
     {
       "alias": null,
       "args": null,
@@ -164,7 +197,7 @@ return {
               "name": "hookType",
               "storageKey": null
             },
-            (v0/*: any*/),
+            (v1/*: any*/),
             {
               "alias": null,
               "args": null,
@@ -246,7 +279,7 @@ return {
       "name": "todoCounts",
       "plural": false,
       "selections": [
-        (v0/*: any*/),
+        (v1/*: any*/),
         {
           "alias": null,
           "args": null,
@@ -286,13 +319,7 @@ return {
           "name": "id",
           "storageKey": null
         },
-        {
-          "alias": null,
-          "args": null,
-          "kind": "ScalarField",
-          "name": "status",
-          "storageKey": null
-        },
+        (v0/*: any*/),
         {
           "alias": null,
           "args": null,
@@ -323,6 +350,6 @@ return {
 };
 })();
 
-(node as any).hash = "38a1c5ba1c2e2ff685d12d2ae0e5a5cf";
+(node as any).hash = "1ee202129462bb18a4e36f3b5525d800";
 
 export default node;
