@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<67f633927ea0c288b8a9ed36c93047e3>>
+ * @generated SignedSource<<bb8505680e126a6ba64275e21e72c729>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -19,12 +19,15 @@ export type SessionsContentSubscription$data = {
     readonly newSessionEdge: {
       readonly cursor: string;
       readonly node: {
+        readonly duration: number | null | undefined;
+        readonly estimatedCostUsd: number | null | undefined;
         readonly gitBranch: string | null | undefined;
         readonly id: string;
         readonly projectName: string;
         readonly sessionId: string;
         readonly startedAt: string | null | undefined;
         readonly summary: string | null | undefined;
+        readonly turnCount: number | null | undefined;
         readonly updatedAt: string | null | undefined;
         readonly worktreeName: string | null | undefined;
         readonly " $fragmentSpreads": FragmentRefs<"SessionListItem_session">;
@@ -126,17 +129,38 @@ v11 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "cursor",
+  "name": "estimatedCostUsd",
   "storageKey": null
 },
 v12 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "name",
+  "name": "turnCount",
   "storageKey": null
 },
 v13 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "duration",
+  "storageKey": null
+},
+v14 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "cursor",
+  "storageKey": null
+},
+v15 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "name",
+  "storageKey": null
+},
+v16 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
@@ -184,6 +208,9 @@ return {
                   (v8/*: any*/),
                   (v9/*: any*/),
                   (v10/*: any*/),
+                  (v11/*: any*/),
+                  (v12/*: any*/),
+                  (v13/*: any*/),
                   {
                     "args": null,
                     "kind": "FragmentSpread",
@@ -192,7 +219,7 @@ return {
                 ],
                 "storageKey": null
               },
-              (v11/*: any*/)
+              (v14/*: any*/)
             ],
             "storageKey": null
           }
@@ -243,7 +270,10 @@ return {
                   (v8/*: any*/),
                   (v9/*: any*/),
                   (v10/*: any*/),
+                  (v11/*: any*/),
                   (v12/*: any*/),
+                  (v13/*: any*/),
+                  (v15/*: any*/),
                   {
                     "alias": null,
                     "args": null,
@@ -268,7 +298,7 @@ return {
                     "plural": false,
                     "selections": [
                       (v4/*: any*/),
-                      (v12/*: any*/),
+                      (v15/*: any*/),
                       {
                         "alias": null,
                         "args": null,
@@ -308,7 +338,7 @@ return {
                         "name": "activeForm",
                         "storageKey": null
                       },
-                      (v13/*: any*/),
+                      (v16/*: any*/),
                       (v4/*: any*/)
                     ],
                     "storageKey": null
@@ -366,7 +396,7 @@ return {
                                 "name": "type",
                                 "storageKey": null
                               },
-                              (v13/*: any*/)
+                              (v16/*: any*/)
                             ],
                             "storageKey": null
                           }
@@ -440,34 +470,13 @@ return {
                     "alias": null,
                     "args": null,
                     "kind": "ScalarField",
-                    "name": "turnCount",
-                    "storageKey": null
-                  },
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
                     "name": "compactionCount",
-                    "storageKey": null
-                  },
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
-                    "name": "estimatedCostUsd",
-                    "storageKey": null
-                  },
-                  {
-                    "alias": null,
-                    "args": null,
-                    "kind": "ScalarField",
-                    "name": "duration",
                     "storageKey": null
                   }
                 ],
                 "storageKey": null
               },
-              (v11/*: any*/)
+              (v14/*: any*/)
             ],
             "storageKey": null
           },
@@ -493,16 +502,16 @@ return {
     ]
   },
   "params": {
-    "cacheID": "d09ee6bc7c7c16ec2750e4350346e838",
+    "cacheID": "2497cdd9ab8ddc82b9a7d527148fa5de",
     "id": null,
     "metadata": {},
     "name": "SessionsContentSubscription",
     "operationKind": "subscription",
-    "text": "subscription SessionsContentSubscription(\n  $projectId: ID\n) {\n  sessionAdded(projectId: $projectId) {\n    sessionId\n    projectId\n    newSessionEdge {\n      node {\n        id\n        sessionId\n        projectName\n        worktreeName\n        summary\n        updatedAt\n        startedAt\n        gitBranch\n        ...SessionListItem_session\n      }\n      cursor\n    }\n  }\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  owner {\n    id\n    name\n    email\n    avatarUrl\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n  gitBranch\n  prNumber\n  prUrl\n  teamName\n  turnCount\n  compactionCount\n  estimatedCostUsd\n  duration\n}\n"
+    "text": "subscription SessionsContentSubscription(\n  $projectId: ID\n) {\n  sessionAdded(projectId: $projectId) {\n    sessionId\n    projectId\n    newSessionEdge {\n      node {\n        id\n        sessionId\n        projectName\n        worktreeName\n        summary\n        updatedAt\n        startedAt\n        gitBranch\n        estimatedCostUsd\n        turnCount\n        duration\n        ...SessionListItem_session\n      }\n      cursor\n    }\n  }\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  owner {\n    id\n    name\n    email\n    avatarUrl\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n  gitBranch\n  prNumber\n  prUrl\n  teamName\n  turnCount\n  compactionCount\n  estimatedCostUsd\n  duration\n}\n"
   }
 };
 })();
 
-(node as any).hash = "8926a936edadfc274f3fe2590a3fb1ed";
+(node as any).hash = "d4802ef7ff4366d5e837fdf62ed0e18a";
 
 export default node;

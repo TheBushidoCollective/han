@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<d6bbfd96a2c23c3e99edf2e8f6288190>>
+ * @generated SignedSource<<812c780992aea00348fe8d49fa9f262c>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -16,12 +16,15 @@ export type SessionsContent_query$data = {
     readonly edges: ReadonlyArray<{
       readonly cursor: string;
       readonly node: {
+        readonly duration: number | null | undefined;
+        readonly estimatedCostUsd: number | null | undefined;
         readonly gitBranch: string | null | undefined;
         readonly id: string;
         readonly projectName: string;
         readonly sessionId: string;
         readonly startedAt: string | null | undefined;
         readonly summary: string | null | undefined;
+        readonly turnCount: number | null | undefined;
         readonly updatedAt: string | null | undefined;
         readonly worktreeName: string | null | undefined;
         readonly " $fragmentSpreads": FragmentRefs<"SessionListItem_session">;
@@ -176,6 +179,27 @@ return {
                   "storageKey": null
                 },
                 {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "estimatedCostUsd",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "turnCount",
+                  "storageKey": null
+                },
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "duration",
+                  "storageKey": null
+                },
+                {
                   "args": null,
                   "kind": "FragmentSpread",
                   "name": "SessionListItem_session"
@@ -253,6 +277,6 @@ return {
 };
 })();
 
-(node as any).hash = "3e292ee2b022eed472b2b60006746fc6";
+(node as any).hash = "601bb4350e739a97ff2e4837dbb21f10";
 
 export default node;

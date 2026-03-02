@@ -27,8 +27,10 @@ export function ConnectionGate({
 	children,
 }: ConnectionGateProps): React.ReactElement {
 	const { isConnected } = useCoordinatorHealth();
-	const [phase, setPhase] = useState<GatePhase>("disconnected");
-	const wasConnectedRef = useRef(false);
+	const [phase, setPhase] = useState<GatePhase>(
+		isConnected ? "connected" : "disconnected",
+	);
+	const wasConnectedRef = useRef(isConnected);
 	const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	const startTransitionToConnected = useCallback(() => {
