@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.17.0] - 2026-03-03
+
+### Added
+
+- update CC feature support to 2.1.63, browse UI refactoring, and Rust GraphQL migration ([8caf0ffe](../../commit/8caf0ffe))
+- structured JSON output for hook run when invoked directly by Claude Code ([5957b3c4](../../commit/5957b3c4))
+- message timeline overhaul with Sentry, chronological results, subway lines, and chat alignment ([cc9af0cc](../../commit/cc9af0cc))
+- backend rearchitecture — Rust crates replace han-native (#70) ([877601e0](../../commit/877601e0))
+
+### Fixed
+
+- resolve TypeScript errors in hosted data source and sync client ([3a4f60a0](../../commit/3a4f60a0))
+- resolve noArrayIndexKey biome errors in han CLI ([8bbf32a0](../../commit/8bbf32a0))
+- correct doctor test for hanBinary override detection ([11a66705](../../commit/11a66705))
+- add process.exit(0) to all han keep subcommands to prevent hanging ([a357b7fe](../../commit/a357b7fe))
+- move API Dockerfile into service directory for Railway build context ([75a8a4b9](../../commit/75a8a4b9))
+
+### Changed
+
+- simplify external marketplace installation to use Claude CLI (#69) ([4b451f23](../../commit/4b451f23))
+
+### Other
+
+- Merge pull request #71 from TheBushidoCollective/ai-dlc/browse-dashboard-overhaul/main ([2707ccfb](../../commit/2707ccfb))
+- Merge branch 'main' of github.com:TheBushidoCollective/han ([1761ba62](../../commit/1761ba62))
+- fix marketplace ([ba153fb9](../../commit/ba153fb9))
+
 ## [3.16.0] - 2026-03-02
 
 ### Added
