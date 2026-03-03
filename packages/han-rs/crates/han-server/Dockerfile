@@ -15,6 +15,7 @@ WORKDIR /build
 COPY Cargo.toml Cargo.lock ./
 COPY crates/han-db/Cargo.toml crates/han-db/Cargo.toml
 COPY crates/han-api/Cargo.toml crates/han-api/Cargo.toml
+COPY crates/han-graphql-derive/Cargo.toml crates/han-graphql-derive/Cargo.toml
 COPY crates/han-indexer/Cargo.toml crates/han-indexer/Cargo.toml
 COPY crates/han-proto/Cargo.toml crates/han-proto/Cargo.toml
 COPY crates/han-coordinator/Cargo.toml crates/han-coordinator/Cargo.toml
@@ -23,6 +24,7 @@ COPY crates/han-server/Cargo.toml crates/han-server/Cargo.toml
 # Create stub source files so cargo can resolve dependencies
 RUN mkdir -p crates/han-db/src && echo "pub fn stub() {}" > crates/han-db/src/lib.rs && \
     mkdir -p crates/han-api/src && echo "pub fn stub() {}" > crates/han-api/src/lib.rs && \
+    mkdir -p crates/han-graphql-derive/src && echo 'use proc_macro::TokenStream; #[proc_macro_derive(EntityFilter, attributes(entity_filter))] pub fn entity_filter(_: TokenStream) -> TokenStream { TokenStream::new() } #[proc_macro_derive(GraphQLEntity, attributes(graphql_entity))] pub fn graphql_entity(_: TokenStream) -> TokenStream { TokenStream::new() }' > crates/han-graphql-derive/src/lib.rs && \
     mkdir -p crates/han-indexer/src && echo "fn main() {}" > crates/han-indexer/src/main.rs && \
     mkdir -p crates/han-proto/src && echo "pub fn stub() {}" > crates/han-proto/src/lib.rs && \
     mkdir -p crates/han-proto/proto && echo 'syntax = "proto3"; package coordinator;' > crates/han-proto/proto/coordinator.proto && \
@@ -36,7 +38,7 @@ RUN cargo build --release --package han-server
 COPY crates/ crates/
 
 # Touch source files to invalidate the build cache for actual code
-RUN touch crates/han-db/src/lib.rs crates/han-api/src/lib.rs crates/han-server/src/main.rs
+RUN touch crates/han-db/src/lib.rs crates/han-api/src/lib.rs crates/han-graphql-derive/src/lib.rs crates/han-server/src/main.rs
 
 # Build the actual binary
 RUN cargo build --release --package han-server
