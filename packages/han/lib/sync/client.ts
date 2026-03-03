@@ -126,7 +126,7 @@ async function sendSyncRequest(
   }
 
   const bytesTransferred = useCompression
-    ? compressedBody?.length
+    ? (compressedBody?.length ?? 0)
     : Buffer.from(jsonBody as string, 'utf-8').length;
 
   return {

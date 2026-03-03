@@ -151,14 +151,14 @@ export function LineChangesChart({
 						width: "100%",
 					}}
 				>
-					{weeks.map((w, idx) => {
+					{weeks.map((w) => {
 						const height = Math.max(
 							(w.linesAdded / maxChange) * barHeight,
 							w.linesAdded > 0 ? 2 : 0,
 						);
 						return (
 							<Box
-								key={`add-${w.startDate}-${idx}`}
+								key={`add-${w.startDate}`}
 								style={{
 									flex: 1,
 									height,
@@ -189,14 +189,14 @@ export function LineChangesChart({
 						width: "100%",
 					}}
 				>
-					{weeks.map((w, idx) => {
+					{weeks.map((w) => {
 						const height = Math.max(
 							(w.linesRemoved / maxChange) * barHeight,
 							w.linesRemoved > 0 ? 2 : 0,
 						);
 						return (
 							<Box
-								key={`rem-${w.startDate}-${idx}`}
+								key={`rem-${w.startDate}`}
 								style={{
 									flex: 1,
 									height,

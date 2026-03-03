@@ -114,14 +114,14 @@ export function FileChangeCard({
 						paddingLeft: 20 + spacing.sm, // Align with filename
 					}}
 				>
-					{validations.map((v, i) => {
+					{validations.map((v) => {
 						const label =
 							v.pluginName && v.hookName
 								? `${v.pluginName}:${v.hookName}`
 								: (v.hookName ?? v.pluginName ?? "hook");
 						return (
 							<span
-								key={`validated-${v.pluginName}-${v.hookName}-${i}`}
+								key={`validated-${v.pluginName}-${v.hookName}`}
 								title={`${label} validated`}
 							>
 								<Badge
@@ -133,14 +133,14 @@ export function FileChangeCard({
 							</span>
 						);
 					})}
-					{missingValidations.map((v, i) => {
+					{missingValidations.map((v) => {
 						const label =
 							v.pluginName && v.hookName
 								? `${v.pluginName}:${v.hookName}`
 								: (v.hookName ?? v.pluginName ?? "hook");
 						return (
 							<span
-								key={`missing-${v.pluginName}-${v.hookName}-${i}`}
+								key={`missing-${v.pluginName}-${v.hookName}`}
 								title={`${label} needs validation`}
 							>
 								<Badge

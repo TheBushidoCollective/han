@@ -52,21 +52,6 @@ function getActivityColor(messageCount: number, maxMessages: number): string {
 }
 
 /**
- * Format date for tooltip. Returns empty string for pad/invalid dates.
- */
-function formatDate(dateStr: string): string {
-	if (dateStr.startsWith("pad-")) return "";
-	const date = new Date(dateStr);
-	if (Number.isNaN(date.getTime())) return "";
-	return date.toLocaleDateString("en-US", {
-		weekday: "short",
-		month: "short",
-		day: "numeric",
-		year: "numeric",
-	});
-}
-
-/**
  * Organize daily activity into weeks (columns)
  */
 function organizeIntoWeeks(
@@ -288,10 +273,6 @@ export function ActivityHeatmap({
 							}}
 						>
 							{week.map((day) => {
-								const isPad = day.date.startsWith("pad-");
-								const label = isPad
-									? undefined
-									: `${formatDate(day.date)}: ${day.messageCount} messages, ${day.sessionCount} sessions`;
 								return (
 									<Box
 										key={day.date}

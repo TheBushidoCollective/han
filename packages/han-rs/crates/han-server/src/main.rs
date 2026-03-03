@@ -50,36 +50,43 @@ async fn main() {
         min_connections: Some(2),
     };
 
-    let db = match establish_connection(db_config).await {
-        Ok(db) => db,
+    let (db, db_connected) = match establish_connection(db_config).await {
+        Ok(db) => {
+            info!("Connected to PostgreSQL");
+            (db, true)
+        }
         Err(e) => {
-            error!("Database connection failed: {e}");
-            std::process::exit(1);
+            error!("Database connection failed (starting in degraded mode): {e}");
+            (sea_orm::DatabaseConnection::Disconnected, false)
         }
     };
 
-    info!("Connected to PostgreSQL");
+    // Only run DB-dependent initialization when connected.
+    // SeaORM's Disconnected variant panics on use, so we must guard these calls.
+    if db_connected {
+        // Run migrations
+        match han_db::migration::run_migrations(&db).await {
+            Ok(()) => info!("Migrations complete"),
+            Err(e) => error!("Migration failed (non-fatal, server will continue): {e}"),
+        }
 
-    // Run migrations (non-fatal — server can still serve healthcheck)
-    match han_db::migration::run_migrations(&db).await {
-        Ok(()) => info!("Migrations complete"),
-        Err(e) => error!("Migration failed (non-fatal, server will continue): {e}"),
+        // Create NOTIFY triggers
+        if let Err(e) = sync::pg_notify::create_notify_triggers(&db).await {
+            error!("Failed to create notify triggers: {e}");
+        }
+    } else {
+        info!("Skipping migrations and triggers (no database connection)");
     }
 
-    // Create NOTIFY triggers
-    if let Err(e) = sync::pg_notify::create_notify_triggers(&db).await {
-        error!("Failed to create notify triggers: {e}");
-        // Non-fatal - subscriptions won't work but server can still run
-    }
-
-    // Build GraphQL schema
+    // Build GraphQL schema (stores db for later use, does not query immediately)
     let (event_sender, _) = broadcast::channel::<DbChangeEvent>(256);
     let schema = build_schema(db.clone(), event_sender.clone());
 
-    // Start PgListener for subscriptions
-    if let Err(e) = sync::pg_notify::start_pg_listener(&config.database_url, event_sender.clone()).await {
-        error!("PgListener failed to start: {e}");
-        // Non-fatal
+    // Start PgListener for subscriptions (only if DB is available)
+    if db_connected {
+        if let Err(e) = sync::pg_notify::start_pg_listener(&config.database_url, event_sender.clone()).await {
+            error!("PgListener failed to start: {e}");
+        }
     }
 
     // Build CORS layer

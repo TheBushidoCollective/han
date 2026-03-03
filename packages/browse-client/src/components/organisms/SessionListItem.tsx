@@ -24,7 +24,6 @@ import {
 	cleanSessionSummary,
 	formatDuration,
 	formatRelativeTime,
-	formatWholeNumber,
 } from "../helpers/formatters.ts";
 import type { SessionListItem_session$key } from "./__generated__/SessionListItem_session.graphql.ts";
 import type { SessionListItemSubscription } from "./__generated__/SessionListItemSubscription.graphql.ts";
@@ -108,23 +107,6 @@ interface SessionListItemProps {
 	/** Connection ID to update when session changes (pass connection.__id) */
 	connectionId?: string;
 	style?: CSSProperties;
-}
-
-function getTaskTypeVariant(
-	type: string | null | undefined,
-): "default" | "info" | "success" | "warning" | "danger" {
-	switch (type?.toUpperCase()) {
-		case "FIX":
-			return "danger";
-		case "IMPLEMENTATION":
-			return "success";
-		case "REFACTOR":
-			return "info";
-		case "RESEARCH":
-			return "warning";
-		default:
-			return "default";
-	}
 }
 
 export function SessionListItem({

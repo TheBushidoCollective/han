@@ -1,8 +1,9 @@
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRoutes } from "react-router-dom";
 import { Box, Center, Text } from "@/components/atoms";
 import type { ToastType } from "@/components/organisms";
 import { ToastContainer } from "@/components/organisms";
+import NotFoundPage from "@/components/pages/NotFoundPage";
 import { Sidebar } from "@/components/templates/Sidebar";
 import {
 	type MemoryUpdateEvent,
@@ -105,8 +106,12 @@ export function App() {
 		}
 	}, [error]);
 
-	// Routes from vite-plugin-pages
-	const routeElement = useRoutes(routes);
+	// Routes from vite-plugin-pages with catch-all 404
+	const allRoutes = useMemo(
+		() => [...routes, { path: "*", element: <NotFoundPage /> }],
+		[],
+	);
+	const routeElement = useRoutes(allRoutes);
 
 	return (
 		<RelayProvider>

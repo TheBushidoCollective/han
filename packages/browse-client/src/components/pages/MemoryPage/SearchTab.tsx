@@ -399,9 +399,9 @@ export function SearchTab({ projectPath }: SearchTabProps): React.ReactElement {
 								Memory Agent Progress
 							</Heading>
 						</HStack>
-						{progressUpdates.map((update, index) => (
+						{progressUpdates.map((update) => (
 							<HStack
-								key={`${update.type}-${index}`}
+								key={`${update.type}-${update.content}-${update.layer ?? "none"}`}
 								gap="sm"
 								align="center"
 								wrap
@@ -465,11 +465,11 @@ export function SearchTab({ projectPath }: SearchTabProps): React.ReactElement {
 								<Heading size="sm" as="h4">
 									Citations
 								</Heading>
-								{result.citations.map((citation, index) => {
+								{result.citations.map((citation) => {
 									const excerptKey = citation.excerpt.slice(0, 50);
 									return (
 										<Card
-											key={`${citation.source}:${excerptKey}:${index}`}
+											key={`${citation.source}:${excerptKey}`}
 											style={{
 												backgroundColor: theme.colors.bg.tertiary,
 											}}

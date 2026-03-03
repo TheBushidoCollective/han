@@ -59,6 +59,9 @@ const SessionsConnectionFragment = graphql`
           updatedAt
           startedAt
           gitBranch
+          estimatedCostUsd
+          turnCount
+          duration
           ...SessionListItem_session
         }
         cursor
@@ -94,6 +97,9 @@ const SessionsContentSubscriptionDef = graphql`
           updatedAt
           startedAt
           gitBranch
+          estimatedCostUsd
+          turnCount
+          duration
           ...SessionListItem_session
         }
         cursor
@@ -212,6 +218,102 @@ function BranchDropdown({
 	);
 }
 
+type SortOption = "updatedAt" | "startedAt" | "cost" | "turns" | "duration";
+
+const SORT_LABELS: Record<SortOption, string> = {
+	updatedAt: "Last Updated",
+	startedAt: "Start Date",
+	cost: "Cost",
+	turns: "Turns",
+	duration: "Duration",
+};
+
+/**
+ * Sort option dropdown (follows BranchDropdown pattern)
+ */
+function SortDropdown({
+	selected,
+	onSelect,
+}: {
+	selected: SortOption;
+	onSelect: (option: SortOption) => void;
+}) {
+	const [isOpen, setIsOpen] = useState(false);
+	const options: SortOption[] = [
+		"updatedAt",
+		"startedAt",
+		"cost",
+		"turns",
+		"duration",
+	];
+
+	return (
+		<Box style={{ position: "relative" }}>
+			<Pressable onPress={() => setIsOpen(!isOpen)}>
+				<Box
+					style={{
+						padding: theme.spacing.sm,
+						paddingHorizontal: theme.spacing.md,
+						backgroundColor: theme.colors.bg.tertiary,
+						borderRadius: theme.radii.md,
+						borderWidth: 1,
+						borderColor: theme.colors.border.default,
+						minWidth: 140,
+					}}
+				>
+					<HStack justify="space-between" align="center" gap="sm">
+						<Text size="sm">{SORT_LABELS[selected]}</Text>
+						<Text size="xs" color="muted">
+							{isOpen ? "\u25B2" : "\u25BC"}
+						</Text>
+					</HStack>
+				</Box>
+			</Pressable>
+
+			{isOpen && (
+				<Box
+					style={{
+						position: "absolute",
+						top: "100%",
+						right: 0,
+						marginTop: theme.spacing.xs,
+						backgroundColor: theme.colors.bg.secondary,
+						borderRadius: theme.radii.md,
+						borderWidth: 1,
+						borderColor: theme.colors.border.default,
+						zIndex: 100,
+						minWidth: 160,
+						overflow: "hidden",
+					}}
+				>
+					{options.map((option) => (
+						<Pressable
+							key={option}
+							onPress={() => {
+								onSelect(option);
+								setIsOpen(false);
+							}}
+						>
+							<Box
+								style={{
+									padding: theme.spacing.sm,
+									paddingHorizontal: theme.spacing.md,
+									backgroundColor:
+										selected === option
+											? theme.colors.bg.hover
+											: "transparent",
+								}}
+							>
+								<Text size="sm">{SORT_LABELS[option]}</Text>
+							</Box>
+						</Pressable>
+					))}
+				</Box>
+			)}
+		</Box>
+	);
+}
+
 interface SessionsContentProps {
 	queryRef: PreloadedQuery<SessionListPageQuery>;
 	projectId: string | null;
@@ -225,6 +327,7 @@ export function SessionsContent({
 }: SessionsContentProps): React.ReactElement {
 	const [filter, setFilter] = useState("");
 	const [selectedBranch, setSelectedBranch] = useState<string>("");
+	const [sortBy, setSortBy] = useState<SortOption>("updatedAt");
 	const [isPending, startTransition] = useTransition();
 
 	// First, read the preloaded query data
@@ -278,13 +381,36 @@ export function SessionsContent({
 				!edge.node.sessionId?.startsWith("agent-"),
 		);
 
-		// Sort by updatedAt descending (most recent first), fall back to startedAt
 		return filtered.sort((a, b) => {
-			const aTime = a.node.updatedAt || a.node.startedAt || "";
-			const bTime = b.node.updatedAt || b.node.startedAt || "";
-			return bTime.localeCompare(aTime);
+			switch (sortBy) {
+				case "startedAt": {
+					const aTime = a.node.startedAt || "";
+					const bTime = b.node.startedAt || "";
+					return bTime.localeCompare(aTime);
+				}
+				case "cost": {
+					const aCost = a.node.estimatedCostUsd ?? 0;
+					const bCost = b.node.estimatedCostUsd ?? 0;
+					return bCost - aCost;
+				}
+				case "turns": {
+					const aTurns = a.node.turnCount ?? 0;
+					const bTurns = b.node.turnCount ?? 0;
+					return bTurns - aTurns;
+				}
+				case "duration": {
+					const aDur = a.node.duration ?? 0;
+					const bDur = b.node.duration ?? 0;
+					return bDur - aDur;
+				}
+				default: {
+					const aTime = a.node.updatedAt || a.node.startedAt || "";
+					const bTime = b.node.updatedAt || b.node.startedAt || "";
+					return bTime.localeCompare(aTime);
+				}
+			}
 		});
-	}, [data.sessions?.edges]);
+	}, [data.sessions?.edges, sortBy]);
 
 	// Extract unique branch names from loaded edges
 	const uniqueBranches = useMemo(() => {
@@ -372,6 +498,7 @@ export function SessionsContent({
 					)}
 				</HStack>
 				<HStack gap="sm" align="center">
+					<SortDropdown selected={sortBy} onSelect={setSortBy} />
 					{uniqueBranches.length > 0 && (
 						<BranchDropdown
 							branches={uniqueBranches}

@@ -49,6 +49,9 @@ import { SessionEffectivenessCard } from "./SessionEffectivenessCard.tsx";
 import { SubagentUsageChart } from "./SubagentUsageChart.tsx";
 import { TimeOfDayChart } from "./TimeOfDayChart.tsx";
 
+import { PluginItem } from "../ProjectDetailPage/PluginItem.tsx";
+import type { Plugin } from "../ProjectDetailPage/types.ts";
+import { WorktreeItem } from "../ProjectDetailPage/WorktreeItem.tsx";
 import { ToolUsageChart } from "./ToolUsageChart.tsx";
 
 /**
@@ -68,14 +71,19 @@ const DashboardContentSubscriptionDef = graphql`
 interface DashboardContentProps {
 	queryRef: PreloadedQuery<DashboardPageQuery>;
 	/**
-	 * Optional repo ID for project-specific dashboard.
+	 * Optional repo ID for repo-specific dashboard.
 	 */
 	repoId?: string;
+	/**
+	 * Optional project ID for project-specific dashboard.
+	 */
+	projectId?: string;
 }
 
 export function DashboardContent({
 	queryRef,
 	repoId,
+	projectId,
 }: DashboardContentProps): React.ReactElement {
 	const navigate = useNavigate();
 	const [isLive, setIsLive] = useState(true);
@@ -101,10 +109,15 @@ export function DashboardContent({
 		data,
 	);
 
-	// Determine if we're viewing a project-specific dashboard
-	const isProjectView = !!repoId;
+	// Determine what scoped view we're in
+	const isRepoView = !!repoId;
+	const isSingleProjectView = !!projectId;
+	const isProjectView = isRepoView || isSingleProjectView;
 	// Use the repo name from GraphQL query (falls back to repoId)
 	const repoDisplayName = data.repo?.name || repoId;
+	// Project data from the query (only present when projectId is set)
+	const projectData = data.project;
+	const projectDisplayName = projectData?.name || projectId;
 
 	// Subscription config for live updates
 	const subscriptionConfig = useMemo<
@@ -387,7 +400,23 @@ export function DashboardContent({
 			{/* Header */}
 			<HStack justify="space-between" align="center">
 				<VStack gap="xs">
-					{isProjectView ? (
+					{isSingleProjectView ? (
+						<>
+							<HStack gap="sm" align="center">
+								<Box
+									onClick={() => navigate("/projects")}
+									style={{ cursor: "pointer" }}
+								>
+									<Text color="secondary">Projects</Text>
+								</Box>
+								<Text color="muted">/</Text>
+								<Heading size="lg">{projectDisplayName}</Heading>
+							</HStack>
+							<Text color="secondary" size="sm">
+								Project Dashboard
+							</Text>
+						</>
+					) : isRepoView ? (
 						<>
 							<HStack gap="sm" align="center">
 								<Box
@@ -400,7 +429,7 @@ export function DashboardContent({
 								<Heading size="lg">{repoDisplayName}</Heading>
 							</HStack>
 							<Text color="secondary" size="sm">
-								Project Dashboard
+								Repo Dashboard
 							</Text>
 						</>
 					) : (
@@ -445,7 +474,13 @@ export function DashboardContent({
 					<StatCard
 						label="Sessions"
 						value={activity.totalSessions}
-						onClick={() => navigate(`/repos/${repoId}/sessions`)}
+						onClick={() =>
+							navigate(
+								isSingleProjectView
+									? `/projects/${projectId}/sessions`
+									: `/repos/${repoId}/sessions`,
+							)
+						}
 					/>
 				) : (
 					<StatCard
@@ -481,9 +516,15 @@ export function DashboardContent({
 							: (pluginStats.userPlugins ?? 0)
 					}
 					subValue={`${pluginStats.enabledPlugins ?? 0} enabled`}
-					onClick={() =>
-						navigate(isProjectView ? `/repos/${repoId}/plugins` : "/plugins")
-					}
+					onClick={() => {
+						if (isSingleProjectView) {
+							navigate(`/projects/${projectId}/plugins`);
+						} else if (isRepoView) {
+							navigate(`/repos/${repoId}/plugins`);
+						} else {
+							navigate("/plugins");
+						}
+					}}
 				/>
 			</Box>
 
@@ -751,9 +792,15 @@ export function DashboardContent({
 			{/* Recent Sessions - full width */}
 			<SectionCard
 				title={isProjectView ? "Project Sessions" : "Recent Sessions"}
-				onViewAll={() =>
-					navigate(isProjectView ? `/repos/${repoId}/sessions` : "/sessions")
-				}
+				onViewAll={() => {
+					if (isSingleProjectView) {
+						navigate(`/projects/${projectId}/sessions`);
+					} else if (isRepoView) {
+						navigate(`/repos/${repoId}/sessions`);
+					} else {
+						navigate("/sessions");
+					}
+				}}
 			>
 				{sessions.length > 0 ? (
 					<VStack style={{ gap: 0 }}>
@@ -772,7 +819,7 @@ export function DashboardContent({
 				)}
 			</SectionCard>
 
-			{/* Project Quick Access - only shown in project view */}
+			{/* Project Quick Access - shown in scoped views */}
 			{isProjectView && (
 				<SectionCard title="Project Resources">
 					<Box
@@ -782,75 +829,102 @@ export function DashboardContent({
 							gap: theme.spacing.md,
 						}}
 					>
-						<Box
-							onClick={() => navigate(`/repos/${repoId}/memory`)}
-							style={{
-								padding: theme.spacing.md,
-								backgroundColor: theme.colors.bg.tertiary,
-								borderRadius: theme.borderRadius.md,
-								cursor: "pointer",
-								textAlign: "center",
-							}}
-						>
-							<VStack gap="xs" align="center">
-								<Text style={{ fontSize: "24px" }}>🧠</Text>
-								<Text size="sm" weight="semibold">
-									Memory
-								</Text>
-							</VStack>
-						</Box>
-						<Box
-							onClick={() => navigate(`/repos/${repoId}/cache`)}
-							style={{
-								padding: theme.spacing.md,
-								backgroundColor: theme.colors.bg.tertiary,
-								borderRadius: theme.borderRadius.md,
-								cursor: "pointer",
-								textAlign: "center",
-							}}
-						>
-							<VStack gap="xs" align="center">
-								<Text style={{ fontSize: "24px" }}>💾</Text>
-								<Text size="sm" weight="semibold">
-									Cache
-								</Text>
-							</VStack>
-						</Box>
-						<Box
-							onClick={() => navigate(`/repos/${repoId}/plugins`)}
-							style={{
-								padding: theme.spacing.md,
-								backgroundColor: theme.colors.bg.tertiary,
-								borderRadius: theme.borderRadius.md,
-								cursor: "pointer",
-								textAlign: "center",
-							}}
-						>
-							<VStack gap="xs" align="center">
-								<Text style={{ fontSize: "24px" }}>🔌</Text>
-								<Text size="sm" weight="semibold">
-									Plugins
-								</Text>
-							</VStack>
-						</Box>
-						<Box
-							onClick={() => navigate(`/repos/${repoId}/settings`)}
-							style={{
-								padding: theme.spacing.md,
-								backgroundColor: theme.colors.bg.tertiary,
-								borderRadius: theme.borderRadius.md,
-								cursor: "pointer",
-								textAlign: "center",
-							}}
-						>
-							<VStack gap="xs" align="center">
-								<Text style={{ fontSize: "24px" }}>⚙️</Text>
-								<Text size="sm" weight="semibold">
-									Settings
-								</Text>
-							</VStack>
-						</Box>
+						{[
+							{
+								label: "Memory",
+								icon: "\uD83E\uDDE0",
+								path: isSingleProjectView
+									? `/projects/${projectId}/memory`
+									: `/repos/${repoId}/memory`,
+							},
+							{
+								label: "Cache",
+								icon: "\uD83D\uDCBE",
+								path: isSingleProjectView
+									? `/projects/${projectId}/cache`
+									: `/repos/${repoId}/cache`,
+							},
+							{
+								label: "Plugins",
+								icon: "\uD83D\uDD0C",
+								path: isSingleProjectView
+									? `/projects/${projectId}/plugins`
+									: `/repos/${repoId}/plugins`,
+							},
+							{
+								label: "Settings",
+								icon: "\u2699\uFE0F",
+								path: isSingleProjectView
+									? `/projects/${projectId}/settings`
+									: `/repos/${repoId}/settings`,
+							},
+						].map((item) => (
+							<Box
+								key={item.label}
+								onClick={() => navigate(item.path)}
+								style={{
+									padding: theme.spacing.md,
+									backgroundColor: theme.colors.bg.tertiary,
+									borderRadius: theme.borderRadius.md,
+									cursor: "pointer",
+									textAlign: "center",
+								}}
+							>
+								<VStack gap="xs" align="center">
+									<Text style={{ fontSize: "24px" }}>{item.icon}</Text>
+									<Text size="sm" weight="semibold">
+										{item.label}
+									</Text>
+								</VStack>
+							</Box>
+						))}
 					</Box>
+				</SectionCard>
+			)}
+
+			{/* Project Plugins - only shown in single-project view when plugins exist */}
+			{isSingleProjectView && projectData?.plugins && projectData.plugins.length > 0 && (
+				<SectionCard title="Project Plugins">
+					<VStack gap="sm">
+						{projectData.plugins
+							.filter(
+								(plugin): plugin is typeof plugin & { id: string } =>
+									!!plugin?.id,
+							)
+							.map((plugin) => (
+								<PluginItem
+									key={plugin.id}
+									plugin={{
+										id: plugin.id,
+										name: plugin.name ?? "Unknown",
+										marketplace: plugin.marketplace ?? "",
+										scope:
+											(plugin.scope as Plugin["scope"]) ?? "USER",
+										enabled: plugin.enabled ?? false,
+										category: plugin.category ?? "Unknown",
+									}}
+								/>
+							))}
+					</VStack>
+				</SectionCard>
+			)}
+
+			{/* Worktrees - only shown in single-project view when worktrees exist */}
+			{isSingleProjectView && projectData?.worktrees && projectData.worktrees.length > 0 && (
+				<SectionCard title="Worktrees">
+					<VStack gap="sm">
+						{projectData.worktrees.map((wt) => (
+							<WorktreeItem
+								key={wt.path}
+								worktree={{
+									name: wt.name ?? "Unknown",
+									path: wt.path ?? "",
+									sessionCount: wt.sessionCount ?? 0,
+								}}
+								projectId={projectData.projectId ?? projectId ?? ""}
+							/>
+						))}
+					</VStack>
 				</SectionCard>
 			)}
 		</VStack>

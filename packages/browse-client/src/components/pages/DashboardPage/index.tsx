@@ -4,7 +4,10 @@
  * Overview of Han's key metrics and status.
  * Uses PageLoader for query preloading.
  *
- * Can be used for both global dashboard (/) and project-specific dashboard (/repos/:repoId).
+ * Can be used for:
+ * - Global dashboard (/)
+ * - Repo-specific dashboard (/repos/:repoId)
+ * - Project-specific dashboard (/projects/:projectId)
  */
 
 import type React from "react";
@@ -233,12 +236,44 @@ export const DashboardActivityFragment = graphql`
 
 /**
  * Main dashboard query
- * Note: projectId filter is used for repo-specific dashboards
+ * Note: projectId/repoId filters are used for scoped dashboards
  */
 export const DashboardPageQuery = graphql`
-  query DashboardPageQuery($repoId: String!, $hasRepoId: Boolean!, $sessionFilter: SessionFilter) {
+  query DashboardPageQuery(
+    $repoId: String!
+    $hasRepoId: Boolean!
+    $projectId: String!
+    $hasProjectId: Boolean!
+    $sessionFilter: SessionFilter
+  ) {
     repo(id: $repoId) @include(if: $hasRepoId) {
       name
+    }
+    project(id: $projectId) @include(if: $hasProjectId) {
+      id
+      projectId
+      name
+      totalSessions
+      lastActivity
+      worktrees {
+        name
+        path
+        sessionCount
+        isWorktree
+        subdirs {
+          relativePath
+          path
+          sessionCount
+        }
+      }
+      plugins {
+        id
+        name
+        marketplace
+        scope
+        enabled
+        category
+      }
     }
     projects(first: 100) {
       id
@@ -253,7 +288,7 @@ export const DashboardPageQuery = graphql`
         }
       }
     }
-    metrics(period: WEEK, repoId: $repoId) {
+    metrics(period: WEEK, projectId: $projectId, repoId: $repoId) {
       totalTasks
       completedTasks
       successRate
@@ -277,8 +312,8 @@ export const DashboardPageQuery = graphql`
     # Note: @defer is disabled due to a multipart streaming parser bug where the
     # initial response isn't yielded until the next chunk's delimiter arrives.
     # The 30s TTL cache on both queries makes subsequent loads instant.
-    ...DashboardPageActivity_query @arguments(repoId: $repoId)
-    ...DashboardPageAnalytics_query @arguments(repoId: $repoId)
+    ...DashboardPageActivity_query @arguments(projectId: $projectId, repoId: $repoId)
+    ...DashboardPageAnalytics_query @arguments(projectId: $projectId, repoId: $repoId)
   }
 `;
 
@@ -288,6 +323,28 @@ export interface DashboardPageProps {
 	 * When provided, shows repo-specific sessions and context.
 	 */
 	repoId?: string;
+	/**
+	 * Optional project ID to filter the dashboard to a specific project.
+	 * When provided, shows project-specific sessions and context.
+	 */
+	projectId?: string;
+}
+
+/**
+ * Build the session filter based on the scoping props.
+ * projectId takes precedence since it is more specific than repoId.
+ */
+function buildSessionFilter(
+	projectId?: string,
+	repoId?: string,
+): { projectId: { _eq: string } } | { project: { repoId: { _eq: string } } } | null {
+	if (projectId) {
+		return { projectId: { _eq: projectId } };
+	}
+	if (repoId) {
+		return { project: { repoId: { _eq: repoId } } };
+	}
+	return null;
 }
 
 /**
@@ -295,6 +352,7 @@ export interface DashboardPageProps {
  */
 export default function DashboardPage({
 	repoId,
+	projectId,
 }: DashboardPageProps): React.ReactElement {
 	return (
 		<PageLoader<DashboardPageQueryType>
@@ -302,11 +360,19 @@ export default function DashboardPage({
 			variables={{
 				repoId: repoId || "",
 				hasRepoId: !!repoId,
-				sessionFilter: repoId ? { project: { repoId: { _eq: repoId } } } : null,
+				projectId: projectId || "",
+				hasProjectId: !!projectId,
+				sessionFilter: buildSessionFilter(projectId, repoId),
 			}}
 			loadingMessage="Loading dashboard..."
 		>
-			{(queryRef) => <DashboardContent queryRef={queryRef} repoId={repoId} />}
+			{(queryRef) => (
+				<DashboardContent
+					queryRef={queryRef}
+					repoId={repoId}
+					projectId={projectId}
+				/>
+			)}
 		</PageLoader>
 	);
 }

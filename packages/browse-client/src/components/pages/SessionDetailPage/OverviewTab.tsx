@@ -18,6 +18,7 @@ import {
 	formatDuration,
 	formatWholeNumber,
 } from "@/components/helpers/formatters.ts";
+import { StatusItem } from "@/components/molecules/StatusItem.tsx";
 import { SectionCard } from "@/components/organisms/SectionCard.tsx";
 import { StatCard } from "@/components/organisms/StatCard.tsx";
 import { colors, radii, spacing } from "@/theme.ts";
@@ -34,6 +35,10 @@ const OverviewTabFragment = graphql`
     duration
     estimatedCostUsd
     compactionCount
+    version
+    startedAt
+    updatedAt
+    status
     hookStats {
       totalHooks
       passedHooks
@@ -151,6 +156,131 @@ function OverviewTabContent({
 						/>
 					)}
 				</HStack>
+
+				{/* Cost Breakdown + Effectiveness Metrics - side by side */}
+				<HStack gap="lg" style={{ alignItems: "stretch" }}>
+					<Box style={{ flex: 1 }}>
+						<SectionCard title="Cost Breakdown" style={{ height: "100%" }}>
+							<VStack gap="md">
+								<HStack gap="sm" align="center">
+									<Text
+										size="xl"
+										weight="bold"
+										style={{ fontVariantNumeric: "tabular-nums" }}
+									>
+										${(data.estimatedCostUsd != null && data.estimatedCostUsd >= 0.01)
+											? data.estimatedCostUsd.toFixed(2)
+											: "0.00"}
+									</Text>
+									<Badge variant="info">Estimated</Badge>
+								</HStack>
+								<Text size="xs" color="muted">
+									Based on token usage and published model pricing
+								</Text>
+							</VStack>
+						</SectionCard>
+					</Box>
+					<Box style={{ flex: 1 }}>
+						<SectionCard title="Effectiveness Metrics" style={{ height: "100%" }}>
+							<VStack gap="sm">
+								<StatusItem
+									label="Turns"
+									value={data.turnCount ?? 0}
+								/>
+								<StatusItem
+									label="Tasks"
+									value={`${completedTasks}/${totalTasks}`}
+								/>
+								<HStack justify="space-between" align="center">
+									<Text color="secondary" size="sm">
+										Compactions
+									</Text>
+									<Badge
+										variant={
+											(data.compactionCount ?? 0) === 0
+												? "success"
+												: (data.compactionCount ?? 0) <= 2
+													? "warning"
+													: "danger"
+										}
+									>
+										{data.compactionCount ?? 0}
+									</Badge>
+								</HStack>
+								{frustrationSummary?.overallLevel && (
+									<HStack justify="space-between" align="center">
+										<Text color="secondary" size="sm">
+											Frustration
+										</Text>
+										<Badge
+											variant={
+												frustrationSummary.overallLevel === "high"
+													? "danger"
+													: frustrationSummary.overallLevel === "moderate"
+														? "warning"
+														: "success"
+											}
+										>
+											{frustrationSummary.overallLevel}
+										</Badge>
+									</HStack>
+								)}
+								{hookStats && (hookStats.totalHooks ?? 0) > 0 && (
+									<StatusItem
+										label="Hook Pass Rate"
+										value={`${(hookStats.passRate ?? 0).toFixed(0)}%`}
+									/>
+								)}
+							</VStack>
+						</SectionCard>
+					</Box>
+				</HStack>
+
+				{/* Activity Summary - full width */}
+				<SectionCard title="Activity Summary">
+					<HStack gap="lg" style={{ flexWrap: "wrap" }}>
+						<VStack gap="sm" style={{ flex: 1, minWidth: 180 }}>
+							<StatusItem
+								label="Duration"
+								value={
+									(data.duration ?? 0) > 0
+										? formatDuration(data.duration ?? 0)
+										: "-"
+								}
+							/>
+							<StatusItem
+								label="Messages"
+								value={formatWholeNumber(data.messageCount ?? 0)}
+							/>
+							<HStack justify="space-between" align="center">
+								<Text color="secondary" size="sm">
+									Status
+								</Text>
+								<Badge
+									variant={
+										data.status === "active"
+											? "success"
+											: "default"
+									}
+								>
+									{data.status ?? "unknown"}
+								</Badge>
+							</HStack>
+						</VStack>
+						<VStack gap="sm" style={{ flex: 1, minWidth: 180 }}>
+							<StatusItem
+								label="Files Changed"
+								value={data.fileChangeCount ?? 0}
+							/>
+							{data.version && (
+								<StatusItem
+									label="Claude Code"
+									value={`v${data.version}`}
+								/>
+							)}
+						</VStack>
+					</HStack>
+				</SectionCard>
 
 				{/* Task Progress */}
 				{totalTasks > 0 && (

@@ -7,15 +7,13 @@
 import type React from "react";
 import { type ReactElement, Suspense } from "react";
 import { graphql, useFragment } from "react-relay";
-import { Badge } from "@/components/atoms/Badge.tsx";
 import { Box } from "@/components/atoms/Box.tsx";
 import { HStack } from "@/components/atoms/HStack.tsx";
 import { Spinner } from "@/components/atoms/Spinner.tsx";
 import { Text } from "@/components/atoms/Text.tsx";
 import { VStack } from "@/components/atoms/VStack.tsx";
-import { SectionCard } from "@/components/organisms/SectionCard.tsx";
 import { StatCard } from "@/components/organisms/StatCard.tsx";
-import { colors, fontSizes, radii, spacing } from "@/theme.ts";
+import { colors, radii, spacing } from "@/theme.ts";
 import type { TasksTab_session$key } from "./__generated__/TasksTab_session.graphql.ts";
 import { NativeTaskCard, TaskCard } from "./components.ts";
 import type { NativeTask } from "./types.ts";

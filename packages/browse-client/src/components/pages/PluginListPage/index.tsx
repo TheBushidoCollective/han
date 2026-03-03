@@ -274,12 +274,15 @@ function PluginsContent({
 							toast.type === "success"
 								? theme.colors.accent.success
 								: theme.colors.accent.danger,
-						color: theme.colors.bg.primary,
 						zIndex: 1000,
-						fontSize: theme.fontSize.sm,
 					}}
 				>
-					{toast.message}
+					<Text
+						size="sm"
+						style={{ color: theme.colors.bg.primary }}
+					>
+						{toast.message}
+					</Text>
 				</Box>
 			)}
 

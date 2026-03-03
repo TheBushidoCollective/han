@@ -555,9 +555,9 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
     // Use live output for running commands, completed output otherwise
     const outputLines =
       isRunning && liveLines ? liveLines : result?.output || [];
-    const visibleLines = outputLines.slice(
-      scrollOffset,
-      scrollOffset + viewportHeight
+    const visibleLines = outputLines
+      .slice(scrollOffset, scrollOffset + viewportHeight)
+      .map((line, i) => ({ lineNum: scrollOffset + i, line } as const)
     );
     const canScrollUp = scrollOffset > 0;
     const canScrollDown = scrollOffset + viewportHeight < outputLines.length;
@@ -611,8 +611,8 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
             </Box>
           )}
           {visibleLines.length > 0 ? (
-            visibleLines.map((line, i) => (
-              <Text key={`output-${scrollOffset + i}`}>{line}</Text>
+            visibleLines.map(({ lineNum, line }) => (
+              <Text key={`output-${lineNum}`}>{line}</Text>
             ))
           ) : (
             <Text dimColor>(no output)</Text>
@@ -694,9 +694,9 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
                 <Text bold color="red">
                   Failed hooks in {hookType}:
                 </Text>
-                {failedResults.map((result, idx) => (
+                {failedResults.map((result) => (
                   <Box
-                    key={`failed-${hookType}-${result.plugin}-${idx}`}
+                    key={`failed-${hookType}-${result.plugin}-${result.command}`}
                     flexDirection="column"
                     marginLeft={2}
                     marginTop={1}
@@ -710,9 +710,9 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
                     </Box>
                     {result.output.length > 0 && (
                       <Box flexDirection="column" marginLeft={2} marginTop={1}>
-                        {result.output.slice(0, 10).map((line, i) => (
+                        {Array.from(result.output.slice(0, 10).entries()).map(([pos, line]) => (
                           <Text
-                            key={`failed-${hookType}-${result.plugin}-${idx}-line-${i}`}
+                            key={`failed-${hookType}-${result.plugin}-${result.command}-line-${pos}`}
                           >
                             {line}
                           </Text>
@@ -740,9 +740,9 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
               <Text bold color="cyan">
                 {hookType}:
               </Text>
-              {results.map((result, idx) => (
+              {results.map((result) => (
                 <Box
-                  key={`${hookType}-${result.plugin}-${idx}`}
+                  key={`${hookType}-${result.plugin}-${result.command}`}
                   flexDirection="column"
                   marginLeft={2}
                 >
@@ -756,9 +756,9 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
                   </Box>
                   {result.output.length > 0 && (
                     <Box flexDirection="column" marginLeft={2}>
-                      {result.output.map((line, i) => (
+                      {Array.from(result.output.entries()).map(([pos, line]) => (
                         <Text
-                          key={`${hookType}-${result.plugin}-${idx}-line-${i}`}
+                          key={`${hookType}-${result.plugin}-${result.command}-line-${pos}`}
                           dimColor
                         >
                           {line}

@@ -30,9 +30,9 @@ pub async fn upsert(
         indexed_at: Set(Some(now)),
     })
     .on_conflict(
-        sea_query::OnConflict::column(session_compacts::Column::Id)
+        sea_query::OnConflict::column(session_compacts::Column::SessionId)
             .update_columns([
-                session_compacts::Column::SessionId,
+                session_compacts::Column::Id,
                 session_compacts::Column::MessageId,
                 session_compacts::Column::Content,
                 session_compacts::Column::RawJson,

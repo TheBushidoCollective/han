@@ -255,7 +255,7 @@ export function ModelUsageChart({
 						width: "100%",
 					}}
 				>
-					{weeks.map((week, idx) => {
+					{weeks.map((week) => {
 						const heightRatio = week.totalTokens / maxWeeklyTokens;
 						const totalHeight = Math.max(
 							heightRatio * chartHeight,
@@ -284,7 +284,7 @@ export function ModelUsageChart({
 
 						return (
 							<VStack
-								key={`week-${week.startDate}-${idx}`}
+								key={`week-${week.startDate}`}
 								justify="flex-end"
 								style={{
 									flex: 1,
@@ -295,9 +295,9 @@ export function ModelUsageChart({
 									marginHorizontal: 1,
 								}}
 							>
-								{segments.map((seg, segIdx) => (
+								{segments.map((seg) => (
 									<Box
-										key={`seg-${seg.displayName}-${segIdx}`}
+										key={`seg-${seg.displayName}`}
 										style={{
 											height: seg.height,
 											backgroundColor: seg.color,
@@ -312,9 +312,9 @@ export function ModelUsageChart({
 
 				{/* Date labels */}
 				<HStack style={{ width: "100%" }}>
-					{weeks.map((week, idx) => (
+					{weeks.map((week) => (
 						<Text
-							key={`label-${week.startDate}-${idx}`}
+							key={`label-${week.startDate}`}
 							size="xs"
 							color="muted"
 							numberOfLines={1}

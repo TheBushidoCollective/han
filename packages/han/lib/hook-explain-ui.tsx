@@ -150,7 +150,7 @@ const HookSourceDisplay: React.FC<{ source: HookSource }> = ({ source }) => {
 
       {source.hooks.map((hook, hookIdx) => (
         <HookEntryDisplay
-          key={`hook-${hookIdx}-${hook.name || hook.command.slice(0, 20)}`}
+          key={`hook-${hook.name || hook.command}-${hook.matcher || 'all'}`}
           hook={hook}
           index={hookIdx}
         />

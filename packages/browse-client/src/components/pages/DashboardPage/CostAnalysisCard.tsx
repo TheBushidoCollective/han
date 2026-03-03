@@ -784,7 +784,7 @@ function CostDetailView({
 								width: "100%",
 							}}
 						>
-							{scaledDailyTrend.map((day, idx) => {
+							{scaledDailyTrend.map((day) => {
 								const barHeight = Math.max(
 									(day.displayCost / maxDailyCost) * sparklineHeight,
 									day.displayCost > 0 ? 2 : 1,
@@ -793,7 +793,7 @@ function CostDetailView({
 
 								return (
 									<Box
-										key={`cost-${day.date}-${idx}`}
+										key={`cost-${day.date}`}
 										style={{
 											flex: 1,
 											height: barHeight,
