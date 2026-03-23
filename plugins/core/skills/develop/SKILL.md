@@ -1,437 +1,265 @@
 ---
 name: develop
-user-invocable: false
-description: Comprehensive 8-phase workflow for developing new features with quality enforcement
+description: >-
+  Guides end-to-end feature development through 8 phases: discover requirements,
+  explore codebase patterns, clarify ambiguities with the user, design architecture,
+  implement with TDD, run multi-agent code review, validate all quality gates, and
+  write a blog post. Use when asked to add a feature, implement a new capability,
+  build functionality, or develop a feature end-to-end.
 ---
 
 # Feature Development Workflow
 
-## Name
-
-han-core:develop - Comprehensive 8-phase workflow for developing new features with quality enforcement
-
-## Synopsis
-
-```
-/develop [arguments]
-```
-
-## Description
-
-Comprehensive 8-phase workflow for developing new features with quality enforcement
-
-## Implementation
-
-A comprehensive, structured 8-phase workflow for developing new features with quality enforcement and quality principles.
+Structured 8-phase process for building new features from requirement gathering through documentation. Each phase produces a concrete output that feeds the next.
 
 ## Overview
 
-This command guides you through a systematic feature development process:
-
-1. **Discover** - Understand requirements and context
-2. **Explore** - Analyze existing codebase patterns
-3. **Clarify** - Resolve ambiguities with user input
-4. **Design** - Create architecture with specialized agents
-5. **Implement** - Build with TDD and quality practices
-6. **Review** - Multi-agent quality review with confidence scoring
-7. **Validate** - Run all verification hooks and summarize
-8. **Document** - Write blog post announcing the feature
+1. **Discover** - Gather requirements, acceptance criteria, and impacted areas
+2. **Explore** - Map codebase patterns and integration points with parallel agents
+3. **Clarify** - Resolve ambiguities with the user before writing code
+4. **Design** - Architect the solution with domain-specific agents
+5. **Implement** - Build with TDD using `tdd:test-driven-development`
+6. **Review** - Multi-agent code review with confidence-based filtering
+7. **Validate** - Run tests, linting, and type checking; generate change summary
+8. **Document** - Write a blog post announcing the feature
 
 ---
 
 ## Phase 1: Discover
 
-### Understand requirements and gather context
+**Objective**: Establish what needs to be built and why.
 
-**Objective**: Establish clear understanding of what needs to be built and why.
-
-1. **Review the feature request**:
-   - What is the user-facing goal?
-   - What problem does this solve?
-   - What are the acceptance criteria?
-
-2. **Identify impacted areas**:
-   - Which parts of the codebase will change?
-   - What existing features might be affected?
-   - Are there related issues or PRs?
-
-3. **Check for similar features**:
+1. **Parse the feature request** - Identify the user-facing goal, the problem it solves, and acceptance criteria.
+2. **Identify impacted areas** - Which modules, APIs, or UI surfaces will change? Are there related issues or PRs?
+3. **Search for prior art**:
 
    ```bash
-   # Search for similar implementations
-   grep -r "similar_feature_name" .
+   # Find existing implementations of similar patterns
+   grep -rn "pagination\|paginate" --include="*.ts" src/
    ```
 
-4. **Review project documentation**:
-   - Check CLAUDE.md, CONTRIBUTING.md for standards
-   - Review architecture docs if available
-   - Identify any constraints or requirements
+4. **Review project standards** - Read CLAUDE.md, CONTRIBUTING.md, and any architecture docs for constraints.
 
-**Output**: Clear problem statement and high-level approach.
+**Output**: Problem statement, acceptance criteria, and list of affected modules.
 
 ---
 
-## Phase 2: Explore (Parallel Agent Execution)
+## Phase 2: Explore (Parallel Agents)
 
-### Analyze codebase with specialized agents
+**Objective**: Understand existing patterns so the new feature fits naturally.
 
-**Objective**: Understand existing patterns and identify integration points.
+Launch these agents in **parallel** (single message, multiple Task calls):
 
-**Launch multiple Explore agents in PARALLEL** (single message with multiple Task calls):
+| Agent | Focus |
+|-------|-------|
+| Code Explorer | Entry points, call chains, data flow |
+| Pattern Analyzer | Naming conventions, test patterns, module structure |
+| Dependency Mapper | Module relationships, integration points, circular-dependency risks |
 
-1. **Code Explorer**: Map existing features
-   - Find entry points and call chains
-   - Identify data flow and transformations
-   - Document current architecture
-
-2. **Pattern Analyzer**: Identify conventions
-   - How are similar features implemented?
-   - What testing patterns are used?
-   - What naming conventions exist?
-
-3. **Dependency Mapper**: Understand relationships
-   - What modules will be affected?
-   - What are the integration points?
-   - Are there circular dependencies to avoid?
-
-**Consolidation**: Synthesize findings from all agents into a cohesive understanding.
-
-**Output**: Comprehensive map of existing codebase patterns and integration points.
+**Output**: Consolidated map of codebase conventions and integration points.
 
 ---
 
 ## Phase 3: Clarify (Human Decision Point)
 
-### Resolve ambiguities before implementation
+**Objective**: Get explicit user answers before writing any code.
 
-**Objective**: Get user input on unclear requirements and design choices.
+Use **AskUserQuestion** to resolve:
 
-**Use AskUserQuestion tool** to resolve:
+- **Architecture trade-offs** - e.g., "Cursor-based or offset-based pagination?"
+- **Scope boundaries** - e.g., "Should this include admin-only filtering?"
+- **Integration approach** - e.g., "Extend UserService or create PaginationService?"
 
-1. **Architecture decisions**:
-   - Which approach should we take? (if multiple valid options)
-   - What are the trade-offs? (performance vs. simplicity)
+Do not proceed with assumptions. Every ambiguity must have a user-approved answer.
 
-2. **Scope clarifications**:
-   - Should this include X feature?
-   - What's the priority if time is limited?
-
-3. **Integration choices**:
-   - Should we extend existing module or create new one?
-   - How should this integrate with system Y?
-
-**IMPORTANT**: Do not proceed with assumptions. Get explicit user answers.
-
-**Output**: Clear, unambiguous requirements with user-approved approach.
+**Output**: Unambiguous requirements with chosen approach.
 
 ---
 
-## Phase 4: Design (Parallel Agent Execution)
+## Phase 4: Design (Parallel Agents)
 
-### Create architecture with specialized agents
+**Objective**: Define module structure, interfaces, and testing strategy before coding.
 
-**Objective**: Design the implementation before coding.
+Select agents by feature type and launch in **parallel** for multi-disciplinary work:
 
-**Select appropriate specialized agent(s)** based on feature type:
+- Frontend feature -> `frontend:presentation-engineer`
+- Backend API -> `backend:api-designer`
+- Database changes -> `databases:database-designer`
+- Security-sensitive -> add `security:security-engineer`
 
-- **Frontend feature?** → `frontend:presentation-engineer`
-- **Backend API?** → `backend:api-designer`
-- **Database changes?** → `databases:database-designer`
-- **Complex system?** → `architecture:solution-architect`
+Each agent produces: file organization, interface contracts, and testing strategy.
 
-**Launch agents in PARALLEL** for multi-disciplinary features:
-
-- Frontend + Backend agents simultaneously
-- Include `security:security-engineer` for sensitive features
-- Include `performance:performance-engineer` for high-traffic features
-
-**Agent responsibilities**:
-
-- Define module structure and file organization
-- Specify interfaces and contracts
-- Identify testing strategy
-- Document key decisions and trade-offs
-
-**Consolidation**: Review all design proposals, resolve conflicts, select final approach.
-
-**Output**: Detailed implementation plan with module structure and interfaces.
+**Output**: Implementation plan with module layout and interface definitions.
 
 ---
 
-## Phase 5: Implement (TDD with Quality Enforcement)
+## Phase 5: Implement (TDD)
 
-### Build the feature using test-driven development
+**Objective**: Build the feature using the `tdd:test-driven-development` skill.
 
-**Objective**: Implement the designed solution with quality practices.
+For each component, follow the Red-Green-Refactor cycle:
 
-**Apply TDD cycle** (use `tdd:test-driven-development` skill):
+```typescript
+// 1. RED - Write a failing test
+describe("getUsersPaginated", () => {
+  it("returns paginated results with total count", async () => {
+    const result = await userService.getUsersPaginated({ page: 1, limit: 10 });
+    expect(result.users).toHaveLength(10);
+    expect(result.total).toBe(25);
+  });
+});
 
-```
-For each component:
-1. Write failing test (Red)
-2. Implement minimum code to pass (Green)
-3. Refactor for quality (Refactor)
-4. Repeat
+// 2. GREEN - Write minimum code to pass
+// 3. REFACTOR - Improve structure while keeping tests green
 ```
 
-**Implementation guidelines**:
+**Guidelines**:
 
-- ✅ Start with tests, not implementation
-- ✅ Follow existing codebase patterns (from Phase 2)
-- ✅ Apply SOLID principles (`han-core:solid-principles` skill)
-- ✅ Keep it simple (KISS, YAGNI)
-- ✅ Apply Boy Scout Rule - leave code better than found
-- ❌ Don't over-engineer
-- ❌ Don't skip tests
-- ❌ Don't ignore linter/type errors
+- Follow codebase patterns discovered in Phase 2
+- Apply SOLID principles (`han-core:solid-principles`)
+- Integrate incrementally -- test integration points as you go
+- Keep it simple (KISS, YAGNI); do not over-engineer
+- Never skip tests or ignore linter/type errors
 
-**Integration**:
-
-- Integrate incrementally (don't build everything then integrate)
-- Test integration points early
-- Validate against acceptance criteria continuously
-
-**Output**: Working implementation with comprehensive tests.
+**Output**: Working implementation with passing tests.
 
 ---
 
-## Phase 6: Review (Parallel Multi-Agent Review)
+## Phase 6: Review (Parallel Multi-Agent)
 
-### Quality review with confidence-based filtering
+**Objective**: Surface high-confidence issues only.
 
-**Objective**: Identify high-confidence issues before final validation.
+Launch review agents in **parallel**:
 
-**Launch review agents in PARALLEL** (single message with multiple Task calls):
+1. **Code Reviewer** (`han-core:code-reviewer`) - Quality assessment with confidence scoring
+2. **Security Engineer** (`security:security-engineer`) - Vulnerability scan, auth pattern verification
+3. **Domain Agent** - Frontend, backend, or other discipline-specific reviewer
 
-1. **Code Reviewer** (han-core:code-reviewer skill):
-   - General quality assessment
-   - Confidence scoring ≥80%
-   - False positive filtering
+**Consolidation rules**:
 
-2. **Security Engineer** (security:security-engineer):
-   - Security vulnerability scan
-   - Auth/authz pattern verification
-   - Input validation review
+- De-duplicate findings across agents
+- Discard issues below 80% confidence
+- Classify remaining as Critical (>=90%) or Important (>=80%)
 
-3. **Discipline-Specific Agent**:
-   - Frontend: `frontend:presentation-engineer` (accessibility, UX)
-   - Backend: `backend:backend-architect` (API design, scalability)
-   - etc.
-
-**Review consolidation**:
-
-- Merge findings from all agents
-- De-duplicate issues
-- Filter for confidence ≥80%
-- Organize by: Critical (≥90%) → Important (≥80%)
-
-**Present findings to user with options**:
+Present results to the user with fix options:
 
 ```
 Found 3 critical and 5 important issues.
 
-Options:
 1. Fix all issues now (recommended)
 2. Fix critical only, defer important
-3. Review findings and decide per-issue
+3. Review findings per-issue
 ```
 
-**Output**: Consolidated review with high-confidence issues only.
+**Output**: Actionable issue list filtered to high-confidence findings.
 
 ---
 
-## Phase 7: Validate & Summarize
+## Phase 7: Validate and Summarize
 
-### Final verification and change summary
+**Objective**: Confirm all quality gates pass and document the change.
 
-**Objective**: Ensure all quality gates pass and document the change.
-
-**Run all validation hooks**:
+**Run validations**:
 
 ```bash
-# All validation plugins automatically run on Stop
-# Verify: tests, linting, type checking, etc.
+# Tests
+npm test            # or the project's test command
+
+# Linting and formatting
+npm run lint
+
+# Type checking
+npx tsc --noEmit
 ```
 
-**Validation checklist**:
+**Checklist** (all must pass before commit):
 
 - [ ] All tests pass
 - [ ] Linting passes
 - [ ] Type checking passes
 - [ ] No security vulnerabilities introduced
 - [ ] Documentation updated
-- [ ] No breaking changes (or properly coordinated)
+- [ ] No uncoordinated breaking changes
 
-**Generate change summary**:
+**Generate change summary** covering: files changed and why, how to test, breaking changes (if any), and follow-up tasks.
 
-1. **What changed**: Files modified and why
-2. **How to test**: Steps to verify functionality
-3. **Breaking changes**: None, or list with migration guide
-4. **Follow-up tasks**: Any deferred work or tech debt
-
-**Create TODO list** (using TaskCreate tool):
-
-- Document any follow-up tasks
-- Track deferred improvements
-- Note any tech debt introduced
-
-**Output**: Ready-to-commit feature with comprehensive documentation.
+**Output**: Commit-ready feature with change summary.
 
 ---
 
 ## Phase 8: Document (Blog Post)
 
-### Write a blog post announcing the feature
+**Objective**: Announce the feature with a blog post.
 
-**Objective**: Share the new feature with the community and explain its value.
+Write to `website/content/blog/{feature-slug}.md`:
 
-**Blog post creation**:
+```markdown
+---
+title: "{Feature Name}: {Subtitle}"
+description: "{One-line problem statement}"
+date: "{YYYY-MM-DD}"
+author: "The Bushido Collective"
+tags: ["{relevant}", "{tags}"]
+category: "Feature"
+---
 
-1. **Research context** (optional):
-   - Use `reddit` to find related community discussions
-   - Identify pain points the feature addresses
-   - Understand how users talk about this problem
+## The Problem
+{Pain point this feature addresses}
 
-2. **Write the blog post**:
+## The Solution
+{How the feature works, with code examples}
 
-   Location: `website/content/blog/{feature-slug}.md`
+## Getting Started
+{Steps to use the feature}
 
-   ```markdown
-   ---
-   title: "{Feature Name}: {Compelling subtitle}"
-   description: "{One-line description of what problem this solves}"
-   date: "{YYYY-MM-DD}"
-   author: "The Bushido Collective"
-   tags: ["{relevant}", "{tags}"]
-   category: "Feature"
-   ---
+## What's Next
+{Future improvements}
+```
 
-   {Opening hook - what problem does this solve?}
+Keep it 500-1000 words, technically accurate, and actionable.
 
-   ## The Problem
-
-   {Describe the pain point this feature addresses}
-
-   ## The Solution
-
-   {Explain how the feature works}
-
-   ### Key Capabilities
-
-   {List main features with examples}
-
-   ## Getting Started
-
-   {How to use the feature}
-
-   ## What's Next
-
-   {Future improvements or related features}
-   ```
-
-3. **Writing guidelines**:
-   - Technical but accessible
-   - 500-1000 words for feature announcements
-   - Include working code examples
-   - Be honest about limitations
-   - Make it actionable
-
-**IMPORTANT**: Every significant feature should have a blog post. This is not optional.
-
-**Output**: Published blog post in `website/content/blog/`.
+**Output**: Published blog post.
 
 ---
 
-## Usage
-
-### Basic usage
+## Example
 
 ```
-/feature-dev
-```
+User: /develop Add pagination to user list API
 
-Then describe the feature you want to build.
+Phase 1 - Discover
+  Goal: GET /api/users supports page/limit params, returns total count
+  Impact: UserService, user routes, integration tests
 
-### With feature description
+Phase 2 - Explore (parallel)
+  Found: Products API uses offset/limit with { items, total } response shape
+  Convention: Services return { data, meta } objects
+  Tests: Integration tests use supertest with database fixtures
 
-```
-/feature-dev Add user authentication with JWT tokens
-```
+Phase 3 - Clarify
+  Q: Cursor-based or offset-based pagination?
+  A: Offset-based (consistent with products API)
 
----
+Phase 4 - Design
+  Agent: backend:api-designer
+  Plan: Add getUsersPaginated(page, limit) to UserService
+  Interface: { users: User[], total: number }
 
-## Best Practices
+Phase 5 - Implement (TDD)
+  Red:   test for getUsersPaginated with fixtures
+  Green: implement in UserService + route handler
+  Refactor: extract shared pagination helper
 
-### DO
+Phase 6 - Review (parallel)
+  Code reviewer: no issues
+  Security: validated input sanitization for page/limit params
 
-- ✅ Follow all 8 phases in order
-- ✅ Launch agents in parallel when independent
-- ✅ Use AskUserQuestion to resolve ambiguities
-- ✅ Apply confidence scoring to all reviews
-- ✅ Run TDD cycle for all new code
-- ✅ Pause for user input at decision points
-- ✅ Write a blog post for every significant feature
+Phase 7 - Validate
+  Tests: PASS | Lint: PASS | Types: PASS
+  Summary: 3 files changed, no breaking changes
 
-### DON'T
-
-- ❌ Skip phases (especially Explore, Review, and Document)
-- ❌ Start coding before design (Phases 1-4)
-- ❌ Implement without tests
-- ❌ Report low-confidence review findings
-- ❌ Make architectural decisions without user input
-- ❌ Commit without running validation hooks
-- ❌ Ship features without documentation
-
----
-
-## Example Workflow
-
-```
-User: /feature-dev Add pagination to user list API
-
-Phase 1: Discover
-- Feature: Add pagination to GET /api/users
-- Acceptance: Support page/limit query params, return total count
-- Impact: Backend API, database queries
-
-Phase 2: Explore (parallel agents)
-- Found existing pagination in products API
-- Pattern: Uses offset/limit with total count in response
-- Testing: Integration tests verify pagination logic
-
-Phase 3: Clarify
-Q: Should we use cursor-based or offset-based pagination?
-A: [User selects offset-based for consistency]
-
-Phase 4: Design
-- Agent: backend:api-designer
-- Design: Extend existing UserService with pagination
-- Interface: getUsersPaginated(page, limit) -> { users, total }
-
-Phase 5: Implement
-- Write test for pagination
-- Implement pagination logic
-- Test passes ✅
-
-Phase 6: Review (parallel agents)
-- Code reviewer: No issues (confidence N/A)
-- Security engineer: No issues (confidence N/A)
-- Backend architect: No issues (confidence N/A)
-
-Phase 7: Validate
-- Tests: ✅ Pass
-- Linting: ✅ Pass
-- Types: ✅ Pass
-- Ready to commit
-
-Phase 8: Document
-- Blog post: website/content/blog/user-list-pagination.md
-- Title: "Pagination: Handling Large Data Sets Gracefully"
-- Tags: [api, pagination, performance]
-
-Summary: Added pagination to user list API
-Files: services/user.service.ts, tests/user.service.test.ts, website/content/blog/user-list-pagination.md
-Testing: Run GET /api/users?page=1&limit=10
+Phase 8 - Document
+  Blog: website/content/blog/user-list-pagination.md
 ```
 
 ---
