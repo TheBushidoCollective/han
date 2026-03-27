@@ -1,6 +1,6 @@
 # MCP Tool Access Patterns
 
-## Two Ways to Access Hashi Plugin Tools
+## Two Ways to Access Service/Tool Plugin Tools
 
 ### 1. Direct Exposure (`expose: true`)
 Tools are directly available as `{serverId}_{toolName}` in Claude Code:
@@ -18,13 +18,13 @@ mcp:
   name: my-server
   # No expose flag - accessed via han_workflow
 ```
-**Used by:** All other hashi plugins (github, reddit, playwright, etc.)
+**Used by:** All other service plugins (github, reddit, playwright, etc.)
 
 ## han_workflow Tool
 
 The orchestrator provides a single `han_workflow` tool that:
 1. Analyzes user intent via `selectBackendsForIntent()`
-2. Discovers available backends from installed hashi plugins
+2. Discovers available backends from installed service plugins
 3. Spawns Agent SDK agents with selected MCP servers
 4. Runs workflows autonomously and returns results
 

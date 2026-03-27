@@ -8,5 +8,5 @@
 
 ## Key Distinction
 
-- `han hook dispatch` - Orchestrates hook execution, outputs text
+- `han hook dispatch` - Dispatches hook execution, outputs text
 - `han hook run` - Executes individual hooks with caching/validation, should log events

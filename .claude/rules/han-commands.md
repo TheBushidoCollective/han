@@ -21,10 +21,10 @@ bun test
 han hook run <plugin-name> <hook-name>
 
 # With caching (skip if no changes)
-han hook run jutsu-biome lint --cached
+han hook run biome lint --cached
 
 # Force re-run ignoring cache
-han hook run jutsu-biome lint --cache=false
+han hook run biome lint --cache=false
 ```
 
 ## Plugin Config Format

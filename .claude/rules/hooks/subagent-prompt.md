@@ -4,11 +4,12 @@ SubagentPrompt is a "virtual" hook type used by plugins to provide context that 
 
 ## How It Works
 
-1. Core Han defines a PreToolUse hook that intercepts Task and Skill tools
-2. The hook runs `han hook orchestrate SubagentPrompt --tool-name <Task|Skill>`
-3. All SubagentPrompt hooks from enabled plugins are executed
-4. Their combined output is wrapped in `<subagent-context>` tags
-5. This context is prepended to the tool's prompt/arguments
+1. Core Han defines a PreToolUse hook that intercepts Agent (formerly Task) and Skill tools
+2. The hook gathers context from SubagentPrompt hooks defined by plugins
+3. Their combined output is wrapped in `<subagent-context>` tags
+4. This context is prepended to the tool's prompt/arguments
+
+**Note:** The orchestrate-based SubagentPrompt gathering has been removed. Context injection via `inject-subagent-context` is currently a no-op placeholder.
 
 ## Defining a SubagentPrompt Hook
 
@@ -27,11 +28,12 @@ Use `tool_filter` to control which tools receive your context:
 
 ```yaml
 hooks:
-  # Only inject context for Task tool (subagents)
-  task-only-context:
+  # Only inject context for Agent tool (subagents)
+  # Note: Use both Agent and Task for backward compatibility with CC < 2.1.63
+  agent-only-context:
     event: SubagentPrompt
-    command: echo "Task context here"
-    tool_filter: [Task]
+    command: echo "Agent context here"
+    tool_filter: [Agent, Task]
 
   # Only inject context for Skill tool
   skill-only-context:
@@ -39,11 +41,11 @@ hooks:
     command: echo "Skill context here"
     tool_filter: [Skill]
 
-  # Both tools (default if tool_filter omitted)
+  # All tools (default if tool_filter omitted)
   all-context:
     event: SubagentPrompt
-    command: echo "Context for both"
-    tool_filter: [Task, Skill]
+    command: echo "Context for all"
+    tool_filter: [Agent, Task, Skill]
 ```
 
 ## Output Format

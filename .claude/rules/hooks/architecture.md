@@ -42,20 +42,27 @@ Plugins register hooks in `hooks/hooks.json`:
 
 ## Hook Events
 
-Claude Code provides these hook events:
+Claude Code provides these hook events (complete as of 2.1.63):
 
-| Event | When Triggered |
-|-------|----------------|
-| `SessionStart` | When a Claude Code session begins |
-| `SessionEnd` | When a session ends |
-| `UserPromptSubmit` | When user submits a prompt |
-| `Stop` | When Claude stops to allow validation |
-| `PreToolUse` | Before a tool is executed |
-| `PostToolUse` | After a tool is executed |
-| `SubagentStart` | When a subagent (Task) starts |
-| `SubagentStop` | When a subagent completes |
-| `PreCompact` | Before context compaction |
-| `Notification` | For notifications |
+| Event | When Triggered | Matcher |
+|-------|----------------|---------|
+| `SessionStart` | When a Claude Code session begins | startup/resume/clear/compact |
+| `UserPromptSubmit` | When user submits a prompt | No |
+| `PreToolUse` | Before a tool is executed | tool name |
+| `PermissionRequest` | When permission dialog appears | tool name |
+| `PostToolUse` | After a tool is executed | tool name |
+| `PostToolUseFailure` | When a tool execution fails | tool name |
+| `Notification` | For notifications | notification type |
+| `SubagentStart` | When a subagent (Agent) starts | agent type |
+| `SubagentStop` | When a subagent completes | agent type |
+| `Stop` | When Claude stops to allow validation | No |
+| `TeammateIdle` | When a teammate goes idle | No |
+| `TaskCompleted` | When a task is marked completed | No |
+| `ConfigChange` | When configuration is modified | config source |
+| `WorktreeCreate` | When a worktree is created | No |
+| `WorktreeRemove` | When a worktree is removed | No |
+| `PreCompact` | Before context compaction | manual/auto |
+| `SessionEnd` | When a session ends | exit reason |
 
 ## Hook Types
 
@@ -82,6 +89,39 @@ Return text directly to the agent:
 }
 ```
 
+### Agent Hooks
+
+Spawn an agent to handle the event:
+
+```json
+{
+  "type": "agent",
+  "prompt": "Review the tool output for security issues. $ARGUMENTS"
+}
+```
+
+### HTTP Hooks (2.1.63+)
+
+POST JSON to a URL and receive JSON back:
+
+```json
+{
+  "type": "http",
+  "url": "http://localhost:8080/hooks/stop",
+  "timeout": 30,
+  "headers": {
+    "Authorization": "Bearer $MY_TOKEN"
+  },
+  "allowedEnvVars": ["MY_TOKEN"]
+}
+```
+
+HTTP hooks send the event's JSON input as the POST body. Response handling:
+- 2xx with empty body: success (exit code 0 equivalent)
+- 2xx with plain text: success, text added as context
+- 2xx with JSON: parsed using same schema as command hooks
+- Non-2xx / connection failure: non-blocking error
+
 ## Matchers
 
 Filter hooks by tool name (for PreToolUse/PostToolUse):
@@ -99,7 +139,7 @@ The core plugin provides essential session hooks:
 
 - **SessionStart**: Ensures coordinator is running, registers config, outputs context
 - **UserPromptSubmit**: Outputs current datetime, references important rules
-- **PreToolUse** (Task|Skill): Injects subagent context
+- **PreToolUse** (Agent|Task|Skill): Injects subagent context
 
 ## Validation Plugin Hooks
 

@@ -64,9 +64,9 @@ The `packages/han/lib/plugin-aliases.ts` file defines the mapping of old names t
 |---------|-----------------|---------|
 | `jutsu-{name}` | `jutsu-typescript` | `languages/typescript` |
 | `hashi-{name}` | `hashi-gitlab` | `services/gitlab` |
-| `do-{name}` | `do-api` | `disciplines/api` |
-| `do-{name}-engineering` | `do-api-engineering` | `disciplines/api` |
-| `do-{name}-development` | `do-backend-development` | `disciplines/backend` |
+| `do-{name}` | `do-api` | `disciplines/api-engineering` |
+| `do-{name}-engineering` | `do-api-engineering` | `disciplines/api-engineering` |
+| `do-{name}-development` | `do-backend-development` | `disciplines/backend-development` |
 
 ### If You See "Plugin not found" Errors
 

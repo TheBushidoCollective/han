@@ -13,4 +13,4 @@ The env var fallbacks (HAN_SESSION_ID, CLAUDE_SESSION_ID) are only used when run
 // 5. Generated CLI session ID - final fallback
 ```
 
-When manually running `han hook orchestrate` from a Bash tool, there's no stdin payload, so it falls back to env vars - which may contain stale/different session IDs.
+When manually running `han hook run` from a Bash tool, there's no stdin payload, so it falls back to env vars - which may contain stale/different session IDs.

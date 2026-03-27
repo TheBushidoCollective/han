@@ -3,7 +3,18 @@
     "Railway": {
       "type": "stdio",
       "command": "npx",
-      "args": ["@railway/mcp-server"],
+      "args": [
+        "@railway/mcp-server"
+      ],
+      "env": {}
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--headless"
+      ],
       "env": {}
     }
   }

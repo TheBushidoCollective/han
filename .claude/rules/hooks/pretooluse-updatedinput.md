@@ -2,7 +2,7 @@
 
 When using `updatedInput` in PreToolUse hooks to modify tool parameters:
 
-**DO NOT set `permissionDecision`** when using `updatedInput`. Setting `permissionDecision: "allow"` breaks the `updatedInput` functionality for the Task tool.
+**DO NOT set `permissionDecision`** when using `updatedInput`. Setting `permissionDecision: "allow"` breaks the `updatedInput` functionality for the Agent tool (formerly Task).
 
 ## Correct Pattern
 

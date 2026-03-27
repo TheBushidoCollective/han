@@ -1,8 +1,8 @@
-# Hashi Plugin MCP Transport Best Practices
+# Service Plugin MCP Transport Best Practices
 
 ## Prefer HTTP Transport Over stdio
 
-When creating hashi plugins, prefer HTTP-based MCP servers over stdio/Docker:
+When creating service plugins, prefer HTTP-based MCP servers over stdio/Docker:
 
 ### HTTP Transport (Best)
 ```json

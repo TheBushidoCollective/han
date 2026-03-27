@@ -1,5 +1,5 @@
 ---
-description: Create a new Han plugin (jutsu, hashi, or do)
+description: Create a new Han plugin (language, validation, service, tool, or discipline)
 ---
 
 # Create a Han Plugin
@@ -10,19 +10,19 @@ Create a new plugin for: $ARGUMENTS
 
 First, determine what type of plugin to create based on the user's request:
 
-### Jutsu (術 - Technique)
+### Language/Validation Plugin
 **Use when**: The plugin provides validation hooks for a technology (linting, type-checking, testing, formatting)
 - Examples: biome, typescript, eslint, rust, playwright
 - Key feature: Runs validation commands on Stop events
 - Structure: `validation/{name}/` or `languages/{name}/` or `tools/{name}/`
 
-### Hashi (橋 - Bridge)
+### Service Plugin
 **Use when**: The plugin provides MCP server integration with an external service
 - Examples: github, gitlab, reddit, playwright-mcp, sentry
 - Key feature: Connects Claude Code to external APIs via MCP
 - Structure: `services/{name}/`
 
-### Do (道 - The Way)
+### Discipline Plugin
 **Use when**: The plugin provides specialized agents for a discipline
 - Examples: frontend-development, accessibility, content writing
 - Key feature: Contains agent definitions for domain expertise
@@ -49,7 +49,7 @@ All plugins share this base structure:
 
 ---
 
-## Jutsu Plugin Template
+## Language/Validation Plugin Template
 
 For validation/quality enforcement plugins:
 
@@ -109,7 +109,7 @@ memory: null
 
 ---
 
-## Hashi Plugin Template
+## Service Plugin Template
 
 For MCP server integrations:
 
@@ -178,7 +178,7 @@ memory: null
 
 ---
 
-## Do Plugin Template
+## Discipline Plugin Template
 
 For discipline/agent plugins:
 
@@ -259,19 +259,19 @@ Summon this agent when:
 - Include comprehensive README.md
 - Test before submitting
 
-### Jutsu (Validation)
+### Language/Validation
 - Use `--fail-fast` for quick feedback
 - Validate, don't auto-fix
 - Support monorepos with `dirs_with`
 - Use `if_changed` for caching
 
-### Hashi (MCP)
+### Service (MCP)
 - Prefer HTTP MCP when available (no install needed)
 - Document required environment variables
 - Include memory provider for team knowledge
 - Add commands for common workflows
 
-### Do (Agents)
+### Discipline (Agents)
 - Create 3-5 focused agents per discipline
 - Write detailed agent definitions (1000+ words)
 - Include when/when-not to invoke

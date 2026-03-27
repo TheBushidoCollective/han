@@ -18,7 +18,7 @@ project-root/
       relay.config.json           # Relay config here (not at root)
 ```
 
-The jutsu-relay LSP runs from project root and can't find `packages/browse-client/relay.config.json`, causing a crash.
+The relay LSP runs from project root and can't find `packages/browse-client/relay.config.json`, causing a crash.
 
 ## Solution: Defensive Entrypoint Scripts
 
@@ -71,7 +71,7 @@ For any jutsu plugin with LSP servers:
 
 ## Implemented In
 
-- `jutsu-relay` - Checks for relay.config.json, relay.config.js, or package.json
+- `relay` - Checks for relay.config.json, relay.config.js, or package.json
 
 ## Should Be Applied To
 

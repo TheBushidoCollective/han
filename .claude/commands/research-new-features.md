@@ -8,7 +8,7 @@ Research feature requests, pain points, and community discussions about Claude A
 
 ## MCP Server Required
 
-This command requires the `hashi-reddit` MCP server to be installed and running.
+This command requires the `reddit` MCP server to be installed and running.
 
 ## Target Subreddits
 
