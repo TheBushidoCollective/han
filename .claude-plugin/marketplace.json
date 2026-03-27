@@ -17,9 +17,9 @@
       "keywords": ["absinthe", "graphql", "elixir", "api", "subscriptions"]
     },
     {
-      "name": "accessibility",
+      "name": "accessibility-engineering",
       "description": "Accessibility engineering agents providing expertise in WCAG, ARIA, and inclusive design",
-      "source": "./plugins/disciplines/accessibility",
+      "source": "./plugins/disciplines/accessibility-engineering",
       "category": "Discipline",
       "keywords": ["accessibility", "wcag", "inclusive-design", "agent"]
     },
@@ -90,9 +90,9 @@
       ]
     },
     {
-      "name": "api",
+      "name": "api-engineering",
       "description": "API engineering agents providing expertise in API design, contracts, and gateway patterns",
-      "source": "./plugins/disciplines/api",
+      "source": "./plugins/disciplines/api-engineering",
       "category": "Discipline",
       "keywords": ["api", "rest", "graphql", "agent"]
     },
@@ -104,9 +104,9 @@
       "keywords": ["apollo", "graphql", "client", "server", "skill"]
     },
     {
-      "name": "architecture",
+      "name": "system-architecture",
       "description": "Agents for system design and architectural thinking.",
-      "source": "./plugins/disciplines/architecture",
+      "source": "./plugins/disciplines/system-architecture",
       "category": "Discipline",
       "keywords": ["architecture", "design", "patterns"]
     },
@@ -131,9 +131,9 @@
       ]
     },
     {
-      "name": "backend",
+      "name": "backend-development",
       "description": "Agents specialized in backend development, API design, and system architecture. Focuses on scalable server-side solutions and data management.",
-      "source": "./plugins/disciplines/backend",
+      "source": "./plugins/disciplines/backend-development",
       "category": "Discipline",
       "keywords": ["backend", "api", "architecture", "data", "server", "agent"]
     },
@@ -165,9 +165,9 @@
       ]
     },
     {
-      "name": "blockchain",
+      "name": "blockchain-development",
       "description": "Blockchain development agents providing expertise in blockchain architecture, smart contracts, and Web3",
-      "source": "./plugins/disciplines/blockchain",
+      "source": "./plugins/disciplines/blockchain-development",
       "category": "Discipline",
       "keywords": ["blockchain", "web3", "smart-contracts", "agent"]
     },
@@ -290,16 +290,16 @@
       ]
     },
     {
-      "name": "compilers",
+      "name": "compiler-engineering",
       "description": "Compiler development agents providing expertise in lexing, parsing, code generation, and language design",
-      "source": "./plugins/disciplines/compilers",
+      "source": "./plugins/disciplines/compiler-engineering",
       "category": "Discipline",
       "keywords": ["compiler", "language-design", "parsing", "agent"]
     },
     {
-      "name": "content",
+      "name": "content-creation",
       "description": "Specialized agents for creating engaging content across various formats and target audiences. Focuses on storytelling, audience engagement, and platform-optimized writing.",
-      "source": "./plugins/disciplines/content",
+      "source": "./plugins/disciplines/content-creation",
       "category": "Discipline",
       "keywords": [
         "content",
@@ -382,9 +382,9 @@
       "keywords": ["data-engineering", "etl", "streaming", "agent"]
     },
     {
-      "name": "databases",
+      "name": "database-engineering",
       "description": "Database engineering agents providing expertise in schema design, query optimization, and reliability",
-      "source": "./plugins/disciplines/databases",
+      "source": "./plugins/disciplines/database-engineering",
       "category": "Discipline",
       "keywords": ["database", "sql", "query-optimization", "agent"]
     },
@@ -410,9 +410,9 @@
       "keywords": ["docker", "docker-compose", "containers", "devops"]
     },
     {
-      "name": "documentation",
+      "name": "documentation-engineering",
       "description": "Agents specialized in technical documentation and knowledge management. Focuses on documentation architecture and user-focused writing.",
-      "source": "./plugins/disciplines/documentation",
+      "source": "./plugins/disciplines/documentation-engineering",
       "category": "Discipline",
       "keywords": ["documentation", "technical-writing", "knowledge", "agent"]
     },
@@ -444,9 +444,9 @@
       "keywords": ["elixir", "otp", "ecto", "skill"]
     },
     {
-      "name": "embedded",
+      "name": "embedded-development",
       "description": "Embedded development agents providing expertise in RTOS, firmware, and IoT",
-      "source": "./plugins/disciplines/embedded",
+      "source": "./plugins/disciplines/embedded-development",
       "category": "Discipline",
       "keywords": ["embedded-systems", "firmware", "iot", "agent"]
     },
@@ -525,9 +525,9 @@
       ]
     },
     {
-      "name": "frontend",
+      "name": "frontend-development",
       "description": "Agents specialized in frontend development, UI design, and presentation engineering. Focuses on visual design, user experience, and interaction patterns.",
-      "source": "./plugins/disciplines/frontend",
+      "source": "./plugins/disciplines/frontend-development",
       "category": "Discipline",
       "keywords": ["frontend", "ui", "ux", "design", "presentation", "agent"]
     },
@@ -544,9 +544,9 @@
       ]
     },
     {
-      "name": "games",
+      "name": "game-development",
       "description": "Game development engineering agents providing expertise in engine architecture, gameplay systems, and performance optimization",
-      "source": "./plugins/disciplines/games",
+      "source": "./plugins/disciplines/game-development",
       "category": "Discipline",
       "keywords": ["game-development", "game-engine", "gameplay", "agent"]
     },
@@ -561,6 +561,20 @@
         "commit",
         "version-control",
         "workflow"
+      ]
+    },
+    {
+      "name": "git-worktrees",
+      "description": "Agent isolation via git worktrees - gives each subagent its own checkout to prevent interference during parallel work.",
+      "source": "./plugins/patterns/git-worktrees",
+      "category": "Pattern",
+      "keywords": [
+        "git",
+        "worktree",
+        "isolation",
+        "subagent",
+        "parallel",
+        "multi-agent"
       ]
     },
     {
@@ -642,9 +656,9 @@
       "keywords": ["go", "golang", "concurrency", "skill"]
     },
     {
-      "name": "graphics",
+      "name": "graphics-engineering",
       "description": "Graphics engineering agents providing expertise in GPU programming, shaders, and rendering",
-      "source": "./plugins/disciplines/graphics",
+      "source": "./plugins/disciplines/graphics-engineering",
       "category": "Discipline",
       "keywords": ["graphics", "gpu", "shaders", "agent"]
     },
@@ -685,9 +699,9 @@
       "keywords": ["helm", "kubernetes", "k8s", "charts", "devops"]
     },
     {
-      "name": "infrastructure",
+      "name": "infrastructure-engineering",
       "description": "Agents for operational excellence and reliability engineering.",
-      "source": "./plugins/disciplines/infrastructure",
+      "source": "./plugins/disciplines/infrastructure-engineering",
       "category": "Discipline",
       "keywords": ["devops", "sre", "deployment", "operations"]
     },
@@ -841,9 +855,9 @@
       ]
     },
     {
-      "name": "mobile",
+      "name": "mobile-development",
       "description": "Agents specialized in mobile development for iOS, Android, and cross-platform applications. Focuses on native and cross-platform mobile solutions.",
-      "source": "./plugins/disciplines/mobile",
+      "source": "./plugins/disciplines/mobile-development",
       "category": "Discipline",
       "keywords": ["mobile", "ios", "android", "development", "agent"]
     },
@@ -869,9 +883,9 @@
       "keywords": ["nestjs", "typescript", "nodejs", "skill"]
     },
     {
-      "name": "networking",
+      "name": "network-engineering",
       "description": "Network engineering agents providing expertise in protocols, distributed systems, and service mesh",
-      "source": "./plugins/disciplines/networking",
+      "source": "./plugins/disciplines/network-engineering",
       "category": "Discipline",
       "keywords": ["network", "protocols", "distributed-systems", "agent"]
     },
@@ -938,9 +952,9 @@
       "keywords": ["objective-c", "objc", "ios", "macos", "arc", "skill"]
     },
     {
-      "name": "observability",
+      "name": "observability-engineering",
       "description": "Observability engineering agents providing expertise in tracing, monitoring, and logging",
-      "source": "./plugins/disciplines/observability",
+      "source": "./plugins/disciplines/observability-engineering",
       "category": "Discipline",
       "keywords": ["observability", "monitoring", "tracing", "agent"]
     },
@@ -967,6 +981,21 @@
       ]
     },
     {
+      "name": "gemini-cli",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with Gemini CLI by translating Gemini CLI events into Han hook invocations.",
+      "source": "./plugins/bridges/gemini-cli",
+      "category": "Integration",
+      "keywords": [
+        "gemini-cli",
+        "gemini",
+        "bridge",
+        "hooks",
+        "compatibility",
+        "claude-code",
+        "validation"
+      ]
+    },
+    {
       "name": "opencode",
       "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with OpenCode by translating OpenCode events into Claude Code hook invocations.",
       "source": "./plugins/bridges/opencode",
@@ -981,9 +1010,39 @@
       ]
     },
     {
-      "name": "performance",
+      "name": "kiro",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with Kiro CLI by translating Kiro hook events into Han hook executions.",
+      "source": "./plugins/bridges/kiro",
+      "category": "Integration",
+      "keywords": [
+        "kiro",
+        "kiro-cli",
+        "bridge",
+        "hooks",
+        "compatibility",
+        "claude-code",
+        "validation"
+      ]
+    },
+    {
+      "name": "codex",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with OpenAI Codex CLI by translating Codex events into Claude Code hook invocations.",
+      "source": "./plugins/bridges/codex",
+      "category": "Integration",
+      "keywords": [
+        "codex",
+        "openai",
+        "bridge",
+        "hooks",
+        "compatibility",
+        "claude-code",
+        "validation"
+      ]
+    },
+    {
+      "name": "performance-engineering",
       "description": "Performance engineering agents providing expertise in profiling, optimization, and scalability",
-      "source": "./plugins/disciplines/performance",
+      "source": "./plugins/disciplines/performance-engineering",
       "category": "Discipline",
       "keywords": ["performance", "optimization", "scalability", "agent"]
     },
@@ -1002,9 +1061,9 @@
       "keywords": ["php", "composer", "security", "web", "skill"]
     },
     {
-      "name": "platform",
+      "name": "platform-engineering",
       "description": "Platform engineering agents providing expertise in developer platforms, IaC, and tooling",
-      "source": "./plugins/disciplines/platform",
+      "source": "./plugins/disciplines/platform-engineering",
       "category": "Discipline",
       "keywords": ["platform-engineering", "infrastructure", "devex", "agent"]
     },
@@ -1038,7 +1097,7 @@
       "keywords": ["mcp", "playwright", "testing", "automation", "server"]
     },
     {
-      "name": "plugin-development",
+      "name": "claude-plugin-development",
       "description": "Specialized agents for developing, testing, and maintaining Claude Code plugins with quality enforcement hooks.",
       "source": "./plugins/disciplines/claude-plugin-development",
       "category": "Discipline",
@@ -1058,9 +1117,9 @@
       ]
     },
     {
-      "name": "product",
+      "name": "product-management",
       "description": "Agents specialized in product vision and strategy. Focuses on product direction, market positioning, and strategic planning.",
-      "source": "./plugins/disciplines/product",
+      "source": "./plugins/disciplines/product-management",
       "category": "Discipline",
       "keywords": ["product", "strategy", "vision", "planning", "agent"]
     },
@@ -1072,9 +1131,9 @@
       "keywords": ["project-management", "coordination", "workflow"]
     },
     {
-      "name": "prompts",
+      "name": "prompt-engineering",
       "description": "Agents specialized in prompt engineering and AI interaction. Focuses on effective prompt design and AI model optimization.",
-      "source": "./plugins/disciplines/prompts",
+      "source": "./plugins/disciplines/prompt-engineering",
       "category": "Discipline",
       "keywords": ["prompt-engineering", "ai", "llm", "agent"]
     },
@@ -1107,9 +1166,9 @@
       "keywords": ["python", "types", "async", "skill"]
     },
     {
-      "name": "quality",
+      "name": "quality-engineering",
       "description": "Agents specialized in quality assurance, testing strategies, and test architecture. Focuses on ensuring code quality and reliability.",
-      "source": "./plugins/disciplines/quality",
+      "source": "./plugins/disciplines/quality-engineering",
       "category": "Discipline",
       "keywords": ["quality", "testing", "qa", "reliability", "agent"]
     },
@@ -1275,9 +1334,9 @@
       "keywords": ["scratch", "workspace", "gitignore", "temporary", "workflow"]
     },
     {
-      "name": "security",
+      "name": "security-engineering",
       "description": "Agents specialized in security engineering and threat mitigation. Focuses on secure architecture, vulnerability assessment, and compliance.",
-      "source": "./plugins/disciplines/security",
+      "source": "./plugins/disciplines/security-engineering",
       "category": "Discipline",
       "keywords": ["security", "compliance", "vulnerability", "threat", "agent"]
     },
@@ -1312,6 +1371,20 @@
       ]
     },
     {
+      "name": "session-code-review",
+      "description": "Backpressure code review that validates changes against REVIEW.md before commits and session completion.",
+      "source": "./plugins/validation/session-code-review",
+      "category": "Validation",
+      "keywords": [
+        "code-review",
+        "review",
+        "backpressure",
+        "quality",
+        "validation",
+        "review.md"
+      ]
+    },
+    {
       "name": "shellcheck",
       "description": "Validation and quality enforcement for Bash and shell scripts using ShellCheck with portability and error handling skills.",
       "source": "./plugins/validation/shellcheck",
@@ -1340,9 +1413,9 @@
       "keywords": ["sip", "voip", "telecommunications", "real-time"]
     },
     {
-      "name": "sre",
+      "name": "site-reliability-engineering",
       "description": "Site Reliability Engineering discipline agent for reliability, monitoring, and incident response",
-      "source": "./plugins/disciplines/sre",
+      "source": "./plugins/disciplines/site-reliability-engineering",
       "category": "Discipline",
       "keywords": [
         "sre",
@@ -1490,9 +1563,9 @@
       ]
     },
     {
-      "name": "voip",
+      "name": "voip-engineering",
       "description": "VoIP engineering discipline for telecommunications and real-time communications systems",
-      "source": "./plugins/disciplines/voip",
+      "source": "./plugins/disciplines/voip-engineering",
       "category": "Discipline",
       "keywords": ["voip", "telecommunications", "sip", "rtp", "engineering"]
     },
@@ -1534,63 +1607,63 @@
     {
       "name": "do-accessibility",
       "description": "Accessibility engineering agents providing expertise in WCAG, ARIA, and inclusive design",
-      "source": "./plugins/disciplines/accessibility",
+      "source": "./plugins/disciplines/accessibility-engineering",
       "category": "Discipline",
       "keywords": ["accessibility", "wcag", "inclusive-design", "agent"]
     },
     {
       "name": "do-accessibility-engineering",
       "description": "Accessibility engineering agents providing expertise in WCAG, ARIA, and inclusive design",
-      "source": "./plugins/disciplines/accessibility",
+      "source": "./plugins/disciplines/accessibility-engineering",
       "category": "Discipline",
       "keywords": ["accessibility", "wcag", "inclusive-design", "agent"]
     },
     {
       "name": "do-api",
       "description": "API engineering agents providing expertise in API design, contracts, and gateway patterns",
-      "source": "./plugins/disciplines/api",
+      "source": "./plugins/disciplines/api-engineering",
       "category": "Discipline",
       "keywords": ["api", "rest", "graphql", "agent"]
     },
     {
       "name": "do-api-engineering",
       "description": "API engineering agents providing expertise in API design, contracts, and gateway patterns",
-      "source": "./plugins/disciplines/api",
+      "source": "./plugins/disciplines/api-engineering",
       "category": "Discipline",
       "keywords": ["api", "rest", "graphql", "agent"]
     },
     {
       "name": "do-architecture",
       "description": "Agents for system design and architectural thinking.",
-      "source": "./plugins/disciplines/architecture",
+      "source": "./plugins/disciplines/system-architecture",
       "category": "Discipline",
       "keywords": ["architecture", "design", "patterns"]
     },
     {
       "name": "do-backend",
       "description": "Agents specialized in backend development, API design, and system architecture. Focuses on scalable server-side solutions and data management.",
-      "source": "./plugins/disciplines/backend",
+      "source": "./plugins/disciplines/backend-development",
       "category": "Discipline",
       "keywords": ["backend", "api", "architecture", "data", "server", "agent"]
     },
     {
       "name": "do-backend-development",
       "description": "Agents specialized in backend development, API design, and system architecture. Focuses on scalable server-side solutions and data management.",
-      "source": "./plugins/disciplines/backend",
+      "source": "./plugins/disciplines/backend-development",
       "category": "Discipline",
       "keywords": ["backend", "api", "architecture", "data", "server", "agent"]
     },
     {
       "name": "do-blockchain",
       "description": "Blockchain development agents providing expertise in blockchain architecture, smart contracts, and Web3",
-      "source": "./plugins/disciplines/blockchain",
+      "source": "./plugins/disciplines/blockchain-development",
       "category": "Discipline",
       "keywords": ["blockchain", "web3", "smart-contracts", "agent"]
     },
     {
       "name": "do-blockchain-development",
       "description": "Blockchain development agents providing expertise in blockchain architecture, smart contracts, and Web3",
-      "source": "./plugins/disciplines/blockchain",
+      "source": "./plugins/disciplines/blockchain-development",
       "category": "Discipline",
       "keywords": ["blockchain", "web3", "smart-contracts", "agent"]
     },
@@ -1604,21 +1677,21 @@
     {
       "name": "do-compiler-development",
       "description": "Compiler development agents providing expertise in lexing, parsing, code generation, and language design",
-      "source": "./plugins/disciplines/compilers",
+      "source": "./plugins/disciplines/compiler-engineering",
       "category": "Discipline",
       "keywords": ["compiler", "language-design", "parsing", "agent"]
     },
     {
       "name": "do-compilers",
       "description": "Compiler development agents providing expertise in lexing, parsing, code generation, and language design",
-      "source": "./plugins/disciplines/compilers",
+      "source": "./plugins/disciplines/compiler-engineering",
       "category": "Discipline",
       "keywords": ["compiler", "language-design", "parsing", "agent"]
     },
     {
       "name": "do-content",
       "description": "Specialized agents for creating engaging content across various formats and target audiences. Focuses on storytelling, audience engagement, and platform-optimized writing.",
-      "source": "./plugins/disciplines/content",
+      "source": "./plugins/disciplines/content-creation",
       "category": "Discipline",
       "keywords": [
         "content",
@@ -1632,7 +1705,7 @@
     {
       "name": "do-content-creator",
       "description": "Specialized agents for creating engaging content across various formats and target audiences. Focuses on storytelling, audience engagement, and platform-optimized writing.",
-      "source": "./plugins/disciplines/content",
+      "source": "./plugins/disciplines/content-creation",
       "category": "Discipline",
       "keywords": [
         "content",
@@ -1653,84 +1726,84 @@
     {
       "name": "do-database-engineering",
       "description": "Database engineering agents providing expertise in schema design, query optimization, and reliability",
-      "source": "./plugins/disciplines/databases",
+      "source": "./plugins/disciplines/database-engineering",
       "category": "Discipline",
       "keywords": ["database", "sql", "query-optimization", "agent"]
     },
     {
       "name": "do-databases",
       "description": "Database engineering agents providing expertise in schema design, query optimization, and reliability",
-      "source": "./plugins/disciplines/databases",
+      "source": "./plugins/disciplines/database-engineering",
       "category": "Discipline",
       "keywords": ["database", "sql", "query-optimization", "agent"]
     },
     {
       "name": "do-documentation",
       "description": "Agents specialized in technical documentation and knowledge management. Focuses on documentation architecture and user-focused writing.",
-      "source": "./plugins/disciplines/documentation",
+      "source": "./plugins/disciplines/documentation-engineering",
       "category": "Discipline",
       "keywords": ["documentation", "technical-writing", "knowledge", "agent"]
     },
     {
       "name": "do-embedded",
       "description": "Embedded development agents providing expertise in RTOS, firmware, and IoT",
-      "source": "./plugins/disciplines/embedded",
+      "source": "./plugins/disciplines/embedded-development",
       "category": "Discipline",
       "keywords": ["embedded-systems", "firmware", "iot", "agent"]
     },
     {
       "name": "do-embedded-development",
       "description": "Embedded development agents providing expertise in RTOS, firmware, and IoT",
-      "source": "./plugins/disciplines/embedded",
+      "source": "./plugins/disciplines/embedded-development",
       "category": "Discipline",
       "keywords": ["embedded-systems", "firmware", "iot", "agent"]
     },
     {
       "name": "do-frontend",
       "description": "Agents specialized in frontend development, UI design, and presentation engineering. Focuses on visual design, user experience, and interaction patterns.",
-      "source": "./plugins/disciplines/frontend",
+      "source": "./plugins/disciplines/frontend-development",
       "category": "Discipline",
       "keywords": ["frontend", "ui", "ux", "design", "presentation", "agent"]
     },
     {
       "name": "do-frontend-development",
       "description": "Agents specialized in frontend development, UI design, and presentation engineering. Focuses on visual design, user experience, and interaction patterns.",
-      "source": "./plugins/disciplines/frontend",
+      "source": "./plugins/disciplines/frontend-development",
       "category": "Discipline",
       "keywords": ["frontend", "ui", "ux", "design", "presentation", "agent"]
     },
     {
       "name": "do-game-development",
       "description": "Game development engineering agents providing expertise in engine architecture, gameplay systems, and performance optimization",
-      "source": "./plugins/disciplines/games",
+      "source": "./plugins/disciplines/game-development",
       "category": "Discipline",
       "keywords": ["game-development", "game-engine", "gameplay", "agent"]
     },
     {
       "name": "do-games",
       "description": "Game development engineering agents providing expertise in engine architecture, gameplay systems, and performance optimization",
-      "source": "./plugins/disciplines/games",
+      "source": "./plugins/disciplines/game-development",
       "category": "Discipline",
       "keywords": ["game-development", "game-engine", "gameplay", "agent"]
     },
     {
       "name": "do-graphics",
       "description": "Graphics engineering agents providing expertise in GPU programming, shaders, and rendering",
-      "source": "./plugins/disciplines/graphics",
+      "source": "./plugins/disciplines/graphics-engineering",
       "category": "Discipline",
       "keywords": ["graphics", "gpu", "shaders", "agent"]
     },
     {
       "name": "do-graphics-engineering",
       "description": "Graphics engineering agents providing expertise in GPU programming, shaders, and rendering",
-      "source": "./plugins/disciplines/graphics",
+      "source": "./plugins/disciplines/graphics-engineering",
       "category": "Discipline",
       "keywords": ["graphics", "gpu", "shaders", "agent"]
     },
     {
       "name": "do-infrastructure",
       "description": "Agents for operational excellence and reliability engineering.",
-      "source": "./plugins/disciplines/infrastructure",
+      "source": "./plugins/disciplines/infrastructure-engineering",
       "category": "Discipline",
       "keywords": ["devops", "sre", "deployment", "operations"]
     },
@@ -1751,70 +1824,70 @@
     {
       "name": "do-mobile",
       "description": "Agents specialized in mobile development for iOS, Android, and cross-platform applications. Focuses on native and cross-platform mobile solutions.",
-      "source": "./plugins/disciplines/mobile",
+      "source": "./plugins/disciplines/mobile-development",
       "category": "Discipline",
       "keywords": ["mobile", "ios", "android", "development", "agent"]
     },
     {
       "name": "do-mobile-development",
       "description": "Agents specialized in mobile development for iOS, Android, and cross-platform applications. Focuses on native and cross-platform mobile solutions.",
-      "source": "./plugins/disciplines/mobile",
+      "source": "./plugins/disciplines/mobile-development",
       "category": "Discipline",
       "keywords": ["mobile", "ios", "android", "development", "agent"]
     },
     {
       "name": "do-network-engineering",
       "description": "Network engineering agents providing expertise in protocols, distributed systems, and service mesh",
-      "source": "./plugins/disciplines/networking",
+      "source": "./plugins/disciplines/network-engineering",
       "category": "Discipline",
       "keywords": ["network", "protocols", "distributed-systems", "agent"]
     },
     {
       "name": "do-networking",
       "description": "Network engineering agents providing expertise in protocols, distributed systems, and service mesh",
-      "source": "./plugins/disciplines/networking",
+      "source": "./plugins/disciplines/network-engineering",
       "category": "Discipline",
       "keywords": ["network", "protocols", "distributed-systems", "agent"]
     },
     {
       "name": "do-observability",
       "description": "Observability engineering agents providing expertise in tracing, monitoring, and logging",
-      "source": "./plugins/disciplines/observability",
+      "source": "./plugins/disciplines/observability-engineering",
       "category": "Discipline",
       "keywords": ["observability", "monitoring", "tracing", "agent"]
     },
     {
       "name": "do-observability-engineering",
       "description": "Observability engineering agents providing expertise in tracing, monitoring, and logging",
-      "source": "./plugins/disciplines/observability",
+      "source": "./plugins/disciplines/observability-engineering",
       "category": "Discipline",
       "keywords": ["observability", "monitoring", "tracing", "agent"]
     },
     {
       "name": "do-performance",
       "description": "Performance engineering agents providing expertise in profiling, optimization, and scalability",
-      "source": "./plugins/disciplines/performance",
+      "source": "./plugins/disciplines/performance-engineering",
       "category": "Discipline",
       "keywords": ["performance", "optimization", "scalability", "agent"]
     },
     {
       "name": "do-performance-engineering",
       "description": "Performance engineering agents providing expertise in profiling, optimization, and scalability",
-      "source": "./plugins/disciplines/performance",
+      "source": "./plugins/disciplines/performance-engineering",
       "category": "Discipline",
       "keywords": ["performance", "optimization", "scalability", "agent"]
     },
     {
       "name": "do-platform",
       "description": "Platform engineering agents providing expertise in developer platforms, IaC, and tooling",
-      "source": "./plugins/disciplines/platform",
+      "source": "./plugins/disciplines/platform-engineering",
       "category": "Discipline",
       "keywords": ["platform-engineering", "infrastructure", "devex", "agent"]
     },
     {
       "name": "do-platform-engineering",
       "description": "Platform engineering agents providing expertise in developer platforms, IaC, and tooling",
-      "source": "./plugins/disciplines/platform",
+      "source": "./plugins/disciplines/platform-engineering",
       "category": "Discipline",
       "keywords": ["platform-engineering", "infrastructure", "devex", "agent"]
     },
@@ -1828,14 +1901,14 @@
     {
       "name": "do-product",
       "description": "Agents specialized in product vision and strategy. Focuses on product direction, market positioning, and strategic planning.",
-      "source": "./plugins/disciplines/product",
+      "source": "./plugins/disciplines/product-management",
       "category": "Discipline",
       "keywords": ["product", "strategy", "vision", "planning", "agent"]
     },
     {
       "name": "do-product-management",
       "description": "Agents specialized in product vision and strategy. Focuses on product direction, market positioning, and strategic planning.",
-      "source": "./plugins/disciplines/product",
+      "source": "./plugins/disciplines/product-management",
       "category": "Discipline",
       "keywords": ["product", "strategy", "vision", "planning", "agent"]
     },
@@ -1849,49 +1922,49 @@
     {
       "name": "do-prompt-engineering",
       "description": "Agents specialized in prompt engineering and AI interaction. Focuses on effective prompt design and AI model optimization.",
-      "source": "./plugins/disciplines/prompts",
+      "source": "./plugins/disciplines/prompt-engineering",
       "category": "Discipline",
       "keywords": ["prompt-engineering", "ai", "llm", "agent"]
     },
     {
       "name": "do-prompts",
       "description": "Agents specialized in prompt engineering and AI interaction. Focuses on effective prompt design and AI model optimization.",
-      "source": "./plugins/disciplines/prompts",
+      "source": "./plugins/disciplines/prompt-engineering",
       "category": "Discipline",
       "keywords": ["prompt-engineering", "ai", "llm", "agent"]
     },
     {
       "name": "do-quality",
       "description": "Agents specialized in quality assurance, testing strategies, and test architecture. Focuses on ensuring code quality and reliability.",
-      "source": "./plugins/disciplines/quality",
+      "source": "./plugins/disciplines/quality-engineering",
       "category": "Discipline",
       "keywords": ["quality", "testing", "qa", "reliability", "agent"]
     },
     {
       "name": "do-quality-assurance",
       "description": "Agents specialized in quality assurance, testing strategies, and test architecture. Focuses on ensuring code quality and reliability.",
-      "source": "./plugins/disciplines/quality",
+      "source": "./plugins/disciplines/quality-engineering",
       "category": "Discipline",
       "keywords": ["quality", "testing", "qa", "reliability", "agent"]
     },
     {
       "name": "do-security",
       "description": "Agents specialized in security engineering and threat mitigation. Focuses on secure architecture, vulnerability assessment, and compliance.",
-      "source": "./plugins/disciplines/security",
+      "source": "./plugins/disciplines/security-engineering",
       "category": "Discipline",
       "keywords": ["security", "compliance", "vulnerability", "threat", "agent"]
     },
     {
       "name": "do-security-engineering",
       "description": "Agents specialized in security engineering and threat mitigation. Focuses on secure architecture, vulnerability assessment, and compliance.",
-      "source": "./plugins/disciplines/security",
+      "source": "./plugins/disciplines/security-engineering",
       "category": "Discipline",
       "keywords": ["security", "compliance", "vulnerability", "threat", "agent"]
     },
     {
       "name": "do-site-reliability-engineering",
       "description": "Site Reliability Engineering discipline agent for reliability, monitoring, and incident response",
-      "source": "./plugins/disciplines/sre",
+      "source": "./plugins/disciplines/site-reliability-engineering",
       "category": "Discipline",
       "keywords": [
         "sre",
@@ -1905,7 +1978,7 @@
     {
       "name": "do-sre",
       "description": "Site Reliability Engineering discipline agent for reliability, monitoring, and incident response",
-      "source": "./plugins/disciplines/sre",
+      "source": "./plugins/disciplines/site-reliability-engineering",
       "category": "Discipline",
       "keywords": [
         "sre",
@@ -1919,21 +1992,21 @@
     {
       "name": "do-technical-documentation",
       "description": "Agents specialized in technical documentation and knowledge management. Focuses on documentation architecture and user-focused writing.",
-      "source": "./plugins/disciplines/documentation",
+      "source": "./plugins/disciplines/documentation-engineering",
       "category": "Discipline",
       "keywords": ["documentation", "technical-writing", "knowledge", "agent"]
     },
     {
       "name": "do-voip",
       "description": "VoIP engineering discipline for telecommunications and real-time communications systems",
-      "source": "./plugins/disciplines/voip",
+      "source": "./plugins/disciplines/voip-engineering",
       "category": "Discipline",
       "keywords": ["voip", "telecommunications", "sip", "rtp", "engineering"]
     },
     {
       "name": "do-voip-engineering",
       "description": "VoIP engineering discipline for telecommunications and real-time communications systems",
-      "source": "./plugins/disciplines/voip",
+      "source": "./plugins/disciplines/voip-engineering",
       "category": "Discipline",
       "keywords": ["voip", "telecommunications", "sip", "rtp", "engineering"]
     },
@@ -2515,12 +2588,57 @@
       ]
     },
     {
+      "name": "hashi-gemini-cli",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with Gemini CLI by translating Gemini CLI events into Han hook invocations.",
+      "source": "./plugins/bridges/gemini-cli",
+      "category": "Integration",
+      "keywords": [
+        "gemini-cli",
+        "gemini",
+        "bridge",
+        "hooks",
+        "compatibility",
+        "claude-code",
+        "validation"
+      ]
+    },
+    {
       "name": "hashi-opencode",
       "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with OpenCode by translating OpenCode events into Claude Code hook invocations.",
       "source": "./plugins/bridges/opencode",
       "category": "Integration",
       "keywords": [
         "opencode",
+        "bridge",
+        "hooks",
+        "compatibility",
+        "claude-code",
+        "validation"
+      ]
+    },
+    {
+      "name": "hashi-kiro",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with Kiro CLI by translating Kiro hook events into Han hook executions.",
+      "source": "./plugins/bridges/kiro",
+      "category": "Integration",
+      "keywords": [
+        "kiro",
+        "kiro-cli",
+        "bridge",
+        "hooks",
+        "compatibility",
+        "claude-code",
+        "validation"
+      ]
+    },
+    {
+      "name": "hashi-codex",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with OpenAI Codex CLI by translating Codex events into Claude Code hook invocations.",
+      "source": "./plugins/bridges/codex",
+      "category": "Integration",
+      "keywords": [
+        "codex",
+        "openai",
         "bridge",
         "hooks",
         "compatibility",

@@ -37,7 +37,7 @@ import { discoverHooks, resolvePluginPaths, getHooksByEvent } from "./discovery"
 import { matchPostToolUseHooks, matchStopHooks } from "./matcher"
 import { executeHooksParallel } from "./executor"
 import { invalidateFile } from "./cache"
-import { formatValidationResults, formatStopResults } from "./formatter"
+import { formatValidationResults } from "./formatter"
 import { mapToolName } from "./types"
 import { BridgeEventLogger } from "./events"
 import {

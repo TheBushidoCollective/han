@@ -19,7 +19,6 @@ import {
   existsSync,
   readdirSync,
   rmSync,
-  copyFileSync,
 } from "node:fs"
 import { join, basename } from "node:path"
 import type { SkillInfo } from "./skills"
