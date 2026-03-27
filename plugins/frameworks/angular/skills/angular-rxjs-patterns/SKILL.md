@@ -44,14 +44,14 @@ const custom$ = new Observable(subscriber => {
 
 ```typescript
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class DataService {
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
 
   getData(): Observable<Data[]> {
     return this.http.get<Data[]>('/api/data');
@@ -296,70 +296,57 @@ this.http.get('/api/data').pipe(
 
 ## Subscription Management
 
-### Manual Subscription Cleanup
+### takeUntilDestroyed (Preferred)
+
+Use `takeUntilDestroyed()` from `@angular/core/rxjs-interop` — no `ngOnDestroy`
+needed, and no manual `Subject<void>` to manage:
 
 ```typescript
-import { Component, OnDestroy } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { Component, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
-  selector: 'app-my-component'
+  selector: 'app-my-component',
+  standalone: true
 })
-export class MyComponent implements OnDestroy {
-  private subscription = new Subscription();
+export class MyComponent {
+  private readonly dataService = inject(DataService);
 
-  ngOnInit() {
-    // Add subscriptions
-    this.subscription.add(
-      this.data$.subscribe(data => {
-        this.data = data;
-      })
-    );
-
-    this.subscription.add(
-      this.other$.subscribe(other => {
-        this.other = other;
-      })
-    );
-  }
-
-  ngOnDestroy() {
-    // Unsubscribe from all
-    this.subscription.unsubscribe();
-  }
-}
-```
-
-### takeUntil Pattern
-
-```typescript
-import { Component, OnDestroy } from '@angular/core';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-
-@Component({
-  selector: 'app-my-component'
-})
-export class MyComponent implements OnDestroy {
-  private destroy$ = new Subject<void>();
-
-  ngOnInit() {
-    this.data$.pipe(
-      takeUntil(this.destroy$)
+  constructor() {
+    this.dataService.data$.pipe(
+      takeUntilDestroyed() // automatically unsubscribes when component destroys
     ).subscribe(data => {
       this.data = data;
     });
 
-    this.other$.pipe(
-      takeUntil(this.destroy$)
+    this.dataService.other$.pipe(
+      takeUntilDestroyed()
     ).subscribe(other => {
       this.other = other;
     });
   }
+}
+```
 
-  ngOnDestroy() {
-    this.destroy$.next();
-    this.destroy$.complete();
+### DestroyRef for Manual Subscriptions
+
+When subscribing imperatively outside the constructor (e.g. on user action),
+use `DestroyRef` directly:
+
+```typescript
+import { Component, inject } from '@angular/core';
+import { DestroyRef } from '@angular/core';
+
+@Component({
+  selector: 'app-my-component',
+  standalone: true
+})
+export class MyComponent {
+  readonly #destroyRef = inject(DestroyRef);
+
+  startPolling() {
+    const sub = interval(5000).subscribe(() => this.poll());
+    this.#destroyRef.onDestroy(() => sub.unsubscribe());
   }
 }
 ```
@@ -367,32 +354,36 @@ export class MyComponent implements OnDestroy {
 ### Async Pipe (No Manual Unsubscribe)
 
 ```typescript
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { AsyncPipe } from '@angular/common';
 import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-user-list',
+  standalone: true,
+  imports: [AsyncPipe],
   template: `
-    <div *ngIf="users$ | async as users">
-      <div *ngFor="let user of users">
-        {{ user.name }}
-      </div>
-    </div>
+    @if (users$ | async; as users) {
+      @for (user of users; track user.id) {
+        <div>{{ user.name }}</div>
+      }
+    }
 
-    <div *ngIf="loading$ | async">Loading...</div>
-    <div *ngIf="error$ | async as error">Error: {{ error }}</div>
+    @if (loading$ | async) {
+      <div>Loading...</div>
+    }
+
+    @if (error$ | async; as error) {
+      <div>Error: {{ error }}</div>
+    }
   `
 })
 export class UserListComponent {
-  users$: Observable<User[]>;
-  loading$: Observable<boolean>;
-  error$: Observable<string | null>;
+  private readonly userService = inject(UserService);
 
-  constructor(private userService: UserService) {
-    this.users$ = this.userService.getUsers();
-    this.loading$ = this.userService.loading$;
-    this.error$ = this.userService.error$;
-  }
+  users$: Observable<User[]> = this.userService.getUsers();
+  loading$: Observable<boolean> = this.userService.loading$;
+  error$: Observable<string | null> = this.userService.error$;
 }
 ```
 
@@ -530,37 +521,40 @@ cached$.subscribe(); // No second HTTP request
 
 ### Data Service with State
 
+Use signals for synchronous state. Use observables for async HTTP operations,
+converting them to signals with `toSignal()` when needed in templates:
+
 ```typescript
-import { Injectable } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { tap, catchError, finalize } from 'rxjs/operators';
+import { Observable, catchError, finalize, tap } from 'rxjs';
+import { of } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserService {
-  private usersSubject = new BehaviorSubject<User[]>([]);
-  private loadingSubject = new BehaviorSubject<boolean>(false);
-  private errorSubject = new BehaviorSubject<string | null>(null);
+  private readonly http = inject(HttpClient);
 
-  users$ = this.usersSubject.asObservable();
-  loading$ = this.loadingSubject.asObservable();
-  error$ = this.errorSubject.asObservable();
+  // Signals for state
+  readonly users = signal<User[]>([]);
+  readonly loading = signal(false);
+  readonly error = signal<string | null>(null);
 
-  constructor(private http: HttpClient) {}
+  // Computed signal
+  readonly hasUsers = computed(() => this.users().length > 0);
 
   loadUsers(): void {
-    this.loadingSubject.next(true);
-    this.errorSubject.next(null);
+    this.loading.set(true);
+    this.error.set(null);
 
     this.http.get<User[]>('/api/users').pipe(
-      tap(users => this.usersSubject.next(users)),
-      catchError(error => {
-        this.errorSubject.next(error.message);
+      tap(users => this.users.set(users)),
+      catchError(err => {
+        this.error.set(err.message);
         return of([]);
       }),
-      finalize(() => this.loadingSubject.next(false))
+      finalize(() => this.loading.set(false))
     ).subscribe();
   }
 
@@ -570,29 +564,55 @@ export class UserService {
 }
 ```
 
+Template with signals (no async pipe needed for signal state):
+
+```typescript
+@Component({
+  selector: 'app-user-list',
+  standalone: true,
+  template: `
+    @if (userService.loading()) {
+      <div>Loading...</div>
+    }
+
+    @if (userService.error(); as error) {
+      <div>Error: {{ error }}</div>
+    }
+
+    @for (user of userService.users(); track user.id) {
+      <div>{{ user.name }}</div>
+    }
+  `
+})
+export class UserListComponent {
+  protected readonly userService = inject(UserService);
+
+  constructor() {
+    this.userService.loadUsers();
+  }
+}
+```
+
 ### Search Service with Debounce
 
 ```typescript
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, Subject } from 'rxjs';
+import { Observable, Subject, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SearchService {
-  private searchTerms = new Subject<string>();
+  private readonly http = inject(HttpClient);
+  private readonly searchTerms = new Subject<string>();
 
-  results$: Observable<SearchResult[]>;
-
-  constructor(private http: HttpClient) {
-    this.results$ = this.searchTerms.pipe(
-      debounceTime(300),
-      distinctUntilChanged(),
-      switchMap(term => this.search(term))
-    );
-  }
+  readonly results$: Observable<SearchResult[]> = this.searchTerms.pipe(
+    debounceTime(300),
+    distinctUntilChanged(),
+    switchMap(term => this.search(term))
+  );
 
   search(term: string): Observable<SearchResult[]> {
     if (!term.trim()) {
@@ -689,15 +709,15 @@ applications that require:
 
 ## RxJS Best Practices in Angular
 
-1. **Use async pipe** - Automatic subscription management
-2. **takeUntil for cleanup** - Unsubscribe in ngOnDestroy
-3. **shareReplay for caching** - Avoid duplicate HTTP requests
-4. **debounceTime for inputs** - Reduce API calls
-5. **switchMap for cancellation** - Cancel old requests
-6. **catchError for errors** - Always handle errors
-7. **BehaviorSubject for state** - Share current state
-8. **Avoid nested subscriptions** - Use operators instead
-9. **Use operators over imperative code** - More declarative
+1. **Use `takeUntilDestroyed()`** - Automatic cleanup without ngOnDestroy
+2. **Use signals for state** - `BehaviorSubject` → `signal()` for synchronous state
+3. **Use async pipe for observables in templates** - Automatic subscription management
+4. **Use `@if`/`@for` control flow** - Replaces `*ngIf`/`*ngFor`
+5. **Use `inject()`** - Cleaner than constructor injection
+6. **shareReplay for caching** - Avoid duplicate HTTP requests
+7. **debounceTime for inputs** - Reduce API calls
+8. **switchMap for cancellation** - Cancel old requests
+9. **catchError for errors** - Always handle errors
 10. **Test observables properly** - Use marble diagrams
 
 ## Common RxJS Mistakes

@@ -14,10 +14,11 @@ testable applications with proper service architecture.
 
 ## DI Fundamentals
 
-Angular's DI is hierarchical and uses decorators and providers:
+Angular's DI uses the `inject()` function (Angular 14+) as the preferred
+injection mechanism — no constructor parameters needed:
 
 ```typescript
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 
 // Service injectable at root level
 @Injectable({
@@ -35,23 +36,21 @@ export class UserService {
   }
 }
 
-// Component injection
+// Standalone component injection via inject()
 import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-user-list',
+  standalone: true,
   template: `
-    <div *ngFor="let user of users">
-      {{ user.name }}
-    </div>
+    @for (user of users; track user.id) {
+      <div>{{ user.name }}</div>
+    }
   `
 })
 export class UserListComponent {
-  users: User[];
-
-  constructor(private userService: UserService) {
-    this.users = this.userService.getUsers();
-  }
+  private readonly userService = inject(UserService);
+  users = this.userService.getUsers();
 }
 ```
 
@@ -60,7 +59,7 @@ export class UserListComponent {
 ### useClass - Class Provider
 
 ```typescript
-import { Injectable, Provider } from '@angular/core';
+import { Injectable, Provider, Component, inject } from '@angular/core';
 
 // Interface
 interface Logger {
@@ -85,18 +84,20 @@ export class FileLogger implements Logger {
 // Provider configuration
 const loggerProvider: Provider = {
   provide: Logger,
-  useClass: ConsoleLogger // or FileLogger based on env
+  useClass: ConsoleLogger
 };
 
-// In module
-@NgModule({
-  providers: [loggerProvider]
+// Standalone component — providers go here, not in NgModule
+@Component({
+  selector: 'app-my-component',
+  standalone: true,
+  providers: [loggerProvider],
+  template: `...`
 })
-export class AppModule {}
-
-// Usage
 export class MyComponent {
-  constructor(private logger: Logger) {
+  private readonly logger = inject(Logger);
+
+  constructor() {
     this.logger.log('Component initialized');
   }
 }
@@ -105,7 +106,7 @@ export class MyComponent {
 ### useValue - Value Provider
 
 ```typescript
-import { InjectionToken } from '@angular/core';
+import { InjectionToken, Component, inject } from '@angular/core';
 
 // Configuration object
 export interface AppConfig {
@@ -117,7 +118,7 @@ export interface AppConfig {
 export const APP_CONFIG = new InjectionToken<AppConfig>('app.config');
 
 // Provider
-const configProvider: Provider = {
+const configProvider = {
   provide: APP_CONFIG,
   useValue: {
     apiUrl: 'https://api.example.com',
@@ -126,15 +127,16 @@ const configProvider: Provider = {
   }
 };
 
-// Module
-@NgModule({
+// bootstrapApplication (standalone)
+bootstrapApplication(AppComponent, {
   providers: [configProvider]
-})
-export class AppModule {}
+});
 
-// Usage
+// Usage via inject()
 export class ApiService {
-  constructor(@Inject(APP_CONFIG) private config: AppConfig) {
+  private readonly config = inject(APP_CONFIG);
+
+  constructor() {
     console.log(this.config.apiUrl);
   }
 }
@@ -143,45 +145,37 @@ export class ApiService {
 ### useFactory - Factory Provider
 
 ```typescript
-import { Injectable, InjectionToken } from '@angular/core';
+import { Injectable, InjectionToken, inject } from '@angular/core';
 
 export const API_URL = new InjectionToken<string>('api.url');
 
-// Factory function
-export function apiUrlFactory(config: AppConfig): string {
-  return config.production
-    ? 'https://api.prod.example.com'
-    : 'https://api.dev.example.com';
-}
-
-// Provider
-const apiUrlProvider: Provider = {
+// Use inject() inside the factory — no deps array needed
+const apiUrlProvider = {
   provide: API_URL,
-  useFactory: apiUrlFactory,
-  deps: [AppConfig] // Dependencies for factory
+  useFactory: () => {
+    const config = inject(AppConfig);
+    return config.production
+      ? 'https://api.prod.example.com'
+      : 'https://api.dev.example.com';
+  }
 };
 
-// Complex factory with multiple deps
-export function httpClientFactory(
-  handler: HttpHandler,
-  config: AppConfig,
-  logger: Logger
-): HttpClient {
-  logger.log('Creating HTTP client');
-  return new HttpClient(handler);
-}
-
-const httpClientProvider: Provider = {
+// Complex factory — all deps resolved via inject()
+const httpClientProvider = {
   provide: HttpClient,
-  useFactory: httpClientFactory,
-  deps: [HttpHandler, AppConfig, Logger]
+  useFactory: () => {
+    const handler = inject(HttpHandler);
+    const logger = inject(Logger);
+    logger.log('Creating HTTP client');
+    return new HttpClient(handler);
+  }
 };
 ```
 
 ### useExisting - Alias Provider
 
 ```typescript
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 
 @Injectable({
   providedIn: 'root'
@@ -192,17 +186,21 @@ export class NewLogger {
   }
 }
 
-// Alias old logger to new logger
-const oldLoggerProvider: Provider = {
-  provide: 'OldLogger',
+// Alias an abstract token to the concrete implementation
+export abstract class Logger {
+  abstract log(message: string): void;
+}
+
+const loggerAlias: Provider = {
+  provide: Logger,
   useExisting: NewLogger
 };
 
 // Usage
 export class MyComponent {
-  constructor(
-    @Inject('OldLogger') private logger: NewLogger
-  ) {
+  private readonly logger = inject(Logger);
+
+  constructor() {
     this.logger.log('Using aliased logger');
   }
 }
@@ -213,7 +211,7 @@ export class MyComponent {
 ### InjectionToken - Type-Safe Tokens
 
 ```typescript
-import { InjectionToken } from '@angular/core';
+import { InjectionToken, inject } from '@angular/core';
 
 // Primitive token
 export const MAX_RETRIES = new InjectionToken<number>('max.retries', {
@@ -238,31 +236,11 @@ export const FEATURE_FLAGS = new InjectionToken<FeatureFlags>(
   }
 );
 
-// Usage
+// Usage via inject()
 @Injectable()
 export class ApiService {
-  constructor(
-    @Inject(MAX_RETRIES) private maxRetries: number,
-    @Inject(FEATURE_FLAGS) private flags: FeatureFlags
-  ) {}
-}
-```
-
-### String Tokens (Legacy)
-
-```typescript
-// Not type-safe, avoid when possible
-const providers: Provider[] = [
-  { provide: 'API_URL', useValue: 'https://api.example.com' },
-  { provide: 'TIMEOUT', useValue: 5000 }
-];
-
-// Usage
-export class MyService {
-  constructor(
-    @Inject('API_URL') private apiUrl: string,
-    @Inject('TIMEOUT') private timeout: number
-  ) {}
+  private readonly maxRetries = inject(MAX_RETRIES);
+  private readonly flags = inject(FEATURE_FLAGS);
 }
 ```
 
@@ -278,24 +256,6 @@ export class MyService {
 export class GlobalService {
   private state = {};
 }
-
-// Same instance everywhere
-```
-
-### Module Injector
-
-```typescript
-@Injectable()
-export class ModuleService {
-  // Service specific to module
-}
-
-@NgModule({
-  providers: [ModuleService]
-})
-export class FeatureModule {}
-
-// Different instance per module
 ```
 
 ### Component Injector
@@ -308,11 +268,12 @@ export class ComponentService {
 
 @Component({
   selector: 'app-my-component',
+  standalone: true,
   template: '...',
   providers: [ComponentService] // New instance per component
 })
 export class MyComponent {
-  constructor(private service: ComponentService) {}
+  private readonly service = inject(ComponentService);
 }
 
 // Each component instance gets its own service instance
@@ -323,19 +284,18 @@ export class MyComponent {
 ```typescript
 @Directive({
   selector: '[appHighlight]',
+  standalone: true,
   providers: [DirectiveService]
 })
 export class HighlightDirective {
-  constructor(private service: DirectiveService) {}
+  private readonly service = inject(DirectiveService);
 }
-
-// Each directive instance gets its own service
 ```
 
 ## ProvidedIn Options
 
 ```typescript
-// Root - singleton
+// Root - singleton across entire app
 @Injectable({
   providedIn: 'root'
 })
@@ -346,34 +306,95 @@ export class RootService {}
   providedIn: 'platform'
 })
 export class PlatformService {}
+```
 
-// Any - new instance per module
-@Injectable({
-  providedIn: 'any'
-})
-export class AnyService {}
+## Optional and Scoped Injection
 
-// Module - specific module
-@Injectable({
-  providedIn: FeatureModule
-})
-export class FeatureService {}
+Use `inject()` options instead of `@Optional`, `@Self`, `@SkipSelf`, `@Host`:
+
+```typescript
+import { inject } from '@angular/core';
+
+export class MyService {
+  // @Optional() equivalent
+  private readonly logger = inject(Logger, { optional: true });
+
+  // @Self() equivalent — only from this component's injector
+  private readonly local = inject(LocalService, { self: true });
+
+  // @SkipSelf() equivalent — skip this injector, look up the tree
+  private readonly parent = inject(SharedService, { skipSelf: true });
+
+  // @Host() equivalent — stop at host element
+  private readonly host = inject(ParentComponent, { host: true });
+
+  // Combine options
+  readonly #dep = inject(Dep, {
+    optional: true,
+    self: true,
+  });
+
+  constructor() {
+    this.logger?.log('Service created');
+  }
+}
+```
+
+## Environment Providers (replaces ForRoot/ForChild)
+
+Use `makeEnvironmentProviders` and `provideX()` functions instead of
+`NgModule.forRoot()` / `NgModule.forChild()`:
+
+```typescript
+import { makeEnvironmentProviders, EnvironmentProviders } from '@angular/core';
+
+export interface SharedConfig {
+  apiUrl: string;
+}
+
+export const SHARED_CONFIG = new InjectionToken<SharedConfig>('shared.config');
+
+// Replace forRoot() with a provideX() function
+export function provideShared(config: SharedConfig): EnvironmentProviders {
+  return makeEnvironmentProviders([
+    SharedService,
+    {
+      provide: SHARED_CONFIG,
+      useValue: config
+    }
+  ]);
+}
+
+// In bootstrapApplication (app root)
+bootstrapApplication(AppComponent, {
+  providers: [
+    provideShared({ apiUrl: 'https://api.example.com' }),
+    provideRouter(routes),
+    provideHttpClient()
+  ]
+});
+
+// In lazy-loaded routes — child-scope providers
+export const routes: Routes = [
+  {
+    path: 'feature',
+    loadComponent: () => import('./feature.component'),
+    providers: [FeatureScopedService]
+  }
+];
 ```
 
 ## Multi-Providers
 
 ```typescript
-import { InjectionToken } from '@angular/core';
+import { InjectionToken, inject } from '@angular/core';
 
-// Token for multiple providers
 export const HTTP_INTERCEPTORS =
   new InjectionToken<HttpInterceptor[]>('http.interceptors');
 
-// Multiple implementations
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
   intercept(req: HttpRequest<any>, next: HttpHandler) {
-    // Add auth header
     return next.handle(req);
   }
 }
@@ -381,7 +402,6 @@ export class AuthInterceptor implements HttpInterceptor {
 @Injectable()
 export class LoggingInterceptor implements HttpInterceptor {
   intercept(req: HttpRequest<any>, next: HttpHandler) {
-    // Log request
     return next.handle(req);
   }
 }
@@ -402,146 +422,18 @@ const providers: Provider[] = [
 
 // Inject as array
 export class HttpService {
-  constructor(
-    @Inject(HTTP_INTERCEPTORS) private interceptors: HttpInterceptor[]
-  ) {
-    // interceptors is array of all registered interceptors
-  }
+  private readonly interceptors = inject(HTTP_INTERCEPTORS);
 }
-```
-
-## Optional and Self Decorators
-
-### @Optional - Allow Missing Dependencies
-
-```typescript
-import { Optional } from '@angular/core';
-
-@Injectable()
-export class MyService {
-  constructor(
-    @Optional() private logger?: Logger
-  ) {
-    // logger might be undefined
-    this.logger?.log('Service created');
-  }
-}
-```
-
-### @Self - Only Current Injector
-
-```typescript
-import { Self } from '@angular/core';
-
-@Component({
-  selector: 'app-my-component',
-  providers: [LocalService]
-})
-export class MyComponent {
-  constructor(
-    @Self() private local: LocalService // Only from this component
-  ) {}
-}
-```
-
-### @SkipSelf - Skip Current Injector
-
-```typescript
-import { SkipSelf } from '@angular/core';
-
-@Component({
-  selector: 'app-child',
-  providers: [SharedService]
-})
-export class ChildComponent {
-  constructor(
-    @SkipSelf() private parent: SharedService // From parent, not self
-  ) {}
-}
-```
-
-### @Host - Host Element Injector
-
-```typescript
-import { Host } from '@angular/core';
-
-@Directive({
-  selector: '[appChild]'
-})
-export class ChildDirective {
-  constructor(
-    @Host() private parent: ParentComponent // From host component
-  ) {}
-}
-```
-
-## ForRoot and ForChild Patterns
-
-```typescript
-import { NgModule, ModuleWithProviders } from '@angular/core';
-
-@NgModule({})
-export class SharedModule {
-  // For root module - configures services
-  static forRoot(config: SharedConfig): ModuleWithProviders<SharedModule> {
-    return {
-      ngModule: SharedModule,
-      providers: [
-        SharedService,
-        {
-          provide: SHARED_CONFIG,
-          useValue: config
-        }
-      ]
-    };
-  }
-
-  // For feature modules - no service providers
-  static forChild(): ModuleWithProviders<SharedModule> {
-    return {
-      ngModule: SharedModule,
-      providers: [] // No providers, use root services
-    };
-  }
-}
-
-// Usage in AppModule
-@NgModule({
-  imports: [
-    SharedModule.forRoot({ apiUrl: 'https://api.example.com' })
-  ]
-})
-export class AppModule {}
-
-// Usage in feature module
-@NgModule({
-  imports: [
-    SharedModule.forChild()
-  ]
-})
-export class FeatureModule {}
 ```
 
 ## Tree-Shakable Providers
 
 ```typescript
-// Traditional (not tree-shakable)
-@Injectable()
-export class OldService {}
-
-@NgModule({
-  providers: [OldService]
-})
-export class AppModule {}
-
-// Tree-shakable (preferred)
+// Tree-shakable (preferred) — service is removed if never injected
 @Injectable({
   providedIn: 'root'
 })
 export class NewService {}
-
-// No need to register in module
-// Service is removed if never injected
 ```
 
 ## Testing with DI
@@ -558,7 +450,7 @@ describe('MyComponent', () => {
     mockUserService = jasmine.createSpyObj('UserService', ['getUsers']);
 
     TestBed.configureTestingModule({
-      declarations: [MyComponent],
+      imports: [MyComponent], // standalone component
       providers: [
         { provide: UserService, useValue: mockUserService }
       ]
@@ -614,189 +506,26 @@ applications that require:
 - Plugin/extension systems
 - Multi-provider patterns (interceptors, validators)
 - Complex service hierarchies
-- Lazy-loaded module isolation
+- Lazy-loaded route isolation
 - Tree-shakable code
 
 ## Angular DI Best Practices
 
-1. **Use `providedIn: 'root'`** - Tree-shakable and singleton
-2. **Use InjectionToken** - Type-safe over string tokens
-3. **Favor composition** - Inject small, focused services
-4. **Use factories for complex creation** - useFactory for dynamic values
-5. **Test with mocks** - Override providers in TestBed
-6. **Follow forRoot/forChild pattern** - For shared modules
-7. **Use @Optional sparingly** - Prefer defaults or required deps
-8. **Document multi-providers** - Clear contract for extensions
-9. **Avoid circular dependencies** - Refactor to common service
-10. **Use providedIn module** - For module-specific services
-
-## DI Pitfalls and Gotchas
-
-1. **Circular dependencies** - A depends on B, B depends on A
-2. **Providing in component** - Creates new instance per component
-3. **Missing providers** - Runtime error if not provided
-4. **Wrong injector level** - Service not found in hierarchy
-5. **Forgetting multi: true** - Overrides instead of adding
-6. **String token collisions** - Use InjectionToken instead
-7. **Not using forRoot** - Multiple service instances
-8. **Providing eagerly** - Use providedIn for tree-shaking
-9. **Testing without mocks** - Real dependencies in tests
-10. **Complex factory deps** - Hard to test and maintain
-
-## Advanced DI Patterns
-
-### Service with Configuration
-
-```typescript
-import { Injectable, Inject, InjectionToken } from '@angular/core';
-
-export interface ApiConfig {
-  baseUrl: string;
-  timeout: number;
-}
-
-export const API_CONFIG = new InjectionToken<ApiConfig>('api.config');
-
-@Injectable({
-  providedIn: 'root'
-})
-export class ApiService {
-  constructor(@Inject(API_CONFIG) private config: ApiConfig) {}
-
-  get(endpoint: string) {
-    return fetch(`${this.config.baseUrl}/${endpoint}`, {
-      signal: AbortSignal.timeout(this.config.timeout)
-    });
-  }
-}
-
-// Module
-@NgModule({
-  providers: [
-    {
-      provide: API_CONFIG,
-      useValue: {
-        baseUrl: 'https://api.example.com',
-        timeout: 5000
-      }
-    }
-  ]
-})
-export class AppModule {}
-```
-
-### Abstract Class Provider
-
-```typescript
-import { Injectable } from '@angular/core';
-
-// Abstract class
-export abstract class DataService<T> {
-  abstract get(id: string): Observable<T>;
-  abstract save(item: T): Observable<T>;
-}
-
-// Implementation
-@Injectable()
-export class UserDataService implements DataService<User> {
-  get(id: string): Observable<User> {
-    // Implementation
-  }
-
-  save(user: User): Observable<User> {
-    // Implementation
-  }
-}
-
-// Provider
-@NgModule({
-  providers: [
-    { provide: DataService, useClass: UserDataService }
-  ]
-})
-export class FeatureModule {}
-
-// Usage
-export class MyComponent {
-  constructor(private dataService: DataService<User>) {}
-}
-```
-
-### Conditional Provider
-
-```typescript
-import { Injectable, InjectionToken } from '@angular/core';
-import { environment } from './environments/environment';
-
-@Injectable()
-export class DevLogger {
-  log(message: string) {
-    console.log('[DEV]', message);
-  }
-}
-
-@Injectable()
-export class ProdLogger {
-  log(message: string) {
-    // Send to logging service
-  }
-}
-
-// Factory chooses implementation
-export function loggerFactory(): Logger {
-  return environment.production
-    ? new ProdLogger()
-    : new DevLogger();
-}
-
-const loggerProvider: Provider = {
-  provide: Logger,
-  useFactory: loggerFactory
-};
-```
-
-### Scope Isolation
-
-```typescript
-// Parent service
-@Injectable({
-  providedIn: 'root'
-})
-export class GlobalState {
-  count = 0;
-}
-
-// Child service (isolated)
-@Injectable()
-export class LocalState {
-  count = 0; // Independent per component
-}
-
-@Component({
-  selector: 'app-counter',
-  providers: [LocalState] // New instance per component
-})
-export class CounterComponent {
-  constructor(
-    public global: GlobalState,
-    public local: LocalState
-  ) {}
-
-  incrementGlobal() {
-    this.global.count++; // Affects all components
-  }
-
-  incrementLocal() {
-    this.local.count++; // Only this component
-  }
-}
-```
+1. **Use `inject()`** — Cleaner than constructor injection, works in class fields
+2. **Use `providedIn: 'root'`** — Tree-shakable and singleton
+3. **Use InjectionToken** — Type-safe tokens, no string tokens
+4. **Use standalone components** — Providers in `@Component`, not `@NgModule`
+5. **Use `provideX()` functions** — Replaces `forRoot()`/`forChild()`
+6. **Use `inject()` in factories** — No `deps` array needed
+7. **Use `inject()` options** — Replaces `@Optional`, `@Self`, `@SkipSelf`, `@Host`
+8. **Favor composition** — Inject small, focused services
+9. **Test with mocks** — Override providers in TestBed
+10. **Avoid circular dependencies** — Refactor to a common service
 
 ## Resources
 
-- [Angular Dependency Injection Guide](https://angular.io/guide/dependency-injection)
-- [Hierarchical Injectors](https://angular.io/guide/hierarchical-dependency-injection)
-- [DI in Action](https://angular.io/guide/dependency-injection-in-action)
-- [Injectable Services](https://angular.io/guide/creating-injectable-service)
-- [Providers](https://angular.io/guide/providers)
-- [Testing with DI](https://angular.io/guide/testing-services)
+- [Angular Dependency Injection Guide](https://angular.dev/guide/di)
+- [inject() function](https://angular.dev/api/core/inject)
+- [Environment Injectors](https://angular.dev/guide/di/environment-injectors)
+- [Injectable Services](https://angular.dev/guide/di/creating-injectable-service)
+- [Testing with DI](https://angular.dev/guide/testing/services)
