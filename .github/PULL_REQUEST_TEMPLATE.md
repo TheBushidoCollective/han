@@ -41,6 +41,18 @@
 - [ ] Linting passes
 - [ ] Manual testing performed
 
+## How It Embodies Bushido
+
+<!-- Which virtues does this PR honor? Check all that apply and briefly explain how. -->
+
+- [ ] **Righteousness (義)** — The code does what it claims, handles edge cases honestly, and produces meaningful errors. Behavior is correct and predictable.
+- [ ] **Courage (勇)** — This change makes a meaningful improvement, even if it required challenging existing patterns or making hard architectural decisions.
+- [ ] **Compassion (仁)** — This reduces friction for users or makes it easier for future contributors to understand, extend, or debug the code.
+- [ ] **Respect (礼)** — The implementation follows established conventions, naming patterns, and architectural decisions already present in the codebase.
+- [ ] **Honesty (誠)** — Limitations, known issues, and intentional omissions are documented. Trade-offs are transparent, not hidden.
+- [ ] **Honor (名誉)** — Tests pass, validation hooks succeed, and this change meets the quality bar for what ships in Han.
+- [ ] **Loyalty (忠義)** — The implementation is maintainable long-term. It avoids clever hacks and is easy to reason about for future contributors.
+
 ## Checklist
 
 - [ ] Code follows existing patterns
