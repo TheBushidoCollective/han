@@ -46,6 +46,10 @@ mock.module('node:fs', () => ({
   existsSync: () => true,
 }));
 
+// Keep waitForHealthy short so tests don't time out while polling a
+// non-existent coordinator (production default is 30s).
+process.env.HAN_COORDINATOR_HEALTH_BUDGET_MS = '50';
+
 const cs = await import('../lib/services/coordinator-service.ts');
 
 let consoleOutput: string[] = [];

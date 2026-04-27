@@ -134,11 +134,15 @@ function findCoordinatorBinary(): string | null {
  * Wait for coordinator to become healthy.
  * First start can be slow: TLS cert generation + --scan-on-start over a
  * large han.db can take 10-30s. Use exponential backoff capped at 2s, with
- * a 30s overall budget.
+ * a configurable overall budget (default 30s, override via
+ * HAN_COORDINATOR_HEALTH_BUDGET_MS for tests / fast-fail callers).
  */
 async function waitForHealthy(
   port: number,
-  budgetMs = 30_000
+  budgetMs = parseInt(
+    process.env.HAN_COORDINATOR_HEALTH_BUDGET_MS || '',
+    10
+  ) || 30_000
 ): Promise<boolean> {
   const deadline = Date.now() + budgetMs;
   let delay = 100;

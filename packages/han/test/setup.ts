@@ -1,9 +1,17 @@
 // Test setup - runs before all tests
-import { afterAll, beforeAll } from 'bun:test';
+import { afterAll, beforeAll, mock } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { resetHanDataDir } from '../lib/config/claude-settings.ts';
+
+// Capture real implementations of modules that other test files commonly mock
+// via mock.module(). Bun shares mock.module() state across test files in the
+// same run, so without explicit restoration the leaked mocks (e.g. an
+// incomplete client stub from data-access-behavioral.test.ts) make later
+// tests fail with "undefined is not an object" when they call
+// createCoordinatorClients() / getCoordinatorClients().
+const realGrpcClient = await import('../lib/grpc/client.ts');
 
 // Store the original value to restore after tests
 const originalClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR;
@@ -34,6 +42,12 @@ afterAll(() => {
     delete process.env.CLAUDE_CONFIG_DIR;
   }
   resetHanDataDir();
+
+  // Re-register the real grpc/client module after each test file's tests
+  // finish. This prevents an incomplete mock from leaking into the next
+  // file. Files that need their own mock register it at module top level,
+  // which takes effect before this afterAll runs for the next file.
+  mock.module('../lib/grpc/client.ts', () => realGrpcClient);
 
   // Clean up the temporary directory
   try {
