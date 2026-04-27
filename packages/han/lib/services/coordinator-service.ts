@@ -12,7 +12,7 @@
  */
 
 import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import {
   createCoordinatorClients,
   isCoordinatorHealthy,
@@ -96,11 +96,14 @@ function findCoordinatorBinary(): string | null {
   if (existsSync(hanBin)) return hanBin;
 
   // 2. npm platform package
+  // Resolve via package.json since the binary has no extension and
+  // can't be loaded as a sub-path module via require.resolve directly.
   const arch = process.arch;
   const platform = process.platform;
   try {
     const pkgName = `@thebushidocollective/han-${platform}-${arch}`;
-    const pkgPath = require.resolve(`${pkgName}/han-coordinator`);
+    const pkgJsonPath = require.resolve(`${pkgName}/package.json`);
+    const pkgPath = join(dirname(pkgJsonPath), 'han-coordinator');
     if (existsSync(pkgPath)) return pkgPath;
   } catch {
     // Package not installed
@@ -128,16 +131,23 @@ function findCoordinatorBinary(): string | null {
 // ============================================================================
 
 /**
- * Wait for coordinator to become healthy with exponential backoff.
- * Retries: 100ms, 200ms, 400ms, 800ms, 1600ms (total ~3.1s)
+ * Wait for coordinator to become healthy.
+ * First start can be slow: TLS cert generation + --scan-on-start over a
+ * large han.db can take 10-30s. Use exponential backoff capped at 2s, with
+ * a 30s overall budget.
  */
-async function waitForHealthy(port: number, maxRetries = 5): Promise<boolean> {
-  for (let i = 0; i < maxRetries; i++) {
+async function waitForHealthy(
+  port: number,
+  budgetMs = 30_000
+): Promise<boolean> {
+  const deadline = Date.now() + budgetMs;
+  let delay = 100;
+  while (Date.now() < deadline) {
     if (await isCoordinatorHealthy(port, 2000)) {
       return true;
     }
-    const delay = 100 * 2 ** i;
-    await Bun.sleep(delay);
+    await Bun.sleep(Math.min(delay, deadline - Date.now()));
+    delay = Math.min(delay * 2, 2000);
   }
   return false;
 }
