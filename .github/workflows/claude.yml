@@ -42,6 +42,15 @@ jobs:
         if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Pass attacker-controlled values via env to avoid shell injection.
+          # GitHub interpolates ${{ }} into env values safely; the shell
+          # never re-evaluates them.
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
           # Check if there are any changes
           if [ -z "$(git status --porcelain)" ]; then
@@ -55,25 +64,25 @@ jobs:
 
           # Determine if we're on a PR or issue
           IS_PR="false"
-          if [ "${{ github.event_name }}" = "pull_request_review_comment" ] || [ "${{ github.event_name }}" = "pull_request_review" ]; then
+          if [ "$EVENT_NAME" = "pull_request_review_comment" ] || [ "$EVENT_NAME" = "pull_request_review" ]; then
             IS_PR="true"
-            NUMBER="${{ github.event.pull_request.number }}"
-            TITLE="${{ github.event.pull_request.title }}"
-            HEAD_REF="${{ github.event.pull_request.head.ref }}"
-          elif [ "${{ github.event_name }}" = "issue_comment" ]; then
+            NUMBER="$PR_NUMBER"
+            TITLE="$PR_TITLE"
+            HEAD_REF="$PR_HEAD_REF"
+          elif [ "$EVENT_NAME" = "issue_comment" ]; then
             # Check if this issue is actually a PR
-            if gh pr view "${{ github.event.issue.number }}" &>/dev/null; then
+            if gh pr view "$ISSUE_NUMBER" &>/dev/null; then
               IS_PR="true"
-              NUMBER="${{ github.event.issue.number }}"
-              TITLE="${{ github.event.issue.title }}"
+              NUMBER="$ISSUE_NUMBER"
+              TITLE="$ISSUE_TITLE"
               HEAD_REF=$(gh pr view "$NUMBER" --json headRefName -q '.headRefName')
             else
-              NUMBER="${{ github.event.issue.number }}"
-              TITLE="${{ github.event.issue.title }}"
+              NUMBER="$ISSUE_NUMBER"
+              TITLE="$ISSUE_TITLE"
             fi
-          elif [ "${{ github.event_name }}" = "issues" ]; then
-            NUMBER="${{ github.event.issue.number }}"
-            TITLE="${{ github.event.issue.title }}"
+          elif [ "$EVENT_NAME" = "issues" ]; then
+            NUMBER="$ISSUE_NUMBER"
+            TITLE="$ISSUE_TITLE"
           else
             NUMBER="$(date +%s)"
             TITLE="Claude Code changes"
@@ -117,7 +126,9 @@ jobs:
 
             git push origin "$BRANCH"
 
-            # Create PR
+            # Create PR. Pass title and body via --title/--body arguments
+            # rather than interpolating into the shell command — gh handles
+            # quoting safely from there.
             gh pr create \
               --title "feat: ${TITLE}" \
               --body "## Summary
@@ -139,4 +150,3 @@ jobs:
 
             echo "✅ Created PR from branch $BRANCH"
           fi
-
