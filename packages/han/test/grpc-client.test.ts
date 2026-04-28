@@ -1,4 +1,12 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, mock } from 'bun:test';
+import { realGrpcClient } from './setup.ts';
+
+// Defensive: other test files in this run mock.module('../lib/grpc/client.ts',
+// () => incompleteStub). Bun shares mock state across files, so even with
+// per-file afterAll cleanup, leaks can survive. Re-register the real module
+// before importing so this file's tests always see the actual implementation.
+mock.module('../lib/grpc/client.ts', () => realGrpcClient);
+
 import {
   createCoordinatorClients,
   getCoordinatorClients,

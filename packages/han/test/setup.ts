@@ -10,8 +10,11 @@ import { resetHanDataDir } from '../lib/config/claude-settings.ts';
 // so files that mock these modules need to restore the real impl in an
 // afterAll to keep subsequent files from inheriting an incomplete stub.
 // Captured here at preload (before any test file mocks anything) so the
-// reference always points at the real exports.
-export const realGrpcClient = await import('../lib/grpc/client.ts');
+// reference always points at the real exports. Spread into a plain object
+// because mock.module's factory needs a regular exports object, not a
+// Module Namespace Object (which is a read-only proxy).
+const _realGrpcClientNamespace = await import('../lib/grpc/client.ts');
+export const realGrpcClient = { ..._realGrpcClientNamespace };
 
 // Store the original value to restore after tests
 const originalClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR;
