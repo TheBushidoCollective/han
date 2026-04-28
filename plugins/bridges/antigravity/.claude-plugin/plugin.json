@@ -1,0 +1,21 @@
+{
+  "name": "antigravity",
+  "version": "0.1.0",
+  "description": "Bridge plugin that enables Han's hook ecosystem (validation, skills, disciplines) to work with Google Antigravity IDE via MCP server.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "antigravity",
+    "google",
+    "bridge",
+    "mcp",
+    "hooks",
+    "validation",
+    "skills"
+  ]
+}

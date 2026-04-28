@@ -1025,6 +1025,21 @@
       ]
     },
     {
+      "name": "antigravity",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, skills, disciplines) to work with Google Antigravity IDE via MCP server.",
+      "source": "./plugins/bridges/antigravity",
+      "category": "Integration",
+      "keywords": [
+        "antigravity",
+        "google",
+        "bridge",
+        "mcp",
+        "hooks",
+        "validation",
+        "skills"
+      ]
+    },
+    {
       "name": "performance-engineering",
       "description": "Performance engineering agents providing expertise in profiling, optimization, and scalability",
       "source": "./plugins/disciplines/performance-engineering",

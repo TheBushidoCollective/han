@@ -76,6 +76,12 @@ Han works with [OpenCode](https://opencode.ai) through a bridge plugin that tran
 
 Your Han validation hooks (biome, eslint, typescript, etc.) now run in OpenCode. See the [full OpenCode guide](/docs/installation/opencode) for details.
 
+## Antigravity
+
+Han works with [Google Antigravity IDE](https://antigravity.google) through a bridge plugin that exposes Han's plugin ecosystem (skills, disciplines, validation) as MCP tools. Antigravity lacks lifecycle hooks like Claude Code/OpenCode, so capabilities are surfaced as callable MCP tools instead.
+
+See the [full Antigravity guide](/docs/installation/antigravity) for setup.
+
 ## Next Steps
 
 After installing Han, you'll want to:
