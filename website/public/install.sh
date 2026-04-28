@@ -49,7 +49,8 @@ detect_platform() {
 		esac
 		;;
 	MINGW* | MSYS* | CYGWIN*)
-		echo "win32-x64"
+		# Match the release asset naming (han-windows-x64.exe).
+		echo "windows-x64"
 		;;
 	*)
 		echo -e "${RED}Unsupported operating system: $os${NC}" >&2
@@ -59,6 +60,17 @@ detect_platform() {
 }
 
 PLATFORM=$(detect_platform)
+
+# Windows binaries are published with a .exe suffix; everything else is bare.
+case "$PLATFORM" in
+windows-*)
+	BINARY_SUFFIX=".exe"
+	HAN_BIN="${HAN_BIN}.exe"
+	;;
+*)
+	BINARY_SUFFIX=""
+	;;
+esac
 
 # Get latest version from GitHub API
 echo -e "${YELLOW}Fetching latest version...${NC}"
@@ -86,7 +98,7 @@ fi
 
 echo -e "${GREEN}Installing han v$LATEST_VERSION...${NC}"
 
-DOWNLOAD_URL="https://github.com/TheBushidoCollective/han/releases/download/v${LATEST_VERSION}/han-${PLATFORM}"
+DOWNLOAD_URL="https://github.com/TheBushidoCollective/han/releases/download/v${LATEST_VERSION}/han-${PLATFORM}${BINARY_SUFFIX}"
 CHECKSUM_URL="${DOWNLOAD_URL}.sha256"
 
 # Download to temp files first for atomic replacement
