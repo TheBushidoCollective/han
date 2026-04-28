@@ -4,7 +4,8 @@
  * Tests actual gRPC delegation, field mapping, stub behavior,
  * and safe-default return values — NOT just exports.
  */
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { realGrpcClient } from './setup.ts';
 
 // ============================================================================
 // Mock infrastructure
@@ -49,6 +50,12 @@ beforeEach(() => {
   mockIndexerIndexFile.mockReset();
   mockIndexerTriggerScan.mockReset();
   mockCoordinatorHealth.mockReset();
+});
+
+// Restore real grpc/client after this file's tests so the incomplete mock
+// (createCoordinatorClients returns {}) doesn't bleed into later files.
+afterAll(() => {
+  mock.module('../lib/grpc/client.ts', () => realGrpcClient);
 });
 
 // ============================================================================

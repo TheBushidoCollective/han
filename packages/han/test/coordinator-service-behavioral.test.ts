@@ -13,6 +13,7 @@ import {
   mock,
   test,
 } from 'bun:test';
+import { realGrpcClient } from './setup.ts';
 
 // ============================================================================
 // Mock infrastructure
@@ -84,12 +85,12 @@ afterEach(() => {
   console.log = originalLog;
   console.error = originalError;
 });
-// Restore real node:fs after all tests to prevent mock from bleeding into
-// other test files. Bun 1.3.4 shares mock.module state across test files
-// within the same test run.
+// Restore real node:fs and grpc/client after all tests so mocks don't
+// bleed into later test files.
 afterAll(() => {
   const realFs = require('node:fs');
   mock.module('node:fs', () => realFs);
+  mock.module('../lib/grpc/client.ts', () => realGrpcClient);
 });
 
 // ============================================================================

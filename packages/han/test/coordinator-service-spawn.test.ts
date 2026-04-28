@@ -13,6 +13,7 @@ import {
   mock,
   test,
 } from 'bun:test';
+import { realGrpcClient } from './setup.ts';
 
 // ============================================================================
 // Mock infrastructure — existsSync returns true to simulate binary found
@@ -46,6 +47,10 @@ mock.module('node:fs', () => ({
   existsSync: () => true,
 }));
 
+// Keep waitForHealthy short so tests don't time out while polling a
+// non-existent coordinator (production default is 30s).
+process.env.HAN_COORDINATOR_HEALTH_BUDGET_MS = '50';
+
 const cs = await import('../lib/services/coordinator-service.ts');
 
 let consoleOutput: string[] = [];
@@ -74,14 +79,13 @@ afterEach(async () => {
   await cs.stopCoordinatorService();
 });
 
-// Restore real node:fs after all tests to prevent mock from bleeding into
-// other test files. Bun 1.3.4 shares mock.module state across test files
-// within the same test run, so this cleanup is essential.
+// Restore real node:fs and grpc/client after all tests so mocks don't
+// bleed into later test files. Bun shares mock.module state across files
+// within the same run, so this cleanup is essential.
 afterAll(() => {
-  // Re-mock node:fs with real implementation to unblock other test files
-  // that depend on existsSync returning accurate results
   const realFs = require('node:fs');
   mock.module('node:fs', () => realFs);
+  mock.module('../lib/grpc/client.ts', () => realGrpcClient);
 });
 
 // ============================================================================
