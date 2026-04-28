@@ -162,6 +162,7 @@ export const PLUGIN_ALIASES: Record<string, string> = {
   'hashi-opencode': 'bridges/opencode',
   'hashi-kiro': 'bridges/kiro',
   'hashi-codex': 'bridges/codex',
+  'hashi-antigravity': 'bridges/antigravity',
 
   // services
   'hashi-agent-sop': 'services/agent-sop',

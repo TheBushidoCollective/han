@@ -1,0 +1,42 @@
+{
+  "name": "antigravity-han-mcp",
+  "version": "0.1.0",
+  "description": "Han bridge for Google Antigravity - MCP server enabling Han's validation hooks, skills, and disciplines in Antigravity IDE",
+  "main": "src/index.ts",
+  "bin": "src/index.ts",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src/"
+  ],
+  "keywords": [
+    "antigravity",
+    "google-antigravity",
+    "mcp",
+    "mcp-server",
+    "han",
+    "claude-code",
+    "hooks",
+    "validation",
+    "linting",
+    "bridge",
+    "skills"
+  ],
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thebushidocollective/han",
+    "directory": "plugins/bridges/antigravity"
+  },
+  "homepage": "https://github.com/thebushidocollective/han/tree/main/plugins/bridges/antigravity",
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=18.0.0"
+  }
+}

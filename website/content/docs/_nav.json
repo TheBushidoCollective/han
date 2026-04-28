@@ -18,6 +18,10 @@
 				{
 					"title": "Using Han with Gemini CLI",
 					"slug": "installation/gemini-cli"
+				},
+				{
+					"title": "Using Han with Antigravity",
+					"slug": "installation/antigravity"
 				}
 			]
 		},
