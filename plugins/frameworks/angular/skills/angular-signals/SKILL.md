@@ -21,6 +21,7 @@ import { Component, signal, computed, effect } from '@angular/core';
 
 @Component({
   selector: 'app-counter',
+  standalone: true,
   template: `
     <div>
       <p>Count: {{ count() }}</p>
@@ -228,6 +229,7 @@ import { Component, input, computed } from '@angular/core';
 
 @Component({
   selector: 'app-user-profile',
+  standalone: true,
   template: `
     <div>
       <h2>{{ displayName() }}</h2>
@@ -362,10 +364,11 @@ import { Component, viewChildren, ElementRef } from '@angular/core';
 
 @Component({
   selector: 'app-list',
+  standalone: true,
   template: `
-    <div #item *ngFor="let item of items()">
-      {{ item }}
-    </div>
+    @for (item of items(); track item) {
+      <div #item>{{ item }}</div>
+    }
     <p>Item count: {{ itemElements().length }}</p>
   `
 })
@@ -393,11 +396,14 @@ export class HeaderDirective {}
 
 @Component({
   selector: 'app-card',
+  standalone: true,
   template: `
     <div class="card">
       <ng-content select="[appHeader]" />
       <ng-content />
-      <p *ngIf="hasHeader()">Has custom header</p>
+      @if (hasHeader()) {
+        <p>Has custom header</p>
+      }
     </div>
   `
 })
@@ -488,16 +494,15 @@ import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-user-list',
+  standalone: true,
   template: `
-    <div *ngIf="users()">
-      <div *ngFor="let user of users()">
-        {{ user.name }}
-      </div>
-    </div>
+    @for (user of users(); track user.id) {
+      <div>{{ user.name }}</div>
+    }
   `
 })
 export class UserListComponent {
-  private http = inject(HttpClient);
+  private readonly http = inject(HttpClient);
 
   // Convert observable to signal
   users = toSignal(
