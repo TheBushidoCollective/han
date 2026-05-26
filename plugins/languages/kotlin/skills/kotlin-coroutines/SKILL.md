@@ -746,7 +746,6 @@ functions. Exception handling respects structured concurrency boundaries.
 
 10. **Mixing callbacks and coroutines incorrectly** without proper bridging
     creates race conditions and leaks
-    
 
 ## When to Use This Skill
 
