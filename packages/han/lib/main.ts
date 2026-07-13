@@ -290,13 +290,17 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
 // Check if this file is the main module being executed
 const isMainModule = (() => {
   try {
-    const currentFile = fileURLToPath(import.meta.url);
-    const mainFile = process.argv[1];
-    // Handle both direct execution and bun run scenarios
+    // Normalize separators: on Windows, fileURLToPath returns backslashes but
+    // bun's bunfs virtual argv[1] uses forward slashes (B:/~BUN/root/...).
+    // Without normalization, === always fails for compiled binaries on Windows.
+    const norm = (p?: string) => p?.replace(/\\/g, '/');
+    const currentFile = norm(fileURLToPath(import.meta.url));
+    const mainFile = norm(process.argv[1]);
     return (
       currentFile === mainFile ||
       mainFile?.endsWith('main.ts') ||
-      mainFile?.endsWith('han')
+      mainFile?.endsWith('han') ||
+      mainFile?.endsWith('han.exe')
     );
   } catch {
     return true; // Default to running if we can't determine
