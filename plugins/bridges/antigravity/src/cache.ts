@@ -10,6 +10,7 @@
 
 import { readFileSync } from "node:fs"
 import { createHash } from "node:crypto"
+import { resolve } from "node:path"
 
 /** Map of cache keys to content hashes from the last successful run */
 const hashCache = new Map<string, string>()
@@ -31,7 +32,7 @@ function cacheKey(
   hookName: string,
   filePath: string,
 ): string {
-  return `${pluginName}:${hookName}:${filePath}`
+  return `${pluginName}:${hookName}:${resolve(filePath)}`
 }
 
 /**
@@ -71,8 +72,9 @@ export function recordSuccess(
  * Invalidate cache for a file across all hooks.
  */
 export function invalidateFile(filePath: string): void {
+  const resolved = resolve(filePath)
   for (const [key] of hashCache) {
-    if (key.endsWith(`:${filePath}`)) {
+    if (key.endsWith(`:${resolved}`)) {
       hashCache.delete(key)
     }
   }

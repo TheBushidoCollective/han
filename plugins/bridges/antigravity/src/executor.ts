@@ -169,11 +169,11 @@ export async function executeHooksParallel(
     hooks.map((hook) => executeHook(hook, filePaths, options)),
   )
 
-  return results.map((r) =>
+  return results.map((r, i) =>
     r.status === "fulfilled"
       ? r.value
       : {
-          hook: hooks[0],
+          hook: hooks[i],
           exitCode: 1,
           stdout: "",
           stderr: r.reason?.message ?? "Unknown error",

@@ -33,12 +33,13 @@
  * via rules to call han_validate after edits.
  */
 
+import { spawn } from "node:child_process"
 import { discoverHooks, resolvePluginPaths, getHooksByEvent } from "./discovery"
 import { matchPostToolUseHooks, matchStopHooks } from "./matcher"
 import { executeHooksParallel } from "./executor"
 import { invalidateFile } from "./cache"
 import { formatValidationResults } from "./formatter"
-import { mapToolName } from "./types"
+import { mapToolName, type HookDefinition } from "./types"
 import { BridgeEventLogger } from "./events"
 import {
   discoverAllSkills,
@@ -61,30 +62,28 @@ const PREFIX = "[han]"
  * Start the Han coordinator daemon in the background.
  */
 function startCoordinator(watchDir: string): void {
-  try {
-    const { spawn } = require("node:child_process") as typeof import("node:child_process")
-
-    const child = spawn(
-      "han",
-      ["coordinator", "ensure", "--background", "--watch-path", watchDir],
-      {
-        stdio: "ignore",
-        detached: true,
-        env: {
-          ...process.env,
-          HAN_PROVIDER: "antigravity",
-        },
+  const child = spawn(
+    "han",
+    ["coordinator", "ensure", "--background", "--watch-path", watchDir],
+    {
+      stdio: "ignore",
+      detached: true,
+      env: {
+        ...process.env,
+        HAN_PROVIDER: "antigravity",
       },
-    )
+    },
+  )
 
-    child.unref()
-    console.error(`${PREFIX} Coordinator ensure started (watch: ${watchDir})`)
-  } catch {
+  child.on("error", () => {
     console.error(
       `${PREFIX} Could not start coordinator (han CLI not found). ` +
         `Browse UI won't show Antigravity sessions.`,
     )
-  }
+  })
+
+  child.unref()
+  console.error(`${PREFIX} Coordinator ensure started (watch: ${watchDir})`)
 }
 
 /**
@@ -140,8 +139,6 @@ export async function createHanMcpServer(projectDir: string) {
 
   // ─── Session State ───────────────────────────────────────────────────────
   const sessionId = crypto.randomUUID()
-  process.env.HAN_PROVIDER = "antigravity"
-  process.env.HAN_SESSION_ID = sessionId
 
   // ─── Event Logger ──────────────────────────────────────────────────────
   const eventLogger = new BridgeEventLogger(sessionId, projectDir)
@@ -153,6 +150,7 @@ export async function createHanMcpServer(projectDir: string) {
   return {
     name: "han",
     version: "0.1.0",
+    eventLogger,
     tools: {
       /**
        * han_skills - Browse and load Han's skill library.
@@ -340,15 +338,28 @@ export async function createHanMcpServer(projectDir: string) {
               invalidateFile(fp)
             }
 
-            // Find and run matching PostToolUse hooks for the first file
-            const matching = matchPostToolUseHooks(
-              postToolUseHooks,
-              claudeToolName,
-              args.files[0],
-              projectDir,
-            )
+            // Match hooks per-file, then group files by their matched hook
+            // so mixed-extension file sets (e.g. .ts + .py) each run only
+            // the hooks that actually apply to them.
+            const hookToFiles = new Map<HookDefinition, string[]>()
+            for (const file of args.files) {
+              const matched = matchPostToolUseHooks(
+                postToolUseHooks,
+                claudeToolName,
+                file,
+                projectDir,
+              )
+              for (const hook of matched) {
+                const files = hookToFiles.get(hook)
+                if (files) {
+                  files.push(file)
+                } else {
+                  hookToFiles.set(hook, [file])
+                }
+              }
+            }
 
-            if (matching.length === 0) {
+            if (hookToFiles.size === 0) {
               return {
                 content: [{
                   type: "text" as const,
@@ -358,12 +369,18 @@ export async function createHanMcpServer(projectDir: string) {
               }
             }
 
-            const results = await executeHooksParallel(matching, args.files, {
-              cwd: projectDir,
-              sessionId,
-              eventLogger,
-              hookType: "PostToolUse",
-            })
+            const results = (
+              await Promise.all(
+                Array.from(hookToFiles.entries()).map(([hook, files]) =>
+                  executeHooksParallel([hook], files, {
+                    cwd: projectDir,
+                    sessionId,
+                    eventLogger,
+                    hookType: "PostToolUse",
+                  }),
+                ),
+              )
+            ).flat()
 
             return {
               content: [{
@@ -483,7 +500,7 @@ export async function createHanMcpServer(projectDir: string) {
  *   "mcpServers": {
  *     "han": {
  *       "command": "npx",
- *       "args": ["-y", "@thebushidocollective/antigravity-han-mcp"]
+ *       "args": ["-y", "antigravity-han-mcp"]
  *     }
  *   }
  * }
@@ -497,6 +514,7 @@ async function main() {
   console.error(`${PREFIX} Project: ${projectDir}`)
 
   const server = await createHanMcpServer(projectDir)
+  const eventLogger = server.eventLogger
 
   // MCP stdio transport: read JSON-RPC from stdin, write to stdout
   const { createInterface } = await import("node:readline")
@@ -596,12 +614,17 @@ async function main() {
 
   rl.on("close", () => {
     console.error(`${PREFIX} MCP server shutting down`)
+    eventLogger.flush()
     process.exit(0)
   })
 }
 
-// Run if invoked directly
-if (require.main === module || process.argv[1]?.endsWith("index.ts")) {
+// Run if invoked directly (ESM has no require.main; compare against the
+// invoked script path instead, with a Bun-specific fallback for dev runs).
+if (
+  import.meta.url === `file://${process.argv[1]}` ||
+  process.argv[1]?.endsWith("index.ts")
+) {
   main().catch((err) => {
     console.error(`${PREFIX} Fatal error:`, err)
     process.exit(1)

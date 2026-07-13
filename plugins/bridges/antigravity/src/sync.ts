@@ -153,12 +153,7 @@ export function generateMcpConfig(projectDir: string): string {
     mcpServers: {
       han: {
         command: "npx",
-        args: [
-          "-y",
-          "@thebushidocollective/antigravity-han-mcp",
-          "--project-dir",
-          projectDir,
-        ],
+        args: ["-y", "antigravity-han-mcp", "--project-dir", projectDir],
       },
     },
   }

@@ -6,6 +6,7 @@
  */
 
 import { existsSync } from "node:fs"
+import { execSync } from "node:child_process"
 import { join, relative } from "node:path"
 import type { HookDefinition } from "./types"
 
@@ -43,6 +44,24 @@ function checkDirsWith(
   return hook.dirsWith.some((requiredFile) =>
     existsSync(join(projectDir, requiredFile)),
   )
+}
+
+/**
+ * Check if a hook's dirTest command succeeds in the project directory.
+ * Used for conditional execution (e.g. skip if a tool is disabled).
+ */
+function checkDirTest(hook: HookDefinition, projectDir: string): boolean {
+  if (!hook.dirTest) return true
+  try {
+    execSync(hook.dirTest, {
+      cwd: projectDir,
+      stdio: ["ignore", "ignore", "ignore"],
+      shell: "/bin/bash",
+    })
+    return true
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -84,6 +103,7 @@ export function matchPostToolUseHooks(
     if (!checkToolFilter(hook, claudeToolName)) return false
     if (!checkDirsWith(hook, projectDir)) return false
     if (!checkFileFilter(hook, filePath, projectDir)) return false
+    if (!checkDirTest(hook, projectDir)) return false
     return true
   })
 }
@@ -95,5 +115,7 @@ export function matchStopHooks(
   hooks: HookDefinition[],
   projectDir: string,
 ): HookDefinition[] {
-  return hooks.filter((hook) => checkDirsWith(hook, projectDir))
+  return hooks.filter(
+    (hook) => checkDirsWith(hook, projectDir) && checkDirTest(hook, projectDir),
+  )
 }

@@ -2632,6 +2632,21 @@
       ]
     },
     {
+      "name": "hashi-antigravity",
+      "description": "Bridge plugin that enables Han's hook ecosystem (validation, skills, disciplines) to work with Google Antigravity IDE via MCP server.",
+      "source": "./plugins/bridges/antigravity",
+      "category": "Integration",
+      "keywords": [
+        "antigravity",
+        "google",
+        "bridge",
+        "mcp",
+        "hooks",
+        "validation",
+        "skills"
+      ]
+    },
+    {
       "name": "hashi-playwright-mcp",
       "description": "MCP server configuration for Playwright integration providing test automation, browser control, and test execution capabilities.",
       "source": "./plugins/services/playwright-mcp",
