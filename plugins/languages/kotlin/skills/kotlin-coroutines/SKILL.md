@@ -712,6 +712,9 @@ functions. Exception handling respects structured concurrency boundaries.
 10. **Test coroutines with TestCoroutineDispatcher** to control time and ensure
     deterministic test execution
 
+11. **Avoid using volatile for synchronization of coroutines** running on multi-threaded dispatchers.
+    This can cause shared mutable state problems. Prefer Atomic types or synchronization structures like Mutex.withLock.
+
 ## Common Pitfalls
 
 1. **Using GlobalScope for scoped work** causes memory leaks when coroutines
@@ -750,7 +753,7 @@ Use Kotlin coroutines when building Android applications for asynchronous
 operations like network calls, database queries, or any I/O-bound work that
 should not block the main thread.
 
-Apply coroutines in server-side Kotlin applications with Ktor or Spring Boot for
+Apply coroutines in server-side Kotlin applications with Ktor, Spring Boot or Quarkus for
 handling concurrent requests efficiently without thread-per-request overhead.
 
 Employ Flow for reactive streams in MVVM architecture, replacing LiveData or
