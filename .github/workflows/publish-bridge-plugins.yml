@@ -1,0 +1,82 @@
+name: Publish Bridge Plugins
+# Publishes bridge plugin packages (opencode-plugin-han, codex-plugin-han, etc.)
+# to npm when their package.json version has not been published yet.
+# Triggered by pushes to main that touch a bridge, or manually.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "plugins/bridges/**/package.json"
+      - "plugins/bridges/**/src/**"
+      - ".github/workflows/publish-bridge-plugins.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm provenance
+    strategy:
+      fail-fast: false
+      matrix:
+        bridge: [antigravity, codex, gemini-cli, kiro, opencode]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Read package metadata
+        id: pkg
+        working-directory: plugins/bridges/${{ matrix.bridge }}
+        run: |
+          echo "name=$(node -p "require('./package.json').name")" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Check if version already published
+        id: check
+        env:
+          PKG_NAME: ${{ steps.pkg.outputs.name }}
+          PKG_VERSION: ${{ steps.pkg.outputs.version }}
+        run: |
+          if npm view "$PKG_NAME@$PKG_VERSION" version --registry https://registry.npmjs.org 2>/dev/null; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "$PKG_NAME@$PKG_VERSION already on npm, skipping"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install build dependencies
+        if: steps.check.outputs.published == 'false'
+        working-directory: plugins/bridges/${{ matrix.bridge }}
+        run: |
+          if [ -f tsconfig.json ]; then
+            npm install --no-audit --no-fund --legacy-peer-deps
+          fi
+
+      - name: Build
+        if: steps.check.outputs.published == 'false'
+        working-directory: plugins/bridges/${{ matrix.bridge }}
+        run: |
+          if [ -f tsconfig.json ]; then
+            npx tsc -p tsconfig.json
+          fi
+          if [ -f tsconfig.tui.json ]; then
+            npx tsc -p tsconfig.tui.json
+          fi
+
+      - name: Publish to npm
+        if: steps.check.outputs.published == 'false'
+        working-directory: plugins/bridges/${{ matrix.bridge }}
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

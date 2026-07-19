@@ -2,6 +2,15 @@
 
 Bridge plugin that brings Han's full plugin ecosystem to [OpenCode](https://opencode.ai) — validation hooks, core guidelines, 400+ skills, and 25 agent disciplines.
 
+## Install
+
+```json
+// opencode.json
+{
+  "plugin": ["opencode-plugin-han"]
+}
+```
+
 ## What This Does
 
 Han plugins define validation hooks, specialized skills, and agent disciplines that run during Claude Code sessions. This bridge makes the entire ecosystem work in OpenCode:
@@ -12,6 +21,16 @@ Han plugins define validation hooks, specialized skills, and agent disciplines t
 4. **Skills** — 400+ coding skills loadable on demand via `han_skills` tool
 5. **Disciplines** — 25 agent personas (frontend, backend, SRE, security, etc.) with system prompt injection
 6. **Events** — Unified JSONL logging with `provider: "opencode"` for Browse UI visibility
+
+## TUI Features
+
+The package also ships an OpenCode TUI plugin (discovered via the `oc-plugin` field):
+
+- **Sidebar panel** — discovered plugin/skill counts and the result of the last validation run
+- **Failure toasts** — a toast names the failing hooks when a validation run fails
+- **`/han` command** — "Han: Validation Summary" dialog with per-hook failure details
+
+The server plugin writes `~/.han/opencode/status/{project}.json` after every run; the TUI plugin reads it.
 
 ## Coverage Matrix
 

@@ -40,6 +40,7 @@ import { executeHooksParallel } from './executor';
 import { formatInlineResults, formatNotificationResults, formatStopResults, } from './formatter';
 import { matchPostToolUseHooks, matchStopHooks } from './matcher';
 import { discoverAllSkills, formatSkillList, loadSkillContent, } from './skills';
+import { BridgeStatusWriter } from './status';
 import { mapToolName, } from './types';
 const PREFIX = '[han]';
 /**
@@ -147,6 +148,15 @@ async function hanBridgePlugin(ctx) {
     const pendingValidations = new Map();
     // ─── Event Logger ──────────────────────────────────────────────────────
     const eventLogger = new BridgeEventLogger(sessionId, directory);
+    // ─── Status Writer (for the TUI plugin) ─────────────────────────────────
+    const statusWriter = new BridgeStatusWriter(directory, {
+        plugins: pluginCount,
+        preToolUse: preToolUseHooks.length,
+        postToolUse: postToolUseHooks.length,
+        stop: stopHooks.length,
+        skills: skillCount,
+        disciplines: disciplineCount,
+    });
     // Set HAN_PROVIDER for child processes (hook commands)
     process.env.HAN_PROVIDER = 'opencode';
     process.env.HAN_SESSION_ID = sessionId;
@@ -378,6 +388,7 @@ async function hanBridgePlugin(ctx) {
                         eventLogger,
                         hookType: 'PostToolUse',
                     });
+                    statusWriter.recordRun('PostToolUse', results, filePaths[0]);
                     // Inline feedback: append failures directly to tool output
                     const inline = formatInlineResults(results);
                     if (inline) {
@@ -461,6 +472,7 @@ async function hanBridgePlugin(ctx) {
                         eventLogger,
                         hookType: 'Stop',
                     });
+                    statusWriter.recordRun('Stop', results);
                     const message = formatStopResults(results);
                     if (message && eventSessionId) {
                         await client.session.prompt({

@@ -59,6 +59,7 @@ import {
   loadSkillContent,
   type SkillInfo,
 } from './skills';
+import { BridgeStatusWriter } from './status';
 import {
   mapToolName,
   type OpenCodeEvent,
@@ -207,6 +208,16 @@ async function hanBridgePlugin(ctx: OpenCodePluginContext) {
 
   // ─── Event Logger ──────────────────────────────────────────────────────
   const eventLogger = new BridgeEventLogger(sessionId, directory);
+
+  // ─── Status Writer (for the TUI plugin) ─────────────────────────────────
+  const statusWriter = new BridgeStatusWriter(directory, {
+    plugins: pluginCount,
+    preToolUse: preToolUseHooks.length,
+    postToolUse: postToolUseHooks.length,
+    stop: stopHooks.length,
+    skills: skillCount,
+    disciplines: disciplineCount,
+  });
 
   // Set HAN_PROVIDER for child processes (hook commands)
   process.env.HAN_PROVIDER = 'opencode';
@@ -503,6 +514,8 @@ async function hanBridgePlugin(ctx: OpenCodePluginContext) {
             hookType: 'PostToolUse',
           });
 
+          statusWriter.recordRun('PostToolUse', results, filePaths[0]);
+
           // Inline feedback: append failures directly to tool output
           const inline = formatInlineResults(results);
           if (inline) {
@@ -603,6 +616,8 @@ async function hanBridgePlugin(ctx: OpenCodePluginContext) {
             eventLogger,
             hookType: 'Stop',
           });
+
+          statusWriter.recordRun('Stop', results);
 
           const message = formatStopResults(results);
           if (message && eventSessionId) {

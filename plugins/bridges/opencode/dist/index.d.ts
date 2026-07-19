@@ -80,19 +80,19 @@ declare function hanBridgePlugin(ctx: OpenCodePluginContext): Promise<{
         han_skills: {
             description: string;
             parameters: {
-                type: 'object';
+                type: "object";
                 properties: {
                     action: {
-                        type: 'string';
+                        type: "string";
                         enum: string[];
                         description: string;
                     };
                     skill: {
-                        type: 'string';
+                        type: "string";
                         description: string;
                     };
                     filter: {
-                        type: 'string';
+                        type: "string";
                         description: string;
                     };
                 };
@@ -115,15 +115,15 @@ declare function hanBridgePlugin(ctx: OpenCodePluginContext): Promise<{
         han_discipline: {
             description: string;
             parameters: {
-                type: 'object';
+                type: "object";
                 properties: {
                     action: {
-                        type: 'string';
+                        type: "string";
                         enum: string[];
                         description: string;
                     };
                     discipline: {
-                        type: 'string';
+                        type: "string";
                         description: string;
                     };
                 };
