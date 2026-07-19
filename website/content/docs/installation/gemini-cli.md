@@ -44,11 +44,11 @@ curl -fsSL https://bun.sh/install | bash
 
 ### 3. Install the Gemini CLI extension
 
-Use the install script to set up the extension:
+Use the install script bundled with the plugin to set up the extension:
 
 ```bash
-# If han is installed, find the plugin path
-bash "$(han plugin path gemini-cli)/install.sh"
+# From your Claude Code plugin cache (adjust version path as needed)
+bash ~/.claude/plugins/cache/han/gemini-cli/*/install.sh ~/.claude/plugins/cache/han/gemini-cli/*
 ```
 
 Or install directly from the Han repository:

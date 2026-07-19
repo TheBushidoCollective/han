@@ -140,23 +140,37 @@ Hooks run at specific points during Claude Code sessions:
 | Event | When | Best For |
 |-------|------|----------|
 | `SessionStart` | Session begins | Initialization |
+| `Setup` | `--init` / `--maintenance` runs | One-time CI/script preparation |
 | `UserPromptSubmit` | Before processing input | Pre-process, inject context |
+| `UserPromptExpansion` | Slash command expands into a prompt | Guard or augment skill invocations |
 | `PreToolUse` | Before tool execution | Input validation |
 | `PermissionRequest` | Permission dialog appears (~2.1.50+) | Audit/auto-approve permissions |
+| `PermissionDenied` | Auto-mode classifier denies a tool call (2.1.89+) | Let the model retry with `{retry: true}` |
 | `PostToolUse` | After tool execution | Result processing |
 | `PostToolUseFailure` | Tool execution fails (~2.1.50+) | Error tracking, recovery |
+| `PostToolBatch` | A parallel batch of tool calls resolves | Batch-level feedback before the next model call |
 | `Stop` | Before response completes | Main validation point |
+| `StopFailure` | Turn ends on API error (2.1.78+) | Notification/logging only |
+| `SubagentStart` | Subagent spawned | Inject context into subagents |
 | `SubagentStop` | Subagent completes | Validate agent work |
-| `Notification` | Notification event | Custom notification handling |
-| `PreCompact` | Before context compaction (~2.1.50+) | Save state before compaction |
-| `SessionEnd` | Session ends | Cleanup |
-| `ConfigChange` | Configuration modified (2.1.49+) | Audit trails, config monitoring |
-| `TeammateIdle` | Teammate goes idle (2.1.33+) | Team coordination |
+| `TaskCreated` | Task created via `TaskCreate` (2.1.84+) | Gate task creation |
 | `TaskCompleted` | Task completed (2.1.33+) | Task tracking, workflows |
+| `TeammateIdle` | Teammate goes idle (2.1.33+) | Team coordination |
+| `Notification` | Notification event | Custom notification handling |
+| `MessageDisplay` | Assistant text is displayed (2.1.152+) | Transform displayed text |
+| `InstructionsLoaded` | CLAUDE.md/rules file loads (2.1.69+) | Observability |
+| `ConfigChange` | Configuration modified (2.1.49+) | Audit trails, config monitoring |
+| `CwdChanged` | Working directory changes (2.1.83+) | Reactive env management (direnv-style) |
+| `FileChanged` | Watched file changes on disk (2.1.83+) | Reactive reloads |
+| `PreCompact` | Before context compaction (~2.1.50+, blocking since 2.1.105) | Save state before compaction |
+| `PostCompact` | After context compaction (2.1.76+) | Post-compaction cleanup |
+| `Elicitation` | MCP server requests user input (2.1.76+) | Auto-answer MCP elicitations |
+| `ElicitationResult` | User responds to an MCP elicitation (2.1.76+) | Override elicitation responses |
 | `WorktreeCreate` | Worktree created (2.1.50+) | Agent isolation tracking, custom VCS |
 | `WorktreeRemove` | Worktree removed (2.1.50+) | Cleanup automation |
+| `SessionEnd` | Session ends | Cleanup |
 
-By default, validation and tool plugin hooks run at `Stop` and `SubagentStop`. Claude Code executes plugin hooks directly - you just define what to run.
+By default, validation and tool plugin hooks run at `Stop` and `SubagentStop`. Claude Code executes plugin hooks directly - you just define what to run. Han's `han-plugin.yml` accepts every event above as of Claude Code 2.1.215.
 
 ### New Hook Events (Claude Code 2.1.33+)
 
@@ -266,6 +280,18 @@ Fired when a worktree is being removed. Receives the `worktree_path` that was or
   "worktree_path": "/project/.claude/worktrees/feature-auth"
 }
 ```
+
+### Hook Handler Types and Advanced Fields (Claude Code 2.1.x)
+
+Generated `hooks/hooks.json` files are always `type: "command"` hooks, but a plugin can also ship a hand-authored `hooks/hooks.json` (like the core plugin does) that uses the full Claude Code hook schema:
+
+- **Handler types**: `command` (shell), `http` (POST the event JSON to a URL), `mcp_tool` (call a tool on a connected MCP server, 2.1.118+), `prompt` (single-turn LLM yes/no evaluation), and `agent` (experimental agentic verifier with tools).
+- **Exec form**: set `args: [...]` to spawn `command` directly without a shell (2.1.139+). Safer for paths with spaces; required if you reference `${user_config.*}` values (2.1.207+).
+- **`if` conditions**: permission-rule syntax filtering at the handler level, e.g. `"if": "Bash(git *)"` (2.1.85+).
+- **`async: true` / `asyncRewake: true`**: run in background; `asyncRewake` wakes Claude with the hook's stderr when it exits 2. Note that decision fields have no effect from async hooks.
+- **Matchers**: `|` separates exact tool names; `,` also works (2.1.191+); anything else is treated as a JavaScript regex. Hyphenated names match exactly (2.1.195+).
+
+Prompt and agent hooks must return `{"ok": true|false, "reason": "..."}`; `ok: false` becomes a `decision: "block"` for the event.
 
 ### Stop/SubagentStop: `last_assistant_message` (2.1.47+)
 
@@ -417,8 +443,9 @@ Hooks have access to these environment variables:
 | Variable | Description |
 |----------|-------------|
 | `CLAUDE_SESSION_ID` | Current session ID |
-| `CLAUDE_PROJECT_ROOT` | Project root directory |
-| `CLAUDE_PLUGIN_ROOT` | Plugin installation directory |
+| `CLAUDE_PROJECT_DIR` | Project root directory |
+| `CLAUDE_PLUGIN_ROOT` | Plugin installation directory (changes on update) |
+| `CLAUDE_PLUGIN_DATA` | Persistent plugin data directory (survives updates, 2.1.78+) |
 | `HAN_SESSION_ID` | Session ID (alias) |
 
 Use plugin root for relative paths:
