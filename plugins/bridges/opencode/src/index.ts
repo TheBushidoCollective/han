@@ -74,28 +74,37 @@ const PREFIX = '[han]';
 /**
  * Extract file path(s) from an OpenCode tool event.
  *
- * OpenCode provides tool output with title/output/metadata.
- * For edit/write tools, the file path is typically in the metadata
- * or can be inferred from the tool output.
+ * The edit/write tools receive the target path in `input.args.filePath`;
+ * fall back to output metadata and title for tools that surface it there.
  */
 function extractFilePaths(
-  _input: ToolEventInput,
+  input: ToolEventInput,
   output: ToolEventOutput
 ): string[] {
   const paths: string[] = [];
+  const push = (p: unknown) => {
+    if (typeof p === 'string' && p && !paths.includes(p)) paths.push(p);
+  };
+
+  // Tool args (write/edit/multiedit all take filePath)
+  if (input.args) {
+    push(input.args.filePath);
+    push(input.args.file_path);
+    push(input.args.path);
+  }
 
   // Check metadata for file path
   if (output.metadata) {
     const meta = output.metadata as Record<string, unknown>;
-    if (typeof meta.path === 'string') paths.push(meta.path);
-    if (typeof meta.file_path === 'string') paths.push(meta.file_path);
-    if (typeof meta.filePath === 'string') paths.push(meta.filePath);
+    push(meta.path);
+    push(meta.file_path);
+    push(meta.filePath);
   }
 
-  // Check title for file path (common pattern: "Edit: src/foo.ts")
+  // Check title for file path (common patterns: "Edit: src/foo.ts", "Write src/foo.ts")
   if (paths.length === 0 && output.title) {
     const titleMatch = output.title.match(
-      /(?:edit|write|create|modify):\s*(.+)/i
+      /(?:edit|write|create|modify):?\s+(.+)/i
     );
     if (titleMatch) {
       paths.push(titleMatch[1].trim());
@@ -391,10 +400,18 @@ async function hanBridgePlugin(ctx: OpenCodePluginContext) {
 
     'chat.message': async (
       _input: Record<string, unknown>,
-      output: { message: string; parts: unknown[] }
+      output: { message: unknown; parts: Array<{ type: string; text?: string }> }
     ) => {
+      // Append to the user's existing text part rather than pushing a new
+      // part: opencode requires durable parts to carry id/sessionID/messageID,
+      // which only the server can assign.
       const timeContext = buildPromptContext();
-      output.parts.push({ type: 'text', text: `\n\n${timeContext}` });
+      const textPart = [...output.parts]
+        .reverse()
+        .find((p) => p.type === 'text' && typeof p.text === 'string');
+      if (textPart) {
+        textPart.text = `${textPart.text}\n\n${timeContext}`;
+      }
     },
 
     // ─── Hook Handlers ───────────────────────────────────────────────────
