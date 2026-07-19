@@ -27,13 +27,21 @@ function getEnabledPlugins(projectDir) {
         try {
             const content = readFileSync(path, 'utf-8');
             const settings = JSON.parse(content);
-            if (!settings.plugins)
-                continue;
-            for (const [name, entry] of Object.entries(settings.plugins)) {
-                if (entry.enabled !== false) {
-                    // Strip @han suffix if present: "biome@han" -> "biome"
-                    const cleanName = name.replace(/@han$/, '');
-                    pluginNames.add(cleanName);
+            // Legacy `plugins` map
+            if (settings.plugins) {
+                for (const [name, entry] of Object.entries(settings.plugins)) {
+                    if (entry.enabled !== false) {
+                        // Strip @han suffix if present: "biome@han" -> "biome"
+                        pluginNames.add(name.replace(/@han$/, ''));
+                    }
+                }
+            }
+            // Current `enabledPlugins` map (what `han plugin install` writes)
+            if (settings.enabledPlugins) {
+                for (const [name, enabled] of Object.entries(settings.enabledPlugins)) {
+                    if (enabled && name.endsWith('@han')) {
+                        pluginNames.add(name.replace(/@han$/, ''));
+                    }
                 }
             }
         }
@@ -84,8 +92,10 @@ function resolvePluginPath(pluginName, marketplace, marketplaceDir) {
     const entry = marketplace.plugins.find((p) => p.name === pluginName);
     if (!entry)
         return null;
-    // source is relative to marketplace.json location (e.g. "./plugins/validation/biome")
-    const pluginPath = resolve(marketplaceDir, entry.source);
+    // source is relative to the marketplace root (the parent of .claude-plugin/),
+    // e.g. "./plugins/validation/biome" resolves to <repo>/plugins/validation/biome
+    const marketplaceRoot = dirname(marketplaceDir);
+    const pluginPath = resolve(marketplaceRoot, entry.source);
     return existsSync(pluginPath) ? pluginPath : null;
 }
 /**
@@ -200,13 +210,28 @@ function parsePluginHooks(pluginName, pluginRoot) {
         for (const [name, def] of Object.entries(config.hooks)) {
             if (!def.command)
                 continue;
+            // Events can carry Claude Code tool matchers: "PostToolUse:Edit|Write".
+            // Split the suffix off so the base event matches and the tools act as
+            // the hook's tool filter.
+            const rawEvents = def.event ?? 'Stop'; // Default event is Stop
+            const events = Array.isArray(rawEvents) ? rawEvents : [rawEvents];
+            const baseEvents = [];
+            const suffixTools = [];
+            for (const e of events) {
+                const [base, tools] = e.split(':', 2);
+                baseEvents.push(base);
+                if (tools) {
+                    suffixTools.push(...tools.split('|').map((t) => t.trim()));
+                }
+            }
+            const toolFilter = [...(def.tool_filter ?? []), ...suffixTools];
             hooks.push({
                 name,
                 pluginName,
                 pluginRoot,
-                event: def.event ?? 'Stop', // Default event is Stop
+                event: Array.isArray(rawEvents) ? baseEvents : baseEvents[0],
                 command: def.command,
-                toolFilter: def.tool_filter,
+                toolFilter: toolFilter.length > 0 ? toolFilter : undefined,
                 fileFilter: def.file_filter,
                 dirsWith: def.dirs_with,
                 dirTest: def.dir_test,
