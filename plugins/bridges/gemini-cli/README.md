@@ -15,15 +15,20 @@ Han plugins define validation hooks, specialized skills, and agent disciplines t
 
 | Claude Code Hook | Gemini CLI Equivalent | Status |
 |---|---|---|
-| PostToolUse | `AfterTool` | Implemented |
+| PostToolUse | `AfterTool` | Implemented (failures return `decision:"deny"` with the errors as `reason`, hiding the tool result) |
 | PreToolUse | `BeforeTool` | Implemented |
 | Stop | `AfterAgent` | Implemented |
 | SessionStart | `SessionStart` | Implemented |
+| SessionEnd | `SessionEnd` | Implemented (advisory; runs SessionEnd Han hooks if any, then flushes the event log) |
 | UserPromptSubmit | `BeforeAgent` | Implemented |
 | PreCompact | `PreCompress` | Implemented |
 | SubagentStart/Stop | — | Not available |
 | Permission denial | `BeforeTool` decision:"deny" | Implemented |
 | MCP tool events | — | Not available |
+| — | `BeforeModel` / `AfterModel` | Intentionally unsupported (Han has no model-level hooks) |
+| — | `BeforeToolSelection` | Intentionally unsupported (Han has no tool-selection hooks) |
+
+Plugin discovery reads the current `enabledPlugins` boolean map (what `han plugin install` writes) as well as the legacy `plugins` object map from Claude Code settings, and resolves marketplace `source` paths relative to the marketplace root.
 
 ## Validation Flow
 
@@ -37,8 +42,8 @@ Agent edits src/app.ts via write_file
   -> Bridge maps write_file -> Write (Claude Code name)
   -> Matches PostToolUse hooks (biome, eslint, tsc)
   -> Runs hooks in parallel
-  -> Returns JSON with systemMessage containing validation errors
-  -> Agent sees errors and fixes them
+  -> On failure: returns decision:"deny" with validation errors as reason
+  -> Tool result is hidden; the agent sees the errors instead and fixes them
 ```
 
 ### AfterAgent (Stop Validation)
@@ -118,10 +123,13 @@ Gemini CLI Hook System
   |     hooks/hooks.json            -> decision:"deny" if validation fails
   |
   |-- AfterTool (matcher: write_file|replace) ──> PostToolUse hooks
-  |     hooks/hooks.json            -> systemMessage with validation errors
+  |     hooks/hooks.json            -> decision:"deny" + reason with validation errors
   |
   |-- AfterAgent ────────────────> Stop hooks (full project validation)
   |     hooks/hooks.json            -> decision:"block" if failures
+  |
+  |-- SessionEnd ────────────────> SessionEnd hooks (if any) + event log flush
+  |     hooks/hooks.json            -> advisory, CLI does not wait
   |
   |-- GEMINI.md ─────────────────> Core guidelines context
   |     (loaded automatically)       (professional honesty, no excuses, etc.)
@@ -171,7 +179,7 @@ Same hook definition. Same validation. Different runtime.
 Gemini CLI hooks communicate via stdin/stdout JSON:
 
 - **Input** (stdin): `{ "tool_name": "write_file", "tool_input": { "path": "src/app.ts", ... } }`
-- **Output** (stdout): `{ "decision": "allow" }` or `{ "systemMessage": "Validation errors..." }`
+- **Output** (stdout): `{ "decision": "allow" }` or `{ "decision": "deny", "reason": "Validation errors..." }`
 - **Logging** (stderr): All debug output goes to stderr (stdout is reserved for JSON)
 
 Exit codes:

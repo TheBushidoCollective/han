@@ -25,7 +25,10 @@ function formatSingleResult(result: HookResult): string {
 /**
  * Format PostToolUse (AfterTool) hook results for Gemini CLI.
  *
- * Returns a GeminiHookOutput with validation results as systemMessage.
+ * Returns decision: "deny" with the validation output as the reason.
+ * Per the current Gemini CLI hook spec, an AfterTool deny hides the tool
+ * result and the reason replaces it, so the agent sees the validation
+ * failures instead of the (now stale) tool output.
  * If all hooks pass, returns null (empty response).
  */
 export function formatAfterToolResults(
@@ -38,7 +41,7 @@ export function formatAfterToolResults(
   const blocks = failures.map(formatSingleResult).filter(Boolean);
   if (blocks.length === 0) return null;
 
-  const message = [
+  const reason = [
     'Han validation hooks found issues after your last edit.',
     'Please fix these issues before continuing:',
     '',
@@ -46,7 +49,8 @@ export function formatAfterToolResults(
   ].join('\n');
 
   return {
-    systemMessage: message,
+    decision: 'deny',
+    reason,
   };
 }
 

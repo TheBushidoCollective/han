@@ -72,5 +72,17 @@
         }
       ]
     }
+  ],
+  "SessionEnd": [
+    {
+      "hooks": [
+        {
+          "name": "han-session-end",
+          "type": "command",
+          "command": "bun ${extensionPath}/src/bridge.ts SessionEnd",
+          "timeout": 10000
+        }
+      ]
+    }
   ]
 }
