@@ -1,5 +1,5 @@
 # core plugin configuration
-# Hooks are defined in .claude-plugin/hooks.json for direct Claude Code integration
+# Hooks are defined in hooks/hooks.json for direct Claude Code integration
 # MCP servers are defined in .mcp.json for direct Claude Code integration
 
 hooks: {}

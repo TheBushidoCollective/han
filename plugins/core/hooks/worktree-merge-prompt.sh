@@ -2,8 +2,11 @@
 # worktree-merge-prompt.sh - SubagentStop hook for discipline agents
 # Detects if running in a worktree with changes and prompts user with merge options.
 #
-# Used by discipline agents via their Stop hook (Claude Code auto-converts
-# Stop → SubagentStop for agents).
+# Registered globally by the core plugin as a SubagentStop hook in
+# hooks/hooks.json. Plugin-shipped agents cannot define their own `hooks:`
+# frontmatter (Claude Code ignores it for security reasons), so the core
+# plugin fires this for every subagent; it no-ops instantly unless the
+# subagent's cwd is inside .claude/worktrees/.
 #
 # Exit 0 = no action needed (not in worktree, or no changes)
 # JSON output with decision: "block" = changes exist, ask user what to do

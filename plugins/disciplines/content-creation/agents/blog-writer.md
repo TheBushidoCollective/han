@@ -3,11 +3,6 @@ name: blog-writer
 description: Use when writing blog posts, articles, or long-form content. Expert at SEO optimization, compelling narratives, and audience-focused content.
 memory: project
 isolation: worktree
-hooks:
-  Stop:
-    - hooks:
-        - type: command
-          command: bash "${CLAUDE_PLUGIN_ROOT}/../../core/hooks/worktree-merge-prompt.sh"
 ---
 
 # Blog Writer Agent
