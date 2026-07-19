@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.19.1] - 2026-07-19
+
+### Added
+
+- support all Claude Code hook events through 2.1.215 ([658961d5](../../commit/658961d5))
+- add Han bridge for Google Antigravity IDE via MCP ([fac22376](../../commit/fac22376))
+- support Task→Agent tool rename in Claude Code 2.1.63 ([2c9801f0](../../commit/2c9801f0))
+
+### Fixed
+
+- resolve han-coordinator binary in npm platform package (#92) ([011598b7](../../commit/011598b7))
+- resolve TypeScript errors in hosted data source and sync client ([3a4f60a0](../../commit/3a4f60a0))
+- resolve noArrayIndexKey biome errors in han CLI ([8bbf32a0](../../commit/8bbf32a0))
+
+### Other
+
+- Merge pull request #96 from TheBushidoCollective/feat/antigravity-bridge ([f8705121](../../commit/f8705121))
+- fix windows binary ([14d9bd10](../../commit/14d9bd10))
+- replace old plugin terminology (Jutsu/Do/Hashi) with current category names ([9a7d07ea](../../commit/9a7d07ea))
+- Merge pull request #71 from TheBushidoCollective/ai-dlc/browse-dashboard-overhaul/main ([2707ccfb](../../commit/2707ccfb))
+
 ## [3.19.0] - 2026-07-15
 
 ### Added
