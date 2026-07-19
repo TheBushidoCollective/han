@@ -34,5 +34,13 @@
         "timeout_ms": 120000
       }
     ]
-  }
+  },
+  "tools": [
+    "fs_read",
+    "fs_write",
+    "execute_bash",
+    "glob",
+    "grep",
+    "@builtin"
+  ]
 }

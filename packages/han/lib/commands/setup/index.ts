@@ -137,7 +137,12 @@ args = ["-y", "@thebushidocollective/han", "mcp"]
           content: JSON.stringify(
             {
               $schema: 'https://opencode.ai/config.json',
-              plugin: ['opencode-plugin-han'],
+              // Loaded from the han marketplace clone (installed by
+              // `han plugin install`). The opencode-plugin-han npm
+              // package is not yet published; see the bridge README.
+              plugin: [
+                `file://${process.env.HOME}/.claude/plugins/marketplaces/han/plugins/bridges/opencode/dist/index.js`,
+              ],
             },
             null,
             2

@@ -133,6 +133,16 @@ Then start Kiro with the Han agent:
 kiro-cli chat --agent han
 ```
 
+The shipped agent config declares the built-in tools the agent needs
+(`fs_read`, `fs_write`, `execute_bash`, `glob`, `grep`) — without a
+`tools` list Kiro gives a custom agent no tools at all, and the model
+will print fake `<fs_write>` blocks instead of writing files.
+
+Kiro asks for approval before tool calls by default. To pre-approve the
+file tools, add an `allowedTools` list to the agent config, or run with
+`kiro-cli chat --agent han --trust-all-tools` (sandboxed/disposable
+environments only).
+
 **Option B: Add hooks to existing agent**
 
 Merge the hooks from `kiro-agent.json` into your existing agent configuration.
