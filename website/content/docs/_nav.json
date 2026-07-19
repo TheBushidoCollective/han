@@ -1,150 +1,150 @@
 {
-  "sections": [
-    {
-      "title": "Getting Started",
-      "items": [
-        {
-          "title": "Overview",
-          "slug": ""
-        },
-        {
-          "title": "What is Han?",
-          "slug": "getting-started"
-        },
-        {
-          "title": "Plugin Categories",
-          "slug": "plugin-categories"
-        }
-      ]
-    },
-    {
-      "title": "Installation",
-      "items": [
-        {
-          "title": "Installation Methods",
-          "slug": "installation"
-        },
-        {
-          "title": "Installing Plugins",
-          "slug": "installation/plugins"
-        },
-        {
-          "title": "Installation Scopes",
-          "slug": "installation/scopes"
-        },
-        {
-          "title": "Using Han with OpenCode",
-          "slug": "installation/opencode"
-        },
-        {
-          "title": "Using Han with Gemini CLI",
-          "slug": "installation/gemini-cli"
-        },
-        {
-          "title": "Using Han with Antigravity",
-          "slug": "installation/antigravity"
-        },
-        {
-          "title": "Using Han with Codex CLI",
-          "slug": "installation/codex"
-        },
-        {
-          "title": "Using Han with Kiro CLI",
-          "slug": "installation/kiro"
-        }
-      ]
-    },
-    {
-      "title": "Configuration",
-      "items": [
-        {
-          "title": "Configuration",
-          "slug": "configuration"
-        },
-        {
-          "title": "Smart Caching",
-          "slug": "configuration/caching"
-        }
-      ]
-    },
-    {
-      "title": "Features",
-      "items": [
-        {
-          "title": "Hook System",
-          "slug": "features/hooks"
-        },
-        {
-          "title": "Checkpoints",
-          "slug": "features/checkpoints"
-        },
-        {
-          "title": "Project Memory",
-          "slug": "features/memory"
-        },
-        {
-          "title": "MCP Integrations",
-          "slug": "integrations"
-        },
-        {
-          "title": "Local Metrics",
-          "slug": "metrics"
-        },
-        {
-          "title": "OpenTelemetry",
-          "slug": "metrics/opentelemetry"
-        }
-      ]
-    },
-    {
-      "title": "Plugin Development",
-      "items": [
-        {
-          "title": "Development Guide",
-          "slug": "plugin-development"
-        },
-        {
-          "title": "Plugin Types",
-          "slug": "plugin-development/types"
-        },
-        {
-          "title": "Hook Configuration",
-          "slug": "plugin-development/hooks"
-        },
-        {
-          "title": "Skills and Commands",
-          "slug": "plugin-development/skills"
-        },
-        {
-          "title": "Testing Plugins",
-          "slug": "plugin-development/testing"
-        },
-        {
-          "title": "Distribution",
-          "slug": "plugin-development/distribution"
-        }
-      ]
-    },
-    {
-      "title": "CLI Reference",
-      "items": [
-        {
-          "title": "Overview",
-          "slug": "cli"
-        },
-        {
-          "title": "Plugin Commands",
-          "slug": "cli/plugins"
-        },
-        {
-          "title": "Hook Commands",
-          "slug": "cli/hooks"
-        },
-        {
-          "title": "Other Commands",
-          "slug": "cli/other"
-        }
-      ]
-    }
-  ]
+	"sections": [
+		{
+			"title": "Getting Started",
+			"items": [
+				{
+					"title": "Overview",
+					"slug": ""
+				},
+				{
+					"title": "What is Han?",
+					"slug": "getting-started"
+				},
+				{
+					"title": "Plugin Categories",
+					"slug": "plugin-categories"
+				}
+			]
+		},
+		{
+			"title": "Installation",
+			"items": [
+				{
+					"title": "Installation Methods",
+					"slug": "installation"
+				},
+				{
+					"title": "Installing Plugins",
+					"slug": "installation/plugins"
+				},
+				{
+					"title": "Installation Scopes",
+					"slug": "installation/scopes"
+				},
+				{
+					"title": "Using Han with OpenCode",
+					"slug": "installation/opencode"
+				},
+				{
+					"title": "Using Han with Gemini CLI",
+					"slug": "installation/gemini-cli"
+				},
+				{
+					"title": "Using Han with Antigravity",
+					"slug": "installation/antigravity"
+				},
+				{
+					"title": "Using Han with Codex CLI",
+					"slug": "installation/codex"
+				},
+				{
+					"title": "Using Han with Kiro CLI",
+					"slug": "installation/kiro"
+				}
+			]
+		},
+		{
+			"title": "Configuration",
+			"items": [
+				{
+					"title": "Configuration",
+					"slug": "configuration"
+				},
+				{
+					"title": "Smart Caching",
+					"slug": "configuration/caching"
+				}
+			]
+		},
+		{
+			"title": "Features",
+			"items": [
+				{
+					"title": "Hook System",
+					"slug": "features/hooks"
+				},
+				{
+					"title": "Checkpoints",
+					"slug": "features/checkpoints"
+				},
+				{
+					"title": "Project Memory",
+					"slug": "features/memory"
+				},
+				{
+					"title": "MCP Integrations",
+					"slug": "integrations"
+				},
+				{
+					"title": "Local Metrics",
+					"slug": "metrics"
+				},
+				{
+					"title": "OpenTelemetry",
+					"slug": "metrics/opentelemetry"
+				}
+			]
+		},
+		{
+			"title": "Plugin Development",
+			"items": [
+				{
+					"title": "Development Guide",
+					"slug": "plugin-development"
+				},
+				{
+					"title": "Plugin Types",
+					"slug": "plugin-development/types"
+				},
+				{
+					"title": "Hook Configuration",
+					"slug": "plugin-development/hooks"
+				},
+				{
+					"title": "Skills and Commands",
+					"slug": "plugin-development/skills"
+				},
+				{
+					"title": "Testing Plugins",
+					"slug": "plugin-development/testing"
+				},
+				{
+					"title": "Distribution",
+					"slug": "plugin-development/distribution"
+				}
+			]
+		},
+		{
+			"title": "CLI Reference",
+			"items": [
+				{
+					"title": "Overview",
+					"slug": "cli"
+				},
+				{
+					"title": "Plugin Commands",
+					"slug": "cli/plugins"
+				},
+				{
+					"title": "Hook Commands",
+					"slug": "cli/hooks"
+				},
+				{
+					"title": "Other Commands",
+					"slug": "cli/other"
+				}
+			]
+		}
+	]
 }
