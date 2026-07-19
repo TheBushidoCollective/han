@@ -9,7 +9,7 @@
             "async": true
           }
         ],
-        "matcher": "Edit|Write|NotebookEdit"
+        "matcher": "Edit|Write"
       }
     ],
     "Stop": [

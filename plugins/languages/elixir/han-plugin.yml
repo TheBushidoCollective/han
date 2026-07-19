@@ -13,7 +13,7 @@ hooks:
       - ".formatter.exs"
 
   build:
-    event: [Stop, PostToolUse:Edit|Write]
+    event: Stop
     command: "mix compile --warnings-as-errors"
     dirs_with:
       - "mix.exs"
