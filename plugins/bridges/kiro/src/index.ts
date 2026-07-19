@@ -18,12 +18,12 @@
  *   user-prompt-submit -> UserPromptSubmit (output datetime to stdout)
  *   pre-tool-use       -> PreToolUse (exit 2 to block, stderr for reason)
  *   post-tool-use      -> PostToolUse (stdout for validation results)
- *   stop               -> Stop (stdout for validation, exit 1 if failures)
+ *   stop               -> Stop (stdout {"decision":"block",...} on failures, exit 0)
  *
  * Architecture:
  *
  *   Kiro fires hook event
- *     -> stdin JSON payload { hook_event_name, cwd, tool_name, tool_input }
+ *     -> stdin JSON payload { hook_event_name, cwd, session_id, tool_name, tool_input }
  *     -> bridge reads payload, maps Kiro tool names to Claude Code names
  *     -> discovery.ts finds installed plugins' hooks
  *     -> matcher.ts filters by tool name + file pattern
@@ -46,13 +46,25 @@ import { executeHooksParallel } from './executor';
 import {
   formatPostToolResults,
   formatPreToolResults,
-  formatStopResults,
+  formatStopBlockDecision,
 } from './formatter';
 import { matchPostToolUseHooks, matchStopHooks } from './matcher';
 import { discoverAllSkills } from './skills';
 import { type KiroHookPayload, mapToolName } from './types';
 
 const PREFIX = '[han]';
+
+/**
+ * Resolve the session ID for event correlation.
+ * Kiro includes a stable session_id on every hook payload; prefer it so all
+ * events in a session land in the same JSONL file. Fall back to the env var
+ * (shared with child processes), then a random UUID.
+ */
+function resolveSessionId(payload: KiroHookPayload): string {
+  return (
+    payload.session_id ?? process.env.HAN_SESSION_ID ?? crypto.randomUUID()
+  );
+}
 
 /**
  * Read JSON payload from stdin.
@@ -186,7 +198,7 @@ async function handlePreToolUse(payload: KiroHookPayload): Promise<void> {
   const kiroToolName = payload.tool_name ?? '';
   const claudeToolName = mapToolName(kiroToolName);
 
-  const sessionId = process.env.HAN_SESSION_ID ?? crypto.randomUUID();
+  const sessionId = resolveSessionId(payload);
   const eventLogger = new BridgeEventLogger(sessionId, directory);
 
   const allHooks = discoverHooks(directory);
@@ -232,7 +244,7 @@ async function handlePostToolUse(payload: KiroHookPayload): Promise<void> {
 
   if (filePaths.length === 0) return;
 
-  const sessionId = process.env.HAN_SESSION_ID ?? crypto.randomUUID();
+  const sessionId = resolveSessionId(payload);
   const eventLogger = new BridgeEventLogger(sessionId, directory);
 
   // Log file changes and invalidate cache
@@ -272,12 +284,14 @@ async function handlePostToolUse(payload: KiroHookPayload): Promise<void> {
 /**
  * Handle stop event (full project validation).
  *
- * Runs Stop hooks for project-wide validation.
- * Non-zero exit code tells Kiro the agent should continue fixing.
+ * Runs Stop hooks for project-wide validation. On failure, prints a Kiro
+ * block decision ({"decision":"block","reason":"..."}) to stdout and exits
+ * 0, which sends the reason to the agent as a new user message and forces
+ * it to continue fixing. (Exit 1 was only a non-blocking warning.)
  */
 async function handleStop(payload: KiroHookPayload): Promise<void> {
   const directory = payload.cwd || process.cwd();
-  const sessionId = process.env.HAN_SESSION_ID ?? crypto.randomUUID();
+  const sessionId = resolveSessionId(payload);
   const eventLogger = new BridgeEventLogger(sessionId, directory);
 
   const allHooks = discoverHooks(directory);
@@ -296,10 +310,9 @@ async function handleStop(payload: KiroHookPayload): Promise<void> {
 
   eventLogger.flush();
 
-  const message = formatStopResults(results);
-  if (message) {
-    process.stdout.write(message);
-    process.exit(1);
+  const decision = formatStopBlockDecision(results);
+  if (decision) {
+    process.stdout.write(decision);
   }
 }
 

@@ -10,6 +10,9 @@
 
 import type { HookResult } from './types';
 
+/** Cap on the block-decision reason sent back to the agent. */
+const MAX_BLOCK_REASON_LENGTH = 4_000;
+
 /**
  * Format a single hook result as a structured validation block.
  */
@@ -97,6 +100,28 @@ export function formatStopResults(results: HookResult[]): string | null {
     ...blocks,
     '</han-validation-summary>',
   ].join('\n');
+}
+
+/**
+ * Format Stop hook results as a Kiro block decision.
+ *
+ * Kiro's `stop` hook supports a JSON decision on stdout with exit 0:
+ * {"decision": "block", "reason": "..."} sends the reason to the agent
+ * as a new user message, forcing it to continue and fix the issues.
+ * This replaces the old exit-code-1 warning, which did not gate stopping.
+ *
+ * @returns JSON string for stdout, or null if all passed
+ */
+export function formatStopBlockDecision(results: HookResult[]): string | null {
+  const message = formatStopResults(results);
+  if (!message) return null;
+
+  const reason =
+    message.length <= MAX_BLOCK_REASON_LENGTH
+      ? message
+      : `${message.slice(0, MAX_BLOCK_REASON_LENGTH)}\n... [truncated, ${message.length - MAX_BLOCK_REASON_LENGTH} more bytes]`;
+
+  return JSON.stringify({ decision: 'block', reason });
 }
 
 /**
