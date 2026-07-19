@@ -1,7 +1,7 @@
 {
 	"name": "@thebushidocollective/han",
 	"version": "3.19.0",
-	"description": "CLI for installing and managing curated Claude Code plugins from the Han marketplace (v3.4)",
+	"description": "CLI for installing and managing curated plugins for AI coding agents from the Han marketplace",
 	"main": "dist/lib/main.js",
 	"types": "dist/lib/main.d.ts",
 	"type": "module",
@@ -59,7 +59,7 @@
 		"@thebushidocollective/han-win32-x64": "1.31.5"
 	},
 	"devDependencies": {
-		"@anthropic-ai/claude-agent-sdk": "0.2.32",
+		"@anthropic-ai/claude-agent-sdk": "0.3.215",
 		"@biomejs/biome": "2.3.7",
 		"@bufbuild/buf": "^1.65.0",
 		"@bufbuild/protobuf": "^2.11.0",
@@ -109,7 +109,7 @@
 		"yaml": "^2.8.1"
 	},
 	"dependencies": {
-		"@anthropic-ai/sdk": "^0.72.1",
+		"@anthropic-ai/sdk": "^0.112.3",
 		"@tanstack/react-virtual": "^3.13.13",
 		"drizzle-orm": "^0.38.0",
 		"highlight.js": "^11.11.1",
