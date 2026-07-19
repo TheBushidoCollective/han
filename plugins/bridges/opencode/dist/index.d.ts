@@ -31,7 +31,7 @@
  * not fire-and-forget. Results are collected, parsed, and delivered
  * as structured messages the agent can act on.
  */
-import { type OpenCodeEvent, type OpenCodePluginContext, type StopResult, type ToolBeforeInput, type ToolBeforeOutput, type ToolEventInput, type ToolEventOutput } from './types';
+import { type OpenCodeEvent, type OpenCodePluginContext, type ToolBeforeInput, type ToolBeforeOutput, type ToolEventInput, type ToolEventOutput } from './types';
 /**
  * Main OpenCode plugin entry point.
  */
@@ -57,18 +57,18 @@ declare function hanBridgePlugin(ctx: OpenCodePluginContext): Promise<{
      */
     'tool.execute.after'?: undefined;
     /**
+     * experimental.session.compacting → PreCompact hooks
+     *
+     * Runs before opencode compacts the session. Han PreCompact hook
+     * output is appended to the compaction prompt as extra context.
+     */
+    'experimental.session.compacting'?: undefined;
+    /**
      * Generic event handler for session lifecycle events.
      *
      * session.idle → Stop hooks (broader project validation)
      */
     event?: undefined;
-    /**
-     * Stop hook - backup validation gate.
-     *
-     * OpenCode calls this when the agent signals completion.
-     * If Stop hooks find issues, forces the agent to continue.
-     */
-    stop?: undefined;
 } | {
     tool: {
         /**
@@ -80,19 +80,19 @@ declare function hanBridgePlugin(ctx: OpenCodePluginContext): Promise<{
         han_skills: {
             description: string;
             parameters: {
-                type: "object";
+                type: 'object';
                 properties: {
                     action: {
-                        type: "string";
+                        type: 'string';
                         enum: string[];
                         description: string;
                     };
                     skill: {
-                        type: "string";
+                        type: 'string';
                         description: string;
                     };
                     filter: {
-                        type: "string";
+                        type: 'string';
                         description: string;
                     };
                 };
@@ -115,15 +115,15 @@ declare function hanBridgePlugin(ctx: OpenCodePluginContext): Promise<{
         han_discipline: {
             description: string;
             parameters: {
-                type: "object";
+                type: 'object';
                 properties: {
                     action: {
-                        type: "string";
+                        type: 'string';
                         enum: string[];
                         description: string;
                     };
                     discipline: {
-                        type: "string";
+                        type: 'string';
                         description: string;
                     };
                 };
@@ -162,6 +162,18 @@ declare function hanBridgePlugin(ctx: OpenCodePluginContext): Promise<{
      */
     'tool.execute.after': (input: ToolEventInput, output: ToolEventOutput) => Promise<void>;
     /**
+     * experimental.session.compacting → PreCompact hooks
+     *
+     * Runs before opencode compacts the session. Han PreCompact hook
+     * output is appended to the compaction prompt as extra context.
+     */
+    'experimental.session.compacting': (_input: {
+        sessionID: string;
+    }, output: {
+        context: string[];
+        prompt?: string;
+    }) => Promise<void>;
+    /**
      * Generic event handler for session lifecycle events.
      *
      * session.idle → Stop hooks (broader project validation)
@@ -169,12 +181,5 @@ declare function hanBridgePlugin(ctx: OpenCodePluginContext): Promise<{
     event: ({ event }: {
         event: OpenCodeEvent;
     }) => Promise<void>;
-    /**
-     * Stop hook - backup validation gate.
-     *
-     * OpenCode calls this when the agent signals completion.
-     * If Stop hooks find issues, forces the agent to continue.
-     */
-    stop: () => Promise<StopResult | undefined>;
 }>;
 export default hanBridgePlugin;

@@ -67,11 +67,6 @@ export interface OpenCodeEvent {
   properties?: Record<string, unknown>;
 }
 
-export interface StopResult {
-  continue: boolean;
-  assistantMessage?: string;
-}
-
 // ─── Han Hook Types ──────────────────────────────────────────────────────────
 
 /**
