@@ -38,7 +38,8 @@ The server plugin writes `~/.han/opencode/status/{project}.json` after every run
 |---|---|---|
 | PostToolUse | `tool.execute.after` | Implemented |
 | PreToolUse | `tool.execute.before` | Implemented |
-| Stop | `stop` + `session.idle` | Implemented |
+| Stop | `session.idle` | Implemented |
+| PreCompact | `experimental.session.compacting` | Implemented |
 | SessionStart | `experimental.chat.system.transform` | Implemented |
 | UserPromptSubmit | `chat.message` | Implemented |
 | SubagentPrompt | `tool.execute.before` (Task/agent) | Implemented |
@@ -80,8 +81,8 @@ Agent edits src/app.ts via Edit tool
 When the agent finishes a turn:
 
 ```
-Agent signals completion
-  -> OpenCode fires session.idle / stop
+Agent finishes its turn
+  -> OpenCode fires session.idle
   -> Bridge runs Stop hooks (full project lint, typecheck, tests)
   -> If failures: re-prompts agent via client.session.prompt()
   -> Agent gets a new turn to fix project-wide issues
@@ -130,18 +131,22 @@ han plugin install --auto
 
 ### Install the Bridge
 
-**Option A: npm package** (recommended)
-
-Add to your `opencode.json`:
+The bridge is distributed with the han marketplace (installed by
+`han plugin install --auto`). Point opencode at the bundled build:
 
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-plugin-han"]
+  "plugin": ["file://~/.claude/plugins/marketplaces/han/plugins/bridges/opencode/dist/index.js"]
 }
 ```
 
-**Option B: Local plugin**
+The `file://` path tracks marketplace updates automatically. (An
+`opencode-plugin-han` npm package is planned but not yet published; if
+you installed the bridge before, replace the bare `"opencode-plugin-han"`
+spec with the `file://` path above.)
+
+**Alternative: project-local copy**
 
 Copy the `src/` directory to `.opencode/plugins/han-bridge/` in your project.
 
@@ -174,10 +179,9 @@ OpenCode Runtime
   |     └─ client.session.prompt() ─────────────────────┘
   |         (re-prompts agent to fix issues)
   |
-  |-- stop ────────────────────────────────────> Stop hooks (backup)
-  |     (agent signals completion)                  |
-  |                                                 └─ { continue: true }
-  |                                                     (force continuation)
+  |-- experimental.session.compacting ─────────> PreCompact hooks
+  |     (before context compaction)                (hook output appended to
+  |                                                 the compaction prompt)
   |
   |-- tool: han_skills ────────────────────────> Skill discovery
   |     (LLM-callable)                             (list/search/load 400+ skills)

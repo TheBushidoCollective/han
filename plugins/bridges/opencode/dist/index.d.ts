@@ -141,8 +141,11 @@ declare function hanBridgePlugin(ctx: OpenCodePluginContext): Promise<{
         system: string[];
     }) => Promise<void>;
     'chat.message': (_input: Record<string, unknown>, output: {
-        message: string;
-        parts: unknown[];
+        message: unknown;
+        parts: Array<{
+            type: string;
+            text?: string;
+        }>;
     }) => Promise<void>;
     /**
      * tool.execute.before → PreToolUse hooks

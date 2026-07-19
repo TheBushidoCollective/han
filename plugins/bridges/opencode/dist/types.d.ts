@@ -52,6 +52,7 @@ export interface ToolEventInput {
     tool: string;
     sessionID: string;
     callID: string;
+    args?: Record<string, unknown>;
 }
 export interface ToolEventOutput {
     title: string;

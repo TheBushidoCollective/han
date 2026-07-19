@@ -75,15 +75,17 @@ The bridge maps Claude Code's hook events to Gemini CLI's extension hooks:
 
 | Claude Code Hook | Gemini CLI Equivalent | Status | Notes |
 |---|---|---|---|
-| **PostToolUse** | `AfterTool` | Implemented | Primary validation — per-file linting/formatting |
+| **PostToolUse** | `AfterTool` | Implemented | Primary validation — per-file linting/formatting; failures return `decision: "deny"` so the tool result is replaced by the validation feedback |
 | **PreToolUse** | `BeforeTool` | Implemented | Pre-execution gates, can deny tool execution |
 | **Stop** | `AfterAgent` | Implemented | Full project validation, blocks agent on failure |
 | **SessionStart** | `SessionStart` | Implemented | Plugin discovery, coordinator start, capability summary |
+| **SessionEnd** | `SessionEnd` | Implemented | Runs Han SessionEnd hooks and flushes the event log |
 | **UserPromptSubmit** | `BeforeAgent` | Implemented | Current datetime injected as additional context |
 | **PreCompact** | `PreCompress` | Implemented | Event log flush before context compression |
 | **Skills** | GEMINI.md context | Partial | Skills discovered and counted; use Gemini CLI's native skill system |
 | **Disciplines** | GEMINI.md context | Partial | Disciplines discovered and counted |
 | **Event Logging** | JSONL + coordinator | Implemented | Browse UI visibility for Gemini CLI sessions |
+| BeforeModel/AfterModel/BeforeToolSelection | — | Intentionally unsupported | Han has no model-level hooks |
 | SubagentStart/Stop | — | Not available | No Gemini CLI equivalent |
 | MCP tool events | — | Not available | AfterTool doesn't fire for MCP tool calls |
 

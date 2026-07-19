@@ -5,35 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- wrap `gemini-hooks.json` in a top-level `hooks` object; Gemini CLI 0.51 rejected the bare event map ("'hooks' property must be an object") and the extension loaded with zero hooks
+- locate the marketplace in installed Claude Code marketplaces (`~/.claude/plugins/marketplaces/`) so discovery works in any project
+
 ## [0.1.0] - 2026-07-19
 
 ### Added
 
 - add SessionEnd, deny-based AfterTool feedback ([97d942c4](../../commit/97d942c4))
-
-## [Unreleased]
-
-### Added
-
-- `SessionEnd` hook: runs any SessionEnd Han hooks and flushes the event log
-  on session exit (advisory; Gemini CLI does not wait)
-
-### Fixed
-
-- discover plugins and hooks from current settings formats: read the
-  `enabledPlugins` boolean map (what `han plugin install` writes) in addition
-  to the legacy `plugins` object map
-- resolve marketplace plugin `source` paths relative to the marketplace root
-  (parent of `.claude-plugin/`), matching Claude Code behavior
-- split Claude Code tool-matcher event suffixes (`PostToolUse:Edit|Write`)
-  into the base event plus tool filter so PostToolUse hooks match
-
-### Changed
-
-- AfterTool validation failures now return `decision:"deny"` with the errors
-  as `reason`, which hides the tool result and shows the reason in its place
-  (previously failures were surfaced via `systemMessage` alongside the tool
-  result)
 
 ## [0.1.0] - 2026-03-02
 

@@ -33,14 +33,16 @@ han plugin install --auto
 
 ### 2. Add the bridge to OpenCode
 
-Add to your `opencode.json`:
+The bridge ships with the han marketplace (installed in step 1). Point opencode at the bundled build in your `opencode.json`:
 
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-plugin-han"]
+  "plugin": ["file://~/.claude/plugins/marketplaces/han/plugins/bridges/opencode/dist/index.js"]
 }
 ```
+
+The `file://` path tracks marketplace updates automatically. (An `opencode-plugin-han` npm package is planned but not yet published.)
 
 That's it. Your Han plugins now work in OpenCode.
 
@@ -52,7 +54,7 @@ The bridge maps Claude Code's hook events to OpenCode's plugin API:
 |---|---|---|---|
 | **PostToolUse** | `tool.execute.after` | Implemented | Primary validation path - per-file linting/formatting |
 | **PreToolUse** | `tool.execute.before` | Implemented | Pre-execution gates, subagent context injection |
-| **Stop** | `stop` + `session.idle` | Implemented | Full project validation when agent finishes |
+| **Stop** | `session.idle` | Implemented | Full project validation when agent finishes |
 | **SessionStart** | `experimental.chat.system.transform` | Implemented | Core guidelines injected into system prompt |
 | **UserPromptSubmit** | `chat.message` | Implemented | Current datetime injected on every prompt |
 | **SubagentPrompt** | `tool.execute.before` (Task/agent) | Implemented | Discipline context injected into subagent prompts |
@@ -62,7 +64,7 @@ The bridge maps Claude Code's hook events to OpenCode's plugin API:
 | SubagentStart/Stop | — | Not available | No OpenCode equivalent |
 | MCP tool events | — | Not available | OpenCode doesn't fire events for MCP calls ([#2319](https://github.com/sst/opencode/issues/2319)) |
 | Permission denial | — | Not available | `tool.execute.before` can't block tool execution |
-| PreCompact | — | Not available | No OpenCode equivalent |
+| PreCompact | `experimental.session.compacting` | Implemented | Hook output appended to the compaction prompt |
 | Session slug | — | Not available | OpenCode uses its own session naming |
 
 ## What Works
@@ -170,7 +172,6 @@ These are genuine platform limitations that cannot be bridged:
 - **MCP tool events**: OpenCode doesn't fire `tool.execute.after` for MCP tool calls ([opencode#2319](https://github.com/sst/opencode/issues/2319)). Validation only runs for built-in tools (edit, write, bash).
 - **Subagent hooks**: No OpenCode equivalent for SubagentStart/SubagentStop. Discipline context is injected via `tool.execute.before` as a workaround.
 - **Permission denial**: OpenCode's `tool.execute.before` cannot block tool execution (no `permissionDecision` equivalent). PreToolUse hooks can warn but not deny.
-- **PreCompact**: No hook before context compaction.
 - **Checkpoint filtering**: Session-scoped checkpoint filtering (only validate files changed since last checkpoint) is not yet implemented in the bridge.
 
 ## How Plugins Stay Compatible

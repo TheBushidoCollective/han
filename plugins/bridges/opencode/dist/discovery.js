@@ -8,7 +8,7 @@
  * This replaces `han hook dispatch`'s discovery with direct filesystem
  * reads, giving the bridge full control over hook execution.
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 /**
@@ -53,20 +53,22 @@ function getEnabledPlugins(projectDir) {
 }
 // ─── Marketplace Resolution ──────────────────────────────────────────────────
 /**
- * Find the marketplace.json file. Searches up from projectDir to find
- * the han repository root, or falls back to the npm-installed marketplace.
+ * Candidate .claude-plugin dirs that may contain the han marketplace.json.
+ * Besides project-relative and home locations, this includes marketplaces
+ * installed by Claude Code under ~/.claude/plugins/marketplaces/<name>/,
+ * which is where `han plugin install` registers the han marketplace.
  */
-function findMarketplace(projectDir) {
-    // Check well-known locations
+function marketplaceCandidateDirs(projectDir) {
     const candidates = [
-        join(projectDir, '.claude-plugin', 'marketplace.json'),
-        join(homedir(), '.claude', 'marketplace.json'),
+        join(projectDir, '.claude-plugin'),
+        join(homedir(), '.claude'),
     ];
     // Walk up directories looking for .claude-plugin/marketplace.json
     let dir = projectDir;
     for (let i = 0; i < 10; i++) {
-        const candidate = join(dir, '.claude-plugin', 'marketplace.json');
-        if (existsSync(candidate) && !candidates.includes(candidate)) {
+        const candidate = join(dir, '.claude-plugin');
+        if (existsSync(join(candidate, 'marketplace.json')) &&
+            !candidates.includes(candidate)) {
             candidates.unshift(candidate);
         }
         const parent = dirname(dir);
@@ -74,16 +76,56 @@ function findMarketplace(projectDir) {
             break;
         dir = parent;
     }
-    for (const path of candidates) {
+    // Installed marketplaces: ~/.claude/plugins/marketplaces/<name>/.claude-plugin
+    const installedRoot = join(homedir(), '.claude', 'plugins', 'marketplaces');
+    if (existsSync(installedRoot)) {
+        try {
+            for (const entry of readdirSync(installedRoot, { withFileTypes: true })) {
+                if (!entry.isDirectory())
+                    continue;
+                const candidate = join(installedRoot, entry.name, '.claude-plugin');
+                if (existsSync(join(candidate, 'marketplace.json'))) {
+                    candidates.push(candidate);
+                }
+            }
+        }
+        catch {
+            // Ignore unreadable marketplace directories
+        }
+    }
+    return candidates;
+}
+/**
+ * Locate the han marketplace.json and its directory. Candidates are checked
+ * in order (project walk-up first, then well-known dirs, then installed
+ * marketplaces); a marketplace named "han" always wins over an unnamed or
+ * differently named one.
+ */
+function findMarketplaceLocation(projectDir) {
+    let fallback = null;
+    for (const dir of marketplaceCandidateDirs(projectDir)) {
+        const path = join(dir, 'marketplace.json');
         if (!existsSync(path))
             continue;
         try {
-            const content = readFileSync(path, 'utf-8');
-            return JSON.parse(content);
+            const marketplace = JSON.parse(readFileSync(path, 'utf-8'));
+            if (!marketplace || !Array.isArray(marketplace.plugins))
+                continue;
+            if (marketplace.name === 'han')
+                return { dir, marketplace };
+            if (!fallback)
+                fallback = { dir, marketplace };
         }
         catch { }
     }
-    return null;
+    return fallback;
+}
+/**
+ * Find the marketplace.json file. Searches up from projectDir to find
+ * the han repository root, then installed marketplaces.
+ */
+function findMarketplace(projectDir) {
+    return findMarketplaceLocation(projectDir)?.marketplace ?? null;
 }
 /**
  * Resolve a plugin name to its filesystem path using the marketplace.
@@ -269,26 +311,11 @@ export function resolvePluginPaths(projectDir) {
     return resolved;
 }
 /**
- * Find the directory containing marketplace.json.
+ * Find the directory containing the marketplace.json that findMarketplace
+ * would parse (same candidate order, same validity check).
  */
 function findMarketplaceDir(projectDir) {
-    const candidates = [
-        join(projectDir, '.claude-plugin'),
-        join(homedir(), '.claude'),
-    ];
-    let dir = projectDir;
-    for (let i = 0; i < 10; i++) {
-        const candidate = join(dir, '.claude-plugin');
-        if (existsSync(join(candidate, 'marketplace.json')) &&
-            !candidates.includes(candidate)) {
-            candidates.unshift(candidate);
-        }
-        const parent = dirname(dir);
-        if (parent === dir)
-            break;
-        dir = parent;
-    }
-    return (candidates.find((d) => existsSync(join(d, 'marketplace.json'))) ?? null);
+    return findMarketplaceLocation(projectDir)?.dir ?? null;
 }
 /**
  * Discover all hook definitions from installed Han plugins.

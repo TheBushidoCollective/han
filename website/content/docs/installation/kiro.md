@@ -55,6 +55,10 @@ kiro-cli chat --agent han
 
 That's it. Your Han plugins now work in Kiro.
 
+The shipped agent config declares the built-in tools the agent needs (`fs_read`, `fs_write`, `execute_bash`, `glob`, `grep`). Without a `tools` list Kiro gives a custom agent no tools at all, and the model prints fake `<fs_write>` blocks instead of writing files.
+
+Kiro asks for approval before tool calls by default. To pre-approve tools, add an `allowedTools` list to the agent config, or run with `kiro-cli chat --agent han --trust-all-tools` (sandboxed environments only).
+
 ## Coverage Matrix
 
 The bridge maps Claude Code's hook events to Kiro's hook system:
@@ -63,7 +67,7 @@ The bridge maps Claude Code's hook events to Kiro's hook system:
 |---|---|---|---|
 | **PostToolUse** | `postToolUse` | Implemented | Primary validation path - per-file linting/formatting |
 | **PreToolUse** | `preToolUse` | Implemented | Pre-execution gates with exit code 2 blocking |
-| **Stop** | `stop` | Implemented | Full project validation when agent finishes |
+| **Stop** | `stop` | Implemented | Full project validation; failures emit `{"decision":"block","reason":...}` so the agent keeps working until validation passes |
 | **SessionStart** | `agentSpawn` | Implemented | Core guidelines injected on agent start |
 | **UserPromptSubmit** | `userPromptSubmit` | Implemented | Current datetime injected on every prompt |
 | **Event Logging** | JSONL + coordinator | Implemented | Browse UI visibility for Kiro sessions |
