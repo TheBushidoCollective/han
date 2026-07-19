@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0] - 2026-07-19
+
+### Added
+
+- block stop on validation failure, fix discovery ([0e463d7c](../../commit/0e463d7c))
+
+### Fixed
+
+- ship a tools list in kiro-agent.json ([ace6e0f7](../../commit/ace6e0f7))
+- locate marketplace in installed Claude Code marketplaces ([60efae09](../../commit/60efae09))
+
 ## [Unreleased]
 
 ### Fixed
