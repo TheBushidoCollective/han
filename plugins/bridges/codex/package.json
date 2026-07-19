@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "Han bridge for Codex CLI - enables Han's validation hooks and plugin ecosystem in Codex sessions",
   "main": "src/index.ts",
+  "bin": {
+    "codex-plugin-han": "src/index.ts"
+  },
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
