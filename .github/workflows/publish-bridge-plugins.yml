@@ -2,6 +2,12 @@ name: Publish Bridge Plugins
 # Publishes bridge plugin packages (opencode-plugin-han, codex-plugin-han, etc.)
 # to npm when their package.json version has not been published yet.
 # Triggered by pushes to main that touch a bridge, or manually.
+#
+# Auth: npm Trusted Publishing (OIDC). No NPM_TOKEN secret required.
+# Each package must have a trusted publisher configured on npmjs.com:
+#   org/user: thebushidocollective (or package owner's account)
+#   repo:     thebushidocollective/han
+#   workflow: publish-bridge-plugins.yml
 
 on:
   workflow_dispatch:
@@ -20,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # npm provenance
+      id-token: write # required for npm trusted publishing + provenance
     strategy:
       fail-fast: false
       matrix:
@@ -33,7 +39,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "24"
-          registry-url: "https://registry.npmjs.org"
 
       - name: Read package metadata
         id: pkg
@@ -74,9 +79,12 @@ jobs:
             npx tsc -p tsconfig.tui.json
           fi
 
+      # npm CLI 11.5.1+ (bundled with Node 24) detects the GitHub Actions
+      # OIDC token and publishes via trusted publishing automatically when
+      # no auth token is configured. Provenance is implied.
       - name: Publish to npm
         if: steps.check.outputs.published == 'false'
         working-directory: plugins/bridges/${{ matrix.bridge }}
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm --version
+          npm publish --access public
