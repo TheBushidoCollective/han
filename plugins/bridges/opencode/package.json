@@ -1,15 +1,22 @@
 {
   "name": "opencode-plugin-han",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Han bridge for OpenCode - enables Han's validation hooks and plugin ecosystem in OpenCode sessions",
   "main": "src/index.ts",
   "type": "module",
+  "oc-plugin": ["server", "tui"],
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./tui": "./dist/tui/index.js"
   },
   "files": [
-    "src/"
+    "src/",
+    "dist/tui/",
+    "README.md"
   ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.tui.json"
+  },
   "keywords": [
     "opencode",
     "opencode-plugin",
@@ -35,6 +42,14 @@
     "bun": ">=1.0.0"
   },
   "peerDependencies": {
-    "@opencode-ai/plugin": "*"
+    "@opencode-ai/plugin": ">=1.4.0 <2"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.18.0",
+    "@opentui/core": "0.1.97",
+    "@opentui/solid": "0.1.97",
+    "@types/node": "^24.0.0",
+    "solid-js": "1.9.11",
+    "typescript": "^5.8.0"
   }
 }

@@ -6,11 +6,12 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "outDir": "dist",
-    "rootDir": "src",
+    "outDir": "dist/tui",
+    "rootDir": "src/tui",
     "declaration": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@opentui/solid",
     "types": ["node"]
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["src/tui/**"]
+  "include": ["src/tui/**/*.ts", "src/tui/**/*.tsx"]
 }
