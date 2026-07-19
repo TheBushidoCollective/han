@@ -15,6 +15,8 @@
 export interface KiroHookPayload {
   hook_event_name: string;
   cwd: string;
+  /** Stable session identifier, present on every event */
+  session_id?: string;
   tool_name?: string;
   tool_input?: Record<string, unknown>;
   tool_response?: Record<string, unknown>;

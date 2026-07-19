@@ -3,11 +3,6 @@ name: newsletter-writer
 description: Use when creating email newsletters or subscriber communications. Expert at building relationships, providing value, and driving reader action through compelling storytelling.
 memory: project
 isolation: worktree
-hooks:
-  Stop:
-    - hooks:
-        - type: command
-          command: bash "${CLAUDE_PLUGIN_ROOT}/../../core/hooks/worktree-merge-prompt.sh"
 ---
 
 # Newsletter Writer Agent

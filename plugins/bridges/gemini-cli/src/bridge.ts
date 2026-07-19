@@ -14,7 +14,8 @@
  *     -> matcher.ts filters by tool name + file pattern
  *     -> executor.ts runs matching hook commands as parallel promises
  *     -> formatter.ts structures results into Gemini CLI JSON response
- *     -> stdout JSON with systemMessage for validation errors
+ *     -> stdout JSON with decision:"deny" + reason for validation errors
+ *        (hides the tool result; reason replaces it per the hook spec)
  *
  *   AfterAgent (agent finished)
  *     -> discovery.ts finds installed plugins' Stop hooks
@@ -33,6 +34,10 @@
  *   BeforeTool
  *     -> Run PreToolUse hooks
  *     -> stdout JSON with decision:"deny" if hook rejects
+ *
+ *   SessionEnd
+ *     -> Run any SessionEnd Han hooks (best-effort)
+ *     -> Flush the event log; advisory, CLI does not wait
  *
  * Key difference from OpenCode bridge: Gemini CLI uses shell command hooks
  * with stdin/stdout JSON protocol, not a JS plugin API. Each hook invocation
@@ -346,6 +351,40 @@ async function handlePreCompress(
   return {};
 }
 
+/**
+ * SessionEnd: Run any SessionEnd Han hooks, then flush the event log.
+ *
+ * Advisory only: Gemini CLI does not wait for SessionEnd hooks, and the
+ * input carries { reason: exit|clear|logout|prompt_input_exit|other }.
+ * Best-effort: if no Han plugin defines SessionEnd hooks this is a no-op
+ * beyond flushing.
+ */
+async function handleSessionEnd(
+  input: GeminiHookInput,
+  projectDir: string
+): Promise<GeminiHookOutput> {
+  console.error(`${PREFIX} SessionEnd (reason: ${input.reason ?? 'unknown'})`);
+
+  const allHooks = discoverHooks(projectDir);
+  const sessionEndHooks = getHooksByEvent(allHooks, 'SessionEnd');
+
+  if (sessionEndHooks.length === 0) return {};
+
+  const sessionId = process.env.GEMINI_SESSION_ID ?? crypto.randomUUID();
+  const eventLogger = new BridgeEventLogger(sessionId, projectDir);
+
+  await executeHooksParallel(sessionEndHooks, [], {
+    cwd: projectDir,
+    sessionId,
+    eventLogger,
+    hookType: 'SessionEnd',
+  });
+
+  eventLogger.flush();
+
+  return {};
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -354,7 +393,7 @@ async function main(): Promise<void> {
   if (!eventType) {
     console.error(`${PREFIX} Usage: bridge.ts <EventType>`);
     console.error(
-      `${PREFIX} Events: SessionStart, BeforeAgent, BeforeTool, AfterTool, AfterAgent, PreCompress`
+      `${PREFIX} Events: SessionStart, BeforeAgent, BeforeTool, AfterTool, AfterAgent, PreCompress, SessionEnd`
     );
     writeOutput({});
     process.exit(0);
@@ -398,6 +437,9 @@ async function main(): Promise<void> {
         break;
       case 'PreCompress':
         output = await handlePreCompress(input, projectDir);
+        break;
+      case 'SessionEnd':
+        output = await handleSessionEnd(input, projectDir);
         break;
       default:
         console.error(`${PREFIX} Unknown event: ${eventType}`);

@@ -10,7 +10,8 @@ Han plugins define validation hooks, specialized skills, and agent disciplines t
 2. **Guidelines** — Core principles (professional honesty, no excuses, skill selection) injected on agent spawn
 3. **Datetime** — Current time injected on every user prompt
 4. **PreToolUse blocking** — Exit code 2 blocks tool execution per Kiro convention
-5. **Events** — Unified JSONL logging with `provider: "kiro"` for Browse UI visibility
+5. **Stop blocking** — Stop failures return `{"decision":"block","reason":"..."}` on stdout, forcing the agent to continue fixing
+6. **Events** — Unified JSONL logging with `provider: "kiro"` for Browse UI visibility
 
 ## Coverage Matrix
 
@@ -18,13 +19,15 @@ Han plugins define validation hooks, specialized skills, and agent disciplines t
 |---|---|---|
 | PostToolUse | `postToolUse` hook | Implemented |
 | PreToolUse | `preToolUse` hook | Implemented |
-| Stop | `stop` hook | Implemented |
+| Stop | `stop` hook | Implemented (blocking via `decision:"block"` JSON on stdout, exit 0) |
 | SessionStart | `agentSpawn` hook | Implemented |
 | UserPromptSubmit | `userPromptSubmit` hook | Implemented |
-| Event Logging | JSONL + coordinator | Implemented |
+| Event Logging | JSONL + coordinator | Implemented (session-correlated via payload `session_id`) |
 | SubagentStart/Stop | — | Not available |
 | MCP tool events | `@mcp/tool` matchers | Partial (Kiro supports MCP matchers) |
 | Permission denial | Exit code 2 | Implemented (Kiro native) |
+
+Plugin discovery reads the current `enabledPlugins` boolean map (what `han plugin install` writes) as well as the legacy `plugins` object map from Claude Code settings, resolves marketplace `source` paths relative to the marketplace root, and understands Claude Code tool-matcher event suffixes (`PostToolUse:Edit|Write`).
 
 ## Key Difference from OpenCode Bridge
 
@@ -76,7 +79,8 @@ When the agent finishes:
 Agent signals completion
   -> Kiro calls: npx kiro-plugin-han stop
   -> Bridge runs Stop hooks (full project lint, typecheck, tests)
-  -> If failures: outputs to stdout, exits 1
+  -> If failures: prints {"decision":"block","reason":"..."} to stdout, exits 0
+  -> Kiro sends the reason to the agent as a new user message
   -> Agent continues to fix project-wide issues
 ```
 
@@ -154,10 +158,12 @@ Kiro uses exit codes for hook communication:
 | Exit Code | Meaning | Used By |
 |-----------|---------|---------|
 | 0 | Success / Allow | All hooks |
-| 1 | Failure (continue with warnings) | stop, postToolUse |
+| 1 | Failure (continue with warnings) | postToolUse |
 | 2 | **Block tool execution** | preToolUse only |
 
 Exit code 2 is Kiro's native blocking mechanism. When a PreToolUse hook exits with code 2, Kiro blocks the tool call and sends stderr to the LLM as the reason.
+
+The `stop` hook is the exception: instead of a non-zero exit code (only a non-blocking warning), the bridge prints a JSON block decision to stdout and exits 0. Kiro reads `{"decision":"block","reason":"..."}` and sends the reason to the agent as a new user message, forcing it to continue. The reason is capped at 4000 bytes.
 
 ## Architecture
 
@@ -185,8 +191,7 @@ Kiro CLI Hook System
   |
   |-- stop ──────────────────────> npx kiro-plugin-han stop
   |     (agent finishes)              -> Run Stop hooks (full project)
-  |                                   -> Validation results to stdout
-  |                                   -> Exit 1 if failures
+  |                                   -> {"decision":"block","reason":...} to stdout, exit 0, if failures
   |
   |-- JSONL logger ──────────────> Event logging
         (hook_run, hook_result)       -> ~/.han/kiro/projects/{slug}/
@@ -240,7 +245,9 @@ Events logged:
 Environment variables set:
 
 - `HAN_PROVIDER=kiro` — Identifies the provider for child processes
-- `HAN_SESSION_ID=<uuid>` — Session ID for event correlation
+- `HAN_SESSION_ID=<uuid>` — Fallback session ID for event correlation
+
+The bridge prefers the `session_id` field Kiro includes in every hook payload, so all events in a session are correlated into one JSONL file. `HAN_SESSION_ID` is only used when the payload has no `session_id`.
 
 ## Remaining Gaps
 

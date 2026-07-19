@@ -3,11 +3,6 @@ name: copywriter
 description: Use when writing marketing copy, landing pages, ad copy, email campaigns, or sales materials. Expert at persuasive writing that converts.
 memory: project
 isolation: worktree
-hooks:
-  Stop:
-    - hooks:
-        - type: command
-          command: bash "${CLAUDE_PLUGIN_ROOT}/../../core/hooks/worktree-merge-prompt.sh"
 ---
 
 # Copywriter Agent

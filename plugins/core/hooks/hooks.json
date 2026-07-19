@@ -172,6 +172,17 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/worktree-merge-prompt.sh\"",
+            "timeout": 15
+          }
+        ]
+      }
     ]
   }
 }

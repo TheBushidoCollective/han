@@ -38,8 +38,9 @@ interface ClaudeHookGroup {
 }
 
 interface ClaudeHookEntry {
-  type: 'command' | 'prompt';
+  type: 'command' | 'http' | 'mcp_tool' | 'prompt' | 'agent';
   command?: string;
+  args?: string[];
   prompt?: string;
   timeout?: number;
   async?: boolean;
@@ -92,7 +93,9 @@ export function generateHooksJson(
 
     for (const [eventType, toolMatcher] of parsedEvents) {
       const isToolUseEvent =
-        eventType === 'PostToolUse' || eventType === 'PreToolUse';
+        eventType === 'PostToolUse' ||
+        eventType === 'PreToolUse' ||
+        eventType === 'PostToolUseFailure';
       // All hooks are async by default unless explicitly marked sync
       const isAsync = !hookDef.sync;
 
@@ -138,19 +141,51 @@ export function generateHooksJson(
     return null;
   }
 
-  // Build the final hooks object with deterministic key order
+  // Build the final hooks object with deterministic key order.
+  // Events not in this list are appended in sorted order so that
+  // newly added Claude Code events are never silently dropped.
   const orderedEvents: HookEventType[] = [
     'SessionStart',
+    'Setup',
     'UserPromptSubmit',
+    'UserPromptExpansion',
     'PreToolUse',
+    'PermissionRequest',
+    'PermissionDenied',
     'PostToolUse',
+    'PostToolUseFailure',
+    'PostToolBatch',
+    'Notification',
+    'MessageDisplay',
     'Stop',
     'SubagentStop',
     'SubagentStart',
+    'TaskCreated',
+    'TaskCompleted',
+    'StopFailure',
+    'TeammateIdle',
+    'InstructionsLoaded',
+    'ConfigChange',
+    'CwdChanged',
+    'FileChanged',
+    'WorktreeCreate',
+    'WorktreeRemove',
+    'PreCompact',
+    'PostCompact',
+    'Elicitation',
+    'ElicitationResult',
+    'SessionEnd',
+  ];
+
+  const orderedKeys = [
+    ...orderedEvents,
+    ...[...eventGroups.keys()]
+      .filter((e) => !orderedEvents.includes(e as HookEventType))
+      .sort(),
   ];
 
   const hooksObj: Record<string, ClaudeHookGroup[]> = {};
-  for (const event of orderedEvents) {
+  for (const event of orderedKeys) {
     const groups = eventGroups.get(event);
     if (groups) {
       hooksObj[event] = groups;

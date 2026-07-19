@@ -3,7 +3,7 @@ title: "Installation Methods"
 description: "Install Han for Claude Code, OpenCode, or standalone use via curl, Homebrew, or plugin install."
 ---
 
-Han works with Claude Code, OpenCode, and as a standalone CLI. Choose the method that fits your workflow.
+Han works with Claude Code, OpenCode, Gemini CLI, Codex CLI, Kiro CLI, Google Antigravity, and as a standalone CLI. Choose the method that fits your workflow.
 
 ## Quick Install (Recommended)
 
@@ -75,6 +75,24 @@ Han works with [OpenCode](https://opencode.ai) through a bridge plugin that tran
 ```
 
 Your Han validation hooks (biome, eslint, typescript, etc.) now run in OpenCode. See the [full OpenCode guide](/docs/installation/opencode) for details.
+
+## Gemini CLI
+
+Han works with [Gemini CLI](https://github.com/google-gemini/gemini-cli) through a Gemini extension that wires Han's hooks into Gemini's lifecycle events (BeforeTool, AfterTool, AfterAgent, SessionStart, SessionEnd).
+
+See the [full Gemini CLI guide](/docs/installation/gemini-cli) for setup.
+
+## Codex CLI
+
+Han works with [OpenAI Codex CLI](https://developers.openai.com/codex/) through Codex's lifecycle hook system (`[features] hooks = true` plus a `hooks.json` wiring `codex-plugin-han` to PreToolUse, PostToolUse, Stop, and the other Codex events).
+
+See the [full Codex CLI guide](/docs/installation/codex) for setup.
+
+## Kiro CLI
+
+Han works with [Kiro CLI](https://kiro.dev) through a Kiro agent definition that maps Kiro's agent hooks (agentSpawn, userPromptSubmit, preToolUse, postToolUse, stop) to Han's validation pipeline.
+
+See the [full Kiro CLI guide](/docs/installation/kiro) for setup.
 
 ## Antigravity
 

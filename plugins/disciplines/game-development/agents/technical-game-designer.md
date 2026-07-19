@@ -5,11 +5,6 @@ description: |
   systems, implementing design tools, and translating design visions into technical specifications.
 memory: project
 isolation: worktree
-hooks:
-  Stop:
-    - hooks:
-        - type: command
-          command: bash "${CLAUDE_PLUGIN_ROOT}/../../core/hooks/worktree-merge-prompt.sh"
 ---
 
 # Technical Game Designer

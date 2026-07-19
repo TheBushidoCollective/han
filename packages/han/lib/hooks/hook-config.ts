@@ -13,48 +13,74 @@ import { findDirectoriesWithMarkers } from './hook-cache.ts';
 
 /**
  * Claude Code hook event types that can trigger han hooks.
- * Complete as of Claude Code 2.1.63.
+ * Complete as of Claude Code 2.1.215.
  */
 export type HookEventType =
   | 'SessionStart'
+  | 'Setup'
   | 'UserPromptSubmit'
+  | 'UserPromptExpansion'
   | 'PreToolUse'
   | 'PermissionRequest'
+  | 'PermissionDenied'
   | 'PostToolUse'
   | 'PostToolUseFailure'
+  | 'PostToolBatch'
   | 'Notification'
+  | 'MessageDisplay'
   | 'SubagentStart'
   | 'SubagentStop'
-  | 'Stop'
-  | 'TeammateIdle'
+  | 'TaskCreated'
   | 'TaskCompleted'
+  | 'Stop'
+  | 'StopFailure'
+  | 'TeammateIdle'
+  | 'InstructionsLoaded'
   | 'ConfigChange'
+  | 'CwdChanged'
+  | 'FileChanged'
   | 'WorktreeCreate'
   | 'WorktreeRemove'
   | 'PreCompact'
+  | 'PostCompact'
+  | 'Elicitation'
+  | 'ElicitationResult'
   | 'SessionEnd';
 
 /**
  * Valid base event types for shorthand parsing validation.
- * Complete as of Claude Code 2.1.63.
+ * Complete as of Claude Code 2.1.215.
  */
 const VALID_EVENT_TYPES = new Set<string>([
   'SessionStart',
+  'Setup',
   'UserPromptSubmit',
+  'UserPromptExpansion',
   'PreToolUse',
   'PermissionRequest',
+  'PermissionDenied',
   'PostToolUse',
   'PostToolUseFailure',
+  'PostToolBatch',
   'Notification',
+  'MessageDisplay',
   'SubagentStart',
   'SubagentStop',
-  'Stop',
-  'TeammateIdle',
+  'TaskCreated',
   'TaskCompleted',
+  'Stop',
+  'StopFailure',
+  'TeammateIdle',
+  'InstructionsLoaded',
   'ConfigChange',
+  'CwdChanged',
+  'FileChanged',
   'WorktreeCreate',
   'WorktreeRemove',
   'PreCompact',
+  'PostCompact',
+  'Elicitation',
+  'ElicitationResult',
   'SessionEnd',
 ]);
 

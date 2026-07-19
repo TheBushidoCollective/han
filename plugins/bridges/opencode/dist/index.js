@@ -112,6 +112,7 @@ async function hanBridgePlugin(ctx) {
     const postToolUseHooks = getHooksByEvent(allHooks, 'PostToolUse');
     const preToolUseHooks = getHooksByEvent(allHooks, 'PreToolUse');
     const stopHooks = getHooksByEvent(allHooks, 'Stop');
+    const preCompactHooks = getHooksByEvent(allHooks, 'PreCompact');
     // ─── Skill Discovery ──────────────────────────────────────────────────────
     const allSkills = discoverAllSkills(resolvedPlugins);
     const skillsByName = new Map();
@@ -410,6 +411,33 @@ async function hanBridgePlugin(ctx) {
             pendingValidations.set(validationKey, validationPromise);
         },
         /**
+         * experimental.session.compacting → PreCompact hooks
+         *
+         * Runs before opencode compacts the session. Han PreCompact hook
+         * output is appended to the compaction prompt as extra context.
+         */
+        'experimental.session.compacting': async (_input, output) => {
+            if (preCompactHooks.length === 0)
+                return;
+            try {
+                const results = await executeHooksParallel(preCompactHooks, [], {
+                    cwd: directory,
+                    sessionId,
+                    timeout: 30_000,
+                    eventLogger,
+                    hookType: 'PreCompact',
+                });
+                for (const result of results) {
+                    if (!result.skipped && result.exitCode === 0 && result.stdout) {
+                        output.context.push(result.stdout);
+                    }
+                }
+            }
+            catch (err) {
+                console.error(`${PREFIX} PreCompact hook error:`, err instanceof Error ? err.message : err);
+            }
+        },
+        /**
          * Generic event handler for session lifecycle events.
          *
          * session.idle → Stop hooks (broader project validation)
@@ -447,39 +475,6 @@ async function hanBridgePlugin(ctx) {
                     console.error(`${PREFIX} Stop hook error:`, err instanceof Error ? err.message : err);
                 }
             }
-        },
-        /**
-         * Stop hook - backup validation gate.
-         *
-         * OpenCode calls this when the agent signals completion.
-         * If Stop hooks find issues, forces the agent to continue.
-         */
-        stop: async () => {
-            const matching = matchStopHooks(stopHooks, directory);
-            if (matching.length === 0)
-                return undefined;
-            try {
-                const results = await executeHooksParallel(matching, [], {
-                    cwd: directory,
-                    sessionId,
-                    timeout: 120_000,
-                    eventLogger,
-                    hookType: 'Stop',
-                });
-                const message = formatStopResults(results);
-                if (message) {
-                    // Flush events before returning so coordinator has latest data
-                    eventLogger.flush();
-                    return {
-                        continue: true,
-                        assistantMessage: message,
-                    };
-                }
-            }
-            catch (err) {
-                console.error(`${PREFIX} Stop validation error:`, err instanceof Error ? err.message : err);
-            }
-            return undefined;
         },
     };
 }

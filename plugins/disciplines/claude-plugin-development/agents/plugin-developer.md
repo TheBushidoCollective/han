@@ -10,11 +10,6 @@ model: inherit
 color: blue
 memory: project
 isolation: worktree
-hooks:
-  Stop:
-    - hooks:
-        - type: command
-          command: bash "${CLAUDE_PLUGIN_ROOT}/../../core/hooks/worktree-merge-prompt.sh"
 ---
 
 # Claude Plugin Developer Agent

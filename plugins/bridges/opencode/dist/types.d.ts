@@ -62,10 +62,6 @@ export interface OpenCodeEvent {
     type: string;
     properties?: Record<string, unknown>;
 }
-export interface StopResult {
-    continue: boolean;
-    assistantMessage?: string;
-}
 /**
  * A hook definition parsed from a plugin's han-plugin.yml.
  */

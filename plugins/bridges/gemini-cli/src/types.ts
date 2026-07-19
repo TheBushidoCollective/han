@@ -21,6 +21,8 @@ export interface GeminiHookInput {
   llm_response?: unknown;
   /** Final agent response (for AfterAgent hooks) */
   prompt_response?: unknown;
+  /** Exit reason (for SessionEnd hooks): exit|clear|logout|prompt_input_exit|other */
+  reason?: string;
 }
 
 /**

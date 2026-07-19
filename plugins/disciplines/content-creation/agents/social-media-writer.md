@@ -3,11 +3,6 @@ name: social-media-writer
 description: Use when creating social media posts, tweets, or platform-specific content. Expert at crafting platform-optimized content that drives engagement and builds community.
 memory: project
 isolation: worktree
-hooks:
-  Stop:
-    - hooks:
-        - type: command
-          command: bash "${CLAUDE_PLUGIN_ROOT}/../../core/hooks/worktree-merge-prompt.sh"
 ---
 
 # Social Media Writer Agent

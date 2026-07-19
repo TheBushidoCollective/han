@@ -5,11 +5,19 @@
 #
 # Installation:
 #   1. Install Han plugins as usual: han plugin install --auto
-#   2. Add the MCP server to ~/.codex/config.toml:
-#      [mcp_servers.han]
-#      command = "npx"
-#      args = ["-y", "codex-plugin-han"]
-#   3. Han hooks (validation, context injection) now work in Codex.
+#   2. Enable hooks in ~/.codex/config.toml:
+#        [features]
+#        hooks = true
+#   3. Wire the events in ~/.codex/hooks.json (see README.md for a
+#      ready-to-paste snippet), e.g.:
+#        {
+#          "hooks": {
+#            "Stop": [
+#              { "hooks": [ { "type": "command", "command": "npx -y codex-plugin-han stop", "timeout": 180 } ] }
+#            ]
+#          }
+#        }
+#   4. Han hooks (validation, context injection) now work in Codex.
 
 hooks: {}
 
