@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.19.2] - 2026-07-19
+
+### Added
+
+- support all Claude Code hook events through 2.1.215 ([658961d5](../../commit/658961d5))
+- add Han bridge for Google Antigravity IDE via MCP ([fac22376](../../commit/fac22376))
+
+### Fixed
+
+- ship a tools list in kiro-agent.json ([ace6e0f7](../../commit/ace6e0f7))
+- resolve han-coordinator binary in npm platform package (#92) ([011598b7](../../commit/011598b7))
+
+### Other
+
+- Merge pull request #96 from TheBushidoCollective/feat/antigravity-bridge ([f8705121](../../commit/f8705121))
+- fix windows binary ([14d9bd10](../../commit/14d9bd10))
+- replace old plugin terminology (Jutsu/Do/Hashi) with current category names ([9a7d07ea](../../commit/9a7d07ea))
+
 ## [3.19.1] - 2026-07-19
 
 ### Added
