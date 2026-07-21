@@ -65,7 +65,15 @@ describe.serial('transcript search', () => {
       const { pathToSlug } = await import('../lib/memory/transcript-search.ts');
 
       expect(pathToSlug('C:\\Users\\user\\Projects\\example-app')).toBe(
-        'C-Users-user-Projects-example-app'
+        'C--Users-user-Projects-example-app'
+      );
+    });
+
+    test('slugToPath restores Windows project slugs', async () => {
+      const { slugToPath } = await import('../lib/memory/transcript-search.ts');
+
+      expect(slugToPath('C--Users-user-Projects-example-app')).toBe(
+        'C:\\Users\\user\\Projects\\example\\app'
       );
     });
 

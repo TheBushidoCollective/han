@@ -169,9 +169,9 @@ export function slugToPath(slug: string): string {
   else if (path.startsWith('tmp-') || path.startsWith('private-tmp-')) {
     path = `/${path.replace(/-/g, '/')}`;
   }
-  // C:\... (Windows)
-  else if (/^[A-Z]-/.test(path)) {
-    path = `${path[0]}:\\${path.slice(2).replace(/-/g, '\\')}`;
+  // C:\... (Windows); Claude replaces both the drive colon and separator.
+  else if (/^[A-Za-z]--/.test(path)) {
+    path = `${path[0]}:\\${path.slice(3).replace(/-/g, '\\')}`;
   }
   // Default: assume Unix-style path
   else {

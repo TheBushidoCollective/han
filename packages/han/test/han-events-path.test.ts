@@ -92,7 +92,7 @@ describe('Han Events Path Resolution', () => {
 
   test('project slugs sanitize Windows drive letters and separators', () => {
     expect(pathToSlug('C:\\Users\\user\\Projects\\example-app')).toBe(
-      'C-Users-user-Projects-example-app'
+      'C--Users-user-Projects-example-app'
     );
   });
 });
