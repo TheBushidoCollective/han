@@ -61,6 +61,14 @@ describe.serial('transcript search', () => {
       expect(pathToSlug('/github.com/org/repo')).toBe('-github-com-org-repo');
     });
 
+    test('pathToSlug converts Windows paths to a single slug', async () => {
+      const { pathToSlug } = await import('../lib/memory/transcript-search.ts');
+
+      expect(pathToSlug('C:\\Users\\user\\Projects\\example-app')).toBe(
+        'C-Users-user-Projects-example-app'
+      );
+    });
+
     test('slugToPath converts macOS Volumes paths', async () => {
       const { slugToPath } = await import('../lib/memory/transcript-search.ts');
 

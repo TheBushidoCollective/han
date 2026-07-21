@@ -182,14 +182,15 @@ export function getClaudeProjectsDir(): string {
 
 /**
  * Convert a filesystem path to Claude Code's project slug format
- * Claude Code replaces both `/` and `.` with `-`
+ * Claude Code replaces path separators and dots with `-`, and omits the
+ * colon after a Windows drive letter.
  *
  * @example
  * pathToSlug("/Volumes/dev/src/github.com/foo/bar") // "-Volumes-dev-src-github-com-foo-bar"
+ * pathToSlug("C:\\Users\\foo\\bar") // "C-Users-foo-bar"
  */
 export function pathToSlug(fsPath: string): string {
-  // Replace path separators and dots with dashes, removing leading slashes
-  return fsPath.replace(/^\//, '-').replace(/[/.]/g, '-');
+  return fsPath.replace(/^([A-Za-z]):/, '$1').replace(/[\\/:.]/g, '-');
 }
 
 /**

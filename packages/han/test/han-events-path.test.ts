@@ -11,6 +11,7 @@ import {
   getHanEventsFilePath,
   getSessionFilePath,
   getSessionsPath,
+  pathToSlug,
   setMemoryRoot,
 } from '../lib/memory/paths.ts';
 
@@ -87,5 +88,11 @@ describe('Han Events Path Resolution', () => {
     const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
     expect(hanEventsPath).toContain(date);
+  });
+
+  test('project slugs sanitize Windows drive letters and separators', () => {
+    expect(pathToSlug('C:\\Users\\user\\Projects\\example-app')).toBe(
+      'C-Users-user-Projects-example-app'
+    );
   });
 });

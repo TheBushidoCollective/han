@@ -23,7 +23,9 @@ import {
   initTable,
   searchFts,
 } from './indexer.ts';
-import { getGitRemote, normalizeGitRemote } from './paths.ts';
+import { getGitRemote, normalizeGitRemote, pathToSlug } from './paths.ts';
+
+export { pathToSlug } from './paths.ts';
 
 /**
  * Transcript message types
@@ -133,14 +135,6 @@ export interface TranscriptSearchResult {
 export function getClaudeProjectsDir(): string {
   const home = process.env.HOME || homedir();
   return join(home, '.claude', 'projects');
-}
-
-/**
- * Convert a filesystem path to Claude project slug
- * e.g., /Volumes/dev/src/github.com/foo -> -Volumes-dev-src-github-com-foo
- */
-export function pathToSlug(path: string): string {
-  return path.replace(/[/.]/g, '-');
 }
 
 /**
