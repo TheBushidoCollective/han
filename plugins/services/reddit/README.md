@@ -96,12 +96,16 @@ Plus **one** of the following.
 export REDDIT_REFRESH_TOKEN="your-refresh-token"
 ```
 
-**Script app login** (simplest, but does not work on accounts with 2FA):
+**Script app login** (simplest, but the weaker option):
 
 ```bash
 export REDDIT_USERNAME="your-username"
 export REDDIT_PASSWORD="your-password"
 ```
+
+The password grant does not work on accounts with 2FA, and Reddit has been
+narrowing where it is accepted at all. If it returns `invalid_grant`, that is
+the grant being refused rather than a bad password: use a refresh token.
 
 Optional:
 

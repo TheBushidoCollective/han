@@ -48,8 +48,8 @@ at <https://www.reddit.com/prefs/apps>, then set:
 | --- | --- | --- |
 | `REDDIT_CLIENT_ID` | for account access | App client id |
 | `REDDIT_CLIENT_SECRET` | for account access | App secret |
-| `REDDIT_REFRESH_TOKEN` | one of these two | Durable user grant, works with 2FA |
-| `REDDIT_USERNAME` + `REDDIT_PASSWORD` | one of these two | Script app grant, no 2FA |
+| `REDDIT_REFRESH_TOKEN` | one of these two | Durable user grant, works with 2FA. Preferred |
+| `REDDIT_USERNAME` + `REDDIT_PASSWORD` | one of these two | Script app grant. No 2FA, and Reddit has been narrowing where it is accepted. An `invalid_grant` here means the grant was refused, not the password |
 | `REDDIT_USER_AGENT` | no | Overrides the default user agent |
 
 Scopes used: `identity`, `history`, `read`, `mysubreddits`, `privatemessages`.

@@ -191,6 +191,9 @@ export function registerTools(server: McpServer, client: RedditClient): void {
         'keyword. Reddit has no server side search over saved items, so ' +
         'this pages through saved history and matches locally on title, ' +
         'body, subreddit, author, and flair. Every term must appear. ' +
+        'Note that this issues up to max_pages sequential Reddit requests ' +
+        '(default 10, 100 items each), so a deep scan is slower than a ' +
+        'single lookup. Lower max_pages when only recent saves matter. ' +
         'Requires user authentication.',
       inputSchema: {
         query: z

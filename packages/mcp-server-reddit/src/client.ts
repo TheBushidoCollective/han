@@ -114,6 +114,12 @@ export class RedditClient {
 
       // A stale token survives a restart of Reddit's auth tier; retry once
       // with a freshly minted one before giving up.
+      //
+      // This is the one failure path that does not back off, deliberately: a
+      // 401 says the token is wrong, not that Reddit is overloaded, and the
+      // next attempt mints a new one rather than repeating the same request.
+      // The attempt counter still bounds it, so a persistent 401 gives up
+      // instead of looping.
       if (response.status === 401 && token) {
         this.tokens.invalidate();
         lastError = new Error('Reddit rejected the access token (HTTP 401)');
