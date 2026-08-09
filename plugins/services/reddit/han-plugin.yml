@@ -7,8 +7,17 @@ hooks: {}
 
 # Memory provider for team memory extraction from Reddit
 # Convention: provider name = plugin name
+#
+# The saved-item tools are listed first because they are the reason to reach
+# for Reddit as a memory source at all: they are the user's own curated
+# archive, not the public firehose.
 memory:
   allowed_tools:
+    - mcp__reddit__search_saved
+    - mcp__reddit__get_saved
+    - mcp__reddit__get_my_comments
+    - mcp__reddit__get_my_posts
+    - mcp__reddit__search_reddit
     - mcp__reddit__get_frontpage_posts
     - mcp__reddit__get_subreddit_info
     - mcp__reddit__get_subreddit_hot_posts
@@ -17,7 +26,11 @@ memory:
     - mcp__reddit__get_post_comments
   system_prompt: |
     Search Reddit for posts and discussions relevant to the query.
+    Start with search_saved: the user saves posts and comments to follow up
+    on later, so their saved archive is the highest signal source here.
+    Fall back to search_reddit for anything public.
     Use get_subreddit_hot_posts to find current discussions.
     Use get_subreddit_top_posts with time filters for popular content.
     Use get_post_comments to understand community sentiment.
-    Return relevant findings with post titles, subreddits, and key insights.
+    Return relevant findings with post titles, subreddits, permalinks, and
+    key insights.

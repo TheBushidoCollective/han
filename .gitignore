@@ -27,6 +27,7 @@ tsconfig.tsbuildinfo
 packages/han/out/
 packages/han-rs/target/
 packages/han-native/
+packages/mcp-server-reddit/dist/
 plugins/**/dist/
 
 # Plugin lock files (managed per-plugin, not committed)

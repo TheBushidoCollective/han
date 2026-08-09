@@ -1,0 +1,57 @@
+{
+  "name": "@thebushidocollective/mcp-server-reddit",
+  "version": "2.0.0",
+  "description": "MCP server for Reddit with authenticated user access: saved posts and comments, profile, vote history, subscriptions, and inbox, plus the public read tools",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "mcp-server-reddit": "dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test test/*.test.ts",
+    "lint": "biome check .",
+    "prepack": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "reddit",
+    "saved",
+    "oauth",
+    "claude-code",
+    "han",
+    "server"
+  ],
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thebushidocollective/han",
+    "directory": "packages/mcp-server-reddit"
+  },
+  "homepage": "https://github.com/thebushidocollective/han/tree/main/packages/mcp-server-reddit",
+  "bugs": {
+    "url": "https://github.com/thebushidocollective/han/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.0"
+  }
+}

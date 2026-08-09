@@ -1,208 +1,184 @@
 # Reddit
 
-MCP server integration for Reddit, enabling Claude Code to fetch frontpage posts, subreddit information, hot/new/top/rising posts, post content, and comments directly from Reddit's public API.
+MCP server integration for Reddit. With a Reddit app configured it reaches
+**your own account**: saved posts and comments, profile, vote history,
+subscriptions, and inbox. Without one it still serves the public read tools.
 
 ## What This Plugin Provides
 
 ### MCP Server: reddit
 
-This plugin connects Claude Code to Reddit and provides read-only access to Reddit content:
+Backed by `@thebushidocollective/mcp-server-reddit`.
 
-- **Frontpage Posts**: Fetch hot posts from Reddit's frontpage
-- **Subreddit Information**: Get details about any subreddit
-- **Post Listings**: Retrieve hot, new, top, and rising posts from subreddits
-- **Post Content**: Get detailed content of specific posts
-- **Comments**: Fetch comments from any post with configurable depth
+**Your account** (requires authentication):
+
+- **Saved items**: everything you saved to follow up on, posts and comments
+- **Saved search**: keyword search across your saved archive, which Reddit
+  itself does not offer
+- **Profile**: username, karma, account age
+- **History**: your posts, your comments, upvoted, downvoted, hidden
+- **Subscriptions**: the subreddits you follow
+- **Inbox**: replies, mentions, and private messages, read only
+
+**Public** (works with or without authentication):
+
+- Frontpage posts, subreddit info, hot/new/top/rising listings
+- Post content and comment threads
+- Reddit-wide and per-subreddit search
+- Any user's public profile
 
 ### Available Tools
 
-Once installed, Claude Code gains access to these tools:
+| Tool | Auth | Purpose |
+| --- | --- | --- |
+| `get_me` | user | Your profile and karma |
+| `get_saved` | user | Your saved posts and comments |
+| `search_saved` | user | Keyword search across your saved archive |
+| `get_upvoted` | user | Posts you upvoted |
+| `get_downvoted` | user | Posts you downvoted |
+| `get_hidden` | user | Posts you hid |
+| `get_my_posts` | user | Posts you submitted |
+| `get_my_comments` | user | Comments you wrote |
+| `get_subscribed_subreddits` | user | Subreddits you follow |
+| `get_inbox` | user | Replies, mentions, private messages |
+| `get_multireddits` | user | Your multireddits |
+| `get_frontpage_posts` | public | Hot posts from the frontpage |
+| `get_subreddit_info` | public | Details about a subreddit |
+| `get_subreddit_hot_posts` | public | Hot posts in a subreddit |
+| `get_subreddit_new_posts` | public | New posts in a subreddit |
+| `get_subreddit_top_posts` | public | Top posts, with a time filter |
+| `get_subreddit_rising_posts` | public | Rising posts in a subreddit |
+| `get_post_content` | public | A post plus its comments |
+| `get_post_comments` | public | Comments on a post |
+| `search_reddit` | public | Search posts, optionally in one subreddit |
+| `get_user_profile` | public | Any user's public profile |
 
-- `get_frontpage_posts`: Get hot posts from Reddit frontpage
-- `get_subreddit_info`: Get information about a subreddit
-- `get_subreddit_hot_posts`: Get hot posts from a specific subreddit
-- `get_subreddit_new_posts`: Get new posts from a specific subreddit
-- `get_subreddit_top_posts`: Get top posts from a specific subreddit
-- `get_subreddit_rising_posts`: Get rising posts from a specific subreddit
-- `get_post_content`: Get detailed content of a specific post
-- `get_post_comments`: Get comments from a post
+Every tool is read only. The server exposes no voting, posting, commenting, or
+saving tools, so it cannot change anything in your Reddit account.
 
 ## Installation
-
-### Prerequisites
-
-- [uv](https://github.com/astral-sh/uv) (Astral's Python package manager)
-
-Install uv if you don't have it:
-
-```bash
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Windows
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-### Via Han Marketplace
 
 ```bash
 han plugin install reddit
 ```
 
-Or install manually:
+Or:
 
 ```bash
 claude plugin marketplace add thebushidocollective/han
 claude plugin install reddit@han
 ```
 
-### Manual Installation
+Requires Node.js 20 or newer. The server is fetched on demand with `npx`, so
+there is nothing to install separately.
 
-If not using Han, add to your Claude Code settings (`~/.claude/settings.json`):
+## Configuration
 
-```json
-{
-  "mcpServers": {
-    "reddit": {
-      "command": "uvx",
-      "args": ["mcp-server-reddit"]
-    }
-  }
-}
+Public tools work with no configuration at all. To reach your own account:
+
+1. Go to <https://www.reddit.com/prefs/apps> and click **create another app**.
+2. Choose **script**, give it any name, and set the redirect URI to
+   `http://localhost:8080` (unused for the script flow).
+3. Note the client id (the string under the app name) and the secret.
+
+Then set:
+
+```bash
+export REDDIT_CLIENT_ID="your-client-id"
+export REDDIT_CLIENT_SECRET="your-client-secret"
 ```
+
+Plus **one** of the following.
+
+**Refresh token** (preferred, survives password changes and works with 2FA):
+
+```bash
+export REDDIT_REFRESH_TOKEN="your-refresh-token"
+```
+
+**Script app login** (simplest, but does not work on accounts with 2FA):
+
+```bash
+export REDDIT_USERNAME="your-username"
+export REDDIT_PASSWORD="your-password"
+```
+
+Optional:
+
+```bash
+export REDDIT_USER_AGENT="my-app/1.0 (by /u/yourname)"
+```
+
+Scopes used: `identity`, `history`, `read`, `mysubreddits`, `privatemessages`.
 
 ## Usage
 
-### Example 1: Check What's Popular on Reddit
+### Find something you saved
 
 ```
-User: What's trending on Reddit's frontpage right now?
-Claude: [uses get_frontpage_posts tool to fetch current hot posts]
+User: What did I save about Postgres connection pooling?
+Claude: [uses search_saved with query "postgres connection pooling"]
 ```
 
-### Example 2: Research a Subreddit
+### Review the backlog
 
 ```
-User: Tell me about r/programming - what are the hot topics?
-Claude: [uses get_subreddit_info and get_subreddit_hot_posts tools]
+User: Show me the last 20 things I saved on Reddit.
+Claude: [uses get_saved]
 ```
 
-### Example 3: Deep Dive into a Post
+### Narrow by subreddit
 
 ```
-User: I want to see what people are saying about post xyz123
-Claude: [uses get_post_content and get_post_comments tools to fetch full discussion]
+User: What have I saved from r/rust?
+Claude: [uses get_saved with subreddit "rust"]
 ```
 
-### Example 4: Find Top Posts of All Time
+### Still works for public research
 
 ```
-User: What are the top posts of all time on r/learnprogramming?
-Claude: [uses get_subreddit_top_posts with time='all' parameter]
+User: What's hot in r/programming today?
+Claude: [uses get_subreddit_hot_posts]
 ```
 
-## Tool Reference
+## Modes
 
-### `get_frontpage_posts`
+The server starts in one of three modes and reports which on stderr:
 
-**Purpose**: Get hot posts from Reddit frontpage
+| Mode | Trigger | Behavior |
+| --- | --- | --- |
+| `user` | client id plus refresh token, or client id plus username and password | All tools |
+| `app` | client id only | Public tools at app rate limits; account tools explain the missing setup |
+| `anonymous` | no credentials | Public tools; account tools explain the missing setup |
 
-**Parameters**:
+Account tools never fail silently. When the server is not signed in they return
+the exact environment variables to set and where to get them.
 
-- `limit` (optional, 1-100, default: 10): Number of posts to return
+## Migrating from 1.x
 
-### `get_subreddit_info`
+Version 1.x ran `uvx mcp-server-reddit`, which was public and unauthenticated.
+Version 2.x replaces it with an authenticated server and:
 
-**Purpose**: Get information about a subreddit
-
-**Parameters**:
-
-- `subreddit_name` (required): Name of the subreddit (without r/ prefix)
-
-### `get_subreddit_hot_posts`
-
-**Purpose**: Get hot posts from a specific subreddit
-
-**Parameters**:
-
-- `subreddit_name` (required): Name of the subreddit
-- `limit` (optional, 1-100, default: 10): Number of posts to return
-
-### `get_subreddit_new_posts`
-
-**Purpose**: Get new posts from a specific subreddit
-
-**Parameters**:
-
-- `subreddit_name` (required): Name of the subreddit
-- `limit` (optional, 1-100, default: 10): Number of posts to return
-
-### `get_subreddit_top_posts`
-
-**Purpose**: Get top posts from a specific subreddit
-
-**Parameters**:
-
-- `subreddit_name` (required): Name of the subreddit
-- `limit` (optional, 1-100, default: 10): Number of posts to return
-- `time` (optional): Time filter - 'hour', 'day', 'week', 'month', 'year', 'all'
-
-### `get_subreddit_rising_posts`
-
-**Purpose**: Get rising posts from a specific subreddit
-
-**Parameters**:
-
-- `subreddit_name` (required): Name of the subreddit
-- `limit` (optional, 1-100, default: 10): Number of posts to return
-
-### `get_post_content`
-
-**Purpose**: Get detailed content of a specific post
-
-**Parameters**:
-
-- `post_id` (required): Reddit post ID
-- `comment_limit` (optional, 1-100, default: 10): Number of comments to include
-- `comment_depth` (optional, 1-10, default: 3): Depth of comment replies
-
-### `get_post_comments`
-
-**Purpose**: Get comments from a post
-
-**Parameters**:
-
-- `post_id` (required): Reddit post ID
-- `limit` (optional, 1-100, default: 10): Number of comments to return
-
-## Use Cases
-
-- **Research**: Gather community perspectives on topics
-- **Trend Analysis**: Monitor what's popular in specific subreddits
-- **Community Feedback**: Understand discussions around products or technologies
-- **Content Discovery**: Find relevant posts and discussions
-- **Sentiment Analysis**: Analyze comments on specific topics
-
-## Limitations
-
-- **Read-only**: This MCP server only provides read access to Reddit
-- **Public Content Only**: Can only access publicly available posts and comments
-- **No Authentication**: Uses Reddit's public API without authentication
-- **Rate Limits**: Subject to Reddit's API rate limits
+- Keeps all eight previous tool names and their parameters, so existing prompts
+  and memory providers continue to work.
+- Drops the `uv` and Python prerequisite in favor of Node.
+- Adds the account tools listed above.
 
 ## Troubleshooting
 
-### Issue: uvx command not found
+**Account tools say authentication is missing.** The server only sees
+environment variables present in the Claude Code process. Export them in the
+shell that launches Claude Code, or set them in your Claude Code settings.
 
-**Solution**: Install uv following the prerequisites section above.
+**HTTP 401 from Reddit.** The client id and secret are mismatched, or the
+password grant is being used on an account with 2FA enabled. Use a refresh
+token instead.
 
-### Issue: Connection errors
+**HTTP 403 from Reddit.** Reddit blocks unauthenticated traffic from many
+datacenter and VPN addresses. Configuring credentials usually resolves it.
 
-**Solution**: Verify you have internet access and Reddit is reachable. The MCP server uses the redditwarp library which accesses Reddit's public API.
-
-### Issue: Empty responses
-
-**Solution**: Some subreddits may be private or have restrictions. Try with a popular public subreddit like r/programming.
+**Empty saved results.** `get_saved` only sees the account the credentials
+belong to. Confirm with `get_me` that it is the account you expect.
 
 ## Related Plugins
 

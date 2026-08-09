@@ -1,8 +1,15 @@
 {
   "mcpServers": {
     "reddit": {
-      "command": "uvx",
-      "args": ["mcp-server-reddit"]
+      "command": "npx",
+      "args": ["-y", "@thebushidocollective/mcp-server-reddit@latest"],
+      "env": {
+        "REDDIT_CLIENT_ID": "${REDDIT_CLIENT_ID}",
+        "REDDIT_CLIENT_SECRET": "${REDDIT_CLIENT_SECRET}",
+        "REDDIT_REFRESH_TOKEN": "${REDDIT_REFRESH_TOKEN}",
+        "REDDIT_USERNAME": "${REDDIT_USERNAME}",
+        "REDDIT_PASSWORD": "${REDDIT_PASSWORD}"
+      }
     }
   }
 }
