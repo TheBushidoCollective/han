@@ -11,7 +11,7 @@ Antigravity doesn't have lifecycle hooks like Claude Code or OpenCode. Instead, 
 
 1. **MCP tools** → **Skills, disciplines, validation** (agent calls on demand)
 2. **Native sync** → **`.agent/skills/` and `.agent/rules/`** (Antigravity discovers natively)
-3. **Event logging** → **Browse UI** (sessions visible alongside Claude Code sessions)
+3. **Event logging** → **first-class sessions** (indexed and attributed to the `antigravity` harness)
 
 ```text
 Agent finishes editing src/app.ts
@@ -168,9 +168,15 @@ hooks:
 
 Same hook definition. Same validation. Different runtime.
 
-## Event Logging
+## Event Logging and Metrics
 
-The bridge writes JSONL events to `~/.han/antigravity/projects/`. Each event includes `provider: "antigravity"`. The Han coordinator indexes these and serves them through the Browse UI alongside Claude Code and OpenCode sessions.
+The bridge writes Han-format JSONL events to `~/.han/antigravity/projects/{slug}/{sessionId}-han.jsonl`. Every event carries `harness: "antigravity"`, the canonical id Han uses for Antigravity wherever it reports on a session.
+
+Antigravity writes no native transcript into that directory, so the events file is the session's entire record. Han indexes a `*-han.jsonl` file that has no sibling `{sessionId}.jsonl` as a session in its own right rather than as a supplement to a Claude Code transcript, and stamps the harness onto the session row. Antigravity sessions show up in the Browse UI and in metrics queries beside Claude Code sessions, attributed to `antigravity` rather than folded into it.
+
+The coordinator finds the directory without being told about it. Every child of `~/.han` holding a `projects` directory is a harness root, so a bridge needs no registration step and no watch flag.
+
+For what the harness dimension buys you once the data is indexed, see [Local Metrics](/docs/metrics#the-harness-dimension).
 
 ## Next Steps
 

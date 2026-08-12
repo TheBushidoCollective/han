@@ -6,6 +6,7 @@ pub mod m20260220_add_session_pr_team;
 pub mod m20260222_tool_call_results;
 pub mod m20260223_performance_indexes;
 pub mod m20260401_human_time_estimation;
+pub mod m20260812_session_harness;
 
 use sea_orm::DatabaseConnection;
 use sea_orm_migration::prelude::*;
@@ -22,6 +23,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260222_tool_call_results::Migration),
             Box::new(m20260223_performance_indexes::Migration),
             Box::new(m20260401_human_time_estimation::Migration),
+            Box::new(m20260812_session_harness::Migration),
         ]
     }
 }

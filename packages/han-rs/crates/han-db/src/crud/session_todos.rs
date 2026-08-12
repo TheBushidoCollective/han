@@ -50,7 +50,10 @@ pub async fn upsert(
         .ok_or(DbError::NotFound("session_todo".to_string()))
 }
 
-pub async fn get(db: &DatabaseConnection, session_id: &str) -> DbResult<Option<session_todos::Model>> {
+pub async fn get(
+    db: &DatabaseConnection,
+    session_id: &str,
+) -> DbResult<Option<session_todos::Model>> {
     session_todos::Entity::find()
         .filter(session_todos::Column::SessionId.eq(session_id))
         .one(db)

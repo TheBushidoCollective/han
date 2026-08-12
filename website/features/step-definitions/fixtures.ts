@@ -4,4 +4,4 @@ export const test = base;
 
 const { Given, When, Then } = createBdd(test);
 
-export { Given, When, Then };
+export { Given, Then, When };

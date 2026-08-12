@@ -2,9 +2,15 @@
 
 use crate::entities::sessions;
 use crate::error::{DbError, DbResult};
-use sea_orm::*;
 use sea_orm::sea_query::Expr;
+use sea_orm::*;
 
+/// Insert or update a session row.
+///
+/// `harness` names the coding agent that produced the session. Passing `None`
+/// leaves an existing value alone rather than clearing it, so a re-index that
+/// cannot determine the harness never downgrades a row that already knows.
+#[allow(clippy::too_many_arguments)]
 pub async fn upsert(
     db: &DatabaseConnection,
     id: String,
@@ -13,8 +19,22 @@ pub async fn upsert(
     transcript_path: Option<String>,
     slug: Option<String>,
     source_config_dir: Option<String>,
+    harness: Option<String>,
 ) -> DbResult<sessions::Model> {
     let id_clone = id.clone();
+    let has_harness = harness.is_some();
+
+    let mut conflict = sea_query::OnConflict::column(sessions::Column::Id);
+    conflict.update_columns([
+        sessions::Column::ProjectId,
+        sessions::Column::Status,
+        sessions::Column::TranscriptPath,
+        sessions::Column::Slug,
+        sessions::Column::SourceConfigDir,
+    ]);
+    if has_harness {
+        conflict.update_column(sessions::Column::Harness);
+    }
 
     sessions::Entity::insert(sessions::ActiveModel {
         id: Set(id),
@@ -27,18 +47,9 @@ pub async fn upsert(
         pr_number: Set(None),
         pr_url: Set(None),
         team_name: Set(None),
+        harness: Set(harness),
     })
-    .on_conflict(
-        sea_query::OnConflict::column(sessions::Column::Id)
-            .update_columns([
-                sessions::Column::ProjectId,
-                sessions::Column::Status,
-                sessions::Column::TranscriptPath,
-                sessions::Column::Slug,
-                sessions::Column::SourceConfigDir,
-            ])
-            .to_owned(),
-    )
+    .on_conflict(conflict.to_owned())
     .exec(db)
     .await
     .map_err(DbError::Database)?;
@@ -101,7 +112,11 @@ pub async fn list(
     query.all(db).await.map_err(DbError::Database)
 }
 
-pub async fn update_last_indexed_line(db: &DatabaseConnection, session_id: &str, line_number: i32) -> DbResult<bool> {
+pub async fn update_last_indexed_line(
+    db: &DatabaseConnection,
+    session_id: &str,
+    line_number: i32,
+) -> DbResult<bool> {
     let res = sessions::Entity::update_many()
         .col_expr(sessions::Column::LastIndexedLine, Expr::value(line_number))
         .filter(sessions::Column::Id.eq(session_id))

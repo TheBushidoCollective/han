@@ -115,9 +115,9 @@ fn parse_field_attrs(field: &syn::Field) -> FieldAttrs {
         if !attr.path().is_ident("graphql_entity") {
             continue;
         }
-        if let Ok(nested) = attr.parse_args_with(
-            syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated,
-        ) {
+        if let Ok(nested) = attr
+            .parse_args_with(syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated)
+        {
             for meta in &nested {
                 match meta {
                     Meta::Path(p) => {
@@ -319,8 +319,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
                 .rename
                 .clone()
                 .unwrap_or_else(|| field_name.to_string().to_case(Case::Camel));
-            let column_variant =
-                format_ident!("{}", field_name.to_string().to_case(Case::Pascal));
+            let column_variant = format_ident!("{}", field_name.to_string().to_case(Case::Pascal));
 
             filter_fields.push(quote! {
                 #[graphql(name = #graphql_name)]

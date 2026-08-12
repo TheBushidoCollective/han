@@ -1,0 +1,49 @@
+{
+  "name": "omp-plugin-han",
+  "version": "0.1.0",
+  "description": "Han bridge for omp (Oh My Pi) - records omp session, tool, token, and cost metrics into Han",
+  "main": "src/index.ts",
+  "type": "module",
+  "omp": {
+    "extensions": ["./src/index.ts"]
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src/",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "keywords": [
+    "omp",
+    "oh-my-pi",
+    "omp-extension",
+    "han",
+    "claude-code",
+    "metrics",
+    "telemetry",
+    "bridge"
+  ],
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thebushidocollective/han",
+    "directory": "plugins/bridges/omp"
+  },
+  "homepage": "https://github.com/thebushidocollective/han/tree/main/plugins/bridges/omp",
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "devDependencies": {
+    "bun-types": "^1.3.9",
+    "typescript": "^5.8.0"
+  }
+}

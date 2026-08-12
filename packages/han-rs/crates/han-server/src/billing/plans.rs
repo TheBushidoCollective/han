@@ -132,9 +132,6 @@ mod tests {
         assert_eq!(map_stripe_status("past_due"), SubscriptionStatus::PastDue);
         assert_eq!(map_stripe_status("canceled"), SubscriptionStatus::Canceled);
         assert_eq!(map_stripe_status("unknown"), SubscriptionStatus::None);
-        assert_eq!(
-            map_stripe_status("incomplete"),
-            SubscriptionStatus::None
-        );
+        assert_eq!(map_stripe_status("incomplete"), SubscriptionStatus::None);
     }
 }

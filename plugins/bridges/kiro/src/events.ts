@@ -1,20 +1,20 @@
 /**
  * Lightweight event logger for the Kiro bridge.
  *
- * Writes Han-format JSONL events with provider="kiro" so the
+ * Writes Han-format JSONL events with harness="kiro" so the
  * coordinator can index them alongside Claude Code and OpenCode sessions.
  *
- * Path: ~/.han/kiro/{project-slug}/{sessionId}-han.jsonl
+ * Path: ~/.han/kiro/projects/{project-slug}/{sessionId}-han.jsonl
  *
  * This is intentionally NOT under ~/.claude/ because Kiro sessions
- * are not Claude Code sessions. The coordinator watches this directory
- * via addWatchPath().
+ * are not Claude Code sessions. The coordinator watches
+ * ~/.han/<harness>/projects for standalone han-event files.
  */
 
 import { randomUUID } from 'node:crypto';
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import type { HanProvider, HookDefinition, HookResult } from './types';
+import type { HanHarness, HookDefinition, HookResult } from './types';
 
 const MAX_OUTPUT_LENGTH = 10_000;
 
@@ -28,7 +28,7 @@ function pathToSlug(fsPath: string): string {
 
 /**
  * Get the han data root for Kiro.
- * Uses ~/.han/kiro/ to keep Kiro data separate from other provider data.
+ * Uses ~/.han/kiro/ to keep Kiro data separate from other harness data.
  */
 function getHanKiroRoot(): string {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '/tmp';
@@ -51,7 +51,7 @@ interface BaseEventMeta {
   sessionId: string;
   type: string;
   timestamp: string;
-  provider: HanProvider;
+  harness: HanHarness;
   cwd?: string;
 }
 
@@ -67,7 +67,7 @@ function truncateOutput(output: string): string {
  * Event logger for Kiro bridge sessions.
  *
  * Writes the same JSONL event format as Han's EventLogger but with
- * a provider field set to "kiro". Events are buffered and flushed
+ * a harness field set to "kiro". Events are buffered and flushed
  * on result events or every 100ms.
  */
 export class BridgeEventLogger {
@@ -75,7 +75,7 @@ export class BridgeEventLogger {
   private buffer: string[] = [];
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly sessionId: string;
-  private readonly provider: HanProvider = 'kiro';
+  private readonly harness: HanHarness = 'kiro';
   private readonly cwd: string;
 
   constructor(sessionId: string, projectDir: string) {
@@ -101,7 +101,7 @@ export class BridgeEventLogger {
       sessionId: this.sessionId,
       type,
       timestamp: new Date().toISOString(),
-      provider: this.provider,
+      harness: this.harness,
       cwd: this.cwd,
     };
   }
@@ -212,12 +212,5 @@ export class BridgeEventLogger {
    */
   getLogPath(): string {
     return this.logPath;
-  }
-
-  /**
-   * Get the projects directory (for coordinator watch path).
-   */
-  getWatchDir(): string {
-    return join(getHanKiroRoot(), 'projects');
   }
 }

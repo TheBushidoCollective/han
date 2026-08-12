@@ -11,7 +11,7 @@ Han plugins define validation hooks, specialized skills, and agent disciplines t
 3. **Datetime** — Current time injected on every user prompt
 4. **PreToolUse blocking** — Exit code 2 blocks tool execution per Kiro convention
 5. **Stop blocking** — Stop failures return `{"decision":"block","reason":"..."}` on stdout, forcing the agent to continue fixing
-6. **Events** — Unified JSONL logging with `provider: "kiro"` for Browse UI visibility
+6. **Events** — Unified JSONL logging with `harness: "kiro"` for Browse UI visibility
 
 ## Coverage Matrix
 
@@ -214,7 +214,7 @@ Bridge Internals:
   matcher.ts       Filter by tool name, file globs, dirsWith
   executor.ts      Spawn hook commands as parallel promises
   formatter.ts     Structure results for stdout/stderr output
-  events.ts        JSONL event logger (provider="kiro")
+  events.ts        JSONL event logger (harness="kiro")
   cache.ts         Content-hash caching (SHA-256)
   context.ts       Core guidelines + datetime injection
   skills.ts        Discover SKILL.md files from installed plugins
@@ -243,9 +243,9 @@ The bridge implements content-hash caching identical to Han's approach. After a 
 
 ## Event Logging
 
-The bridge writes Han-format JSONL events to `~/.han/kiro/projects/`. Each event includes `provider: "kiro"` to distinguish Kiro sessions from Claude Code and OpenCode sessions.
+The bridge writes Han-format JSONL events to `~/.han/kiro/projects/`. Each event includes `harness: "kiro"` to distinguish Kiro sessions from Claude Code and OpenCode sessions.
 
-On first invocation (agentSpawn), the bridge starts the Han coordinator in the background. The coordinator indexes events for Browse UI visibility.
+On first invocation (agentSpawn), the bridge starts the Han coordinator in the background with `han coordinator ensure --background`. The coordinator discovers `~/.han/<harness>/projects` on disk, watches it, and indexes each `<sessionId>-han.jsonl` as a session attributed to that harness, which is how Kiro sessions reach the Browse UI. There is no registration step and no `--watch-path` flag. The coordinator enumerates those roots when it starts, so the very first session from a newly installed bridge is picked up at the next coordinator start or scan rather than live. Every session after that is live.
 
 Events logged:
 
@@ -254,10 +254,10 @@ Events logged:
 
 Environment variables set:
 
-- `HAN_PROVIDER=kiro` — Identifies the provider for child processes
-- `HAN_SESSION_ID=<uuid>` — Fallback session ID for event correlation
+- `HAN_PROVIDER=kiro` names the harness for child processes
+- `HAN_SESSION_ID=<session id>` carries the resolved session id, so hook child processes log against the same session
 
-The bridge prefers the `session_id` field Kiro includes in every hook payload, so all events in a session are correlated into one JSONL file. `HAN_SESSION_ID` is only used when the payload has no `session_id`.
+The bridge resolves the session id from the `session_id` field Kiro includes in every hook payload, before anything logs an event, and exports it as `HAN_SESSION_ID`. It falls back to an inherited `HAN_SESSION_ID` and then to a generated UUID. Every event in a Kiro session lands in one JSONL file, `agentSpawn` included.
 
 ## Remaining Gaps
 

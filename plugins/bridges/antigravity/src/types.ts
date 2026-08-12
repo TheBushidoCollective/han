@@ -21,19 +21,19 @@ export interface AntigravityMcpConfig {
   mcpServers: Record<
     string,
     {
-      command: string
-      args?: string[]
-      env?: Record<string, string>
+      command: string;
+      args?: string[];
+      env?: Record<string, string>;
     }
-  >
+  >;
 }
 
 /**
  * Antigravity settings from .gemini/settings.json.
  */
 export interface AntigravitySettings {
-  "tools.autoAccept"?: string[]
-  [key: string]: unknown
+  'tools.autoAccept'?: string[];
+  [key: string]: unknown;
 }
 
 // ─── MCP Tool Types ──────────────────────────────────────────────────────────
@@ -42,19 +42,19 @@ export interface AntigravitySettings {
  * MCP tool definition shape for the bridge's tools.
  */
 export interface McpToolDefinition {
-  name: string
-  description: string
+  name: string;
+  description: string;
   inputSchema: {
-    type: "object"
-    properties: Record<string, McpToolProperty>
-    required?: string[]
-  }
+    type: 'object';
+    properties: Record<string, McpToolProperty>;
+    required?: string[];
+  };
 }
 
 export interface McpToolProperty {
-  type: string
-  description: string
-  enum?: string[]
+  type: string;
+  description: string;
+  enum?: string[];
 }
 
 /**
@@ -62,10 +62,10 @@ export interface McpToolProperty {
  */
 export interface McpToolResult {
   content: Array<{
-    type: "text"
-    text: string
-  }>
-  isError?: boolean
+    type: 'text';
+    text: string;
+  }>;
+  isError?: boolean;
 }
 
 // ─── Han Hook Types ──────────────────────────────────────────────────────────
@@ -75,25 +75,25 @@ export interface McpToolResult {
  */
 export interface HookDefinition {
   /** Hook name (key in the hooks map, e.g. "lint-async") */
-  name: string
+  name: string;
   /** Plugin short name (e.g. "biome") */
-  pluginName: string
+  pluginName: string;
   /** Absolute path to the plugin directory */
-  pluginRoot: string
+  pluginRoot: string;
   /** The hook event type(s) */
-  event: string | string[]
+  event: string | string[];
   /** Shell command to execute (may contain ${HAN_FILES}) */
-  command: string
+  command: string;
   /** Which tools trigger this hook (e.g. ["Edit", "Write", "NotebookEdit"]) */
-  toolFilter?: string[]
+  toolFilter?: string[];
   /** File glob patterns that trigger this hook */
-  fileFilter?: string[]
+  fileFilter?: string[];
   /** Directories required to exist (e.g. ["biome.json"]) */
-  dirsWith?: string[]
+  dirsWith?: string[];
   /** Bash expression to test if hook applies to this directory */
-  dirTest?: string
+  dirTest?: string;
   /** Timeout in milliseconds */
-  timeout?: number
+  timeout?: number;
 }
 
 /**
@@ -101,31 +101,60 @@ export interface HookDefinition {
  */
 export interface HookResult {
   /** The hook that was executed */
-  hook: HookDefinition
+  hook: HookDefinition;
   /** Process exit code (0 = success) */
-  exitCode: number
+  exitCode: number;
   /** Combined stdout output */
-  stdout: string
+  stdout: string;
   /** Combined stderr output */
-  stderr: string
+  stderr: string;
   /** Execution duration in milliseconds */
-  durationMs: number
+  durationMs: number;
   /** Whether the hook was skipped (e.g. no matching files) */
-  skipped: boolean
+  skipped: boolean;
 }
 
-// ─── Provider ────────────────────────────────────────────────────────────────
+// ─── Harness ─────────────────────────────────────────────────────────────────
 
 /**
- * Han provider identifies which AI coding tool is running the session.
+ * Han harness identifies which AI coding tool is running the session.
+ *
+ * The union is shared verbatim across every Han bridge so a harness id
+ * means the same thing in every JSONL event stream. Defaults to
+ * "claude-code" when HAN_PROVIDER is not set or is unrecognized.
  */
-export type HanProvider = "antigravity" | "opencode" | "claude-code"
+export type HanHarness =
+  | 'claude-code'
+  | 'omp'
+  | 'opencode'
+  | 'gemini-cli'
+  | 'kiro'
+  | 'codex'
+  | 'antigravity';
 
-export function getProvider(): HanProvider {
-  const env = process.env.HAN_PROVIDER
-  if (env === "antigravity") return "antigravity"
-  if (env === "opencode") return "opencode"
-  return "claude-code"
+const HAN_HARNESSES: readonly HanHarness[] = [
+  'claude-code',
+  'omp',
+  'opencode',
+  'gemini-cli',
+  'kiro',
+  'codex',
+  'antigravity',
+];
+
+function isHanHarness(value: string | undefined): value is HanHarness {
+  return (
+    value !== undefined && (HAN_HARNESSES as readonly string[]).includes(value)
+  );
+}
+
+/**
+ * Resolve the harness running this session from the environment.
+ * The Antigravity bridge sets HAN_PROVIDER for its own child processes.
+ */
+export function getHarness(): HanHarness {
+  const env = process.env.HAN_PROVIDER;
+  return isHanHarness(env) ? env : 'claude-code';
 }
 
 // ─── Antigravity -> Claude Code Tool Name Mapping ────────────────────────────
@@ -135,20 +164,20 @@ export function getProvider(): HanProvider {
  * Antigravity uses similar naming to VS Code extensions and Gemini tools.
  */
 export const TOOL_NAME_MAP: Record<string, string> = {
-  edit_file: "Edit",
-  write_file: "Write",
-  read_file: "Read",
-  run_terminal_command: "Bash",
-  search_files: "Grep",
-  list_files: "Glob",
-  edit: "Edit",
-  write: "Write",
-  bash: "Bash",
-  read: "Read",
-  glob: "Glob",
-  grep: "Grep",
-}
+  edit_file: 'Edit',
+  write_file: 'Write',
+  read_file: 'Read',
+  run_terminal_command: 'Bash',
+  search_files: 'Grep',
+  list_files: 'Glob',
+  edit: 'Edit',
+  write: 'Write',
+  bash: 'Bash',
+  read: 'Read',
+  glob: 'Glob',
+  grep: 'Grep',
+};
 
 export function mapToolName(antigravityTool: string): string {
-  return TOOL_NAME_MAP[antigravityTool.toLowerCase()] ?? antigravityTool
+  return TOOL_NAME_MAP[antigravityTool.toLowerCase()] ?? antigravityTool;
 }

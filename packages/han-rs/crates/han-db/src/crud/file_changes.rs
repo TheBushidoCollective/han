@@ -54,7 +54,11 @@ pub async fn get_by_session(
         .map_err(DbError::Database)
 }
 
-pub async fn has_changes(db: &DatabaseConnection, session_id: &str, agent_id: Option<&str>) -> DbResult<bool> {
+pub async fn has_changes(
+    db: &DatabaseConnection,
+    session_id: &str,
+    agent_id: Option<&str>,
+) -> DbResult<bool> {
     let mut query = session_file_changes::Entity::find()
         .filter(session_file_changes::Column::SessionId.eq(session_id));
 

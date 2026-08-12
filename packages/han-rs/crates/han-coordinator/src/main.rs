@@ -16,15 +16,12 @@ use grpc::{
     MemoryServiceImpl, SessionServiceImpl, SlotServiceImpl,
 };
 use han_api::context::DbChangeEvent;
-use han_db::{DbConfig, establish_connection};
 use han_db::migration::Migrator;
+use han_db::{establish_connection, DbConfig};
 use han_proto::coordinator::{
-    coordinator_service_server::CoordinatorServiceServer,
-    hook_service_server::HookServiceServer,
-    indexer_service_server::IndexerServiceServer,
-    memory_service_server::MemoryServiceServer,
-    session_service_server::SessionServiceServer,
-    slot_service_server::SlotServiceServer,
+    coordinator_service_server::CoordinatorServiceServer, hook_service_server::HookServiceServer,
+    indexer_service_server::IndexerServiceServer, memory_service_server::MemoryServiceServer,
+    session_service_server::SessionServiceServer, slot_service_server::SlotServiceServer,
 };
 use hooks::HookEngine;
 use lock::CoordinatorLock;
@@ -33,7 +30,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
-use tokio::sync::{Mutex, RwLock, broadcast};
+use tokio::sync::{broadcast, Mutex, RwLock};
 use tokio_rustls::TlsAcceptor;
 use tonic::transport::Server as TonicServer;
 
@@ -141,10 +138,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Install ring crypto provider for rustls (must be before any TLS operations)
     let _ = rustls::crypto::ring::default_provider().install_default();
 
-    tracing::info!(
-        "Han Coordinator v{} starting",
-        env!("CARGO_PKG_VERSION")
-    );
+    tracing::info!("Han Coordinator v{} starting", env!("CARGO_PKG_VERSION"));
 
     // Daemon mode: fork if not --foreground
     if !cli.foreground {
@@ -364,7 +358,10 @@ fn daemonize(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     let pid_path = if let Some(home) = dirs::home_dir() {
         let han_dir = home.join(".han");
         let _ = std::fs::create_dir_all(&han_dir);
-        han_dir.join("coordinator.pid").to_string_lossy().to_string()
+        han_dir
+            .join("coordinator.pid")
+            .to_string_lossy()
+            .to_string()
     } else {
         "coordinator.pid".to_string()
     };

@@ -2,6 +2,7 @@
 
 use async_graphql::*;
 use han_db::entities::messages;
+use han_db::entities::sessions::DEFAULT_HARNESS;
 use sea_orm::{
     ColumnTrait, Condition, DatabaseConnection, DbBackend, EntityTrait, FromQueryResult,
     PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Statement,
@@ -40,10 +41,22 @@ pub struct SessionData {
     pub version: Option<String>,
     pub worktree_name: Option<String>,
     pub source_config_dir: Option<String>,
+    pub harness: Option<String>,
     pub status: Option<String>,
     pub pr_number: Option<i32>,
     pub pr_url: Option<String>,
     pub team_name: Option<String>,
+}
+
+impl SessionData {
+    /// Harness id for this session, coalescing a legacy NULL column to
+    /// [`DEFAULT_HARNESS`].
+    ///
+    /// Lives outside the `#[Object]` block so the mapping is callable (and
+    /// testable) without a GraphQL request context.
+    pub fn harness_id(&self) -> &str {
+        self.harness.as_deref().unwrap_or(DEFAULT_HARNESS)
+    }
 }
 
 /// Session GraphQL type.
@@ -136,6 +149,16 @@ impl SessionData {
     /// Claude Code version.
     async fn version(&self) -> Option<&str> {
         self.version.as_deref()
+    }
+
+    /// Coding agent that produced this session.
+    ///
+    /// One of `claude-code`, `omp`, `opencode`, `gemini-cli`, `kiro`, `codex`,
+    /// or `antigravity`. Never null: Claude Code was the only harness han
+    /// indexed before harness tracking existed, so a session with no recorded
+    /// harness reads as `claude-code`.
+    async fn harness(&self) -> &str {
+        self.harness_id()
     }
 
     /// Session status (active, completed, etc.).
@@ -817,6 +840,7 @@ pub struct SessionFilterSource {
     pub slug: Option<String>,
     pub pr_number: Option<i32>,
     pub team_name: Option<String>,
+    pub harness: Option<String>,
 
     /// Association: filter sessions by their related project's fields.
     #[entity_filter(assoc(
@@ -849,6 +873,7 @@ mod tests {
             version: Some("1.0.0".into()),
             worktree_name: None,
             source_config_dir: None,
+            harness: None,
             status: Some("active".into()),
             pr_number: None,
             pr_url: None,
@@ -932,6 +957,7 @@ mod tests {
         assert!(f.project_id.is_none());
         assert!(f.status.is_none());
         assert!(f.slug.is_none());
+        assert!(f.harness.is_none());
         assert!(f.and.is_none());
         assert!(f.or.is_none());
         assert!(f.not.is_none());
@@ -942,6 +968,7 @@ mod tests {
         let o = SessionOrderBy::default();
         assert!(o.id.is_none());
         assert!(o.status.is_none());
+        assert!(o.harness.is_none());
     }
 
     #[test]
@@ -988,6 +1015,41 @@ mod tests {
         };
         // to_condition() should not panic — it generates an IN subquery
         let _cond = f.to_condition();
+    }
+
+    #[test]
+    fn session_filter_harness_emits_column_predicate() {
+        use sea_orm::QueryTrait;
+        let f = SessionFilter {
+            harness: Some(crate::filters::types::StringFilter {
+                eq: Some("omp".into()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let sql = han_db::entities::sessions::Entity::find()
+            .filter(f.to_condition())
+            .build(DbBackend::Sqlite)
+            .to_string();
+        assert!(
+            sql.contains(r#""harness" = 'omp'"#),
+            "harness predicate missing from: {sql}"
+        );
+    }
+
+    #[test]
+    fn harness_id_returns_recorded_value() {
+        let mut s = make_session("s1", "2024-01-01");
+        s.harness = Some("omp".into());
+        assert_eq!(s.harness_id(), "omp");
+    }
+
+    #[test]
+    fn harness_id_coalesces_null_to_claude_code() {
+        let mut s = make_session("s1", "2024-01-01");
+        s.harness = None;
+        assert_eq!(s.harness_id(), "claude-code");
+        assert_eq!(s.harness_id(), DEFAULT_HARNESS);
     }
 }
 

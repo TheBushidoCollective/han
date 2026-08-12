@@ -82,7 +82,10 @@ pub async fn queue_pending_hook(
     Ok(id)
 }
 
-pub async fn get_queued_hooks(db: &DatabaseConnection, orchestration_id: &str) -> DbResult<Vec<pending_hooks::Model>> {
+pub async fn get_queued_hooks(
+    db: &DatabaseConnection,
+    orchestration_id: &str,
+) -> DbResult<Vec<pending_hooks::Model>> {
     pending_hooks::Entity::find()
         .filter(pending_hooks::Column::OrchestrationId.eq(orchestration_id))
         .order_by_asc(pending_hooks::Column::QueuedAt)

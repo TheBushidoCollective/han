@@ -60,7 +60,7 @@ The bridge maps Claude Code's hook events to OpenCode's plugin API:
 | **SubagentPrompt** | `tool.execute.before` (Task/agent) | Implemented | Discipline context injected into subagent prompts |
 | **Skills** | `tool` registration | Implemented | 400+ skills via `han_skills` tool |
 | **Disciplines** | `tool` + `system.transform` | Implemented | 25 agent personas via `han_discipline` tool |
-| **Event Logging** | JSONL + coordinator | Implemented | Browse UI visibility for OpenCode sessions |
+| **Event Logging** | JSONL + coordinator | Implemented | OpenCode sessions indexed as first-class sessions, attributed to the `opencode` harness |
 | SubagentStart/Stop | — | Not available | No OpenCode equivalent |
 | MCP tool events | — | Not available | OpenCode doesn't fire events for MCP calls ([#2319](https://github.com/sst/opencode/issues/2319)) |
 | Permission denial | — | Not available | `tool.execute.before` can't block tool execution |
@@ -225,7 +225,7 @@ OpenCode Plugin Runtime
   |-- tool: han_discipline ────> Agent disciplines (25 personas)
   |                                -> activate/deactivate/list
   |
-  |-- JSONL event logger ──────> Browse UI visibility
+  |-- JSONL event logger ──────> Indexed as `opencode` sessions
                                    -> ~/.han/opencode/projects/{slug}/
 ```
 
@@ -235,21 +235,27 @@ The bridge discovers hooks at startup by reading:
 2. `.claude-plugin/marketplace.json` for plugin path resolution
 3. Each plugin's `han-plugin.yml` for hook definitions
 
-## Event Logging
+## Event Logging and Metrics
 
-The bridge writes Han-format JSONL events to `~/.han/opencode/projects/`. Each event includes `provider: "opencode"` to distinguish OpenCode sessions from Claude Code sessions.
+The bridge writes Han-format JSONL events to `~/.han/opencode/projects/{slug}/{sessionId}-han.jsonl`. Every event carries `harness: "opencode"`, the canonical id Han uses for OpenCode wherever it reports on a session.
 
-On startup, the bridge launches the Han coordinator in the background. The coordinator watches the OpenCode events directory and indexes events into SQLite, making them visible in the Browse UI alongside Claude Code sessions.
+OpenCode writes no native transcript into that directory, so the events file is the session's entire record. Han indexes a `*-han.jsonl` file that has no sibling `{sessionId}.jsonl` as a session in its own right rather than as a supplement to a Claude Code transcript, and stamps the harness onto the session row. OpenCode sessions show up in the Browse UI and in metrics queries beside Claude Code sessions, attributed to `opencode` rather than folded into it.
+
+The coordinator finds the directory without being told about it. Every child of `~/.han` holding a `projects` directory is a harness root, so a bridge needs no registration step and no watch flag. On startup the bridge runs `han coordinator ensure --background` to make sure the coordinator is up.
 
 Events logged:
 
 - **hook_run / hook_result** - Hook execution lifecycle
 - **hook_file_change** - File edits detected via tool events
 
+OpenCode sessions carry no token or cost figures. Han reads usage from a harness's own transcript, and OpenCode writes none that Han parses. The `token_usage` event exists for a bridge to report usage explicitly, and the OpenCode bridge does not emit it yet.
+
 Environment variables set by the bridge:
 
-- `HAN_PROVIDER=opencode` - Identifies the provider for child processes
+- `HAN_PROVIDER=opencode` - Identifies the harness for child processes. The variable keeps its original name because user-authored hook commands read it. Han reads `HAN_HARNESS` first and falls back to `HAN_PROVIDER`, so a `han` process the bridge spawns attributes its own events to `opencode` and does not disagree with the bridge that spawned it. `HAN_HARNESS` is the preferred name for anything new.
 - `HAN_SESSION_ID=<uuid>` - Session ID for event correlation
+
+For what the harness dimension buys you once the data is indexed, see [Local Metrics](/docs/metrics#the-harness-dimension).
 
 ## Next Steps
 

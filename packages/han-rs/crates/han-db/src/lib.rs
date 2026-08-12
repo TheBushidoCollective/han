@@ -3,13 +3,13 @@
 //! Provides a dual-database abstraction supporting both SQLite and PostgreSQL
 //! through SeaORM entities, migrations, and CRUD operations.
 
+pub mod aggregates;
+pub mod connection;
+pub mod crud;
 pub mod entities;
 pub mod error;
-pub mod connection;
-pub mod search;
-pub mod crud;
 pub mod migration;
-pub mod aggregates;
+pub mod search;
 
-pub use connection::{DbConfig, establish_connection};
+pub use connection::{establish_connection, DbConfig};
 pub use error::DbError;

@@ -68,10 +68,7 @@ fn load_real_certs() -> Result<Option<CertPair>, TlsError> {
 
         // Basic validation: ensure they look like PEM
         if cert_pem.contains("BEGIN CERTIFICATE") && key_pem.contains("PRIVATE KEY") {
-            tracing::info!(
-                "Using Let's Encrypt certificates from {:?}",
-                certs_dir
-            );
+            tracing::info!("Using Let's Encrypt certificates from {:?}", certs_dir);
             return Ok(Some(CertPair { cert_pem, key_pem }));
         }
 

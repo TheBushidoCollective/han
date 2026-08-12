@@ -302,8 +302,7 @@ mod tests {
 
     #[test]
     fn test_extract_project_path() {
-        let path =
-            Path::new("/home/user/.claude/projects/Volumes-dev-src-myproject/session.jsonl");
+        let path = Path::new("/home/user/.claude/projects/Volumes-dev-src-myproject/session.jsonl");
         assert_eq!(
             extract_project_path(path),
             Some("Volumes-dev-src-myproject".to_string())

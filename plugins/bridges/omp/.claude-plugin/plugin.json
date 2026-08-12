@@ -1,0 +1,22 @@
+{
+  "name": "omp",
+  "version": "0.1.0",
+  "description": "Bridge plugin that records omp (Oh My Pi) session, tool, token, and cost metrics into Han, so omp sessions appear in Han's Browse UI and cost rollups alongside Claude Code.",
+  "author": {
+    "name": "The Bushido Collective",
+    "url": "https://thebushido.co"
+  },
+  "homepage": "https://github.com/thebushidocollective/han",
+  "repository": "https://github.com/thebushidocollective/han",
+  "license": "Apache-2.0",
+  "keywords": [
+    "omp",
+    "oh-my-pi",
+    "bridge",
+    "metrics",
+    "telemetry",
+    "tokens",
+    "cost",
+    "claude-code"
+  ]
+}

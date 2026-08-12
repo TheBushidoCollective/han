@@ -3,7 +3,7 @@
 //! Tests run against a fresh in-memory SQLite database with migrations applied.
 //! Also includes a read-only test against the real ~/.han/han.db if it exists.
 
-use han_db::connection::{DbConfig, establish_connection};
+use han_db::connection::{establish_connection, DbConfig};
 use han_db::migration::Migrator;
 use sea_orm::DatabaseConnection;
 use sea_orm_migration::MigratorTrait;
@@ -172,7 +172,9 @@ async fn test_projects_crud() {
     assert!(found.is_some());
 
     // List
-    let all = projects::list(&db, None).await.expect("Failed to list projects");
+    let all = projects::list(&db, None)
+        .await
+        .expect("Failed to list projects");
     assert_eq!(all.len(), 1);
 }
 
@@ -193,6 +195,7 @@ async fn test_sessions_crud() {
         Some("active".to_string()),
         Some("/tmp/transcript.jsonl".to_string()),
         Some("fancy-session".to_string()),
+        None,
         None,
     )
     .await
@@ -324,6 +327,7 @@ async fn test_messages_crud() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -397,7 +401,9 @@ async fn test_messages_crud() {
             parent_id: Set(None),
             message_type: Set("assistant".to_string()),
             role: Set(Some("assistant".to_string())),
-            content: Set(Some("I found the authentication bug and fixed it.".to_string())),
+            content: Set(Some(
+                "I found the authentication bug and fixed it.".to_string(),
+            )),
             tool_name: Set(Some("Edit".to_string())),
             tool_input: Set(None),
             tool_result: Set(None),
@@ -578,6 +584,7 @@ async fn test_native_tasks_crud() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -705,14 +712,9 @@ async fn test_orchestrations_crud() {
     let db = setup_db().await;
     use han_db::crud::orchestrations;
 
-    let orch = orchestrations::create(
-        &db,
-        None,
-        "Stop".to_string(),
-        "/project".to_string(),
-    )
-    .await
-    .expect("Failed to create orchestration");
+    let orch = orchestrations::create(&db, None, "Stop".to_string(), "/project".to_string())
+        .await
+        .expect("Failed to create orchestration");
 
     assert_eq!(orch.hook_type, "Stop");
     assert_eq!(orch.total_hooks, 0);
@@ -776,6 +778,7 @@ async fn test_async_hooks_crud() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -833,6 +836,7 @@ async fn test_session_files_crud() {
         "session-sf".to_string(),
         None,
         Some("active".to_string()),
+        None,
         None,
         None,
         None,
@@ -904,6 +908,7 @@ async fn test_fts5_search_messages() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -916,7 +921,9 @@ async fn test_fts5_search_messages() {
             parent_id: Set(None),
             message_type: Set("assistant".to_string()),
             role: Set(Some("assistant".to_string())),
-            content: Set(Some("The authentication module has a critical bug".to_string())),
+            content: Set(Some(
+                "The authentication module has a critical bug".to_string(),
+            )),
             tool_name: Set(None),
             tool_input: Set(None),
             tool_result: Set(None),
@@ -946,7 +953,9 @@ async fn test_fts5_search_messages() {
             parent_id: Set(None),
             message_type: Set("assistant".to_string()),
             role: Set(Some("assistant".to_string())),
-            content: Set(Some("The database migration script needs updating".to_string())),
+            content: Set(Some(
+                "The database migration script needs updating".to_string(),
+            )),
             tool_name: Set(None),
             tool_input: Set(None),
             tool_result: Set(None),
@@ -1032,6 +1041,7 @@ async fn test_dashboard_aggregates() {
         "session-agg".to_string(),
         None,
         Some("active".to_string()),
+        None,
         None,
         None,
         None,
@@ -1142,6 +1152,7 @@ async fn test_activity_aggregates() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -1210,6 +1221,7 @@ async fn test_frustration_crud() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -1271,6 +1283,7 @@ async fn test_session_summaries_crud() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -1290,7 +1303,10 @@ async fn test_session_summaries_crud() {
 
     assert_eq!(summary.session_id, "session-ss");
     assert_eq!(summary.message_id, "msg-ss-001");
-    assert_eq!(summary.content, Some("This session was about fixing bugs".to_string()));
+    assert_eq!(
+        summary.content,
+        Some("This session was about fixing bugs".to_string())
+    );
     assert_eq!(summary.line_number, 10);
 
     // Get
@@ -1341,6 +1357,7 @@ async fn test_session_compacts_crud() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -1368,7 +1385,10 @@ async fn test_session_compacts_crud() {
         .await
         .expect("Failed to get session compact");
     assert!(found.is_some());
-    assert_eq!(found.unwrap().compact_type, Some("auto_compact".to_string()));
+    assert_eq!(
+        found.unwrap().compact_type,
+        Some("auto_compact".to_string())
+    );
 
     // Upsert again (should update)
     let updated = session_compacts::upsert(
@@ -1408,6 +1428,7 @@ async fn test_session_todos_crud() {
         "session-td".to_string(),
         None,
         Some("active".to_string()),
+        None,
         None,
         None,
         None,
@@ -1477,6 +1498,7 @@ async fn test_generated_summaries_crud() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -1489,6 +1511,7 @@ async fn test_generated_summaries_crud() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -1498,7 +1521,11 @@ async fn test_generated_summaries_crud() {
         &db,
         "session-gs".to_string(),
         "Fixed authentication bugs and added tests".to_string(),
-        vec!["auth".to_string(), "testing".to_string(), "bugfix".to_string()],
+        vec![
+            "auth".to_string(),
+            "testing".to_string(),
+            "bugfix".to_string(),
+        ],
         Some(vec!["src/auth.rs".to_string()]),
         Some(vec!["Edit".to_string(), "Bash".to_string()]),
         Some("completed".to_string()),
@@ -1569,6 +1596,7 @@ async fn test_file_changes_crud() {
         "session-fc".to_string(),
         None,
         Some("active".to_string()),
+        None,
         None,
         None,
         None,
@@ -1660,6 +1688,7 @@ async fn test_file_validations_crud() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -1727,15 +1756,9 @@ async fn test_file_validations_crud() {
     assert_eq!(all_after.len(), 2);
 
     // Delete stale
-    let deleted = file_validations::delete_stale(
-        &db,
-        "session-fv",
-        "biome",
-        "lint",
-        "/project",
-    )
-    .await
-    .expect("Failed to delete stale validations");
+    let deleted = file_validations::delete_stale(&db, "session-fv", "biome", "lint", "/project")
+        .await
+        .expect("Failed to delete stale validations");
     assert_eq!(deleted, 2);
 
     // Verify empty
@@ -1760,17 +1783,32 @@ async fn test_read_real_database() {
         return;
     }
 
+    // Work on a copy and migrate it. A developer's database is whatever
+    // migration state their last coordinator run left it in, so reading it
+    // directly fails the moment a migration adds a column, which says nothing
+    // about whether the entities can read real data. Copying also keeps a test
+    // from touching a database it does not own.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let copy_path = tmp.path().join("han.db");
+    std::fs::copy(&db_path, &copy_path).expect("copy real database");
+
     let db = establish_connection(DbConfig::Sqlite {
-        path: db_path.clone(),
+        path: copy_path.to_string_lossy().to_string(),
     })
     .await
-    .expect("Failed to connect to real database");
+    .expect("Failed to connect to real database copy");
+
+    Migrator::up(&db, None)
+        .await
+        .expect("Failed to migrate real database copy");
 
     // Read-only queries only
     use han_db::crud::{repos, sessions};
 
     // List repos (just verify no error)
-    let all_repos = repos::list(&db).await.expect("Failed to list repos from real db");
+    let all_repos = repos::list(&db)
+        .await
+        .expect("Failed to list repos from real db");
     eprintln!("Real DB: {} repos found", all_repos.len());
 
     // List recent sessions

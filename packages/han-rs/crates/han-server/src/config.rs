@@ -223,7 +223,10 @@ mod tests {
         // --- Scenario: CORS origins comma-separated with whitespace ---
         clear_env_vars();
         set_required_env_vars();
-        std::env::set_var("CORS_ORIGINS", "https://a.com, https://b.com , https://c.com");
+        std::env::set_var(
+            "CORS_ORIGINS",
+            "https://a.com, https://b.com , https://c.com",
+        );
 
         let config = Config::from_env().expect("should parse CORS origins");
         assert_eq!(config.cors_origins.len(), 3);
@@ -242,7 +245,9 @@ mod tests {
         clear_env_vars();
         let result = require_env("TOTALLY_NONEXISTENT_VAR_12345");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("TOTALLY_NONEXISTENT_VAR_12345"));
+        assert!(result
+            .unwrap_err()
+            .contains("TOTALLY_NONEXISTENT_VAR_12345"));
 
         // --- Scenario: require_env with present var ---
         std::env::set_var("HAN_TEST_REQUIRE_ENV", "hello");

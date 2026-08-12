@@ -3,7 +3,7 @@
  *
  * Replicates the core plugin's SessionStart and UserPromptSubmit
  * context injection for OpenCode. These guidelines are LLM-universal
- * (not Claude-specific) and improve agent quality regardless of provider.
+ * (not Claude-specific) and improve agent quality regardless of harness.
  *
  * SessionStart context → experimental.chat.system.transform (persistent)
  * UserPromptSubmit context → chat.message (per-prompt)

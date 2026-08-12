@@ -84,7 +84,9 @@ async fn main() {
 
     // Start PgListener for subscriptions (only if DB is available)
     if db_connected {
-        if let Err(e) = sync::pg_notify::start_pg_listener(&config.database_url, event_sender.clone()).await {
+        if let Err(e) =
+            sync::pg_notify::start_pg_listener(&config.database_url, event_sender.clone()).await
+        {
             error!("PgListener failed to start: {e}");
         }
     }

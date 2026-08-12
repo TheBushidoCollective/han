@@ -51,6 +51,10 @@
 				{
 					"title": "Using Han with Kiro CLI",
 					"slug": "installation/kiro"
+				},
+				{
+					"title": "Using Han with Oh My Pi",
+					"slug": "installation/omp"
 				}
 			]
 		},

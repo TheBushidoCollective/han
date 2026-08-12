@@ -245,6 +245,9 @@ function parseSimpleYaml(content: string): RawPluginConfig {
 
     if (!currentHook) continue;
     const hook = result.hooks?.[currentHook];
+    // result.hooks is optional, so a malformed file can set currentHook
+    // without ever creating the record. Everything below writes into hook.
+    if (!hook) continue;
 
     // Simple key-value (4-space indent)
     const kvMatch = trimmed.match(/^ {4}(\S+):\s*(.+)$/);

@@ -523,7 +523,11 @@ pub fn estimate_human_time_ms(parsed: &ParsedMessage) -> Option<i32> {
                 ms += lines_added as f64 * 12_000.0;
             }
 
-            if ms > 0.0 { Some(ms as i32) } else { None }
+            if ms > 0.0 {
+                Some(ms as i32)
+            } else {
+                None
+            }
         }
         MessageType::User => {
             // Scale by content length: short confirmations ("y", "ok") get less time,
@@ -547,7 +551,11 @@ pub fn estimate_human_time_ms(parsed: &ParsedMessage) -> Option<i32> {
                 "TodoWrite" | "TodoRead" => 0.0, // No human equivalent
                 _ => 15.0,
             };
-            if secs > 0.0 { Some((secs * 1000.0) as i32) } else { None }
+            if secs > 0.0 {
+                Some((secs * 1000.0) as i32)
+            } else {
+                None
+            }
         }
         _ => None,
     }
@@ -613,6 +621,87 @@ fn extract_session_id(file_path: &Path) -> Option<String> {
         ClassifiedFile::HanEvents { session_id } => Some(session_id),
         ClassifiedFile::Agent { .. } => extract_session_id_from_agent_file(file_path),
         ClassifiedFile::Unknown => None,
+    }
+}
+
+/// Harness recorded for a session whose path carries no harness segment. Only
+/// Claude Code wrote to `~/.claude/projects`, so that inference is safe.
+///
+/// Re-exported from han-db so the storage layer and the indexer cannot drift.
+pub use han_db::entities::sessions::DEFAULT_HARNESS;
+
+/// Derive the harness from a session file path.
+///
+/// Bridged harnesses write to `~/.han/<harness>/projects/<slug>/<file>`, so the
+/// segment immediately before `projects` names the harness. Anything else, in
+/// practice `~/.claude/projects`, is Claude Code.
+pub fn harness_from_path(file_path: &Path) -> String {
+    let mut components: Vec<&str> = file_path
+        .components()
+        .filter_map(|c| c.as_os_str().to_str())
+        .collect();
+
+    // Walk from the end so a project directory literally named "han" cannot be
+    // mistaken for the `.han` root.
+    while let Some(segment) = components.pop() {
+        if segment != "projects" {
+            continue;
+        }
+        match (components.pop(), components.last()) {
+            (Some(harness), Some(&".han")) if !harness.is_empty() => {
+                return harness.to_string();
+            }
+            _ => break,
+        }
+    }
+
+    DEFAULT_HARNESS.to_string()
+}
+
+/// Locate the native transcript that a `*-han.jsonl` events file belongs to.
+///
+/// Claude Code writes both files side by side. A bridged harness writes only
+/// the events file, so `None` means the events file stands alone and is itself
+/// the session record.
+fn native_sibling(han_events_path: &Path) -> Option<std::path::PathBuf> {
+    let session_id = match classify_file(han_events_path) {
+        ClassifiedFile::HanEvents { session_id } => session_id,
+        _ => return None,
+    };
+    let candidate = han_events_path
+        .parent()?
+        .join(format!("{}.jsonl", session_id));
+    candidate.exists().then_some(candidate)
+}
+
+fn has_native_sibling(han_events_path: &Path) -> bool {
+    native_sibling(han_events_path).is_some()
+}
+
+/// Token counts lifted off a `token_usage` han event.
+#[derive(Default)]
+struct HanEventTokenUsage {
+    input_tokens: Option<i64>,
+    output_tokens: Option<i64>,
+    cache_read_tokens: Option<i64>,
+    cache_creation_tokens: Option<i64>,
+}
+
+/// Read token counts from a `token_usage` event.
+///
+/// Bridged harnesses report cost and tokens through this event because they
+/// have no native transcript for han to parse. Every other event type yields
+/// no counts.
+fn han_event_token_usage(event: &ParsedHanEvent) -> HanEventTokenUsage {
+    if event.event_type != "token_usage" {
+        return HanEventTokenUsage::default();
+    }
+    let field = |name: &str| event.data.get(name).and_then(|v| v.as_i64());
+    HanEventTokenUsage {
+        input_tokens: field("input_tokens"),
+        output_tokens: field("output_tokens"),
+        cache_read_tokens: field("cache_read_tokens"),
+        cache_creation_tokens: field("cache_creation_tokens"),
     }
 }
 
@@ -699,11 +788,7 @@ fn decode_project_path(slug: &str) -> String {
     }
 
     // Known domain patterns: `github-com` → `github.com`
-    let domain_dots = [
-        ("github", "com"),
-        ("gitlab", "com"),
-        ("bitbucket", "org"),
-    ];
+    let domain_dots = [("github", "com"), ("gitlab", "com"), ("bitbucket", "org")];
 
     let mut path = String::new();
     let mut i = 0;
@@ -1046,7 +1131,9 @@ fn extract_tool_call_results(
     message_id: &str,
     batch: &mut Vec<han_db::entities::tool_call_results::ActiveModel>,
 ) {
-    let Ok(json) = serde_json::from_str::<Value>(raw_json) else { return };
+    let Ok(json) = serde_json::from_str::<Value>(raw_json) else {
+        return;
+    };
     let Some(content) = json
         .get("message")
         .and_then(|m| m.get("content"))
@@ -1063,12 +1150,18 @@ fn extract_tool_call_results(
             continue;
         };
 
-        let is_error = block.get("is_error").and_then(|e| e.as_bool()).unwrap_or(false);
+        let is_error = block
+            .get("is_error")
+            .and_then(|e| e.as_bool())
+            .unwrap_or(false);
         let text_content = extract_tool_result_text(block);
         let has_image = block
             .get("content")
             .and_then(|c| c.as_array())
-            .map(|arr| arr.iter().any(|c| c.get("type").and_then(|t| t.as_str()) == Some("image")))
+            .map(|arr| {
+                arr.iter()
+                    .any(|c| c.get("type").and_then(|t| t.as_str()) == Some("image"))
+            })
             .unwrap_or(false);
 
         batch.push(han_db::entities::tool_call_results::ActiveModel {
@@ -1093,7 +1186,9 @@ fn extract_tool_result_text(block: &Value) -> String {
                 .iter()
                 .filter_map(|c| {
                     if c.get("type").and_then(|t| t.as_str()) == Some("text") {
-                        c.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
+                        c.get("text")
+                            .and_then(|t| t.as_str())
+                            .map(|s| s.to_string())
                     } else {
                         None
                     }
@@ -1268,7 +1363,11 @@ fn should_compute_sentiment(raw_json: &str) -> bool {
     };
 
     // Exclude isMeta messages (system-injected, not real human input)
-    if json.get("isMeta").and_then(|v| v.as_bool()).unwrap_or(false) {
+    if json
+        .get("isMeta")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+    {
         return false;
     }
 
@@ -1302,9 +1401,7 @@ fn should_compute_sentiment(raw_json: &str) -> bool {
     true
 }
 
-fn compute_sentiment(
-    content: &str,
-) -> (Option<f64>, Option<String>, Option<f64>, Option<String>) {
+fn compute_sentiment(content: &str) -> (Option<f64>, Option<String>, Option<f64>, Option<String>) {
     match sentiment::analyze_sentiment(content) {
         Some(result) => (
             Some(result.sentiment_score),
@@ -1452,7 +1549,7 @@ pub async fn index_session_file(
         .and_then(|s| s.last_indexed_line)
         .unwrap_or(0);
 
-    // Upsert session
+    // Upsert session, recording which harness produced it.
     crud::sessions::upsert(
         db,
         session_id.clone(),
@@ -1461,6 +1558,7 @@ pub async fn index_session_file(
         Some(file_path.to_string()),
         None,
         source_config_dir.map(|s| s.to_string()),
+        Some(harness_from_path(path)),
     )
     .await?;
 
@@ -1479,38 +1577,47 @@ pub async fn index_session_file(
     let mut max_line = last_line;
     let mut session_slug: Option<String> = None;
 
-    let result = jsonl_read_page(path, start_line, u32::MAX)?;
-    for line in &result.lines {
-        if let Some(parsed) = parse_jsonl_line_intermediate(line) {
-            if let Some(ref ts) = parsed.direct_timestamp {
-                uuid_to_timestamp.insert(parsed.uuid.clone(), ts.clone());
-            }
-            if parsed.message_type == MessageType::FileHistorySnapshot {
-                if let Some(ts) = parsed
-                    .json
-                    .get("snapshot")
-                    .and_then(|s| s.get("timestamp"))
-                    .and_then(|t| t.as_str())
-                {
-                    uuid_to_timestamp.insert(parsed.uuid.clone(), ts.to_string());
+    // A han events file is not a transcript. Parsing its lines as transcript
+    // messages produces `unknown`-typed rows whose ids collide with the han
+    // event rows written below, which then silently fail to insert. The han
+    // events pass further down is the only reader this file needs.
+    let is_han_events_file = matches!(classify_file(path), ClassifiedFile::HanEvents { .. });
+
+    if !is_han_events_file {
+        let result = jsonl_read_page(path, start_line, u32::MAX)?;
+        for line in &result.lines {
+            if let Some(parsed) = parse_jsonl_line_intermediate(line) {
+                if let Some(ts) = &parsed.direct_timestamp {
+                    uuid_to_timestamp.insert(parsed.uuid.clone(), ts.clone());
                 }
-            }
-            if session_slug.is_none() {
-                if let Some(slug) = parsed.json.get("slug").and_then(|s| s.as_str()) {
-                    session_slug = Some(slug.to_string());
+                if parsed.message_type == MessageType::FileHistorySnapshot {
+                    if let Some(ts) = parsed
+                        .json
+                        .get("snapshot")
+                        .and_then(|s| s.get("timestamp"))
+                        .and_then(|t| t.as_str())
+                    {
+                        uuid_to_timestamp.insert(parsed.uuid.clone(), ts.to_string());
+                    }
                 }
+                if session_slug.is_none() {
+                    if let Some(slug) = parsed.json.get("slug").and_then(|s| s.as_str()) {
+                        session_slug = Some(slug.to_string());
+                    }
+                }
+                if line.line_number as i32 > max_line {
+                    max_line = line.line_number as i32;
+                }
+                intermediate_lines.push(parsed);
             }
-            if line.line_number as i32 > max_line {
-                max_line = line.line_number as i32;
-            }
-            intermediate_lines.push(parsed);
         }
     }
 
     // Pass 2: Finalize messages and insert in batches
     let mut total_indexed = 0u32;
     let mut messages_batch: Vec<messages::ActiveModel> = Vec::new();
-    let mut tool_call_results_batch: Vec<han_db::entities::tool_call_results::ActiveModel> = Vec::new();
+    let mut tool_call_results_batch: Vec<han_db::entities::tool_call_results::ActiveModel> =
+        Vec::new();
     let mut last_known_timestamp: Option<String> = None;
     // Track sequential TaskCreate positions for TaskUpdate ID resolution
     let mut task_create_ids: Vec<String> = Vec::new();
@@ -1578,7 +1685,8 @@ pub async fn index_session_file(
                     // Detect TeamCreate tool calls for team_name
                     if tn == "TeamCreate" {
                         if let Some(team_name) = extract_team_name_from_input(ti) {
-                            let _ = crud::sessions::update_team_name(db, &session_id, &team_name).await;
+                            let _ =
+                                crud::sessions::update_team_name(db, &session_id, &team_name).await;
                         }
                     }
                 }
@@ -1588,7 +1696,8 @@ pub async fn index_session_file(
             if finalized.message_type == MessageType::ToolResult {
                 if let Some(ref result) = finalized.tool_result {
                     if let Some((pr_number, pr_url)) = extract_pr_from_bash_result(result) {
-                        let _ = crud::sessions::update_pr_info(db, &session_id, pr_number, &pr_url).await;
+                        let _ = crud::sessions::update_pr_info(db, &session_id, pr_number, &pr_url)
+                            .await;
                     }
                 }
             }
@@ -1661,8 +1770,15 @@ pub async fn index_session_file(
                                     // Detect TeamCreate for team_name
                                     if tool_name == "TeamCreate" {
                                         if let Some(input) = item.get("input") {
-                                            if let Some(team_name) = extract_team_name_from_input(&input.to_string()) {
-                                                let _ = crud::sessions::update_team_name(db, &session_id, &team_name).await;
+                                            if let Some(team_name) =
+                                                extract_team_name_from_input(&input.to_string())
+                                            {
+                                                let _ = crud::sessions::update_team_name(
+                                                    db,
+                                                    &session_id,
+                                                    &team_name,
+                                                )
+                                                .await;
                                             }
                                         }
                                     }
@@ -1673,9 +1789,8 @@ pub async fn index_session_file(
                                             .and_then(|v| v.as_str())
                                             .map(|s| s.to_string())
                                             .unwrap_or_else(|| Uuid::new_v4().to_string());
-                                        let tool_input_str = item
-                                            .get("input")
-                                            .map(|v| v.to_string());
+                                        let tool_input_str =
+                                            item.get("input").map(|v| v.to_string());
                                         // Estimate human time for this tool_use
                                         let tool_use_msg = ParsedMessage {
                                             message_type: MessageType::ToolUse,
@@ -1716,9 +1831,17 @@ pub async fn index_session_file(
                                             line_number,
                                             source_file_name.clone(),
                                             source_file_type.clone(),
-                                            None, None, None, None,
-                                            None, None, None, None,
-                                            None, None, None,
+                                            None,
+                                            None,
+                                            None,
+                                            None,
+                                            None,
+                                            None,
+                                            None,
+                                            None,
+                                            None,
+                                            None,
+                                            None,
                                             tool_human_time,
                                         ));
                                     }
@@ -1846,7 +1969,9 @@ pub async fn index_session_file(
 
     // Insert tool call results index
     if !tool_call_results_batch.is_empty() {
-        let _ = crud::tool_call_results::insert_batch(db, std::mem::take(&mut tool_call_results_batch)).await;
+        let _ =
+            crud::tool_call_results::insert_batch(db, std::mem::take(&mut tool_call_results_batch))
+                .await;
     }
 
     // =========================================================================
@@ -1870,7 +1995,9 @@ pub async fn index_session_file(
             let ln = HAN_LINE_OFFSET + (idx as i32);
             let content = serde_json::to_string(&event.data).ok();
             let tool_name = Some(event.event_type.clone());
-
+            // A token_usage event is a harness's only way to report cost, so
+            // lift its counts into the columns the token aggregates read.
+            let usage = han_event_token_usage(&event);
             messages_batch.push(to_active_model(
                 event.id,
                 &session_id,
@@ -1891,10 +2018,10 @@ pub async fn index_session_file(
                 None,
                 None,
                 None,
-                None,
-                None,
-                None,
-                None,
+                usage.input_tokens,
+                usage.output_tokens,
+                usage.cache_read_tokens,
+                usage.cache_creation_tokens,
                 None,
                 None,
                 None,
@@ -1929,6 +2056,7 @@ pub async fn index_session_file(
             Some(file_path.to_string()),
             session_slug,
             source_config_dir.map(|s| s.to_string()),
+            Some(harness_from_path(path)),
         )
         .await?;
     }
@@ -2174,14 +2302,7 @@ async fn process_task_event(
                     .and_then(|v| v.as_str())
                     .map(String::from);
 
-                let _ = crud::tasks::fail(
-                    db,
-                    tid,
-                    reason.to_string(),
-                    confidence,
-                    notes,
-                )
-                .await;
+                let _ = crud::tasks::fail(db, tid, reason.to_string(), confidence, notes).await;
             }
             Ok(true)
         }
@@ -2242,6 +2363,7 @@ pub async fn index_project_directory(
 
     let mut main_files = Vec::new();
     let mut agent_files = Vec::new();
+    let mut han_event_files = Vec::new();
 
     for entry in entries.flatten() {
         let path = entry.path();
@@ -2249,7 +2371,7 @@ pub async fn index_project_directory(
             match classify_file(&path) {
                 ClassifiedFile::Main { .. } => main_files.push(path),
                 ClassifiedFile::Agent { .. } => agent_files.push(path),
-                ClassifiedFile::HanEvents { .. } => {} // Processed with main file
+                ClassifiedFile::HanEvents { .. } => han_event_files.push(path),
                 ClassifiedFile::Unknown => {}
             }
         }
@@ -2258,15 +2380,25 @@ pub async fn index_project_directory(
     let mut results = Vec::new();
 
     for path in &main_files {
-        let result =
-            index_session_file(db, &path.to_string_lossy(), source_config_dir).await?;
+        let result = index_session_file(db, &path.to_string_lossy(), source_config_dir).await?;
         results.push(result);
         tokio::task::yield_now().await;
     }
 
     for path in &agent_files {
-        let result =
-            index_session_file(db, &path.to_string_lossy(), source_config_dir).await?;
+        let result = index_session_file(db, &path.to_string_lossy(), source_config_dir).await?;
+        results.push(result);
+        tokio::task::yield_now().await;
+    }
+
+    // A han events file that sits beside a native transcript was already read
+    // while indexing that transcript. One without a sibling is a bridged
+    // harness's only record of the session, so index it in its own right.
+    for path in &han_event_files {
+        if has_native_sibling(path) {
+            continue;
+        }
+        let result = index_session_file(db, &path.to_string_lossy(), source_config_dir).await?;
         results.push(result);
         tokio::task::yield_now().await;
     }
@@ -2286,24 +2418,15 @@ pub async fn handle_file_event(
 
     match event_type {
         FileEventType::Created | FileEventType::Modified => {
-            // If this is a Han events file, find and index the main session file
+            // A han events file next to a native transcript is read as part of
+            // that transcript, so index the transcript instead. Without a
+            // sibling the han events file is the session's only record, which
+            // is how every bridged harness reports, so index it directly.
             if filename.ends_with("-han") {
-                let sid = extract_session_id(path);
-                if let Some(sid) = sid {
-                    if let Some(dir) = path.parent() {
-                        let main_file = dir.join(format!("{}.jsonl", sid));
-                        if main_file.exists() {
-                            let result = index_session_file(
-                                db,
-                                &main_file.to_string_lossy(),
-                                None,
-                            )
-                            .await?;
-                            return Ok(Some(result));
-                        }
-                    }
+                if let Some(main_file) = native_sibling(path) {
+                    let result = index_session_file(db, &main_file.to_string_lossy(), None).await?;
+                    return Ok(Some(result));
                 }
-                return Ok(None);
             }
 
             let result = index_session_file(db, file_path, None).await?;
@@ -2318,7 +2441,26 @@ pub async fn handle_file_event(
     }
 }
 
-/// Perform a full scan and index of all Claude Code sessions.
+/// Enumerate the root directories bridged harnesses write sessions under.
+///
+/// Each bridge writes to `~/.han/<harness>/projects/<slug>/`, so every child of
+/// `~/.han` that contains a `projects` directory is a harness root. Discovering
+/// them from disk means a new bridge needs no registration step to be indexed.
+pub fn bridge_harness_roots() -> Vec<std::path::PathBuf> {
+    let Some(home) = dirs::home_dir() else {
+        return Vec::new();
+    };
+    let Ok(entries) = std::fs::read_dir(home.join(".han")) else {
+        return Vec::new();
+    };
+    entries
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.join("projects").is_dir())
+        .collect()
+}
+
+/// Perform a full scan and index of every session han can see, across harnesses.
 pub async fn full_scan_and_index(db: &DatabaseConnection) -> ProcessorResult<Vec<IndexResult>> {
     // Check if indexer version changed — triggers full re-index if needed
     let _ = check_indexer_version(db).await;
@@ -2327,9 +2469,8 @@ pub async fn full_scan_and_index(db: &DatabaseConnection) -> ProcessorResult<Vec
 
     let config_dirs = crud::config_dirs::list(db).await?;
 
-    let home = dirs::home_dir().ok_or_else(|| {
-        ProcessorError::Other("Could not determine home directory".to_string())
-    })?;
+    let home = dirs::home_dir()
+        .ok_or_else(|| ProcessorError::Other("Could not determine home directory".to_string()))?;
     let default_claude_dir = home.join(".claude");
 
     let mut dirs_to_scan: Vec<std::path::PathBuf> = config_dirs
@@ -2339,6 +2480,12 @@ pub async fn full_scan_and_index(db: &DatabaseConnection) -> ProcessorResult<Vec
 
     if !dirs_to_scan.iter().any(|p| p == &default_claude_dir) {
         dirs_to_scan.push(default_claude_dir);
+    }
+
+    for root in bridge_harness_roots() {
+        if !dirs_to_scan.contains(&root) {
+            dirs_to_scan.push(root);
+        }
     }
 
     tracing::info!(
@@ -2370,12 +2517,8 @@ pub async fn full_scan_and_index(db: &DatabaseConnection) -> ProcessorResult<Vec
             let path = entry.path();
             if path.is_dir() {
                 let config_dir_str = config_dir.to_string_lossy().to_string();
-                match index_project_directory(
-                    db,
-                    &path.to_string_lossy(),
-                    Some(&config_dir_str),
-                )
-                .await
+                match index_project_directory(db, &path.to_string_lossy(), Some(&config_dir_str))
+                    .await
                 {
                     Ok(project_results) => results.extend(project_results),
                     Err(e) => {
@@ -2401,14 +2544,105 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_harness_from_claude_path_is_default() {
+        let path = Path::new(
+            "/home/user/.claude/projects/-Users-me-proj/abc12345-1234-5678-9abc-def012345678.jsonl",
+        );
+        assert_eq!(harness_from_path(path), "claude-code");
+    }
+
+    #[test]
+    fn test_harness_from_bridge_path() {
+        for harness in [
+            "omp",
+            "opencode",
+            "gemini-cli",
+            "kiro",
+            "codex",
+            "antigravity",
+        ] {
+            let path = std::path::PathBuf::from("/home/user/.han")
+                .join(harness)
+                .join("projects/-Users-me-proj/abc12345-1234-5678-9abc-def012345678-han.jsonl");
+            assert_eq!(harness_from_path(&path), harness);
+        }
+    }
+
+    #[test]
+    fn test_harness_ignores_project_named_projects() {
+        // A project directory can legitimately be called "projects"; only the
+        // segment under `.han` names a harness.
+        let path = Path::new(
+            "/home/user/.han/omp/projects/-Users-me-projects/abc12345-1234-5678-9abc-def012345678-han.jsonl",
+        );
+        assert_eq!(harness_from_path(path), "omp");
+    }
+
+    #[test]
+    fn test_harness_from_unrelated_path_is_default() {
+        let path = Path::new("/tmp/whatever/projects/x/abc.jsonl");
+        assert_eq!(harness_from_path(path), "claude-code");
+    }
+
+    #[test]
+    fn test_native_sibling_detection() {
+        let dir = std::env::temp_dir().join(format!("han-sibling-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&dir);
+        let sid = "abc12345-1234-5678-9abc-def012345678";
+        let han = dir.join(format!("{}-han.jsonl", sid));
+        std::fs::write(&han, "").unwrap();
+
+        // A bridged harness writes only the events file.
+        assert!(!has_native_sibling(&han));
+
+        // Claude Code writes both, so the events file is read with the transcript.
+        let native = dir.join(format!("{}.jsonl", sid));
+        std::fs::write(&native, "").unwrap();
+        assert_eq!(native_sibling(&han), Some(native));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_token_usage_lifted_only_from_token_usage_events() {
+        let event = |event_type: &str| ParsedHanEvent {
+            id: "e1".to_string(),
+            event_type: event_type.to_string(),
+            timestamp: "2026-08-12T00:00:00Z".to_string(),
+            agent_id: None,
+            data: serde_json::json!({
+                "input_tokens": 100,
+                "output_tokens": 20,
+                "cache_read_tokens": 5,
+                "cache_creation_tokens": 7,
+            }),
+            raw_json: "{}".to_string(),
+        };
+
+        let usage = han_event_token_usage(&event("token_usage"));
+        assert_eq!(usage.input_tokens, Some(100));
+        assert_eq!(usage.output_tokens, Some(20));
+        assert_eq!(usage.cache_read_tokens, Some(5));
+        assert_eq!(usage.cache_creation_tokens, Some(7));
+
+        // Another event type carrying the same keys must not be counted.
+        let other = han_event_token_usage(&event("hook_result"));
+        assert_eq!(other.input_tokens, None);
+        assert_eq!(other.output_tokens, None);
+    }
+    #[test]
     fn test_classify_file_main() {
-        let path = Path::new("/home/user/.claude/projects/test/abc12345-1234-5678-9abc-def012345678.jsonl");
+        let path = Path::new(
+            "/home/user/.claude/projects/test/abc12345-1234-5678-9abc-def012345678.jsonl",
+        );
         assert!(matches!(classify_file(path), ClassifiedFile::Main { .. }));
     }
 
     #[test]
     fn test_classify_file_main_messages() {
-        let path = Path::new("/home/user/.claude/projects/test/abc12345-1234-5678-9abc-def012345678_messages.jsonl");
+        let path = Path::new(
+            "/home/user/.claude/projects/test/abc12345-1234-5678-9abc-def012345678_messages.jsonl",
+        );
         assert!(matches!(classify_file(path), ClassifiedFile::Main { .. }));
     }
 
@@ -2420,14 +2654,24 @@ mod tests {
 
     #[test]
     fn test_classify_file_han_events() {
-        let path = Path::new("/home/user/.claude/projects/test/abc12345-1234-5678-9abc-def012345678-han.jsonl");
-        assert!(matches!(classify_file(path), ClassifiedFile::HanEvents { .. }));
+        let path = Path::new(
+            "/home/user/.claude/projects/test/abc12345-1234-5678-9abc-def012345678-han.jsonl",
+        );
+        assert!(matches!(
+            classify_file(path),
+            ClassifiedFile::HanEvents { .. }
+        ));
     }
 
     #[test]
     fn test_classify_file_cli_han() {
-        let path = Path::new("/home/user/.claude/projects/test/cli-abc12345-1234-5678-9abc-def012345678-han.jsonl");
-        assert!(matches!(classify_file(path), ClassifiedFile::HanEvents { .. }));
+        let path = Path::new(
+            "/home/user/.claude/projects/test/cli-abc12345-1234-5678-9abc-def012345678-han.jsonl",
+        );
+        assert!(matches!(
+            classify_file(path),
+            ClassifiedFile::HanEvents { .. }
+        ));
     }
 
     #[test]
@@ -2444,8 +2688,12 @@ mod tests {
 
     #[test]
     fn test_is_valid_cli_session_id() {
-        assert!(is_valid_cli_session_id("cli-abc12345-1234-5678-9abc-def012345678"));
-        assert!(!is_valid_cli_session_id("abc12345-1234-5678-9abc-def012345678"));
+        assert!(is_valid_cli_session_id(
+            "cli-abc12345-1234-5678-9abc-def012345678"
+        ));
+        assert!(!is_valid_cli_session_id(
+            "abc12345-1234-5678-9abc-def012345678"
+        ));
         assert!(!is_valid_cli_session_id("cli-short"));
     }
 
@@ -2511,8 +2759,7 @@ mod tests {
 
     #[test]
     fn test_extract_message_content_string() {
-        let json: Value =
-            serde_json::from_str(r#"{"message":{"content":"Hello world"}}"#).unwrap();
+        let json: Value = serde_json::from_str(r#"{"message":{"content":"Hello world"}}"#).unwrap();
         assert_eq!(
             extract_message_content(&json),
             Some("Hello world".to_string())

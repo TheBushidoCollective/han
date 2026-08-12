@@ -3,7 +3,7 @@
  *
  * Generates rules content that can be synced to .agent/rules/ or
  * returned via MCP tools. These guidelines are LLM-universal and
- * improve agent quality regardless of provider.
+ * improve agent quality regardless of harness.
  */
 
 /**
@@ -49,44 +49,44 @@ Review available skills BEFORE starting work. Use han_skills to:
 1. Search for relevant skills matching your task
 2. Load skill content for specialized guidance
 3. Announce which skills you're applying and why
-`
+`;
 
 /**
  * Build rules file content for .agent/rules/han-guidelines.md.
  */
 export function buildRulesContent(
   skillCount: number,
-  disciplineCount: number,
+  disciplineCount: number
 ): string {
-  const lines: string[] = [CORE_GUIDELINES]
+  const lines: string[] = [CORE_GUIDELINES];
 
-  lines.push(`## Han Capabilities\n`)
+  lines.push(`## Han Capabilities\n`);
   lines.push(
-    `Han bridge active with ${skillCount} skills and ${disciplineCount} disciplines available.`,
-  )
+    `Han bridge active with ${skillCount} skills and ${disciplineCount} disciplines available.`
+  );
   lines.push(
-    `MCP tools: han_skills (browse/load skills), han_discipline (activate agent personas), han_validate (run validation hooks), han_sync (sync skills/rules)`,
-  )
-  lines.push("")
+    `MCP tools: han_skills (browse/load skills), han_discipline (activate agent personas), han_validate (run validation hooks), han_sync (sync skills/rules)`
+  );
+  lines.push('');
 
-  return lines.join("\n")
+  return lines.join('\n');
 }
 
 /**
  * Build per-prompt context with current datetime.
  */
 export function buildPromptContext(): string {
-  const now = new Date()
-  const dateStr = now.toLocaleString("en-US", {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZoneName: "short",
-  })
+  const now = new Date();
+  const dateStr = now.toLocaleString('en-US', {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZoneName: 'short',
+  });
 
-  return `Current local time: ${dateStr}`
+  return `Current local time: ${dateStr}`;
 }

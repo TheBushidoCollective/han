@@ -20,7 +20,7 @@ Han plugins define validation hooks, specialized skills, and agent disciplines t
 3. **Datetime** — Current time injected on every user prompt
 4. **Skills** — 400+ coding skills loadable on demand via `han_skills` tool
 5. **Disciplines** — 25 agent personas (frontend, backend, SRE, security, etc.) with system prompt injection
-6. **Events** — Unified JSONL logging with `provider: "opencode"` for Browse UI visibility
+6. **Events** — Unified JSONL logging with `harness: "opencode"` for Browse UI visibility
 
 ## TUI Features
 
@@ -200,7 +200,7 @@ Bridge Internals:
   matcher.ts       Filter by tool name, file globs, dirsWith
   executor.ts      Spawn hook commands as parallel promises
   formatter.ts     Structure results as XML-tagged agent messages
-  events.ts        JSONL event logger (provider="opencode")
+  events.ts        JSONL event logger (harness="opencode")
   cache.ts         Content-hash caching (SHA-256)
 ```
 
@@ -262,16 +262,16 @@ LLM: han_discipline({ action: "activate", discipline: "frontend" })
 # in the system prompt, steering the agent's expertise.
 ```
 
-## Event Logging & Provider Architecture
+## Event Logging & Harness Attribution
 
-The bridge writes Han-format JSONL events to `~/.han/opencode/projects/{slug}/{sessionId}-han.jsonl`. Each event includes `provider: "opencode"` so the coordinator can distinguish OpenCode sessions from Claude Code sessions.
+The bridge writes Han-format JSONL events to `~/.han/opencode/projects/{slug}/{sessionId}-han.jsonl`. Each event includes `harness: "opencode"` so the coordinator can distinguish OpenCode sessions from Claude Code sessions. Sessions are keyed on OpenCode's own `sessionID`, read from the hook input on every event, so a Han session id matches the session OpenCode itself shows. A generated id is used only if OpenCode omits it.
 
 Events logged:
 
 - `hook_run` / `hook_result` — Hook execution lifecycle (start, success/failure, duration)
 - `hook_file_change` — File edits detected via `tool.execute.after`
 
-The bridge sets `HAN_PROVIDER=opencode` in the environment for child processes and starts the Han coordinator in the background via `han coordinator ensure --background --watch-path <dir>`. The coordinator indexes these JSONL files into SQLite and serves them through the Browse UI alongside Claude Code sessions.
+The bridge sets `HAN_PROVIDER=opencode` in the environment for child processes and starts the Han coordinator in the background via `han coordinator ensure --background`. The coordinator discovers `~/.han/<harness>/projects` on disk, watches it, and indexes each `<sessionId>-han.jsonl` into SQLite as a session attributed to that harness, which is how OpenCode sessions reach the Browse UI alongside Claude Code sessions. There is no registration step and no `--watch-path` flag. The coordinator enumerates those roots when it starts, so the very first session from a newly installed bridge is picked up at the next coordinator start or scan rather than live. Every session after that is live.
 
 ## Remaining Gaps
 

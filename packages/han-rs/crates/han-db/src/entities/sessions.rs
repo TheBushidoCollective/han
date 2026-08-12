@@ -1,7 +1,14 @@
-//! Entity: sessions (Claude Code sessions)
+//! Entity: sessions (agent sessions from any supported harness)
 
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+
+/// Harness recorded for sessions with no explicit value.
+///
+/// Claude Code was the only harness han indexed before harness tracking
+/// existed, so it is both the migration backfill value and the fallback any
+/// reader uses.
+pub const DEFAULT_HARNESS: &str = "claude-code";
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "sessions")]
@@ -17,6 +24,12 @@ pub struct Model {
     pub pr_number: Option<i32>,
     pub pr_url: Option<String>,
     pub team_name: Option<String>,
+    /// Coding agent that produced this session: `claude-code`, `omp`,
+    /// `opencode`, `gemini-cli`, `kiro`, `codex`, or `antigravity`.
+    ///
+    /// NULL means the row predates harness tracking, which only Claude Code
+    /// could have produced. Readers resolve NULL to `claude-code`.
+    pub harness: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

@@ -69,6 +69,29 @@ import { mapToolName } from './types';
 const PREFIX = '[han]';
 
 /**
+ * Resolve the session id used to correlate every event this process logs.
+ *
+ * Gemini CLI does not put a session id on the hook payload, so the only
+ * candidate is the GEMINI_SESSION_ID environment variable. It is resolved
+ * once and memoized: without that, each call site mints its own UUID whenever
+ * the variable is unset, and a single process scatters its events across
+ * several sessions.
+ *
+ * This does NOT correlate across processes. Gemini CLI invokes the bridge as
+ * a fresh process per hook event, so if the host does not actually export
+ * that variable, every hook event still lands in its own session. See
+ * README "Remaining Gaps".
+ */
+let resolvedSessionId: string | undefined;
+
+function resolveSessionId(): string {
+  if (resolvedSessionId === undefined) {
+    resolvedSessionId = process.env.GEMINI_SESSION_ID ?? crypto.randomUUID();
+  }
+  return resolvedSessionId;
+}
+
+/**
  * Read stdin as JSON. Gemini CLI passes hook context via stdin.
  */
 async function readStdin(): Promise<GeminiHookInput> {
@@ -125,26 +148,22 @@ function extractFilePaths(input: GeminiHookInput): string[] {
 /**
  * Start the Han coordinator daemon in the background.
  */
-function startCoordinator(watchDir: string): void {
+function startCoordinator(): void {
   try {
     const { spawn } =
       require('node:child_process') as typeof import('node:child_process');
 
-    const child = spawn(
-      'han',
-      ['coordinator', 'ensure', '--background', '--watch-path', watchDir],
-      {
-        stdio: 'ignore',
-        detached: true,
-        env: {
-          ...process.env,
-          HAN_PROVIDER: 'gemini-cli',
-        },
-      }
-    );
+    const child = spawn('han', ['coordinator', 'ensure', '--background'], {
+      stdio: 'ignore',
+      detached: true,
+      env: {
+        ...process.env,
+        HAN_PROVIDER: 'gemini-cli',
+      },
+    });
 
     child.unref();
-    console.error(`${PREFIX} Coordinator ensure started (watch: ${watchDir})`);
+    console.error(`${PREFIX} Coordinator ensure started`);
   } catch {
     console.error(
       `${PREFIX} Could not start coordinator (han CLI not found). ` +
@@ -185,9 +204,7 @@ async function handleSessionStart(
   );
 
   // Start coordinator for Browse UI visibility
-  const sessionId = process.env.GEMINI_SESSION_ID ?? crypto.randomUUID();
-  const eventLogger = new BridgeEventLogger(sessionId, projectDir);
-  startCoordinator(eventLogger.getWatchDir());
+  startCoordinator();
 
   return {
     systemMessage: buildSessionContext(
@@ -237,7 +254,7 @@ async function handleBeforeTool(
 
   if (matching.length === 0) return {};
 
-  const sessionId = process.env.GEMINI_SESSION_ID ?? crypto.randomUUID();
+  const sessionId = resolveSessionId();
   const eventLogger = new BridgeEventLogger(sessionId, projectDir);
 
   const results = await executeHooksParallel(matching, [], {
@@ -286,7 +303,7 @@ async function handleAfterTool(
 
   if (matching.length === 0) return {};
 
-  const sessionId = process.env.GEMINI_SESSION_ID ?? crypto.randomUUID();
+  const sessionId = resolveSessionId();
   const eventLogger = new BridgeEventLogger(sessionId, projectDir);
 
   // Log file changes
@@ -323,7 +340,7 @@ async function handleAfterAgent(
   const matching = matchStopHooks(stopHooks, projectDir);
   if (matching.length === 0) return {};
 
-  const sessionId = process.env.GEMINI_SESSION_ID ?? crypto.randomUUID();
+  const sessionId = resolveSessionId();
   const eventLogger = new BridgeEventLogger(sessionId, projectDir);
 
   const results = await executeHooksParallel(matching, [], {
@@ -370,7 +387,7 @@ async function handleSessionEnd(
 
   if (sessionEndHooks.length === 0) return {};
 
-  const sessionId = process.env.GEMINI_SESSION_ID ?? crypto.randomUUID();
+  const sessionId = resolveSessionId();
   const eventLogger = new BridgeEventLogger(sessionId, projectDir);
 
   await executeHooksParallel(sessionEndHooks, [], {
@@ -406,7 +423,8 @@ async function main(): Promise<void> {
     process.env.CLAUDE_PROJECT_DIR ??
     process.cwd();
 
-  // Set provider environment
+  // Name the harness for child processes. The variable keeps its
+  // HAN_PROVIDER spelling; han reads it as the harness id.
   process.env.HAN_PROVIDER = 'gemini-cli';
 
   // Read stdin JSON from Gemini CLI

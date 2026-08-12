@@ -1,20 +1,20 @@
 /**
  * Lightweight event logger for the Codex bridge.
  *
- * Writes Han-format JSONL events with provider="codex" so the
+ * Writes Han-format JSONL events with harness="codex" so the
  * coordinator can index them alongside Claude Code session data.
  *
- * Path: ~/.han/codex/{project-slug}/{sessionId}-han.jsonl
+ * Path: ~/.han/codex/projects/{project-slug}/{sessionId}-han.jsonl
  *
  * This is intentionally NOT under ~/.claude/ or ~/.codex/ because
- * these are Han events, not provider-native session data. The
- * coordinator watches this directory via addWatchPath().
+ * these are Han events, not harness-native session data. The
+ * coordinator watches ~/.han/<harness>/projects for these files.
  */
 
 import { randomUUID } from 'node:crypto';
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import type { HanProvider, HookDefinition, HookResult } from './types';
+import type { HanHarness, HookDefinition, HookResult } from './types';
 
 const MAX_OUTPUT_LENGTH = 10_000;
 
@@ -51,7 +51,7 @@ interface BaseEventMeta {
   sessionId: string;
   type: string;
   timestamp: string;
-  provider: HanProvider;
+  harness: HanHarness;
   cwd?: string;
 }
 
@@ -67,7 +67,7 @@ function truncateOutput(output: string): string {
  * Event logger for Codex bridge sessions.
  *
  * Writes the same JSONL event format as Han's EventLogger but with
- * a provider field set to "codex". Events are buffered and flushed
+ * a harness field set to "codex". Events are buffered and flushed
  * on result events or every 100ms.
  */
 export class BridgeEventLogger {
@@ -75,7 +75,7 @@ export class BridgeEventLogger {
   private buffer: string[] = [];
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly sessionId: string;
-  private readonly provider: HanProvider = 'codex';
+  private readonly harness: HanHarness = 'codex';
   private readonly cwd: string;
 
   constructor(sessionId: string, projectDir: string) {
@@ -101,7 +101,7 @@ export class BridgeEventLogger {
       sessionId: this.sessionId,
       type,
       timestamp: new Date().toISOString(),
-      provider: this.provider,
+      harness: this.harness,
       cwd: this.cwd,
     };
   }
@@ -212,12 +212,5 @@ export class BridgeEventLogger {
    */
   getLogPath(): string {
     return this.logPath;
-  }
-
-  /**
-   * Get the projects directory (for coordinator watch path).
-   */
-  getWatchDir(): string {
-    return join(getHanCodexRoot(), 'projects');
   }
 }

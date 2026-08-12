@@ -119,9 +119,9 @@ fn parse_field_assoc(field: &syn::Field) -> Option<AssocDecl> {
         if !attr.path().is_ident("entity_filter") {
             continue;
         }
-        if let Ok(nested) = attr.parse_args_with(
-            syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated,
-        ) {
+        if let Ok(nested) = attr
+            .parse_args_with(syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated)
+        {
             for meta in &nested {
                 // Look for assoc(...) — a Meta::List with path "assoc"
                 if let Meta::List(list) = meta {
@@ -155,8 +155,7 @@ fn parse_field_assoc(field: &syn::Field) -> Option<AssocDecl> {
                         }
                     }
 
-                    let filter_str =
-                        filter_str.expect("assoc() requires `filter` attribute");
+                    let filter_str = filter_str.expect("assoc() requires `filter` attribute");
                     let local_col_str =
                         local_col_str.expect("assoc() requires `local_column` attribute");
                     let foreign_ent_str =
@@ -190,9 +189,9 @@ fn is_field_skipped(field: &syn::Field) -> bool {
         if !attr.path().is_ident("entity_filter") {
             continue;
         }
-        if let Ok(nested) = attr.parse_args_with(
-            syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated,
-        ) {
+        if let Ok(nested) = attr
+            .parse_args_with(syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated)
+        {
             for meta in &nested {
                 if let Meta::Path(p) = meta {
                     if p.is_ident("skip") {

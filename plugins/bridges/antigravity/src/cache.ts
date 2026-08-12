@@ -8,31 +8,31 @@
  * Cache value: content hash after last successful hook run
  */
 
-import { readFileSync } from "node:fs"
-import { createHash } from "node:crypto"
-import { resolve } from "node:path"
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 /** Map of cache keys to content hashes from the last successful run */
-const hashCache = new Map<string, string>()
+const hashCache = new Map<string, string>();
 
 /**
  * Compute SHA-256 hash of a file's contents.
  */
 function hashFile(filePath: string): string | null {
   try {
-    const content = readFileSync(filePath)
-    return createHash("sha256").update(content).digest("hex")
+    const content = readFileSync(filePath);
+    return createHash('sha256').update(content).digest('hex');
   } catch {
-    return null
+    return null;
   }
 }
 
 function cacheKey(
   pluginName: string,
   hookName: string,
-  filePath: string,
+  filePath: string
 ): string {
-  return `${pluginName}:${hookName}:${resolve(filePath)}`
+  return `${pluginName}:${hookName}:${resolve(filePath)}`;
 }
 
 /**
@@ -41,16 +41,16 @@ function cacheKey(
 export function shouldSkipHook(
   pluginName: string,
   hookName: string,
-  filePath: string,
+  filePath: string
 ): boolean {
-  const key = cacheKey(pluginName, hookName, filePath)
-  const cachedHash = hashCache.get(key)
-  if (!cachedHash) return false
+  const key = cacheKey(pluginName, hookName, filePath);
+  const cachedHash = hashCache.get(key);
+  if (!cachedHash) return false;
 
-  const currentHash = hashFile(filePath)
-  if (!currentHash) return false
+  const currentHash = hashFile(filePath);
+  if (!currentHash) return false;
 
-  return cachedHash === currentHash
+  return cachedHash === currentHash;
 }
 
 /**
@@ -59,12 +59,12 @@ export function shouldSkipHook(
 export function recordSuccess(
   pluginName: string,
   hookName: string,
-  filePath: string,
+  filePath: string
 ): void {
-  const hash = hashFile(filePath)
+  const hash = hashFile(filePath);
   if (hash) {
-    const key = cacheKey(pluginName, hookName, filePath)
-    hashCache.set(key, hash)
+    const key = cacheKey(pluginName, hookName, filePath);
+    hashCache.set(key, hash);
   }
 }
 
@@ -72,10 +72,10 @@ export function recordSuccess(
  * Invalidate cache for a file across all hooks.
  */
 export function invalidateFile(filePath: string): void {
-  const resolved = resolve(filePath)
+  const resolved = resolve(filePath);
   for (const [key] of hashCache) {
     if (key.endsWith(`:${resolved}`)) {
-      hashCache.delete(key)
+      hashCache.delete(key);
     }
   }
 }
@@ -84,5 +84,5 @@ export function invalidateFile(filePath: string): void {
  * Clear the entire cache.
  */
 export function clearCache(): void {
-  hashCache.clear()
+  hashCache.clear();
 }

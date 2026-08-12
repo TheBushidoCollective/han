@@ -98,7 +98,10 @@ mod tests {
         assert_eq!(cloned.config.port, state.config.port);
         assert_eq!(cloned.config.jwt_secret, state.config.jwt_secret);
         assert_eq!(cloned.config.database_url, state.config.database_url);
-        assert_eq!(cloned.config.github_client_id, state.config.github_client_id);
+        assert_eq!(
+            cloned.config.github_client_id,
+            state.config.github_client_id
+        );
         assert_eq!(cloned.config.public_url, state.config.public_url);
         assert_eq!(cloned.config.cors_origins, state.config.cors_origins);
     }

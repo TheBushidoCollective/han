@@ -72,7 +72,10 @@ pub async fn get_by_path(db: &DatabaseConnection, path: &str) -> DbResult<Option
         .map_err(DbError::Database)
 }
 
-pub async fn list(db: &DatabaseConnection, repo_id: Option<&str>) -> DbResult<Vec<projects::Model>> {
+pub async fn list(
+    db: &DatabaseConnection,
+    repo_id: Option<&str>,
+) -> DbResult<Vec<projects::Model>> {
     let mut query = projects::Entity::find().order_by_asc(projects::Column::Name);
     if let Some(rid) = repo_id {
         query = query.filter(projects::Column::RepoId.eq(rid));

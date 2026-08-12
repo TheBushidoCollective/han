@@ -12,7 +12,7 @@ The bridge is a CLI (`codex-plugin-han`) that Codex calls once per event:
 1. **PreToolUse / PostToolUse / Stop** → **validation gates** (biome, eslint, tsc, etc.)
 2. **SessionStart / UserPromptSubmit** → **context injection** (core guidelines, datetime)
 3. **JSON decisions** → **`permissionDecision: "deny"` and `decision: "block"`** keep the agent in the loop until validation passes
-4. **Event logging** → **Browse UI** (sessions visible alongside Claude Code sessions)
+4. **Event logging** → **first-class sessions** (indexed and attributed to the `codex` harness)
 
 ```text
 Agent edits src/app.ts via apply_patch
@@ -147,6 +147,12 @@ args = ["mcp"]
 | `spawn_agent` | `Agent` |
 | `mcp__server__tool` | passed through as-is |
 
-## Event Logging
+## Event Logging and Metrics
 
-The bridge writes Han-format JSONL events to `~/.han/codex/projects/{slug}/{sessionId}-han.jsonl` with `provider: "codex"`, indexed by the Han coordinator and visible in the Browse UI alongside Claude Code, OpenCode, and other provider sessions.
+The bridge writes Han-format JSONL events to `~/.han/codex/projects/{slug}/{sessionId}-han.jsonl`. Every event carries `harness: "codex"`, the canonical id Han uses for Codex CLI wherever it reports on a session.
+
+Codex writes no native transcript into that directory, so the events file is the session's entire record. Han indexes a `*-han.jsonl` file that has no sibling `{sessionId}.jsonl` as a session in its own right rather than as a supplement to a Claude Code transcript, and stamps the harness onto the session row. Codex CLI sessions show up in the Browse UI and in metrics queries beside Claude Code sessions, attributed to `codex` rather than folded into it.
+
+The coordinator finds the directory without being told about it. Every child of `~/.han` holding a `projects` directory is a harness root, so a bridge needs no registration step and no watch flag. On `SessionStart` the bridge runs `han coordinator ensure --background` to make sure the coordinator is up.
+
+For what the harness dimension buys you once the data is indexed, see [Local Metrics](/docs/metrics#the-harness-dimension).

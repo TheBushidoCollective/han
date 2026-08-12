@@ -3,7 +3,7 @@ title: "Local Metrics"
 description: "Track task completion and agent performance with local metrics."
 ---
 
-Han's metrics system gives Claude Code self-awareness through measurement. By tracking tasks with confidence estimates and comparing them against actual outcomes, both you and Claude can see where confidence aligns with reality - and where it doesn't.
+Han's metrics system gives your coding agent self-awareness through measurement. By tracking tasks with confidence estimates and comparing them against actual outcomes, both you and the agent can see where confidence aligns with reality, and where it doesn't. It measures every harness Han bridges, not only Claude Code.
 
 ## The Problem: Uncalibrated Confidence
 
@@ -113,6 +113,104 @@ The database contains tables for:
 - `frustration_events` - User sentiment and frustration detection
 
 Data can be queried directly with any SQLite client or through the Browse UI.
+
+## The Harness Dimension
+
+Han indexes sessions from every coding agent it bridges. Each session records which one produced it, so a metric can be read per harness instead of averaged across all of them.
+
+| Harness id | Coding agent |
+|---|---|
+| `claude-code` | Claude Code |
+| `omp` | Oh My Pi |
+| `opencode` | OpenCode |
+| `gemini-cli` | Gemini CLI |
+| `kiro` | Kiro CLI |
+| `codex` | OpenAI Codex CLI |
+| `antigravity` | Google Antigravity |
+
+Those exact strings are the canonical ids. The same value appears in the JSONL event envelope as `harness`, in the `sessions.harness` column, and on `Session.harness` in the GraphQL API.
+
+### Where the harness comes from
+
+The indexer derives a session's harness from its file path, not from the events inside it. A bridge writes to `~/.han/<harness>/projects/<slug>/`, so the directory name is the harness. Anything under `~/.claude/projects` is Claude Code.
+
+Individual events still carry their own `harness` field, and a reader inspecting one event sees it there. That field is not what sets the session's harness. A session cannot legitimately change harness partway through, and a path is something the indexer can trust without parsing file contents. Expect the asymmetry: the event says it, the path decides it.
+
+Sessions recorded before harness tracking existed read as `claude-code`. Claude Code was the only harness Han could index at the time, so the migration backfills those rows rather than leaving them unattributed. There is no NULL harness to work around in a query.
+
+### Filtering by harness in GraphQL
+
+`Session.harness` is a non-null `String` carrying one of the ids above:
+
+```graphql
+{
+  sessions(first: 20) {
+    edges {
+      node {
+        sessionId
+        harness
+        messageCount
+      }
+    }
+  }
+}
+```
+
+Filtering rides the standard `SessionFilter` input, so no new query argument is involved. Counting the sessions from one harness is the same query asking only for `totalCount`:
+
+```graphql
+{
+  sessions(first: 20, filter: { harness: { _eq: "omp" } }) {
+    totalCount
+    edges {
+      node {
+        sessionId
+        harness
+      }
+    }
+  }
+}
+```
+
+`harness` is a `StringFilter`, so `_eq`, `_ne`, `_in`, `_notIn`, `_contains`, `_startsWith`, `_endsWith`, and `_isNull` all apply, it composes with `_and`, `_or`, and `_not`, and it is sortable through `SessionOrderBy`:
+
+```graphql
+{
+  sessions(
+    first: 50
+    filter: { harness: { _in: ["omp", "opencode", "codex"] } }
+    orderBy: { harness: ASC }
+  ) {
+    edges {
+      node {
+        sessionId
+        harness
+        projectName
+      }
+    }
+  }
+}
+```
+
+### Token and cost data across harnesses
+
+Claude Code records token usage in its own transcript, which Han reads directly. No other harness writes a transcript Han parses, so a bridge has to report usage explicitly with a `token_usage` event carrying the model, the input, output, cache read and cache creation token counts, and the cost in USD when the harness computes one. The indexer lifts those counts into the same message columns the Claude Code path fills, so any harness that reports them is covered by the existing token and cost aggregates rather than needing its own.
+
+Coverage is not uniform, so read a cost total as covering the harnesses that report cost rather than all seven. What each harness actually reports today:
+
+| Harness | Sessions | Tool calls | File changes | Tokens and cost |
+|---|---|---|---|---|
+| `claude-code` | Yes | Yes | Yes | Yes, read from its own transcript |
+| `omp` | Yes | Yes | Yes | Yes, via `token_usage` |
+| `opencode` | Yes | Yes | Yes | No |
+| `gemini-cli` | Yes | Yes | Yes | No |
+| `kiro` | Yes | Yes | Yes | No |
+| `codex` | Yes | Yes | Yes | No |
+| `antigravity` | Yes | Yes | Yes | No |
+
+Closing that gap is a per-bridge change and needs nothing from the indexer. The ingestion path is already there, the `token_usage` event type is harness-agnostic, and the `messages` token columns already exist and are already what the aggregates read. A bridge that starts emitting `token_usage` is counted from its next session with no other change anywhere.
+
+A harness that reports no cost omits the cost field rather than sending zero, which keeps a genuinely free turn distinguishable from an unmeasured one.
 
 ## Integration with Hooks
 

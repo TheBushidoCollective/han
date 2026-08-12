@@ -5,45 +5,42 @@
  * to find hooks that apply to a specific validation request.
  */
 
-import { existsSync } from "node:fs"
-import { execSync } from "node:child_process"
-import { join, relative } from "node:path"
-import type { HookDefinition } from "./types"
+import { execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { join, relative } from 'node:path';
+import type { HookDefinition } from './types';
 
 /**
  * Test if a file path matches a glob-like pattern.
  */
 function matchGlob(pattern: string, filePath: string): boolean {
   let regexStr = pattern
-    .replace(/\./g, "\\.")
+    .replace(/\./g, '\\.')
     .replace(/\{([^}]+)\}/g, (_match, group: string) => {
-      const alts = group.split(",").map((s: string) => s.trim())
-      return `(${alts.join("|")})`
+      const alts = group.split(',').map((s: string) => s.trim());
+      return `(${alts.join('|')})`;
     })
-    .replace(/\*\*/g, "<<<GLOBSTAR>>>")
-    .replace(/\*/g, "[^/]*")
-    .replace(/<<<GLOBSTAR>>>/g, ".*")
+    .replace(/\*\*/g, '<<<GLOBSTAR>>>')
+    .replace(/\*/g, '[^/]*')
+    .replace(/<<<GLOBSTAR>>>/g, '.*');
 
-  regexStr = `^${regexStr}$`
+  regexStr = `^${regexStr}$`;
 
   try {
-    return new RegExp(regexStr).test(filePath)
+    return new RegExp(regexStr).test(filePath);
   } catch {
-    return false
+    return false;
   }
 }
 
 /**
  * Check if a hook's dirsWith requirement is met.
  */
-function checkDirsWith(
-  hook: HookDefinition,
-  projectDir: string,
-): boolean {
-  if (!hook.dirsWith || hook.dirsWith.length === 0) return true
+function checkDirsWith(hook: HookDefinition, projectDir: string): boolean {
+  if (!hook.dirsWith || hook.dirsWith.length === 0) return true;
   return hook.dirsWith.some((requiredFile) =>
-    existsSync(join(projectDir, requiredFile)),
-  )
+    existsSync(join(projectDir, requiredFile))
+  );
 }
 
 /**
@@ -51,16 +48,16 @@ function checkDirsWith(
  * Used for conditional execution (e.g. skip if a tool is disabled).
  */
 function checkDirTest(hook: HookDefinition, projectDir: string): boolean {
-  if (!hook.dirTest) return true
+  if (!hook.dirTest) return true;
   try {
     execSync(hook.dirTest, {
       cwd: projectDir,
-      stdio: ["ignore", "ignore", "ignore"],
-      shell: "/bin/bash",
-    })
-    return true
+      stdio: ['ignore', 'ignore', 'ignore'],
+      shell: '/bin/bash',
+    });
+    return true;
   } catch {
-    return false
+    return false;
   }
 }
 
@@ -70,13 +67,13 @@ function checkDirTest(hook: HookDefinition, projectDir: string): boolean {
 function checkFileFilter(
   hook: HookDefinition,
   filePath: string,
-  projectDir: string,
+  projectDir: string
 ): boolean {
-  if (!hook.fileFilter || hook.fileFilter.length === 0) return true
-  const relPath = relative(projectDir, filePath)
+  if (!hook.fileFilter || hook.fileFilter.length === 0) return true;
+  const relPath = relative(projectDir, filePath);
   return hook.fileFilter.some(
-    (pattern) => matchGlob(pattern, relPath) || matchGlob(pattern, filePath),
-  )
+    (pattern) => matchGlob(pattern, relPath) || matchGlob(pattern, filePath)
+  );
 }
 
 /**
@@ -84,10 +81,10 @@ function checkFileFilter(
  */
 function checkToolFilter(
   hook: HookDefinition,
-  claudeToolName: string,
+  claudeToolName: string
 ): boolean {
-  if (!hook.toolFilter || hook.toolFilter.length === 0) return true
-  return hook.toolFilter.includes(claudeToolName)
+  if (!hook.toolFilter || hook.toolFilter.length === 0) return true;
+  return hook.toolFilter.includes(claudeToolName);
 }
 
 /**
@@ -97,15 +94,15 @@ export function matchPostToolUseHooks(
   hooks: HookDefinition[],
   claudeToolName: string,
   filePath: string,
-  projectDir: string,
+  projectDir: string
 ): HookDefinition[] {
   return hooks.filter((hook) => {
-    if (!checkToolFilter(hook, claudeToolName)) return false
-    if (!checkDirsWith(hook, projectDir)) return false
-    if (!checkFileFilter(hook, filePath, projectDir)) return false
-    if (!checkDirTest(hook, projectDir)) return false
-    return true
-  })
+    if (!checkToolFilter(hook, claudeToolName)) return false;
+    if (!checkDirsWith(hook, projectDir)) return false;
+    if (!checkFileFilter(hook, filePath, projectDir)) return false;
+    if (!checkDirTest(hook, projectDir)) return false;
+    return true;
+  });
 }
 
 /**
@@ -113,9 +110,9 @@ export function matchPostToolUseHooks(
  */
 export function matchStopHooks(
   hooks: HookDefinition[],
-  projectDir: string,
+  projectDir: string
 ): HookDefinition[] {
   return hooks.filter(
-    (hook) => checkDirsWith(hook, projectDir) && checkDirTest(hook, projectDir),
-  )
+    (hook) => checkDirsWith(hook, projectDir) && checkDirTest(hook, projectDir)
+  );
 }
