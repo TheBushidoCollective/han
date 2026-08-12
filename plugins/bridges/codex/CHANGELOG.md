@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0] - 2026-08-12
+
+### Added
+
+- catalog and track metrics from every harness, and bridge omp (#109) ([a7a02ccc](../../commit/a7a02ccc))
+- rewrite bridge for Codex CLI lifecycle hooks ([0db61833](../../commit/0db61833))
+
+### Fixed
+
+- locate marketplace in installed Claude Code marketplaces ([60efae09](../../commit/60efae09))
+
+### Other
+
+- live-test results and current setup for all bridges ([62accccd](../../commit/62accccd))
+
 ## [0.1.0] - 2026-07-19
 
 ### Added
