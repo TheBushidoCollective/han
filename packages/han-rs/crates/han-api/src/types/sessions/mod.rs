@@ -153,12 +153,10 @@ impl SessionData {
 
     /// Coding agent that produced this session.
     ///
-    /// Canonical ids: `claude-code`, `omp`, `opencode`, `gemini-cli`, `kiro`,
-    /// `codex`, or `antigravity`. Never null. The migration backfills every
-    /// pre-tracking row to [`DEFAULT_HARNESS`], since Claude Code was the only
-    /// harness han indexed before harness tracking existed; a NULL that slips
-    /// past a future writer resolves to the same value rather than surfacing an
-    /// empty harness to callers.
+    /// One of `claude-code`, `omp`, `opencode`, `gemini-cli`, `kiro`, `codex`,
+    /// or `antigravity`. Never null: Claude Code was the only harness han
+    /// indexed before harness tracking existed, so a session with no recorded
+    /// harness reads as `claude-code`.
     async fn harness(&self) -> &str {
         self.harness_id()
     }

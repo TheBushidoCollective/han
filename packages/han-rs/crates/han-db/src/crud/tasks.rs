@@ -55,7 +55,8 @@ pub async fn complete(
     };
 
     let now = chrono::Utc::now().to_rfc3339();
-    let files_json = files_modified.map(|f| serde_json::to_string(&f).unwrap_or_else(|_| "[]".to_string()));
+    let files_json =
+        files_modified.map(|f| serde_json::to_string(&f).unwrap_or_else(|_| "[]".to_string()));
 
     let mut active: tasks::ActiveModel = existing.into();
     active.outcome = Set(Some(outcome));

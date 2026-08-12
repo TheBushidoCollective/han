@@ -114,7 +114,12 @@ fn map_notify_to_event(payload: &NotifyPayload) -> Option<DbChangeEvent> {
 mod tests {
     use super::*;
 
-    fn make_payload(event_type: &str, session_id: Option<&str>, table: Option<&str>, id: Option<&str>) -> NotifyPayload {
+    fn make_payload(
+        event_type: &str,
+        session_id: Option<&str>,
+        table: Option<&str>,
+        id: Option<&str>,
+    ) -> NotifyPayload {
         NotifyPayload {
             event_type: event_type.to_string(),
             session_id: session_id.map(|s| s.to_string()),
@@ -140,7 +145,10 @@ mod tests {
     fn test_map_session_synced_missing_session_id() {
         let payload = make_payload("session_synced", None, None, None);
         let event = map_notify_to_event(&payload);
-        assert!(event.is_none(), "should return None when session_id is missing");
+        assert!(
+            event.is_none(),
+            "should return None when session_id is missing"
+        );
     }
 
     #[test]
@@ -149,7 +157,11 @@ mod tests {
         let event = map_notify_to_event(&payload);
         assert!(event.is_some());
         match event.unwrap() {
-            DbChangeEvent::SessionAdded { session_id, parent_id, project_id } => {
+            DbChangeEvent::SessionAdded {
+                session_id,
+                parent_id,
+                project_id,
+            } => {
                 assert_eq!(session_id, "sess-456");
                 assert!(parent_id.is_none());
                 assert!(project_id.is_none());
@@ -162,7 +174,10 @@ mod tests {
     fn test_map_session_added_missing_session_id() {
         let payload = make_payload("session_added", None, None, None);
         let event = map_notify_to_event(&payload);
-        assert!(event.is_none(), "should return None when session_id is missing");
+        assert!(
+            event.is_none(),
+            "should return None when session_id is missing"
+        );
     }
 
     #[test]
@@ -171,7 +186,10 @@ mod tests {
         let event = map_notify_to_event(&payload);
         assert!(event.is_some());
         match event.unwrap() {
-            DbChangeEvent::SessionMessageAdded { session_id, message_index } => {
+            DbChangeEvent::SessionMessageAdded {
+                session_id,
+                message_index,
+            } => {
                 assert_eq!(session_id, "sess-789");
                 assert_eq!(message_index, 0);
             }
@@ -183,7 +201,10 @@ mod tests {
     fn test_map_message_added_missing_session_id() {
         let payload = make_payload("message_added", None, None, None);
         let event = map_notify_to_event(&payload);
-        assert!(event.is_none(), "should return None when session_id is missing");
+        assert!(
+            event.is_none(),
+            "should return None when session_id is missing"
+        );
     }
 
     #[test]

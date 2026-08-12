@@ -2319,7 +2319,8 @@ impl QueryRoot {
         // Query 2: Breakdown by category
         // Split assistant messages into "Reading AI Output" (token-based) and "Writing Code" (lines-based)
         // using UNION ALL to compute each sub-category from the raw columns.
-        let cat_core = |where_clause: &str| format!(
+        let cat_core = |where_clause: &str| {
+            format!(
             "SELECT 'Reading AI Output' as category, \
                COALESCE(SUM(CAST(output_tokens AS BIGINT) * 320), 0) as category_ms \
              FROM messages WHERE message_type = 'assistant' AND output_tokens IS NOT NULL AND {where_clause} \
@@ -2335,16 +2336,21 @@ impl QueryRoot {
              SELECT 'Navigation & Tools' as category, \
                COALESCE(SUM(human_time_ms), 0) as category_ms \
              FROM messages WHERE message_type = 'tool_use' AND human_time_ms IS NOT NULL AND {where_clause}"
-        );
+        )
+        };
         let (ht_cat_sql, ht_cat_values) = if let Some((ref sc, ref sv)) = scope {
             let w = format!("timestamp >= date('now', ? || ' days') AND {sc}");
             (
                 cat_core(&w),
                 vec![
-                    format!("-{days}").into(), sv.clone(),
-                    format!("-{days}").into(), sv.clone(),
-                    format!("-{days}").into(), sv.clone(),
-                    format!("-{days}").into(), sv.clone(),
+                    format!("-{days}").into(),
+                    sv.clone(),
+                    format!("-{days}").into(),
+                    sv.clone(),
+                    format!("-{days}").into(),
+                    sv.clone(),
+                    format!("-{days}").into(),
+                    sv.clone(),
                 ],
             )
         } else {

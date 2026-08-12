@@ -2,8 +2,8 @@
 
 use crate::entities::config_dirs;
 use crate::error::{DbError, DbResult};
-use sea_orm::*;
 use sea_orm::sea_query::Expr;
+use sea_orm::*;
 
 pub async fn register(
     db: &DatabaseConnection,
@@ -43,7 +43,10 @@ pub async fn register(
         .ok_or(DbError::NotFound("config_dir".to_string()))
 }
 
-pub async fn get_by_path(db: &DatabaseConnection, path: &str) -> DbResult<Option<config_dirs::Model>> {
+pub async fn get_by_path(
+    db: &DatabaseConnection,
+    path: &str,
+) -> DbResult<Option<config_dirs::Model>> {
     config_dirs::Entity::find()
         .filter(config_dirs::Column::Path.eq(path))
         .one(db)

@@ -4,7 +4,10 @@ use crate::entities::messages;
 use crate::error::{DbError, DbResult};
 use sea_orm::*;
 
-pub async fn insert_batch(db: &DatabaseConnection, msgs: Vec<messages::ActiveModel>) -> DbResult<u64> {
+pub async fn insert_batch(
+    db: &DatabaseConnection,
+    msgs: Vec<messages::ActiveModel>,
+) -> DbResult<u64> {
     if msgs.is_empty() {
         return Ok(0);
     }
@@ -49,8 +52,7 @@ pub async fn list_by_session(
     offset: Option<u64>,
     order_desc: bool,
 ) -> DbResult<Vec<messages::Model>> {
-    let mut query = messages::Entity::find()
-        .filter(messages::Column::SessionId.eq(session_id));
+    let mut query = messages::Entity::find().filter(messages::Column::SessionId.eq(session_id));
 
     if let Some(aid) = agent_id {
         query = query.filter(messages::Column::AgentId.eq(aid));
@@ -86,20 +88,30 @@ pub async fn get_count(db: &DatabaseConnection, session_id: &str) -> DbResult<u6
         .map_err(DbError::Database)
 }
 
-pub async fn get_counts_batch(db: &DatabaseConnection, session_ids: Vec<String>) -> DbResult<Vec<(String, u64)>> {
+pub async fn get_counts_batch(
+    db: &DatabaseConnection,
+    session_ids: Vec<String>,
+) -> DbResult<Vec<(String, u64)>> {
     use sea_orm::{ConnectionTrait, Statement};
 
     if session_ids.is_empty() {
         return Ok(vec![]);
     }
 
-    let placeholders: Vec<String> = session_ids.iter().enumerate().map(|(i, _)| format!("?{}", i + 1)).collect();
+    let placeholders: Vec<String> = session_ids
+        .iter()
+        .enumerate()
+        .map(|(i, _)| format!("?{}", i + 1))
+        .collect();
     let sql = format!(
         "SELECT session_id, COUNT(*) as cnt FROM messages WHERE session_id IN ({}) GROUP BY session_id",
         placeholders.join(", ")
     );
 
-    let values: Vec<Value> = session_ids.into_iter().map(|s| Value::String(Some(Box::new(s)))).collect();
+    let values: Vec<Value> = session_ids
+        .into_iter()
+        .map(|s| Value::String(Some(Box::new(s))))
+        .collect();
     let stmt = Statement::from_sql_and_values(db.get_database_backend(), &sql, values);
     let rows = db.query_all(stmt).await.map_err(DbError::Database)?;
 
@@ -257,14 +269,21 @@ pub async fn get_session_timestamps_batch(
         return Ok(vec![]);
     }
 
-    let placeholders: Vec<String> = session_ids.iter().enumerate().map(|(i, _)| format!("?{}", i + 1)).collect();
+    let placeholders: Vec<String> = session_ids
+        .iter()
+        .enumerate()
+        .map(|(i, _)| format!("?{}", i + 1))
+        .collect();
     let sql = format!(
         "SELECT session_id, MIN(timestamp) as started_at, MAX(timestamp) as ended_at, COUNT(*) as message_count
          FROM messages WHERE session_id IN ({}) GROUP BY session_id",
         placeholders.join(", ")
     );
 
-    let values: Vec<Value> = session_ids.into_iter().map(|s| Value::String(Some(Box::new(s)))).collect();
+    let values: Vec<Value> = session_ids
+        .into_iter()
+        .map(|s| Value::String(Some(Box::new(s))))
+        .collect();
     let stmt = Statement::from_sql_and_values(db.get_database_backend(), &sql, values);
     let rows = db.query_all(stmt).await.map_err(DbError::Database)?;
 

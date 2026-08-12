@@ -8,8 +8,8 @@ use axum::{
 };
 use hmac::{Hmac, Mac};
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
-use sha2::Sha256;
 use serde_json::json;
+use sha2::Sha256;
 use tracing::{error, info, warn};
 
 use super::plans::map_stripe_status;
@@ -38,7 +38,10 @@ pub async fn webhook_handler(
     body: String,
 ) -> impl IntoResponse {
     // Verify signature
-    let signature = match headers.get("stripe-signature").and_then(|v| v.to_str().ok()) {
+    let signature = match headers
+        .get("stripe-signature")
+        .and_then(|v| v.to_str().ok())
+    {
         Some(sig) => sig.to_string(),
         None => {
             return (
@@ -134,7 +137,9 @@ pub fn verify_signature(payload: &str, signature_header: &str, secret: &str) -> 
     let expected = hex::encode(mac.finalize().into_bytes());
 
     // Constant-time comparison
-    signatures.iter().any(|sig| constant_time_eq(sig, &expected))
+    signatures
+        .iter()
+        .any(|sig| constant_time_eq(sig, &expected))
 }
 
 /// Constant-time string comparison to prevent timing attacks.
@@ -155,15 +160,11 @@ async fn handle_subscription_change(
 ) -> Result<(), String> {
     use han_db::entities::users;
 
-    let customer_id = object["customer"]
-        .as_str()
-        .ok_or("missing customer ID")?;
+    let customer_id = object["customer"].as_str().ok_or("missing customer ID")?;
     let status_str = object["status"]
         .as_str()
         .ok_or("missing subscription status")?;
-    let subscription_id = object["id"]
-        .as_str()
-        .ok_or("missing subscription ID")?;
+    let subscription_id = object["id"].as_str().ok_or("missing subscription ID")?;
 
     let status = map_stripe_status(status_str);
 
@@ -202,9 +203,7 @@ async fn handle_subscription_deleted(
 ) -> Result<(), String> {
     use han_db::entities::users;
 
-    let customer_id = object["customer"]
-        .as_str()
-        .ok_or("missing customer ID")?;
+    let customer_id = object["customer"].as_str().ok_or("missing customer ID")?;
 
     info!(customer_id, "Subscription deleted");
 
@@ -233,12 +232,7 @@ fn handle_payment_failed(object: &serde_json::Value) {
     let invoice_id = object["id"].as_str().unwrap_or("unknown");
     let amount = object["amount_due"].as_i64().unwrap_or(0);
 
-    warn!(
-        customer_id,
-        invoice_id,
-        amount,
-        "Invoice payment failed"
-    );
+    warn!(customer_id, invoice_id, amount, "Invoice payment failed");
 }
 
 #[cfg(test)]

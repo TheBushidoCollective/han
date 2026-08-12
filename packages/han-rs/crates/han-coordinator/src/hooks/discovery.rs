@@ -133,11 +133,7 @@ fn scan_plugins_dir(
                 match parse_hooks_json(hooks_path, &plugin_name, &path) {
                     Ok(discovered) => hooks.extend(discovered),
                     Err(e) => {
-                        tracing::warn!(
-                            "Failed to parse hooks.json at {:?}: {}",
-                            hooks_path,
-                            e
-                        );
+                        tracing::warn!("Failed to parse hooks.json at {:?}: {}", hooks_path, e);
                     }
                 }
                 break;

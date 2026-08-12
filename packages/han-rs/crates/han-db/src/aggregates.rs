@@ -121,27 +121,51 @@ pub async fn query_dashboard_aggregates(
     // 1. Tool usage (top 20)
     let tool_usage = {
         let sql = "SELECT tool_name, COUNT(*) as cnt FROM messages WHERE tool_name IS NOT NULL AND timestamp > ?1 GROUP BY tool_name ORDER BY cnt DESC LIMIT 20";
-        let rows = db.query_all(Statement::from_sql_and_values(backend, sql, vec![Value::String(Some(Box::new(cutoff_date.to_string())))]))
-            .await.map_err(DbError::Database)?;
-        rows.iter().filter_map(|r| {
-            Some(ToolUsageRow {
-                tool_name: r.try_get::<String>("", "tool_name").ok()?,
-                count: r.try_get::<i64>("", "cnt").ok()?,
+        let rows = db
+            .query_all(Statement::from_sql_and_values(
+                backend,
+                sql,
+                vec![Value::String(Some(Box::new(cutoff_date.to_string())))],
+            ))
+            .await
+            .map_err(DbError::Database)?;
+        rows.iter()
+            .filter_map(|r| {
+                Some(ToolUsageRow {
+                    tool_name: r.try_get::<String>("", "tool_name").ok()?,
+                    count: r.try_get::<i64>("", "cnt").ok()?,
+                })
             })
-        }).collect()
+            .collect()
     };
 
     // 2. Token totals
-    let (total_input_tokens, total_output_tokens, total_cache_read_tokens, total_sessions, total_messages) = {
+    let (
+        total_input_tokens,
+        total_output_tokens,
+        total_cache_read_tokens,
+        total_sessions,
+        total_messages,
+    ) = {
         let sql = "SELECT COALESCE(SUM(input_tokens), 0), COALESCE(SUM(output_tokens), 0), COALESCE(SUM(cache_read_tokens), 0), COUNT(DISTINCT session_id), COUNT(*) FROM messages WHERE message_type = 'assistant' AND timestamp > ?1";
-        let row = db.query_one(Statement::from_sql_and_values(backend, sql, vec![Value::String(Some(Box::new(cutoff_date.to_string())))]))
-            .await.map_err(DbError::Database)?;
+        let row = db
+            .query_one(Statement::from_sql_and_values(
+                backend,
+                sql,
+                vec![Value::String(Some(Box::new(cutoff_date.to_string())))],
+            ))
+            .await
+            .map_err(DbError::Database)?;
         match row {
             Some(r) => (
-                r.try_get::<i64>("", "COALESCE(SUM(input_tokens), 0)").unwrap_or(0),
-                r.try_get::<i64>("", "COALESCE(SUM(output_tokens), 0)").unwrap_or(0),
-                r.try_get::<i64>("", "COALESCE(SUM(cache_read_tokens), 0)").unwrap_or(0),
-                r.try_get::<i64>("", "COUNT(DISTINCT session_id)").unwrap_or(0),
+                r.try_get::<i64>("", "COALESCE(SUM(input_tokens), 0)")
+                    .unwrap_or(0),
+                r.try_get::<i64>("", "COALESCE(SUM(output_tokens), 0)")
+                    .unwrap_or(0),
+                r.try_get::<i64>("", "COALESCE(SUM(cache_read_tokens), 0)")
+                    .unwrap_or(0),
+                r.try_get::<i64>("", "COUNT(DISTINCT session_id)")
+                    .unwrap_or(0),
                 r.try_get::<i64>("", "COUNT(*)").unwrap_or(0),
             ),
             None => (0, 0, 0, 0, 0),
@@ -151,33 +175,49 @@ pub async fn query_dashboard_aggregates(
     // 3. Daily costs
     let daily_costs = {
         let sql = "SELECT date(timestamp) as d, COALESCE(SUM(input_tokens), 0) as it, COALESCE(SUM(output_tokens), 0) as ot, COALESCE(SUM(cache_read_tokens), 0) as crt, COUNT(DISTINCT session_id) as sc FROM messages WHERE message_type = 'assistant' AND timestamp > ?1 GROUP BY d ORDER BY d";
-        let rows = db.query_all(Statement::from_sql_and_values(backend, sql, vec![Value::String(Some(Box::new(cutoff_date.to_string())))]))
-            .await.map_err(DbError::Database)?;
-        rows.iter().filter_map(|r| {
-            Some(DailyCostRow {
-                date: r.try_get::<String>("", "d").ok()?,
-                input_tokens: r.try_get::<i64>("", "it").ok()?,
-                output_tokens: r.try_get::<i64>("", "ot").ok()?,
-                cache_read_tokens: r.try_get::<i64>("", "crt").ok()?,
-                session_count: r.try_get::<i64>("", "sc").ok()?,
+        let rows = db
+            .query_all(Statement::from_sql_and_values(
+                backend,
+                sql,
+                vec![Value::String(Some(Box::new(cutoff_date.to_string())))],
+            ))
+            .await
+            .map_err(DbError::Database)?;
+        rows.iter()
+            .filter_map(|r| {
+                Some(DailyCostRow {
+                    date: r.try_get::<String>("", "d").ok()?,
+                    input_tokens: r.try_get::<i64>("", "it").ok()?,
+                    output_tokens: r.try_get::<i64>("", "ot").ok()?,
+                    cache_read_tokens: r.try_get::<i64>("", "crt").ok()?,
+                    session_count: r.try_get::<i64>("", "sc").ok()?,
+                })
             })
-        }).collect()
+            .collect()
     };
 
     // 4. Hook health
     let hook_health = {
         let sql = "SELECT hook_name, COUNT(*) as total_runs, SUM(CASE WHEN passed = 1 THEN 1 ELSE 0 END) as pass_count, SUM(CASE WHEN passed = 0 THEN 1 ELSE 0 END) as fail_count, AVG(duration_ms) as avg_duration_ms FROM hook_executions WHERE executed_at > ?1 GROUP BY hook_name ORDER BY total_runs DESC LIMIT 20";
-        let rows = db.query_all(Statement::from_sql_and_values(backend, sql, vec![Value::String(Some(Box::new(cutoff_date.to_string())))]))
-            .await.map_err(DbError::Database)?;
-        rows.iter().filter_map(|r| {
-            Some(HookHealthRow {
-                hook_name: r.try_get::<String>("", "hook_name").ok()?,
-                total_runs: r.try_get::<i64>("", "total_runs").ok()?,
-                pass_count: r.try_get::<i64>("", "pass_count").ok()?,
-                fail_count: r.try_get::<i64>("", "fail_count").ok()?,
-                avg_duration_ms: r.try_get::<f64>("", "avg_duration_ms").ok()?,
+        let rows = db
+            .query_all(Statement::from_sql_and_values(
+                backend,
+                sql,
+                vec![Value::String(Some(Box::new(cutoff_date.to_string())))],
+            ))
+            .await
+            .map_err(DbError::Database)?;
+        rows.iter()
+            .filter_map(|r| {
+                Some(HookHealthRow {
+                    hook_name: r.try_get::<String>("", "hook_name").ok()?,
+                    total_runs: r.try_get::<i64>("", "total_runs").ok()?,
+                    pass_count: r.try_get::<i64>("", "pass_count").ok()?,
+                    fail_count: r.try_get::<i64>("", "fail_count").ok()?,
+                    avg_duration_ms: r.try_get::<f64>("", "avg_duration_ms").ok()?,
+                })
             })
-        }).collect()
+            .collect()
     };
 
     Ok(DashboardAggregates {
@@ -208,42 +248,70 @@ pub async fn query_activity_aggregates(
     // Daily activity
     let daily_activity = {
         let sql = "SELECT date(timestamp) as d, COUNT(*) as mc, COUNT(DISTINCT session_id) as sc, COALESCE(SUM(input_tokens), 0) as it, COALESCE(SUM(output_tokens), 0) as ot, COALESCE(SUM(cache_read_tokens), 0) as crt, COALESCE(SUM(lines_added), 0) as la, COALESCE(SUM(lines_removed), 0) as lr, COALESCE(SUM(files_changed), 0) as fc FROM messages WHERE timestamp > ?1 GROUP BY d ORDER BY d";
-        let rows = db.query_all(Statement::from_sql_and_values(backend, sql, vec![Value::String(Some(Box::new(cutoff_date.to_string())))]))
-            .await.map_err(DbError::Database)?;
-        rows.iter().filter_map(|r| {
-            Some(DailyActivityRow {
-                date: r.try_get::<String>("", "d").ok()?,
-                message_count: r.try_get::<i64>("", "mc").ok()?,
-                session_count: r.try_get::<i64>("", "sc").ok()?,
-                input_tokens: r.try_get::<i64>("", "it").ok()?,
-                output_tokens: r.try_get::<i64>("", "ot").ok()?,
-                cache_read_tokens: r.try_get::<i64>("", "crt").ok()?,
-                lines_added: r.try_get::<i64>("", "la").ok()?,
-                lines_removed: r.try_get::<i64>("", "lr").ok()?,
-                files_changed: r.try_get::<i64>("", "fc").ok()?,
+        let rows = db
+            .query_all(Statement::from_sql_and_values(
+                backend,
+                sql,
+                vec![Value::String(Some(Box::new(cutoff_date.to_string())))],
+            ))
+            .await
+            .map_err(DbError::Database)?;
+        rows.iter()
+            .filter_map(|r| {
+                Some(DailyActivityRow {
+                    date: r.try_get::<String>("", "d").ok()?,
+                    message_count: r.try_get::<i64>("", "mc").ok()?,
+                    session_count: r.try_get::<i64>("", "sc").ok()?,
+                    input_tokens: r.try_get::<i64>("", "it").ok()?,
+                    output_tokens: r.try_get::<i64>("", "ot").ok()?,
+                    cache_read_tokens: r.try_get::<i64>("", "crt").ok()?,
+                    lines_added: r.try_get::<i64>("", "la").ok()?,
+                    lines_removed: r.try_get::<i64>("", "lr").ok()?,
+                    files_changed: r.try_get::<i64>("", "fc").ok()?,
+                })
             })
-        }).collect()
+            .collect()
     };
 
     // Hourly activity
     let hourly_activity = {
         let sql = "SELECT CAST(strftime('%H', timestamp) AS INTEGER) as h, COUNT(*) as mc, COUNT(DISTINCT session_id) as sc FROM messages WHERE timestamp > ?1 GROUP BY h ORDER BY h";
-        let rows = db.query_all(Statement::from_sql_and_values(backend, sql, vec![Value::String(Some(Box::new(cutoff_date.to_string())))]))
-            .await.map_err(DbError::Database)?;
-        rows.iter().filter_map(|r| {
-            Some(HourlyActivityRow {
-                hour: r.try_get::<i32>("", "h").ok()?,
-                message_count: r.try_get::<i64>("", "mc").ok()?,
-                session_count: r.try_get::<i64>("", "sc").ok()?,
+        let rows = db
+            .query_all(Statement::from_sql_and_values(
+                backend,
+                sql,
+                vec![Value::String(Some(Box::new(cutoff_date.to_string())))],
+            ))
+            .await
+            .map_err(DbError::Database)?;
+        rows.iter()
+            .filter_map(|r| {
+                Some(HourlyActivityRow {
+                    hour: r.try_get::<i32>("", "h").ok()?,
+                    message_count: r.try_get::<i64>("", "mc").ok()?,
+                    session_count: r.try_get::<i64>("", "sc").ok()?,
+                })
             })
-        }).collect()
+            .collect()
     };
 
     // Totals
-    let (total_input_tokens, total_output_tokens, total_cache_read_tokens, total_messages, total_sessions) = {
+    let (
+        total_input_tokens,
+        total_output_tokens,
+        total_cache_read_tokens,
+        total_messages,
+        total_sessions,
+    ) = {
         let sql = "SELECT COALESCE(SUM(input_tokens), 0) as it, COALESCE(SUM(output_tokens), 0) as ot, COALESCE(SUM(cache_read_tokens), 0) as crt, COUNT(*) as mc, COUNT(DISTINCT session_id) as sc FROM messages WHERE timestamp > ?1";
-        let row = db.query_one(Statement::from_sql_and_values(backend, sql, vec![Value::String(Some(Box::new(cutoff_date.to_string())))]))
-            .await.map_err(DbError::Database)?;
+        let row = db
+            .query_one(Statement::from_sql_and_values(
+                backend,
+                sql,
+                vec![Value::String(Some(Box::new(cutoff_date.to_string())))],
+            ))
+            .await
+            .map_err(DbError::Database)?;
         match row {
             Some(r) => (
                 r.try_get::<i64>("", "it").unwrap_or(0),

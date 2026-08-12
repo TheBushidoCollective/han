@@ -70,7 +70,9 @@ pub fn decrypt_field(master_secret: &str, encrypted: &str) -> Result<String, Cry
     let dek = kek::unwrap_dek(master_secret, &wrapped_key)?;
 
     // Decode nonce and ciphertext
-    let nonce_bytes = B64.decode(nonce_b64).map_err(|_| CryptoError::InvalidFormat)?;
+    let nonce_bytes = B64
+        .decode(nonce_b64)
+        .map_err(|_| CryptoError::InvalidFormat)?;
     let ciphertext = B64.decode(ct_b64).map_err(|_| CryptoError::InvalidFormat)?;
 
     if nonce_bytes.len() != NONCE_SIZE {

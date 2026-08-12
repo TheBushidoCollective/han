@@ -4,7 +4,12 @@ use crate::entities::repos;
 use crate::error::{DbError, DbResult};
 use sea_orm::*;
 
-pub async fn upsert(db: &DatabaseConnection, remote: String, name: String, default_branch: Option<String>) -> DbResult<repos::Model> {
+pub async fn upsert(
+    db: &DatabaseConnection,
+    remote: String,
+    name: String,
+    default_branch: Option<String>,
+) -> DbResult<repos::Model> {
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -18,7 +23,11 @@ pub async fn upsert(db: &DatabaseConnection, remote: String, name: String, defau
     })
     .on_conflict(
         sea_query::OnConflict::column(repos::Column::Remote)
-            .update_columns([repos::Column::Name, repos::Column::DefaultBranch, repos::Column::UpdatedAt])
+            .update_columns([
+                repos::Column::Name,
+                repos::Column::DefaultBranch,
+                repos::Column::UpdatedAt,
+            ])
             .to_owned(),
     )
     .exec(db)
@@ -34,7 +43,10 @@ pub async fn upsert(db: &DatabaseConnection, remote: String, name: String, defau
         .ok_or(DbError::NotFound("repo".to_string()))
 }
 
-pub async fn get_by_remote(db: &DatabaseConnection, remote: &str) -> DbResult<Option<repos::Model>> {
+pub async fn get_by_remote(
+    db: &DatabaseConnection,
+    remote: &str,
+) -> DbResult<Option<repos::Model>> {
     repos::Entity::find()
         .filter(repos::Column::Remote.eq(remote))
         .one(db)

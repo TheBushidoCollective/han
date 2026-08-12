@@ -18,8 +18,10 @@ pub async fn upsert(
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
     let topics_json = serde_json::to_string(&topics).unwrap_or_else(|_| "[]".to_string());
-    let files_json = files_modified.map(|f| serde_json::to_string(&f).unwrap_or_else(|_| "[]".to_string()));
-    let tools_json = tools_used.map(|t| serde_json::to_string(&t).unwrap_or_else(|_| "[]".to_string()));
+    let files_json =
+        files_modified.map(|f| serde_json::to_string(&f).unwrap_or_else(|_| "[]".to_string()));
+    let tools_json =
+        tools_used.map(|t| serde_json::to_string(&t).unwrap_or_else(|_| "[]".to_string()));
 
     let session_id_clone = session_id.clone();
 
@@ -63,7 +65,10 @@ pub async fn upsert(
         .ok_or(DbError::NotFound("generated_session_summary".to_string()))
 }
 
-pub async fn get(db: &DatabaseConnection, session_id: &str) -> DbResult<Option<generated_session_summaries::Model>> {
+pub async fn get(
+    db: &DatabaseConnection,
+    session_id: &str,
+) -> DbResult<Option<generated_session_summaries::Model>> {
     generated_session_summaries::Entity::find()
         .filter(generated_session_summaries::Column::SessionId.eq(session_id))
         .one(db)
@@ -71,7 +76,10 @@ pub async fn get(db: &DatabaseConnection, session_id: &str) -> DbResult<Option<g
         .map_err(DbError::Database)
 }
 
-pub async fn list_sessions_without_summaries(db: &DatabaseConnection, limit: Option<u64>) -> DbResult<Vec<String>> {
+pub async fn list_sessions_without_summaries(
+    db: &DatabaseConnection,
+    limit: Option<u64>,
+) -> DbResult<Vec<String>> {
     use sea_orm::{ConnectionTrait, Statement};
 
     let sql = "SELECT s.id FROM sessions s LEFT JOIN generated_session_summaries g ON s.id = g.session_id WHERE g.id IS NULL ORDER BY s.id DESC LIMIT ?1";

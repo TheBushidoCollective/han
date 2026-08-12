@@ -122,7 +122,9 @@ pub async fn update(
                 current.push(b);
             }
         }
-        active.blocks = Set(Some(serde_json::to_string(&current).unwrap_or_else(|_| "[]".to_string())));
+        active.blocks = Set(Some(
+            serde_json::to_string(&current).unwrap_or_else(|_| "[]".to_string()),
+        ));
     }
 
     if let Some(new_blocked_by) = add_blocked_by {
@@ -136,14 +138,20 @@ pub async fn update(
                 current.push(b);
             }
         }
-        active.blocked_by = Set(Some(serde_json::to_string(&current).unwrap_or_else(|_| "[]".to_string())));
+        active.blocked_by = Set(Some(
+            serde_json::to_string(&current).unwrap_or_else(|_| "[]".to_string()),
+        ));
     }
 
     let result = active.update(db).await.map_err(DbError::Database)?;
     Ok(Some(result))
 }
 
-pub async fn get(db: &DatabaseConnection, session_id: &str, task_id: &str) -> DbResult<Option<native_tasks::Model>> {
+pub async fn get(
+    db: &DatabaseConnection,
+    session_id: &str,
+    task_id: &str,
+) -> DbResult<Option<native_tasks::Model>> {
     native_tasks::Entity::find()
         .filter(native_tasks::Column::SessionId.eq(session_id))
         .filter(native_tasks::Column::Id.eq(task_id))
@@ -152,7 +160,10 @@ pub async fn get(db: &DatabaseConnection, session_id: &str, task_id: &str) -> Db
         .map_err(DbError::Database)
 }
 
-pub async fn get_by_session(db: &DatabaseConnection, session_id: &str) -> DbResult<Vec<native_tasks::Model>> {
+pub async fn get_by_session(
+    db: &DatabaseConnection,
+    session_id: &str,
+) -> DbResult<Vec<native_tasks::Model>> {
     native_tasks::Entity::find()
         .filter(native_tasks::Column::SessionId.eq(session_id))
         .order_by_asc(native_tasks::Column::CreatedAt)

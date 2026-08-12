@@ -7,12 +7,12 @@ pub mod cache;
 pub mod discovery;
 pub mod executor;
 
-use cache::{CacheKey, HookCache, hash_string};
-use discovery::{DiscoveredHook, discover_hooks, find_matching_hooks};
-use executor::{HookOutputLine, execute_hook};
+use cache::{hash_string, CacheKey, HookCache};
+use discovery::{discover_hooks, find_matching_hooks, DiscoveredHook};
+use executor::{execute_hook, HookOutputLine};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tokio::sync::{Mutex, mpsc};
+use tokio::sync::{mpsc, Mutex};
 
 /// Hook execution engine managing discovery, caching, and execution.
 pub struct HookEngine {
@@ -113,11 +113,7 @@ impl HookEngine {
             {
                 let cache = self.cache.lock().await;
                 if cache.is_valid(&cache_key, &affected_files) && !affected_files.is_empty() {
-                    tracing::debug!(
-                        "Hook {}:{} skipped (cache valid)",
-                        hook.plugin_name,
-                        event
-                    );
+                    tracing::debug!("Hook {}:{} skipped (cache valid)", hook.plugin_name, event);
 
                     // Send cached completion
                     let _ = output_tx
@@ -179,14 +175,8 @@ impl HookEngine {
                 }
             });
 
-            let exec_result = execute_hook(
-                &command,
-                working_dir,
-                &hook_env,
-                hook.timeout,
-                line_tx,
-            )
-            .await;
+            let exec_result =
+                execute_hook(&command, working_dir, &hook_env, hook.timeout, line_tx).await;
 
             let _ = forward_handle.await;
 
@@ -326,9 +316,7 @@ mod tests {
 
         let (tx, _rx) = mpsc::channel(256);
 
-        let results = engine
-            .execute_event("Stop", None, None, &[], tx)
-            .await;
+        let results = engine.execute_event("Stop", None, None, &[], tx).await;
 
         // Prompt-only hooks are skipped (no command to execute)
         assert!(results.is_empty());
@@ -350,13 +338,25 @@ mod tests {
 
         let (tx1, _rx1) = mpsc::channel(256);
         let results = engine
-            .execute_event("PreToolUse", Some("Bash"), Some(Path::new("/tmp")), &[], tx1)
+            .execute_event(
+                "PreToolUse",
+                Some("Bash"),
+                Some(Path::new("/tmp")),
+                &[],
+                tx1,
+            )
             .await;
         assert_eq!(results.len(), 1); // Should match
 
         let (tx2, _rx2) = mpsc::channel(256);
         let results = engine
-            .execute_event("PreToolUse", Some("Read"), Some(Path::new("/tmp")), &[], tx2)
+            .execute_event(
+                "PreToolUse",
+                Some("Read"),
+                Some(Path::new("/tmp")),
+                &[],
+                tx2,
+            )
             .await;
         assert!(results.is_empty()); // Should not match
     }

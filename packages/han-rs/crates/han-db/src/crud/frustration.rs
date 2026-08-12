@@ -16,7 +16,8 @@ pub async fn record(
 ) -> DbResult<frustration_events::Model> {
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
-    let signals_json = detected_signals.map(|s| serde_json::to_string(&s).unwrap_or_else(|_| "[]".to_string()));
+    let signals_json =
+        detected_signals.map(|s| serde_json::to_string(&s).unwrap_or_else(|_| "[]".to_string()));
 
     let result = frustration_events::Entity::insert(frustration_events::ActiveModel {
         id: Set(id),

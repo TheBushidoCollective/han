@@ -60,10 +60,7 @@ pub async fn establish_connection(config: DbConfig) -> Result<DatabaseConnection
             max_connections,
             min_connections,
             ..
-        } => (
-            max_connections.unwrap_or(20),
-            min_connections.unwrap_or(2),
-        ),
+        } => (max_connections.unwrap_or(20), min_connections.unwrap_or(2)),
         _ => (5, 1),
     };
 

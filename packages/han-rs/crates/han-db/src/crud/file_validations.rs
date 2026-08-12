@@ -66,7 +66,10 @@ pub async fn record(
         .ok_or(DbError::NotFound("session_file_validation".to_string()))
 }
 
-pub async fn get_by_session(db: &DatabaseConnection, session_id: &str) -> DbResult<Vec<session_file_validations::Model>> {
+pub async fn get_by_session(
+    db: &DatabaseConnection,
+    session_id: &str,
+) -> DbResult<Vec<session_file_validations::Model>> {
     session_file_validations::Entity::find()
         .filter(session_file_validations::Column::SessionId.eq(session_id))
         .all(db)

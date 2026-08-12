@@ -3,7 +3,7 @@
 //! Uses Argon2id to derive KEK from master secret, then wraps/unwraps
 //! Data Encryption Keys (DEKs) with AES-256-GCM.
 
-use argon2::{Argon2, Algorithm, Params, Version};
+use argon2::{Algorithm, Argon2, Params, Version};
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use rand::RngCore;
 
@@ -49,7 +49,9 @@ pub fn derive_kek(master_secret: &str, salt: &[u8]) -> Result<[u8; KEY_SIZE], Cr
 }
 
 /// Generate a new DEK and wrap it with a KEK derived from the master secret.
-pub fn generate_and_wrap_dek(master_secret: &str) -> Result<([u8; KEY_SIZE], WrappedKey), CryptoError> {
+pub fn generate_and_wrap_dek(
+    master_secret: &str,
+) -> Result<([u8; KEY_SIZE], WrappedKey), CryptoError> {
     let dek = aes_gcm::generate_key();
 
     // Generate random salt for KEK derivation
@@ -62,15 +64,21 @@ pub fn generate_and_wrap_dek(master_secret: &str) -> Result<([u8; KEY_SIZE], Wra
     // Wrap DEK with KEK using AES-256-GCM
     let (wrapped, nonce) = aes_gcm::encrypt(&kek, &dek)?;
 
-    Ok((dek, WrappedKey {
-        wrapped_dek: B64.encode(&wrapped),
-        wrap_nonce: B64.encode(nonce),
-        kek_salt: B64.encode(salt),
-    }))
+    Ok((
+        dek,
+        WrappedKey {
+            wrapped_dek: B64.encode(&wrapped),
+            wrap_nonce: B64.encode(nonce),
+            kek_salt: B64.encode(salt),
+        },
+    ))
 }
 
 /// Unwrap a DEK using a KEK derived from the master secret.
-pub fn unwrap_dek(master_secret: &str, wrapped: &WrappedKey) -> Result<[u8; KEY_SIZE], CryptoError> {
+pub fn unwrap_dek(
+    master_secret: &str,
+    wrapped: &WrappedKey,
+) -> Result<[u8; KEY_SIZE], CryptoError> {
     let salt = B64
         .decode(&wrapped.kek_salt)
         .map_err(|_| CryptoError::InvalidFormat)?;

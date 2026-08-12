@@ -523,7 +523,11 @@ pub fn estimate_human_time_ms(parsed: &ParsedMessage) -> Option<i32> {
                 ms += lines_added as f64 * 12_000.0;
             }
 
-            if ms > 0.0 { Some(ms as i32) } else { None }
+            if ms > 0.0 {
+                Some(ms as i32)
+            } else {
+                None
+            }
         }
         MessageType::User => {
             // Scale by content length: short confirmations ("y", "ok") get less time,
@@ -547,7 +551,11 @@ pub fn estimate_human_time_ms(parsed: &ParsedMessage) -> Option<i32> {
                 "TodoWrite" | "TodoRead" => 0.0, // No human equivalent
                 _ => 15.0,
             };
-            if secs > 0.0 { Some((secs * 1000.0) as i32) } else { None }
+            if secs > 0.0 {
+                Some((secs * 1000.0) as i32)
+            } else {
+                None
+            }
         }
         _ => None,
     }
@@ -780,11 +788,7 @@ fn decode_project_path(slug: &str) -> String {
     }
 
     // Known domain patterns: `github-com` → `github.com`
-    let domain_dots = [
-        ("github", "com"),
-        ("gitlab", "com"),
-        ("bitbucket", "org"),
-    ];
+    let domain_dots = [("github", "com"), ("gitlab", "com"), ("bitbucket", "org")];
 
     let mut path = String::new();
     let mut i = 0;
@@ -1127,7 +1131,9 @@ fn extract_tool_call_results(
     message_id: &str,
     batch: &mut Vec<han_db::entities::tool_call_results::ActiveModel>,
 ) {
-    let Ok(json) = serde_json::from_str::<Value>(raw_json) else { return };
+    let Ok(json) = serde_json::from_str::<Value>(raw_json) else {
+        return;
+    };
     let Some(content) = json
         .get("message")
         .and_then(|m| m.get("content"))
@@ -1144,12 +1150,18 @@ fn extract_tool_call_results(
             continue;
         };
 
-        let is_error = block.get("is_error").and_then(|e| e.as_bool()).unwrap_or(false);
+        let is_error = block
+            .get("is_error")
+            .and_then(|e| e.as_bool())
+            .unwrap_or(false);
         let text_content = extract_tool_result_text(block);
         let has_image = block
             .get("content")
             .and_then(|c| c.as_array())
-            .map(|arr| arr.iter().any(|c| c.get("type").and_then(|t| t.as_str()) == Some("image")))
+            .map(|arr| {
+                arr.iter()
+                    .any(|c| c.get("type").and_then(|t| t.as_str()) == Some("image"))
+            })
             .unwrap_or(false);
 
         batch.push(han_db::entities::tool_call_results::ActiveModel {
@@ -1174,7 +1186,9 @@ fn extract_tool_result_text(block: &Value) -> String {
                 .iter()
                 .filter_map(|c| {
                     if c.get("type").and_then(|t| t.as_str()) == Some("text") {
-                        c.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
+                        c.get("text")
+                            .and_then(|t| t.as_str())
+                            .map(|s| s.to_string())
                     } else {
                         None
                     }
@@ -1349,7 +1363,11 @@ fn should_compute_sentiment(raw_json: &str) -> bool {
     };
 
     // Exclude isMeta messages (system-injected, not real human input)
-    if json.get("isMeta").and_then(|v| v.as_bool()).unwrap_or(false) {
+    if json
+        .get("isMeta")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+    {
         return false;
     }
 
@@ -1383,9 +1401,7 @@ fn should_compute_sentiment(raw_json: &str) -> bool {
     true
 }
 
-fn compute_sentiment(
-    content: &str,
-) -> (Option<f64>, Option<String>, Option<f64>, Option<String>) {
+fn compute_sentiment(content: &str) -> (Option<f64>, Option<String>, Option<f64>, Option<String>) {
     match sentiment::analyze_sentiment(content) {
         Some(result) => (
             Some(result.sentiment_score),
@@ -1565,10 +1581,7 @@ pub async fn index_session_file(
     // messages produces `unknown`-typed rows whose ids collide with the han
     // event rows written below, which then silently fail to insert. The han
     // events pass further down is the only reader this file needs.
-    let is_han_events_file = matches!(
-        classify_file(path),
-        ClassifiedFile::HanEvents { .. }
-    );
+    let is_han_events_file = matches!(classify_file(path), ClassifiedFile::HanEvents { .. });
 
     if !is_han_events_file {
         let result = jsonl_read_page(path, start_line, u32::MAX)?;
@@ -1603,7 +1616,8 @@ pub async fn index_session_file(
     // Pass 2: Finalize messages and insert in batches
     let mut total_indexed = 0u32;
     let mut messages_batch: Vec<messages::ActiveModel> = Vec::new();
-    let mut tool_call_results_batch: Vec<han_db::entities::tool_call_results::ActiveModel> = Vec::new();
+    let mut tool_call_results_batch: Vec<han_db::entities::tool_call_results::ActiveModel> =
+        Vec::new();
     let mut last_known_timestamp: Option<String> = None;
     // Track sequential TaskCreate positions for TaskUpdate ID resolution
     let mut task_create_ids: Vec<String> = Vec::new();
@@ -1671,7 +1685,8 @@ pub async fn index_session_file(
                     // Detect TeamCreate tool calls for team_name
                     if tn == "TeamCreate" {
                         if let Some(team_name) = extract_team_name_from_input(ti) {
-                            let _ = crud::sessions::update_team_name(db, &session_id, &team_name).await;
+                            let _ =
+                                crud::sessions::update_team_name(db, &session_id, &team_name).await;
                         }
                     }
                 }
@@ -1681,7 +1696,8 @@ pub async fn index_session_file(
             if finalized.message_type == MessageType::ToolResult {
                 if let Some(ref result) = finalized.tool_result {
                     if let Some((pr_number, pr_url)) = extract_pr_from_bash_result(result) {
-                        let _ = crud::sessions::update_pr_info(db, &session_id, pr_number, &pr_url).await;
+                        let _ = crud::sessions::update_pr_info(db, &session_id, pr_number, &pr_url)
+                            .await;
                     }
                 }
             }
@@ -1754,8 +1770,15 @@ pub async fn index_session_file(
                                     // Detect TeamCreate for team_name
                                     if tool_name == "TeamCreate" {
                                         if let Some(input) = item.get("input") {
-                                            if let Some(team_name) = extract_team_name_from_input(&input.to_string()) {
-                                                let _ = crud::sessions::update_team_name(db, &session_id, &team_name).await;
+                                            if let Some(team_name) =
+                                                extract_team_name_from_input(&input.to_string())
+                                            {
+                                                let _ = crud::sessions::update_team_name(
+                                                    db,
+                                                    &session_id,
+                                                    &team_name,
+                                                )
+                                                .await;
                                             }
                                         }
                                     }
@@ -1766,9 +1789,8 @@ pub async fn index_session_file(
                                             .and_then(|v| v.as_str())
                                             .map(|s| s.to_string())
                                             .unwrap_or_else(|| Uuid::new_v4().to_string());
-                                        let tool_input_str = item
-                                            .get("input")
-                                            .map(|v| v.to_string());
+                                        let tool_input_str =
+                                            item.get("input").map(|v| v.to_string());
                                         // Estimate human time for this tool_use
                                         let tool_use_msg = ParsedMessage {
                                             message_type: MessageType::ToolUse,
@@ -1809,9 +1831,17 @@ pub async fn index_session_file(
                                             line_number,
                                             source_file_name.clone(),
                                             source_file_type.clone(),
-                                            None, None, None, None,
-                                            None, None, None, None,
-                                            None, None, None,
+                                            None,
+                                            None,
+                                            None,
+                                            None,
+                                            None,
+                                            None,
+                                            None,
+                                            None,
+                                            None,
+                                            None,
+                                            None,
                                             tool_human_time,
                                         ));
                                     }
@@ -1939,7 +1969,9 @@ pub async fn index_session_file(
 
     // Insert tool call results index
     if !tool_call_results_batch.is_empty() {
-        let _ = crud::tool_call_results::insert_batch(db, std::mem::take(&mut tool_call_results_batch)).await;
+        let _ =
+            crud::tool_call_results::insert_batch(db, std::mem::take(&mut tool_call_results_batch))
+                .await;
     }
 
     // =========================================================================
@@ -2270,14 +2302,7 @@ async fn process_task_event(
                     .and_then(|v| v.as_str())
                     .map(String::from);
 
-                let _ = crud::tasks::fail(
-                    db,
-                    tid,
-                    reason.to_string(),
-                    confidence,
-                    notes,
-                )
-                .await;
+                let _ = crud::tasks::fail(db, tid, reason.to_string(), confidence, notes).await;
             }
             Ok(true)
         }
@@ -2355,15 +2380,13 @@ pub async fn index_project_directory(
     let mut results = Vec::new();
 
     for path in &main_files {
-        let result =
-            index_session_file(db, &path.to_string_lossy(), source_config_dir).await?;
+        let result = index_session_file(db, &path.to_string_lossy(), source_config_dir).await?;
         results.push(result);
         tokio::task::yield_now().await;
     }
 
     for path in &agent_files {
-        let result =
-            index_session_file(db, &path.to_string_lossy(), source_config_dir).await?;
+        let result = index_session_file(db, &path.to_string_lossy(), source_config_dir).await?;
         results.push(result);
         tokio::task::yield_now().await;
     }
@@ -2375,8 +2398,7 @@ pub async fn index_project_directory(
         if has_native_sibling(path) {
             continue;
         }
-        let result =
-            index_session_file(db, &path.to_string_lossy(), source_config_dir).await?;
+        let result = index_session_file(db, &path.to_string_lossy(), source_config_dir).await?;
         results.push(result);
         tokio::task::yield_now().await;
     }
@@ -2402,8 +2424,7 @@ pub async fn handle_file_event(
             // is how every bridged harness reports, so index it directly.
             if filename.ends_with("-han") {
                 if let Some(main_file) = native_sibling(path) {
-                    let result =
-                        index_session_file(db, &main_file.to_string_lossy(), None).await?;
+                    let result = index_session_file(db, &main_file.to_string_lossy(), None).await?;
                     return Ok(Some(result));
                 }
             }
@@ -2448,9 +2469,8 @@ pub async fn full_scan_and_index(db: &DatabaseConnection) -> ProcessorResult<Vec
 
     let config_dirs = crud::config_dirs::list(db).await?;
 
-    let home = dirs::home_dir().ok_or_else(|| {
-        ProcessorError::Other("Could not determine home directory".to_string())
-    })?;
+    let home = dirs::home_dir()
+        .ok_or_else(|| ProcessorError::Other("Could not determine home directory".to_string()))?;
     let default_claude_dir = home.join(".claude");
 
     let mut dirs_to_scan: Vec<std::path::PathBuf> = config_dirs
@@ -2497,12 +2517,8 @@ pub async fn full_scan_and_index(db: &DatabaseConnection) -> ProcessorResult<Vec
             let path = entry.path();
             if path.is_dir() {
                 let config_dir_str = config_dir.to_string_lossy().to_string();
-                match index_project_directory(
-                    db,
-                    &path.to_string_lossy(),
-                    Some(&config_dir_str),
-                )
-                .await
+                match index_project_directory(db, &path.to_string_lossy(), Some(&config_dir_str))
+                    .await
                 {
                     Ok(project_results) => results.extend(project_results),
                     Err(e) => {
@@ -2527,7 +2543,6 @@ pub async fn full_scan_and_index(db: &DatabaseConnection) -> ProcessorResult<Vec
 mod tests {
     use super::*;
 
-
     #[test]
     fn test_harness_from_claude_path_is_default() {
         let path = Path::new(
@@ -2538,7 +2553,14 @@ mod tests {
 
     #[test]
     fn test_harness_from_bridge_path() {
-        for harness in ["omp", "opencode", "gemini-cli", "kiro", "codex", "antigravity"] {
+        for harness in [
+            "omp",
+            "opencode",
+            "gemini-cli",
+            "kiro",
+            "codex",
+            "antigravity",
+        ] {
             let path = std::path::PathBuf::from("/home/user/.han")
                 .join(harness)
                 .join("projects/-Users-me-proj/abc12345-1234-5678-9abc-def012345678-han.jsonl");
@@ -2610,13 +2632,17 @@ mod tests {
     }
     #[test]
     fn test_classify_file_main() {
-        let path = Path::new("/home/user/.claude/projects/test/abc12345-1234-5678-9abc-def012345678.jsonl");
+        let path = Path::new(
+            "/home/user/.claude/projects/test/abc12345-1234-5678-9abc-def012345678.jsonl",
+        );
         assert!(matches!(classify_file(path), ClassifiedFile::Main { .. }));
     }
 
     #[test]
     fn test_classify_file_main_messages() {
-        let path = Path::new("/home/user/.claude/projects/test/abc12345-1234-5678-9abc-def012345678_messages.jsonl");
+        let path = Path::new(
+            "/home/user/.claude/projects/test/abc12345-1234-5678-9abc-def012345678_messages.jsonl",
+        );
         assert!(matches!(classify_file(path), ClassifiedFile::Main { .. }));
     }
 
@@ -2628,14 +2654,24 @@ mod tests {
 
     #[test]
     fn test_classify_file_han_events() {
-        let path = Path::new("/home/user/.claude/projects/test/abc12345-1234-5678-9abc-def012345678-han.jsonl");
-        assert!(matches!(classify_file(path), ClassifiedFile::HanEvents { .. }));
+        let path = Path::new(
+            "/home/user/.claude/projects/test/abc12345-1234-5678-9abc-def012345678-han.jsonl",
+        );
+        assert!(matches!(
+            classify_file(path),
+            ClassifiedFile::HanEvents { .. }
+        ));
     }
 
     #[test]
     fn test_classify_file_cli_han() {
-        let path = Path::new("/home/user/.claude/projects/test/cli-abc12345-1234-5678-9abc-def012345678-han.jsonl");
-        assert!(matches!(classify_file(path), ClassifiedFile::HanEvents { .. }));
+        let path = Path::new(
+            "/home/user/.claude/projects/test/cli-abc12345-1234-5678-9abc-def012345678-han.jsonl",
+        );
+        assert!(matches!(
+            classify_file(path),
+            ClassifiedFile::HanEvents { .. }
+        ));
     }
 
     #[test]
@@ -2652,8 +2688,12 @@ mod tests {
 
     #[test]
     fn test_is_valid_cli_session_id() {
-        assert!(is_valid_cli_session_id("cli-abc12345-1234-5678-9abc-def012345678"));
-        assert!(!is_valid_cli_session_id("abc12345-1234-5678-9abc-def012345678"));
+        assert!(is_valid_cli_session_id(
+            "cli-abc12345-1234-5678-9abc-def012345678"
+        ));
+        assert!(!is_valid_cli_session_id(
+            "abc12345-1234-5678-9abc-def012345678"
+        ));
         assert!(!is_valid_cli_session_id("cli-short"));
     }
 
@@ -2719,8 +2759,7 @@ mod tests {
 
     #[test]
     fn test_extract_message_content_string() {
-        let json: Value =
-            serde_json::from_str(r#"{"message":{"content":"Hello world"}}"#).unwrap();
+        let json: Value = serde_json::from_str(r#"{"message":{"content":"Hello world"}}"#).unwrap();
         assert_eq!(
             extract_message_content(&json),
             Some("Hello world".to_string())

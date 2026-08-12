@@ -8,13 +8,13 @@
 //! - SlotService: in-memory HashMap
 //! - MemoryService: han-db FTS search
 
-use han_proto::coordinator::*;
 use han_proto::coordinator::coordinator_service_server::CoordinatorService as CoordinatorServiceTrait;
-use han_proto::coordinator::session_service_server::SessionService as SessionServiceTrait;
-use han_proto::coordinator::indexer_service_server::IndexerService as IndexerServiceTrait;
 use han_proto::coordinator::hook_service_server::HookService as HookServiceTrait;
-use han_proto::coordinator::slot_service_server::SlotService as SlotServiceTrait;
+use han_proto::coordinator::indexer_service_server::IndexerService as IndexerServiceTrait;
 use han_proto::coordinator::memory_service_server::MemoryService as MemoryServiceTrait;
+use han_proto::coordinator::session_service_server::SessionService as SessionServiceTrait;
+use han_proto::coordinator::slot_service_server::SlotService as SlotServiceTrait;
+use han_proto::coordinator::*;
 
 use crate::hooks::executor::HookOutputLine;
 use crate::hooks::HookEngine;
@@ -24,7 +24,7 @@ use sea_orm::DatabaseConnection;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
-use tokio::sync::{Mutex, RwLock, mpsc};
+use tokio::sync::{mpsc, Mutex, RwLock};
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
 
@@ -58,10 +58,7 @@ pub struct CoordinatorServiceImpl {
 
 #[tonic::async_trait]
 impl CoordinatorServiceTrait for CoordinatorServiceImpl {
-    async fn health(
-        &self,
-        _request: Request<Empty>,
-    ) -> Result<Response<HealthResponse>, Status> {
+    async fn health(&self, _request: Request<Empty>) -> Result<Response<HealthResponse>, Status> {
         let uptime = self.state.start_time.elapsed().as_millis() as i64;
         Ok(Response::new(HealthResponse {
             healthy: true,
@@ -70,10 +67,7 @@ impl CoordinatorServiceTrait for CoordinatorServiceImpl {
         }))
     }
 
-    async fn shutdown(
-        &self,
-        request: Request<ShutdownRequest>,
-    ) -> Result<Response<Empty>, Status> {
+    async fn shutdown(&self, request: Request<ShutdownRequest>) -> Result<Response<Empty>, Status> {
         let req = request.into_inner();
         tracing::info!(
             "Shutdown requested (graceful={}, timeout={}s)",
@@ -83,10 +77,8 @@ impl CoordinatorServiceTrait for CoordinatorServiceImpl {
 
         tokio::spawn(async move {
             if req.graceful && req.timeout_seconds > 0 {
-                tokio::time::sleep(std::time::Duration::from_secs(
-                    req.timeout_seconds as u64,
-                ))
-                .await;
+                tokio::time::sleep(std::time::Duration::from_secs(req.timeout_seconds as u64))
+                    .await;
             }
             std::process::exit(0);
         });
@@ -94,22 +86,12 @@ impl CoordinatorServiceTrait for CoordinatorServiceImpl {
         Ok(Response::new(Empty {}))
     }
 
-    async fn status(
-        &self,
-        _request: Request<Empty>,
-    ) -> Result<Response<StatusResponse>, Status> {
+    async fn status(&self, _request: Request<Empty>) -> Result<Response<StatusResponse>, Status> {
         let uptime = self.state.start_time.elapsed().as_secs();
 
-        let sessions = crud::sessions::list(
-            &self.state.db,
-            None,
-            None,
-            None,
-            Some(0),
-            Some(0),
-        )
-        .await
-        .unwrap_or_default();
+        let sessions = crud::sessions::list(&self.state.db, None, None, None, Some(0), Some(0))
+            .await
+            .unwrap_or_default();
         let session_count = sessions.len() as i64;
 
         Ok(Response::new(StatusResponse {
@@ -152,16 +134,10 @@ impl SessionServiceTrait for SessionServiceImpl {
         &self,
         _request: Request<GetActiveSessionRequest>,
     ) -> Result<Response<SessionResponse>, Status> {
-        let sessions = crud::sessions::list(
-            &self.state.db,
-            None,
-            Some("active"),
-            None,
-            Some(1),
-            Some(0),
-        )
-        .await
-        .map_err(|e| Status::internal(e.to_string()))?;
+        let sessions =
+            crud::sessions::list(&self.state.db, None, Some("active"), None, Some(1), Some(0))
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
 
         let session = sessions.first().map(model_to_session_data);
         Ok(Response::new(SessionResponse { session }))
@@ -558,7 +534,10 @@ mod tests {
         assert_eq!(data.project_id, Some("proj-1".to_string()));
         assert_eq!(data.status, Some("active".to_string()));
         assert_eq!(data.session_slug, Some("my-session".to_string()));
-        assert_eq!(data.session_file_path, Some("/path/to/file.jsonl".to_string()));
+        assert_eq!(
+            data.session_file_path,
+            Some("/path/to/file.jsonl".to_string())
+        );
         assert_eq!(data.last_indexed_line, Some(42));
     }
 
@@ -684,10 +663,7 @@ mod tests {
         };
 
         // Empty initially
-        let resp = svc
-            .list(Request::new(ListSlotsRequest {}))
-            .await
-            .unwrap();
+        let resp = svc.list(Request::new(ListSlotsRequest {})).await.unwrap();
         assert!(resp.into_inner().slots.is_empty());
 
         // Add two slots
@@ -706,10 +682,7 @@ mod tests {
             }))
             .await;
 
-        let resp = svc
-            .list(Request::new(ListSlotsRequest {}))
-            .await
-            .unwrap();
+        let resp = svc.list(Request::new(ListSlotsRequest {})).await.unwrap();
         let slots = resp.into_inner().slots;
         assert_eq!(slots.len(), 2);
     }
@@ -723,9 +696,7 @@ mod tests {
 
         // Should return empty list when no plugins installed
         let resp = svc
-            .list_hooks(Request::new(ListHooksRequest {
-                event_filter: None,
-            }))
+            .list_hooks(Request::new(ListHooksRequest { event_filter: None }))
             .await
             .unwrap();
         // May have hooks from installed plugins, but should not error

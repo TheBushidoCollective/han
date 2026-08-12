@@ -1,5 +1,7 @@
 //! Route definitions and handlers.
 
+use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
+use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{
     extract::State,
     http::StatusCode,
@@ -7,8 +9,6 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
-use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use serde_json::json;
 
 use han_api::context::GraphQLContext;
@@ -45,10 +45,7 @@ async fn health_handler() -> impl IntoResponse {
 }
 
 /// GraphQL query/mutation handler with optional auth.
-async fn graphql_handler(
-    State(state): State<AppState>,
-    req: GraphQLRequest,
-) -> GraphQLResponse {
+async fn graphql_handler(State(state): State<AppState>, req: GraphQLRequest) -> GraphQLResponse {
     // Extract auth from the request headers would need manual handling here.
     // For simplicity, create context without user - auth is added via GraphQL directives.
     let ctx = GraphQLContext::new(state.db.clone(), state.event_sender.clone());
@@ -58,9 +55,7 @@ async fn graphql_handler(
 
 /// GraphQL Playground UI.
 async fn graphql_playground() -> impl IntoResponse {
-    axum::response::Html(playground_source(
-        GraphQLPlaygroundConfig::new("/graphql"),
-    ))
+    axum::response::Html(playground_source(GraphQLPlaygroundConfig::new("/graphql")))
 }
 
 /// Session sync wrapper that handles auth inline.
@@ -214,7 +209,11 @@ async fn refresh_token_handler(
         }
     };
 
-    match generate_token_pair(&state.config.jwt_secret, &claims.sub, claims.team_id.as_deref()) {
+    match generate_token_pair(
+        &state.config.jwt_secret,
+        &claims.sub,
+        claims.team_id.as_deref(),
+    ) {
         Ok(tokens) => (StatusCode::OK, Json(json!(tokens))),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -229,9 +228,7 @@ async fn extract_auth(state: &AppState, headers: &axum::http::HeaderMap) -> Opti
     use crate::auth::jwt::{validate_token, TokenType};
     use crate::auth::middleware::AuthMethod;
 
-    let auth_header = headers
-        .get("authorization")
-        .and_then(|v| v.to_str().ok())?;
+    let auth_header = headers.get("authorization").and_then(|v| v.to_str().ok())?;
 
     let token = auth_header.strip_prefix("Bearer ")?;
 
@@ -291,7 +288,10 @@ async fn upsert_user(
         active.avatar_url = Set(github_user.avatar_url.clone());
         active.github_username = Set(Some(github_user.login.clone()));
         active.updated_at = Set(chrono::Utc::now().to_rfc3339());
-        active.update(db).await.map_err(|e| format!("Update failed: {e}"))?;
+        active
+            .update(db)
+            .await
+            .map_err(|e| format!("Update failed: {e}"))?;
         return Ok(user.id);
     }
 
@@ -308,7 +308,10 @@ async fn upsert_user(
             active.github_username = Set(Some(github_user.login.clone()));
             active.avatar_url = Set(github_user.avatar_url.clone());
             active.updated_at = Set(chrono::Utc::now().to_rfc3339());
-            active.update(db).await.map_err(|e| format!("Update failed: {e}"))?;
+            active
+                .update(db)
+                .await
+                .map_err(|e| format!("Update failed: {e}"))?;
             return Ok(user.id);
         }
     }
@@ -331,7 +334,10 @@ async fn upsert_user(
         updated_at: Set(now),
     };
 
-    active.insert(db).await.map_err(|e| format!("Insert failed: {e}"))?;
+    active
+        .insert(db)
+        .await
+        .map_err(|e| format!("Insert failed: {e}"))?;
     Ok(user_id)
 }
 

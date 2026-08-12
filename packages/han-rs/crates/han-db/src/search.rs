@@ -99,7 +99,11 @@ impl SqliteSearch {
         };
 
         let stmt = Statement::from_sql_and_values(sea_orm::DatabaseBackend::Sqlite, &sql, params);
-        let rows = self.db.query_all(stmt).await.map_err(crate::error::DbError::Database)?;
+        let rows = self
+            .db
+            .query_all(stmt)
+            .await
+            .map_err(crate::error::DbError::Database)?;
 
         let mut results = Vec::new();
         for row in rows {
@@ -107,7 +111,9 @@ impl SqliteSearch {
                 id: row.try_get::<String>("", "id").unwrap_or_default(),
                 session_id: row.try_get::<String>("", "session_id").unwrap_or_default(),
                 content: row.try_get::<String>("", "content").unwrap_or_default(),
-                message_type: row.try_get::<String>("", "message_type").unwrap_or_default(),
+                message_type: row
+                    .try_get::<String>("", "message_type")
+                    .unwrap_or_default(),
                 timestamp: row.try_get::<String>("", "timestamp").unwrap_or_default(),
                 score: row.try_get::<f64>("", "score").unwrap_or(0.0).abs(),
             };
@@ -146,14 +152,20 @@ impl SqliteSearch {
             ],
         );
 
-        let rows = self.db.query_all(stmt).await.map_err(crate::error::DbError::Database)?;
+        let rows = self
+            .db
+            .query_all(stmt)
+            .await
+            .map_err(crate::error::DbError::Database)?;
 
         let mut results = Vec::new();
         for row in rows {
             let result = GeneratedSummarySearchResult {
                 id: row.try_get::<String>("", "id").unwrap_or_default(),
                 session_id: row.try_get::<String>("", "session_id").unwrap_or_default(),
-                summary_text: row.try_get::<String>("", "summary_text").unwrap_or_default(),
+                summary_text: row
+                    .try_get::<String>("", "summary_text")
+                    .unwrap_or_default(),
                 topics: row.try_get::<String>("", "topics").unwrap_or_default(),
                 score: row.try_get::<f64>("", "score").unwrap_or(0.0).abs(),
             };

@@ -7,10 +7,10 @@
 use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{
-    Router,
     extract::{State, WebSocketUpgrade},
     response::{Html, IntoResponse},
     routing::{get, post},
+    Router,
 };
 use han_api::HanSchema;
 use std::sync::Arc;
@@ -190,10 +190,7 @@ pub fn build_router(schema: HanSchema, start_time: Instant) -> Router {
 
     Router::new()
         .route("/health", get(health_handler))
-        .route(
-            "/graphql",
-            post(graphql_handler).get(graphql_ws_handler),
-        )
+        .route("/graphql", post(graphql_handler).get(graphql_ws_handler))
         .route("/graphiql", get(graphiql_handler))
         .layer(cors)
         .with_state(state)

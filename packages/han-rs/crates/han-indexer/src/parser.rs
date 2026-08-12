@@ -62,11 +62,7 @@ pub fn jsonl_count_lines(file_path: &Path) -> ParserResult<u32> {
 }
 
 /// Read a page of lines from a JSONL file.
-pub fn jsonl_read_page(
-    file_path: &Path,
-    offset: u32,
-    limit: u32,
-) -> ParserResult<PaginatedResult> {
+pub fn jsonl_read_page(file_path: &Path, offset: u32, limit: u32) -> ParserResult<PaginatedResult> {
     use memmap2::Mmap;
     use std::fs::File;
 
@@ -296,11 +292,7 @@ mod tests {
 
     #[test]
     fn test_read_reverse() {
-        let f = write_temp_jsonl(&[
-            r#"{"line":0}"#,
-            r#"{"line":1}"#,
-            r#"{"line":2}"#,
-        ]);
+        let f = write_temp_jsonl(&[r#"{"line":0}"#, r#"{"line":1}"#, r#"{"line":2}"#]);
 
         let lines = jsonl_read_reverse(f.path(), 2).unwrap();
         assert_eq!(lines.len(), 2);

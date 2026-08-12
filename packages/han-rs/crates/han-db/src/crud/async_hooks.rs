@@ -2,8 +2,8 @@
 
 use crate::entities::async_hook_queue;
 use crate::error::{DbError, DbResult};
-use sea_orm::*;
 use sea_orm::sea_query::Expr;
+use sea_orm::*;
 
 pub async fn enqueue(
     db: &DatabaseConnection,
@@ -40,7 +40,10 @@ pub async fn enqueue(
     Ok(result)
 }
 
-pub async fn list_pending(db: &DatabaseConnection, session_id: &str) -> DbResult<Vec<async_hook_queue::Model>> {
+pub async fn list_pending(
+    db: &DatabaseConnection,
+    session_id: &str,
+) -> DbResult<Vec<async_hook_queue::Model>> {
     async_hook_queue::Entity::find()
         .filter(async_hook_queue::Column::SessionId.eq(session_id))
         .filter(async_hook_queue::Column::Status.eq("pending"))
@@ -64,7 +67,11 @@ pub async fn is_queue_empty(db: &DatabaseConnection, session_id: &str) -> DbResu
     Ok(count == 0)
 }
 
-pub async fn complete(db: &DatabaseConnection, id: &str, result_json: Option<String>) -> DbResult<()> {
+pub async fn complete(
+    db: &DatabaseConnection,
+    id: &str,
+    result_json: Option<String>,
+) -> DbResult<()> {
     let now = chrono::Utc::now().to_rfc3339();
     async_hook_queue::Entity::update_many()
         .col_expr(async_hook_queue::Column::Status, Expr::value("completed"))

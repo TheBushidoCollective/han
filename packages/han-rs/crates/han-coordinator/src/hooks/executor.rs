@@ -5,10 +5,10 @@
 
 use std::path::Path;
 use std::time::Duration;
+use thiserror::Error;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::mpsc;
-use thiserror::Error;
 
 const DEFAULT_TIMEOUT_MS: u64 = 30_000;
 
@@ -27,10 +27,7 @@ pub enum ExecutorError {
 pub enum HookOutputLine {
     Stdout(String),
     Stderr(String),
-    Complete {
-        exit_code: i32,
-        duration_ms: u64,
-    },
+    Complete { exit_code: i32, duration_ms: u64 },
     Error(String),
 }
 

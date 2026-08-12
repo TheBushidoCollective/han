@@ -5,7 +5,7 @@
 
 use han_api::context::DbChangeEvent;
 use han_db::entities::{projects, sessions};
-use han_indexer::{WatcherService, handle_file_event};
+use han_indexer::{handle_file_event, WatcherService};
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use tokio::sync::broadcast;
 
@@ -33,14 +33,9 @@ pub fn start_watcher_bridge(
         // WatcherService::new is synchronous and may block while setting up
         // OS-level file watchers. Use spawn_blocking to avoid stalling the
         // tokio runtime.
-        let watcher = match tokio::task::spawn_blocking(|| {
-            WatcherService::new(None)
-        }).await {
+        let watcher = match tokio::task::spawn_blocking(|| WatcherService::new(None)).await {
             Ok(Ok(w)) => {
-                tracing::info!(
-                    "Watcher bridge started, watching: {:?}",
-                    w.watched_paths()
-                );
+                tracing::info!("Watcher bridge started, watching: {:?}", w.watched_paths());
                 w
             }
             Ok(Err(e)) => {
@@ -99,7 +94,11 @@ async fn add_extra_watch_paths(
         }
     }
 
-    tracing::info!("Watching {} paths total: {:?}", watcher.watched_paths().len(), watcher.watched_paths());
+    tracing::info!(
+        "Watching {} paths total: {:?}",
+        watcher.watched_paths().len(),
+        watcher.watched_paths()
+    );
     run_watcher_loop(watcher, db, event_tx).await;
 }
 
@@ -134,7 +133,8 @@ async fn run_watcher_loop(
 
                 // Look up project_dir for correct global ID format.
                 // Session global IDs are Session:{project_dir}:{session_id}.
-                let (project_dir, project_id) = lookup_session_project(&db, &index_result.session_id).await;
+                let (project_dir, project_id) =
+                    lookup_session_project(&db, &index_result.session_id).await;
 
                 let global_id = if project_dir.is_empty() {
                     format!("Session:{}", index_result.session_id)
@@ -175,7 +175,10 @@ async fn run_watcher_loop(
 
 /// Look up the project_dir and project_id for a session from the database.
 /// Returns (project_dir, project_id). Both may be empty/None if not found.
-async fn lookup_session_project(db: &DatabaseConnection, session_id: &str) -> (String, Option<String>) {
+async fn lookup_session_project(
+    db: &DatabaseConnection,
+    session_id: &str,
+) -> (String, Option<String>) {
     let session = match sessions::Entity::find_by_id(session_id).one(db).await {
         Ok(Some(s)) => s,
         _ => return (String::new(), None),
@@ -223,7 +226,11 @@ mod tests {
             project_id: Some("proj-1".to_string()),
         };
         match &event {
-            DbChangeEvent::SessionAdded { session_id, parent_id, project_id } => {
+            DbChangeEvent::SessionAdded {
+                session_id,
+                parent_id,
+                project_id,
+            } => {
                 assert_eq!(session_id, "test-session");
                 assert!(parent_id.is_none());
                 assert_eq!(project_id, &Some("proj-1".to_string()));
@@ -236,7 +243,10 @@ mod tests {
             message_index: 42,
         };
         match &event {
-            DbChangeEvent::SessionMessageAdded { session_id, message_index } => {
+            DbChangeEvent::SessionMessageAdded {
+                session_id,
+                message_index,
+            } => {
                 assert_eq!(session_id, "test-session");
                 assert_eq!(*message_index, 42);
             }

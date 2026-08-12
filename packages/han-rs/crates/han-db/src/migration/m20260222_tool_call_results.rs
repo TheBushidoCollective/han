@@ -32,11 +32,7 @@ impl MigrationTrait for Migration {
                             .string()
                             .not_null(),
                     )
-                    .col(
-                        ColumnDef::new(ToolCallResults::Content)
-                            .text()
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(ToolCallResults::Content).text().not_null())
                     .col(
                         ColumnDef::new(ToolCallResults::IsError)
                             .boolean()

@@ -61,10 +61,7 @@ impl CoordinatorLock {
                 if !self.is_stale(&existing) {
                     return Err(LockError::AlreadyLocked { pid: existing.pid });
                 }
-                tracing::info!(
-                    "Stale lock found (pid={}), removing",
-                    existing.pid
-                );
+                tracing::info!("Stale lock found (pid={}), removing", existing.pid);
             }
             // Remove stale or corrupted lock
             let _ = fs::remove_file(&self.lock_path);
@@ -134,8 +131,8 @@ impl CoordinatorLock {
 
         // Check heartbeat age
         if let Ok(heartbeat) = chrono::DateTime::parse_from_rfc3339(&data.heartbeat_at) {
-            let age = chrono::Utc::now()
-                .signed_duration_since(heartbeat.with_timezone(&chrono::Utc));
+            let age =
+                chrono::Utc::now().signed_duration_since(heartbeat.with_timezone(&chrono::Utc));
             if age.num_seconds() > STALE_TIMEOUT_SECS {
                 return true;
             }
@@ -209,7 +206,10 @@ mod tests {
         // Second acquire should fail since our process owns it
         let result = lock.acquire(None);
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), LockError::AlreadyLocked { .. }));
+        assert!(matches!(
+            result.unwrap_err(),
+            LockError::AlreadyLocked { .. }
+        ));
 
         lock.release().unwrap();
     }

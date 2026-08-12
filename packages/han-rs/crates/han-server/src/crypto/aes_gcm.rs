@@ -2,7 +2,7 @@
 
 use aes_gcm::{
     aead::{Aead, KeyInit, OsRng},
-    Aes256Gcm, AeadCore, Key, Nonce,
+    AeadCore, Aes256Gcm, Key, Nonce,
 };
 
 /// AES-256-GCM key size in bytes.
@@ -13,7 +13,10 @@ pub const NONCE_SIZE: usize = 12;
 /// Encrypt plaintext with AES-256-GCM.
 ///
 /// Returns ciphertext with appended authentication tag (16 bytes).
-pub fn encrypt(key: &[u8; KEY_SIZE], plaintext: &[u8]) -> Result<(Vec<u8>, [u8; NONCE_SIZE]), CryptoError> {
+pub fn encrypt(
+    key: &[u8; KEY_SIZE],
+    plaintext: &[u8],
+) -> Result<(Vec<u8>, [u8; NONCE_SIZE]), CryptoError> {
     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(key));
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
 

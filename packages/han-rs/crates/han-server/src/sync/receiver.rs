@@ -54,7 +54,11 @@ pub async fn sync_sessions_impl(
     request: SyncSessionRequest,
 ) -> impl IntoResponse {
     if let Err(e) = validate_sync_request(&request) {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": e}))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": e})),
+        )
+            .into_response();
     }
 
     info!(

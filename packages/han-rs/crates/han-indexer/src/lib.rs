@@ -21,7 +21,9 @@ pub mod types;
 pub mod watcher;
 
 // Re-export primary public API
-pub use parser::{jsonl_count_lines, jsonl_read_page, jsonl_read_reverse, JsonlLine, PaginatedResult};
+pub use parser::{
+    jsonl_count_lines, jsonl_read_page, jsonl_read_reverse, JsonlLine, PaginatedResult,
+};
 pub use processor::{
     bridge_harness_roots, check_indexer_version, full_scan_and_index, handle_file_event,
     harness_from_path, index_project_directory, index_session_file, DEFAULT_HARNESS,

@@ -84,5 +84,14 @@ pub async fn update(
 }
 
 pub async fn cancel(db: &DatabaseConnection, id: &str) -> DbResult<()> {
-    update(db, id, Some("cancelled".to_string()), None, None, None, None).await
+    update(
+        db,
+        id,
+        Some("cancelled".to_string()),
+        None,
+        None,
+        None,
+        None,
+    )
+    .await
 }
