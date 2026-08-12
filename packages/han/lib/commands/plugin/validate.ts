@@ -14,13 +14,13 @@ import { parse as parseYaml } from 'yaml';
 import { validatePluginConfig } from '../../config/config-validator.ts';
 import { generateHooksForPlugin } from './generate-hooks.ts';
 
-interface ValidationIssue {
+export interface ValidationIssue {
   type: 'error' | 'warning';
   path: string;
   message: string;
 }
 
-interface PluginValidationResult {
+export interface PluginValidationResult {
   pluginPath: string;
   pluginName: string;
   issues: ValidationIssue[];
@@ -47,9 +47,51 @@ function findFiles(dir: string, filename: string): string[] {
 }
 
 /**
+ * Top-level fields recognized by the Claude Code plugin manifest schema.
+ *
+ * Source: https://code.claude.com/docs/en/plugins-reference
+ * Claude Code ignores top-level fields it does not recognize, so anything
+ * outside this set is reported as a warning rather than an error.
+ */
+const RECOGNIZED_MANIFEST_FIELDS: Record<string, true> = {
+  $schema: true,
+  name: true,
+  displayName: true,
+  version: true,
+  description: true,
+  author: true,
+  homepage: true,
+  repository: true,
+  license: true,
+  keywords: true,
+  metadata: true,
+  defaultEnabled: true,
+  strict: true,
+  skills: true,
+  commands: true,
+  agents: true,
+  workflows: true,
+  hooks: true,
+  mcpServers: true,
+  outputStyles: true,
+  lspServers: true,
+  experimental: true,
+  userConfig: true,
+  channels: true,
+  dependencies: true,
+};
+
+/**
+ * Component keys that belong under the manifest's `experimental` key.
+ * Declaring them at the top level still works, but a future Claude Code
+ * release will require `experimental.*`.
+ */
+const EXPERIMENTAL_COMPONENT_KEYS: readonly string[] = ['themes', 'monitors'];
+
+/**
  * Validate a single plugin directory
  */
-function validatePlugin(pluginPath: string): PluginValidationResult {
+export function validatePlugin(pluginPath: string): PluginValidationResult {
   const issues: ValidationIssue[] = [];
   const pluginName = basename(pluginPath);
 
@@ -75,36 +117,103 @@ function validatePlugin(pluginPath: string): PluginValidationResult {
   } else {
     // Validate plugin.json
     try {
-      const pluginJson = JSON.parse(readFileSync(pluginJsonPath, 'utf-8'));
+      const parsed: unknown = JSON.parse(
+        readFileSync(pluginJsonPath, 'utf-8')
+      );
 
-      if (!pluginJson.name) {
+      if (
+        typeof parsed !== 'object' ||
+        parsed === null ||
+        Array.isArray(parsed)
+      ) {
         issues.push({
           type: 'error',
           path: pluginJsonPath,
-          message: "Missing required 'name' field",
+          message: 'plugin.json must contain a JSON object',
         });
-      } else if (pluginJson.name !== pluginName) {
-        issues.push({
-          type: 'warning',
-          path: pluginJsonPath,
-          message: `Plugin name '${pluginJson.name}' doesn't match directory name '${pluginName}'`,
-        });
-      }
+      } else {
+        const manifest = parsed as Record<string, unknown>;
 
-      if (!pluginJson.version) {
-        issues.push({
-          type: 'error',
-          path: pluginJsonPath,
-          message: "Missing required 'version' field",
-        });
-      }
+        if (!manifest.name) {
+          issues.push({
+            type: 'error',
+            path: pluginJsonPath,
+            message: "Missing required 'name' field",
+          });
+        } else if (manifest.name !== pluginName) {
+          issues.push({
+            type: 'warning',
+            path: pluginJsonPath,
+            message: `Plugin name '${manifest.name}' doesn't match directory name '${pluginName}'`,
+          });
+        }
 
-      if (!pluginJson.description) {
-        issues.push({
-          type: 'warning',
-          path: pluginJsonPath,
-          message: "Missing 'description' field",
-        });
+        if (!manifest.version) {
+          issues.push({
+            type: 'warning',
+            path: pluginJsonPath,
+            message:
+              "Missing 'version' field - optional upstream, but setting it pins the plugin version so users only get updates when you bump it",
+          });
+        }
+
+        if (!manifest.description) {
+          issues.push({
+            type: 'warning',
+            path: pluginJsonPath,
+            message: "Missing 'description' field",
+          });
+        }
+
+        for (const key of Object.keys(manifest)) {
+          if (
+            Object.hasOwn(RECOGNIZED_MANIFEST_FIELDS, key) ||
+            EXPERIMENTAL_COMPONENT_KEYS.includes(key)
+          ) {
+            continue;
+          }
+          issues.push({
+            type: 'warning',
+            path: pluginJsonPath,
+            message: `Unrecognized field '${key}' - Claude Code ignores top-level fields it does not recognize`,
+          });
+        }
+
+        if (Object.hasOwn(manifest, 'experimental')) {
+          const experimental = manifest.experimental;
+          if (
+            typeof experimental !== 'object' ||
+            experimental === null ||
+            Array.isArray(experimental)
+          ) {
+            issues.push({
+              type: 'warning',
+              path: pluginJsonPath,
+              message:
+                "'experimental' must be an object - Claude Code ignores a non-object value",
+            });
+          } else {
+            for (const key of Object.keys(experimental)) {
+              if (!EXPERIMENTAL_COMPONENT_KEYS.includes(key)) {
+                issues.push({
+                  type: 'warning',
+                  path: pluginJsonPath,
+                  message: `Unrecognized 'experimental.${key}' - recognized experimental components are ${EXPERIMENTAL_COMPONENT_KEYS.join(', ')}`,
+                });
+              }
+            }
+          }
+        }
+
+        for (const key of EXPERIMENTAL_COMPONENT_KEYS) {
+          if (Object.hasOwn(manifest, key)) {
+            issues.push({
+              type: 'warning',
+              path: pluginJsonPath,
+              message: `'${key}' at the top level still loads, but a future Claude Code release will require 'experimental.${key}'`,
+            });
+          }
+        }
       }
     } catch {
       issues.push({
@@ -124,7 +233,7 @@ function validatePlugin(pluginPath: string): PluginValidationResult {
           type: 'error',
           path: join(claudePluginDir, file),
           message:
-            'Should not be in .claude-plugin/ - move to plugin root or hooks/',
+            "Unexpected file in .claude-plugin/ - a plugin's .claude-plugin/ holds only plugin.json; move hooks to hooks/ and everything else to the plugin root",
         });
       }
     }
