@@ -1,0 +1,12 @@
+hooks:
+  build:
+    event: Stop
+    command: "npx ng build"
+    dirs_with:
+      - "angular.json"
+    if_changed:
+      - "**/*.ts"
+      - "**/*.html"
+      - "**/*.{css,scss}"
+      - "angular.json"
+      - "tsconfig*.json"

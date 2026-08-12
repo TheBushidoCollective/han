@@ -22,4 +22,3 @@ hooks:
       - "**/test_*.py"
       - "**/*_test.py"
       - "**/tests/*.py"
-    file_test: grep -qE "(def test_|class Test)" "${HAN_FILE}"

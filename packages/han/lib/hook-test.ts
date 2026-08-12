@@ -9,12 +9,13 @@ import {
   type MarketplaceConfig,
 } from './config/claude-settings.ts';
 import { HookTestUI } from './hook-test-ui.tsx';
+import { findPluginInMarketplace } from './hooks/plugin-discovery.ts';
 
 interface HookCommand {
   plugin: string;
   command: string;
   pluginDir: string;
-  type: 'command' | 'prompt';
+  type: 'command' | 'http' | 'mcp_tool' | 'prompt' | 'agent';
   timeout?: number;
 }
 
@@ -234,30 +235,6 @@ async function executeHookCommand(
       });
     });
   });
-}
-
-/**
- * Find plugin in a marketplace root directory
- */
-function findPluginInMarketplace(
-  marketplaceRoot: string,
-  pluginName: string
-): string | null {
-  // Try different plugin directory structures
-  const potentialPaths = [
-    join(marketplaceRoot, 'jutsu', pluginName),
-    join(marketplaceRoot, 'do', pluginName),
-    join(marketplaceRoot, 'hashi', pluginName),
-    join(marketplaceRoot, pluginName),
-  ];
-
-  for (const path of potentialPaths) {
-    if (existsSync(path)) {
-      return path;
-    }
-  }
-
-  return null;
 }
 
 /**

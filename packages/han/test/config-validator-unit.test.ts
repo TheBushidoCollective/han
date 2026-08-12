@@ -22,16 +22,22 @@ describe('Config Validator', () => {
         expect(result.errors).toHaveLength(0);
       });
 
-      test('validates config with all hook properties', () => {
+      test('validates every YamlPluginHookDefinition property', () => {
         const result = validatePluginConfig({
           hooks: {
             test: {
               command: 'npm test',
-              dirsWith: ['package.json'],
-              dirTest: 'test -f jest.config.ts',
+              event: 'Stop',
+              tool_filter: ['Edit', 'Write'],
+              dirs_with: ['package.json'],
+              dir_test: 'test -f jest.config.ts',
               description: 'Run tests',
-              ifChanged: ['**/*.ts', '**/*.tsx'],
-              idleTimeout: 30,
+              if_changed: ['**/*.ts', '**/*.tsx'],
+              timeout: 60000,
+              idle_timeout: 30,
+              tip: 'Use the jutsu_jest MCP tool',
+              depends_on: [{ plugin: 'typescript', hook: 'typecheck' }],
+              mcp: true,
             },
           },
         });
@@ -133,36 +139,36 @@ describe('Config Validator', () => {
         );
       });
 
-      test('rejects dirsWith as non-array', () => {
+      test('rejects dirs_with as non-array', () => {
         const result = validatePluginConfig({
           hooks: {
-            lint: { command: 'lint', dirsWith: 'package.json' },
+            lint: { command: 'lint', dirs_with: 'package.json' },
           },
         });
         expect(result.valid).toBe(false);
-        expect(result.errors[0].message).toBe("'dirsWith' must be an array");
+        expect(result.errors[0].message).toBe("'dirs_with' must be an array");
       });
 
-      test('rejects dirsWith with non-strings', () => {
+      test('rejects dirs_with with non-strings', () => {
         const result = validatePluginConfig({
           hooks: {
-            lint: { command: 'lint', dirsWith: ['package.json', 123] },
+            lint: { command: 'lint', dirs_with: ['package.json', 123] },
           },
         });
         expect(result.valid).toBe(false);
         expect(result.errors[0].message).toBe(
-          "'dirsWith' must contain only strings"
+          "'dirs_with' must contain only strings"
         );
       });
 
-      test('rejects dirTest as non-string', () => {
+      test('rejects dir_test as non-string', () => {
         const result = validatePluginConfig({
           hooks: {
-            lint: { command: 'lint', dirTest: 123 },
+            lint: { command: 'lint', dir_test: 123 },
           },
         });
         expect(result.valid).toBe(false);
-        expect(result.errors[0].message).toBe("'dirTest' must be a string");
+        expect(result.errors[0].message).toBe("'dir_test' must be a string");
       });
 
       test('rejects description as non-string', () => {
@@ -175,54 +181,64 @@ describe('Config Validator', () => {
         expect(result.errors[0].message).toBe("'description' must be a string");
       });
 
-      test('rejects ifChanged as non-array', () => {
+      test('rejects if_changed as non-array', () => {
         const result = validatePluginConfig({
           hooks: {
-            lint: { command: 'lint', ifChanged: '**/*.ts' },
+            lint: { command: 'lint', if_changed: '**/*.ts' },
           },
         });
         expect(result.valid).toBe(false);
-        expect(result.errors[0].message).toBe("'ifChanged' must be an array");
+        expect(result.errors[0].message).toBe("'if_changed' must be an array");
       });
 
-      test('rejects ifChanged with non-strings', () => {
+      test('rejects if_changed with non-strings', () => {
         const result = validatePluginConfig({
           hooks: {
-            lint: { command: 'lint', ifChanged: ['**/*.ts', 123] },
+            lint: { command: 'lint', if_changed: ['**/*.ts', 123] },
           },
         });
         expect(result.valid).toBe(false);
         expect(result.errors[0].message).toBe(
-          "'ifChanged' must contain only strings"
+          "'if_changed' must contain only strings"
         );
       });
 
-      test('rejects idleTimeout as non-number', () => {
+      test('rejects idle_timeout as non-number', () => {
         const result = validatePluginConfig({
           hooks: {
-            lint: { command: 'lint', idleTimeout: '30000' },
+            lint: { command: 'lint', idle_timeout: '30000' },
           },
         });
         expect(result.valid).toBe(false);
-        expect(result.errors[0].message).toContain("'idleTimeout'");
+        expect(result.errors[0].message).toContain("'idle_timeout'");
       });
 
-      test('rejects idleTimeout as float', () => {
+      test('rejects idle_timeout as float', () => {
         const result = validatePluginConfig({
           hooks: {
-            lint: { command: 'lint', idleTimeout: 30.5 },
+            lint: { command: 'lint', idle_timeout: 30.5 },
           },
         });
         expect(result.valid).toBe(false);
       });
 
-      test('rejects negative idleTimeout', () => {
+      test('rejects negative idle_timeout', () => {
         const result = validatePluginConfig({
           hooks: {
-            lint: { command: 'lint', idleTimeout: -1000 },
+            lint: { command: 'lint', idle_timeout: -1000 },
           },
         });
         expect(result.valid).toBe(false);
+      });
+
+      test('rejects camelCase keys absent from the YAML schema', () => {
+        const result = validatePluginConfig({
+          hooks: {
+            lint: { command: 'lint', dirsWith: ['package.json'] },
+          },
+        });
+        expect(result.valid).toBe(false);
+        expect(result.errors[0].message).toBe("Unknown property 'dirsWith'");
       });
 
       test('rejects unknown hook properties', () => {
@@ -242,7 +258,7 @@ describe('Config Validator', () => {
       test('collects multiple errors', () => {
         const result = validatePluginConfig({
           hooks: {
-            lint: { command: 123, dirsWith: 'invalid' },
+            lint: { command: 123, dirs_with: 'invalid' },
           },
         });
         expect(result.valid).toBe(false);

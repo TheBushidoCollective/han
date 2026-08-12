@@ -1,0 +1,19 @@
+hooks:
+  format:
+    event: [Stop, PostToolUse:Edit|Write]
+    command: "clang-format --dry-run --Werror ${HAN_FILES}"
+    dirs_with:
+      - ".clang-format"
+    if_changed:
+      - "**/*.c"
+      - "**/*.h"
+
+  build:
+    event: Stop
+    command: "make"
+    dirs_with:
+      - "Makefile"
+    if_changed:
+      - "**/*.c"
+      - "**/*.h"
+      - "Makefile"

@@ -3,7 +3,7 @@ hooks:
     dirs_with:
       - "build.gradle"
       - "build.gradle.kts"
-    test_dir: "test -f gradlew && grep -q 'com.android' build.gradle* 2>/dev/null"
+    dir_test: "test -f gradlew && grep -q 'com.android' build.gradle* 2>/dev/null"
     command: "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/build.sh\""
     if_changed:
       - "**/*.kt"

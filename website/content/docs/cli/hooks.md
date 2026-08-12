@@ -30,11 +30,13 @@ han hook run --dirs-with <file> -- <command>
 | Option | Description |
 |--------|-------------|
 | `--no-cache` | Disable caching (caching is ON by default in v2.0.0+) |
-| `--no-checkpoints` | Disable checkpoint filtering (checkpoints are ON by default) |
+| `--only <directory>` | Only run in the specified directory, for targeted re-runs after a failure |
 | `--verbose` | Show full command output in real-time |
-| `--directory <path>` | Limit execution to specific directory |
-| `--checkpoint-type <type>` | Filter against checkpoint type (`session` or `agent`) |
-| `--checkpoint-id <id>` | Filter against specific checkpoint ID |
+| `--skip-deps` | Skip dependency checks, for recheck and retry scenarios |
+| `--session-id <id>` | Claude session ID used for event logging and cache tracking |
+| `--async` | Enable per-file `${HAN_FILES}` substitution (PostToolUse) or session-file substitution (Stop) |
+
+`--checkpoint-type <type>` and `--checkpoint-id <id>` are still parsed and validated, but the hook runner ignores them. They are inert remnants of the removed checkpoint feature.
 
 **Legacy options:**
 
@@ -47,14 +49,14 @@ han hook run --dirs-with <file> -- <command>
 
 ### Caching Behavior
 
-Caching is enabled by default (since v2.0.0):
+Caching is enabled by default (since v2.0.0). A hook run:
 
-1. Han creates a checkpoint with file modification times
-2. On subsequent runs, compares current file times to checkpoint
-3. Skips execution if no files have changed
-4. Clears checkpoint on failure (ensures retry on next run)
+1. Builds a manifest of the files matching the hook's `if_changed` patterns
+2. Skips the hook when nothing the current session touched appears in that manifest
+3. Otherwise compares each file's hash against the hash recorded at its last validation, and runs when any differ or a validated file was deleted
+4. Assumes changes and runs on any error, so a cache fault never silently skips validation
 
-Checkpoints are session-scoped by default, meaning they're cleared when the Claude Code session ends. Use `--no-checkpoints` to disable checkpoint filtering entirely.
+Pass `--no-cache` (or set `HAN_NO_CACHE=1`) to force a run.
 
 ### Examples
 
@@ -68,8 +70,8 @@ han hook run bun test --no-cache
 # Run TypeScript type checking verbosely
 han hook run typescript typecheck --verbose
 
-# Run Biome lint in specific directory
-han hook run biome lint --directory packages/core
+# Run Biome lint in one directory only
+han hook run biome lint --only packages/core
 
 # Legacy: Run npm test in directories with package.json
 han hook run --dirs-with package.json -- npm test
@@ -91,9 +93,9 @@ hooks:
 When you run `han hook run bun test`, Han:
 
 1. Finds directories containing `bun.lock` or `bun.lockb`
-2. Checks if files matching `**/*.ts` or `**/*.test.ts` have changed (caching is enabled by default)
+2. Checks whether files matching `**/*.ts` or `**/*.test.ts` have changed (caching is enabled by default)
 3. Runs `bun test --only-failures` in each directory
-4. Records the result and updates checkpoints
+4. Records the result and updates the file-validation cache
 
 ## `han hook list`
 
@@ -108,6 +110,9 @@ han hook list
 # Filter by plugin
 han hook list --plugin bun
 
+# Filter by event type
+han hook list --event Stop
+
 # Show detailed information
 han hook list --verbose
 ```
@@ -116,8 +121,9 @@ han hook list --verbose
 
 | Option | Description |
 |--------|-------------|
-| `--plugin <name>` | Filter hooks by plugin name |
-| `--verbose` | Show detailed hook configuration |
+| `-e, --event <event>` | Filter by event type (for example `Stop`, `PreToolUse`) |
+| `-p, --plugin <name>` | Filter hooks by plugin name (substring match) |
+| `-v, --verbose` | Show additional details including source paths |
 | `--json` | Output as JSON for scripting |
 
 ### Output
@@ -151,93 +157,89 @@ han hook list --json | jq '.[] | select(.plugin == "bun")'
 
 ## `han hook explain`
 
-Show detailed explanation of a hook's configuration and behavior.
+Show comprehensive information about configured hooks. By default it covers every hook Claude Code would fire, both Han plugin hooks and hooks defined in settings files.
+
+The optional positional argument is an **event type**, not a plugin or hook name.
 
 ### Usage
 
 ```bash
-# Explain a specific hook
-han hook explain <plugin-name> <hook-name>
-```
+# All hooks, Han plugins plus Claude Code settings
+han hook explain
 
-### Example
+# Only Stop hooks, from all sources
+han hook explain Stop
 
-```bash
-han hook explain bun test
-```
+# Only hooks contributed by Han plugins
+han hook explain --han-only
 
-Output:
-
-```
-Hook: bun/test
-
-Description: Run Bun tests
-
-Command: bun test --only-failures
-
-Directories: Runs in directories containing:
-  - bun.lock
-  - bun.lockb
-
-File Patterns: Triggers when these files change:
-  - **/*.ts
-  - **/*.test.ts
-
-Cache: Enabled by default (use --no-cache to disable)
-
-Usage:
-  han hook run bun test
-  han hook run bun test --no-cache
-  han hook run bun test --verbose --directory packages/core
-```
-
-## `han hook verify`
-
-Verify hook configuration for all installed plugins.
-
-### Usage
-
-```bash
-# Verify all plugin hooks
-han hook verify
-
-# Verify specific plugin
-han hook verify --plugin bun
+# Combine both
+han hook explain Stop --han-only
 ```
 
 ### Options
 
 | Option | Description |
 |--------|-------------|
-| `--plugin <name>` | Verify hooks for specific plugin only |
-| `--fix` | Attempt to fix common issues |
-
-Checks for:
-
-- Valid hook configuration syntax
-- Command executability
-- File pattern validity
-- Directory detection logic
+| `--han-only` | Show only Han plugin hooks, excluding settings hooks |
 
 ## `han hook test`
 
-Test a hook configuration without actually running it.
+Run hooks with simulated Claude Code input and show their actual output. This executes the hooks, which is the point: it reproduces a hook failure exactly as Claude Code would trigger it.
+
+As with `explain`, the optional positional argument is an event type.
 
 ### Usage
 
 ```bash
-# Test which directories a hook would run in
-han hook test <plugin-name> <hook-name>
+# Test every hook
+han hook test
 
-# Test with specific directory
-han hook test <plugin-name> <hook-name> --directory packages/core
+# Test only SessionStart hooks
+han hook test SessionStart
+
+# Show the stdin payload sent to hooks
+han hook test Stop --payload
+
+# Only hooks whose command contains "han"
+han hook test --command han
 ```
 
-Shows:
+### Options
 
-- Detected directories
-- Files that would trigger execution (if `ifChanged` is set)
-- Checkpoint status (if `--cache` would skip)
+| Option | Description |
+|--------|-------------|
+| `--payload` | Show the stdin JSON payload sent to hooks |
+| `--command <substring>` | Filter to hooks whose command contains this string |
+
+## `han hook dispatch`
+
+Run every Han plugin hook registered for one event. This is what Claude Code invokes from a generated `hooks.json`.
+
+### Usage
+
+```bash
+han hook dispatch Stop
+han hook dispatch PostToolUse --all
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-a, --all` | Include hooks defined in Claude Code settings, not just Han plugin hooks |
+| `--no-cache` | Disable caching for the dispatched hooks |
+
+`--no-checkpoints` exports `HAN_NO_CHECKPOINTS=1` to child hooks, which turns off session-scoped `${HAN_FILES}` filtering so hooks check the whole tree. See [session-scoped validation](/docs/features/checkpoints#turning-session-filtering-off).
+
+## Other `han hook` subcommands
+
+| Command | Purpose |
+|---------|---------|
+| `han hook context` | Print consolidated session context for `SessionStart` injection |
+| `han hook auto-detect` | Auto-install plugins from file changes, for `PostToolUse` |
+| `han hook auto-detect-prompt` | Auto-install plugins from URLs and patterns in a prompt, for `UserPromptSubmit` |
+| `han hook wrap-subagent-context` | `PreToolUse` helper that injects context into Agent and Skill tool prompts |
 
 ## Environment Variables
 
@@ -246,8 +248,16 @@ Hook execution respects these environment variables:
 | Variable | Description |
 |----------|-------------|
 | `HAN_DISABLE_HOOKS` | Set to `1` or `true` to disable all hooks |
+| `HAN_FORCE_HOOKS` | Set to `1` or `true` to run hooks even where they would otherwise be suppressed |
 | `HAN_HOOK_RUN_VERBOSE` | Set to `1` or `true` to enable verbose output globally |
-| `HAN_MCP_TIMEOUT` | Hook timeout in milliseconds (default: 600000 = 10 minutes) |
+| `HAN_NO_CACHE` | Set to `1` or `true` to disable caching for this run |
+| `HAN_SESSION_ID` | Session ID used for event logging, cache tracking, and lock scoping |
+| `HAN_DEBUG` | Set to `1` or `true` for debug diagnostics on stderr |
+| `HAN_HOOK_ABSOLUTE_TIMEOUT` | Hard ceiling on a single hook, in seconds (default: 300) |
+| `HAN_HOOK_PARALLELISM` | Parallel hook slots (default: half the CPU count, minimum 1) |
+| `HAN_HOOK_ACQUIRE_TIMEOUT` | How long to wait for a free slot, in milliseconds (default: 3600000) |
+| `HAN_HOOK_LOCK_TIMEOUT` | When a held lock is treated as stale, in milliseconds (default: 900000) |
+| `HAN_HOOK_NO_LOCK` | Set to `1` to disable hook resource locking entirely |
 
 ### Example
 
@@ -288,27 +298,28 @@ Hooks run automatically at lifecycle events when configured in plugin `hooks.jso
 
 ### Hook Lifecycle
 
-Han supports these Claude Code hook points:
+Han accepts all 31 Claude Code hook events. The events below are the ones you will most often wire up from the CLI; see the [full hook event reference](/docs/plugin-development/hooks#hook-lifecycle) for the complete list, current as of Claude Code 2.1.228.
 
-| Hook | When It Fires | Checkpoint Type | Purpose |
-|------|---------------|-----------------|---------|
-| `SessionStart` | Claude Code session begins | Creates session checkpoint | Initialize session state |
-| `SubagentStart` | Subagent is spawned | Creates agent checkpoint | Capture pre-subagent state |
-| `UserPromptSubmit` | User submits a prompt | N/A | Pre-process user input |
-| `PreToolUse` | Before each tool call | N/A | Validate tool usage |
-| `PermissionRequest` | Permission dialog appears | N/A | Audit/auto-approve permissions |
-| `PostToolUse` | After each tool call | N/A | Post-process tool results |
-| `PostToolUseFailure` | Tool execution fails | N/A | Error tracking, recovery |
-| `Stop` | Agent about to respond | Validates using session checkpoint | Validate all session changes |
-| `SubagentStop` | Subagent completes | Validates using agent checkpoint | Validate subagent changes |
-| `Notification` | Notification event | N/A | Custom notification handling |
-| `PreCompact` | Before context compaction | N/A | Save state before compaction |
-| `SessionEnd` | Session ends | N/A | Cleanup session state |
-| `ConfigChange` | Configuration modified (2.1.49+) | N/A | Audit trails, config monitoring |
-| `TeammateIdle` | Teammate goes idle (2.1.33+) | N/A | Team coordination |
-| `TaskCompleted` | Task completed (2.1.33+) | N/A | Task tracking, workflows |
-| `WorktreeCreate` | Worktree created (2.1.50+) | N/A | Agent isolation tracking, custom VCS |
-| `WorktreeRemove` | Worktree removed (2.1.50+) | N/A | Cleanup automation |
+| Hook | When It Fires | Purpose |
+|------|---------------|---------|
+| `SessionStart` | Claude Code session begins | Initialize session state |
+| `SubagentStart` | Subagent is spawned | Inject context into the subagent |
+| `UserPromptSubmit` | User submits a prompt | Pre-process user input |
+| `PreToolUse` | Before each tool call | Validate tool usage |
+| `PermissionRequest` | Permission dialog appears | Audit or auto-approve permissions |
+| `PostToolUse` | After each tool call | Post-process tool results |
+| `PostToolUseFailure` | Tool execution fails | Error tracking, recovery |
+| `Stop` | Agent about to respond | Validate all session changes |
+| `SubagentStop` | Subagent completes | Validate subagent changes |
+| `Notification` | Notification event | Custom notification handling |
+| `PreCompact` | Before context compaction | Save state before compaction |
+| `SessionEnd` | Session ends | Cleanup session state |
+| `ConfigChange` | Configuration modified (2.1.49+) | Audit trails, config monitoring |
+| `TeammateIdle` | Teammate goes idle (2.1.33+) | Team coordination |
+| `TaskCompleted` | Task completed (2.1.33+) | Task tracking, workflows |
+| `DirectoryAdded` | Directory added mid-session (2.1.219+) | React to a newly registered working root |
+| `WorktreeCreate` | Worktree created (2.1.50+) | Agent isolation tracking, custom VCS |
+| `WorktreeRemove` | Worktree removed (2.1.50+) | Cleanup automation |
 
 ### New Hook Events
 
@@ -420,7 +431,7 @@ Only `type: "command"` hooks are supported. No matcher support.
 
 #### WorktreeRemove (2.1.50+)
 
-Fired when a worktree is being removed (session exit or subagent completion). The hook receives the `worktree_path` that was created. WorktreeRemove hooks **cannot block** removal — failures are logged in debug mode only.
+Fired when a worktree is being removed (session exit or subagent completion). The hook receives the `worktree_path` that was created. WorktreeRemove hooks **cannot block** removal; failures are logged in debug mode only.
 
 ```json
 {
@@ -448,19 +459,14 @@ The `Stop` and `SubagentStop` hook inputs now include a `last_assistant_message`
 
 This is useful for content-aware validation, sentiment analysis, or logging the agent's final output.
 
-### Checkpoint Filtering
+### How Hooks Narrow What They Check
 
-Hooks automatically filter what files they check based on when they run:
+Hooks do not re-check the whole tree on every run:
 
-- **Stop hooks** validate against the session checkpoint (created at `SessionStart`)
-  - Only checks files modified during the entire session
-  - Use for session-wide validations (tests, builds, linting)
+- **Caching** skips a hook when nothing the current session touched matches its `if_changed` patterns, then compares file hashes against the last recorded validation
+- **Session filtering** hands a hook only the session's own modified files, for any command that uses `${HAN_FILES}`
 
-- **SubagentStop hooks** validate against the agent checkpoint (created at `SubagentStart`)
-  - Only checks files modified by that specific subagent
-  - Use for focused validations (type checking, unit tests)
-
-This ensures hooks only validate relevant changes and skip unchanged files automatically.
+Earlier versions did this with explicit session and agent checkpoints captured at `SessionStart` and `SubagentStart`. That mechanism has been removed. The `--checkpoint-type`, `--checkpoint-id`, and `--no-checkpoints` flags survive as no-ops.
 
 ## Learn More
 

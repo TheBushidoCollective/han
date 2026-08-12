@@ -1,13 +1,15 @@
 ---
-title: "Checkpoint System"
-description: "How Han's checkpoint system brings focused, incremental validation by only checking code you actually modified."
+title: "Session-Scoped Validation"
+description: "How Han keeps validation focused on the code you actually modified, instead of drowning you in a legacy project's pre-existing issues."
 ---
 
-Han's checkpoint system applies the Boy Scout Rule to code validation: leave the code better than you found it, but don't demand perfection on day one.
+Han applies the Boy Scout Rule to code validation: leave the code better than you found it, but don't demand perfection on day one.
+
+> **Naming note:** Han used to implement this with an explicit checkpoint system, and some configuration keys and CLI flags still carry the `checkpoint` name. That subsystem has been removed and this page documents what actually runs today. The `checkpoints` config key and the `--no-checkpoints` flag now control session-scoped filtering; see [turning session filtering off](#turning-session-filtering-off). Two flags survive that genuinely do nothing, listed under [inert leftovers](#inert-leftovers).
 
 ## The Problem
 
-Without checkpoints, validation hooks run against your entire codebase. Install a linting plugin on a legacy project with 500 pre-existing issues, and you're immediately overwhelmed with problems you didn't create.
+Run validation hooks against your entire codebase and a legacy project with 500 pre-existing issues buries you in problems you didn't create.
 
 This leads to:
 
@@ -15,295 +17,104 @@ This leads to:
 - Validation abandoned entirely
 - Net result: worse quality, not better
 
-## The Solution: Session-Scoped Validation
+## The Solution
 
-Checkpoints capture file states when your session starts. When hooks run, they only validate files you actually modified during that session.
+Two independent mechanisms keep a hook's attention on your work.
 
 ```text
-Session Start (t0):
-├─ Checkpoint created
-├─ File hashes captured for all project files
-
-Your Work (t0 → t1):
+Your Work:
 ├─ Modified: components/Button.tsx
 ├─ Untouched: utils/format.ts (has lint errors)
 
-Session Stop (t1):
-├─ Hook runs
-├─ Filters to: components/Button.tsx only
+Stop hook runs:
+├─ Filters to: components/Button.tsx
 └─ Pre-existing issues in utils/format.ts: not your problem today
 ```
 
-## How Checkpoints Work
+### 1. Caching
 
-### Session Checkpoints
+Every hook declares `if_changed` glob patterns. Before running, Han builds a manifest of the files matching those patterns and decides whether there is anything to do:
 
-Created automatically at `SessionStart`:
+- If the current session has not touched any file in the manifest, the hook is skipped
+- Otherwise each file's hash is compared against the hash recorded at its last validation, and the hook runs when any hash differs or a previously validated file was deleted
+- On any error reading cache state, Han assumes changes and runs the hook, so a cache fault never silently skips validation
 
-- Captures SHA-256 hashes of all tracked files
-- Stored in `~/.claude/projects/{slug}/han/checkpoints/session_{id}.json`
-- Used by `Stop` hooks to filter validation scope
-- Cleaned up after 24 hours
+Caching is on by default. Turn it off with `--no-cache` on `han hook run`, `HAN_NO_CACHE=1`, or `hooks.cache: false` in `han.yml`.
 
-### Agent Checkpoints
+### 2. Session file filtering
 
-For complex workflows with subagents:
-
-- Created at `SubagentStart` for each spawned agent
-- Stored as `agent_{agent_id}.json`
-- Each agent's work is validated independently
-- Prevents cross-contamination between parallel work
-
-```text
-Main Session (session_abc):
-├─ Checkpoint: session_abc.json
-├─ Spawns Subagent 1 (agent_xyz):
-│  ├─ Checkpoint: agent_xyz.json
-│  └─ Works on feature-a/
-└─ Spawns Subagent 2 (agent_def):
-   ├─ Checkpoint: agent_def.json
-   └─ Works on feature-b/
-```
-
-When Subagent 1 finishes, `SubagentStop` hooks only validate its changes. Subagent 2's work is isolated.
-
-## Transcript Filtering (v2.3.0)
-
-Checkpoints solve isolation for subagents within a session. But what about **multiple sessions** in the same working tree?
-
-### The Multi-Session Problem
-
-```text
-Session A: Modifies src/auth.ts, introduces lint error
-Session B: Modifies src/utils.ts, runs Stop hook
-
-Without transcript filtering:
-└─ Session B's hook sees auth.ts changed (vs B's checkpoint)
-└─ Session B tries to fix auth.ts
-└─ Session A also tries to fix auth.ts
-└─ Edit conflict!
-```
-
-### The Solution: Transcript-Based Scoping
-
-Each session maintains a transcript of file operations. Stop hooks use this to filter:
-
-```text
-Session A: src/auth.ts in transcript → validate auth.ts only
-Session B: src/utils.ts in transcript → validate utils.ts only
-```
-
-No conflicts. Each session handles only its own changes.
-
-### How It Works
-
-1. Claude Code records all Write/Edit operations in session transcripts
-2. At `Stop`, Han extracts modified files from the transcript
-3. Files are intersected with the hook's `if_changed` patterns
-4. Hook runs only on files THIS session actually modified
-
-### File-Targeted Commands
-
-For commands that support file arguments, use `${HAN_FILES}` to pass only session-modified files:
+A hook command can opt in to file-level targeting by including the `${HAN_FILES}` template:
 
 ```yaml
-plugins:
-  biome:
-    hooks:
-      lint:
-        command: npx biome check --write ${HAN_FILES}
-```
-
-This ensures Session B doesn't see (or fail on) Session A's lint errors.
-
-When `cache=false` or transcript filtering is disabled, `${HAN_FILES}` is replaced with `.` to run on all files. Use `han hook run --cache=false` to force full validation.
-
-### Configuration
-
-Transcript filtering is enabled by default when checkpoints are enabled:
-
-```yaml
+# han-plugin.yml
 hooks:
-  checkpoints: true        # Enables checkpoints (default: true)
-  transcript_filter: true  # Enables transcript filtering (default: true)
+  lint:
+    command: npx biome check --write ${HAN_FILES}
+    if_changed:
+      - "**/*.ts"
+      - "**/*.tsx"
 ```
 
-The `transcript_filter` option requires `checkpoints: true`. Disabling checkpoints automatically disables transcript filtering.
+At `Stop`, Han resolves that template against the files the current session modified:
 
-### Fallback Behavior
+- `${HAN_FILES}` becomes the session-modified files under the hook's directory that also match `if_changed`
+- With no session ID, no session-modified files, or a failed lookup, it becomes `.` so the hook falls back to the whole directory
+- If the session did modify files but none match this directory and `if_changed`, the hook is skipped for that directory rather than run against `.`
+- A command without `${HAN_FILES}` runs unchanged
 
-If a transcript can't be found or parsed, the hook runs normally (full checkpoint-based filtering). This ensures hooks never silently skip validation.
+This is automatic and has no off switch. A command opts in by using the template and opts out by not using it.
 
-## Configuration
+## Multi-Session Safety
 
-Checkpoints are enabled by default. All settings default to `true` as of v2.0.0.
-
-### Disable Checkpoints
-
-For intentional full-codebase validation:
-
-```yaml
-# han.yml
-hooks:
-  checkpoints: false  # Validate all changed files, not just your session's
-```
-
-Or via environment variable:
-
-```bash
-HAN_NO_CHECKPOINTS=1 han hook run biome lint
-```
-
-Or via CLI flag:
-
-```bash
-han hook run biome lint --no-checkpoints
-```
-
-### When to Disable
-
-- **Tech debt sprints**: When deliberately addressing accumulated issues
-- **CI pipelines**: Merge gates should validate the full codebase
-- **Initial cleanup**: First-time adoption with planned fix-all session
-
-Most day-to-day development should keep checkpoints enabled.
-
-## CLI Commands
-
-Manage checkpoints directly with the CLI:
-
-### Capture a Checkpoint
-
-```bash
-# Automatic (reads stdin from hook payload)
-han checkpoint capture
-
-# Manual with explicit options
-han checkpoint capture --type session --id my-session-123
-han checkpoint capture --type agent --id agent-xyz
-```
-
-### List Active Checkpoints
-
-```bash
-han checkpoint list
-```
-
-Output:
+Session file filtering is what keeps two Claude Code sessions in the same repo from fighting:
 
 ```text
-Active Checkpoints
-==================
-
-Session Checkpoints:
-  - abc123 (captured 2 hours ago)
-  - def456 (captured 1 day ago)
-
-Agent Checkpoints:
-  - agent-xyz (captured 5 minutes ago)
-
-Total: 3 checkpoints
+Session A: modifies src/auth.ts   → its Stop hook validates src/auth.ts
+Session B: modifies src/utils.ts  → its Stop hook validates src/utils.ts
 ```
 
-### Clean Stale Checkpoints
+Without it, Session B's hook would see Session A's unfinished edit to `auth.ts`, try to fix it, and collide with Session A doing the same thing.
+
+## Subagent Work
+
+Subagents run the same hooks as the main conversation. A `SubagentStop` hook validates through the same caching and `${HAN_FILES}` path as a `Stop` hook, so a subagent's validation naturally narrows to the files that subagent touched.
+
+## Turning Session Filtering Off
+
+Session-scoped filtering narrows a hook to the files the session touched. Turn
+it off when you want a hook to check the whole tree every time:
+
+| Name | Where it appears | Effect |
+|------|------------------|--------|
+| `hooks.checkpoints: false` | `han.yml` | `${HAN_FILES}` expands to `.`, so hooks check everything |
+| `--no-checkpoints` | `han hook dispatch` | Same, for the hooks that dispatch invokes |
+| `HAN_NO_CHECKPOINTS=1` | Environment | Same, read by the hook runner |
+
+## Inert Leftovers
+
+`--checkpoint-type` and `--checkpoint-id` on `han hook run` are still parsed and
+validated, then ignored. They are remnants of the removed checkpoint system.
+
+There is no `han checkpoint` command. Earlier documentation described
+`han checkpoint capture`, `list`, and `clean`; those subcommands were removed
+along with the feature.
+
+## Adopting Han on a Legacy Codebase
+
+Because a hook only fires on files you touch, you can install validation plugins on a messy codebase without a cleanup sprint first:
+
+1. Install the plugins for your stack
+2. Work normally. Hooks validate only what you edit
+3. Pre-existing issues surface gradually, as you touch the files that contain them
+
+To deliberately attack accumulated debt, force a full run:
 
 ```bash
-# Remove checkpoints older than 24 hours (default)
-han checkpoint clean
-
-# Custom age threshold
-han checkpoint clean --max-age 48
+han hook run biome lint --no-cache
 ```
 
-## Integration with Hooks
+## Learn More
 
-Hooks automatically use checkpoints when available:
-
-```json
-{
-  "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          { "type": "command", "command": "han checkpoint capture" }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          { "type": "command", "command": "han hook run biome lint" }
-        ]
-      }
-    ]
-  }
-}
-```
-
-The `Stop` hook automatically filters to files changed since the session checkpoint.
-
-## The Boy Scout Philosophy
-
-The checkpoint system embodies incremental improvement:
-
-1. Touch a file → that file gets validated
-2. Fix issues in code you're already changing
-3. Over time, frequently-touched code gets cleaner
-4. Rarely-touched code stays as-is until relevant
-
-This is sustainable. Demanding perfection on day one isn't.
-
-## What Checkpoints Don't Do
-
-**Hide problems**: Pre-existing issues still exist. They surface when you touch those files.
-
-**Replace CI**: Your CI should validate the full codebase. Checkpoints optimize the developer feedback loop.
-
-**Persist across sessions**: Each session starts fresh. Old checkpoints are cleaned up automatically.
-
-## Technical Details
-
-### Checkpoint Storage
-
-```text
-~/.claude/projects/{project-slug}/han/checkpoints/
-├── session_abc123.json
-├── session_def456.json
-└── agent_xyz789.json
-```
-
-### Checkpoint Format
-
-```json
-{
-  "type": "session",
-  "id": "session_abc123",
-  "timestamp": "2025-12-13T08:00:00Z",
-  "files": {
-    "src/index.ts": "sha256:abc...",
-    "src/utils.ts": "sha256:def..."
-  }
-}
-```
-
-### Graceful Degradation
-
-- Missing checkpoint? Normal hook behavior (validates all changed files)
-- Corrupted checkpoint? Falls back gracefully
-- Never silently skips validation
-
-### Debugging
-
-Checkpoint capture fails silently by default to avoid blocking hooks. To see error messages:
-
-```bash
-HAN_VERBOSE=1 han checkpoint capture --type session --id test-123
-```
-
-The `HAN_VERBOSE=1` environment variable enables detailed error output for troubleshooting.
-
-## Next Steps
-
-- Learn about [smart caching](/docs/configuration/caching) for faster hook execution
-- Explore [hook configuration](/docs/configuration) for fine-tuning
-- Read about [SubagentStart/Stop hooks](/docs/cli/hooks) for agent lifecycle
+- [Hook System](/docs/features/hooks) - How hooks fire and what they do
+- [Hook Commands](/docs/cli/hooks) - Running hooks manually
+- [Configuration](/docs/configuration) - Tuning hook behaviour

@@ -7,43 +7,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import YAML from 'yaml';
-import {
-  getMergedPluginsAndMarketplaces,
-  type MarketplaceConfig,
-} from '../../config/claude-settings.ts';
-
-/**
- * Find plugin in a marketplace root directory
- */
-export function findPluginInMarketplace(
-  marketplaceRoot: string,
-  pluginName: string
-): string | null {
-  const potentialPaths = [
-    join(marketplaceRoot, 'jutsu', pluginName),
-    join(marketplaceRoot, 'do', pluginName),
-    join(marketplaceRoot, 'hashi', pluginName),
-    join(marketplaceRoot, pluginName),
-  ];
-
-  for (const path of potentialPaths) {
-    if (existsSync(path)) {
-      return path;
-    }
-  }
-
-  return null;
-}
-
-/**
- * Resolve a path to absolute, relative to cwd
- */
-export function resolvePathToAbsolute(path: string): string {
-  if (path.startsWith('/')) {
-    return path;
-  }
-  return join(process.cwd(), path);
-}
+import { getMergedPluginsAndMarketplaces } from '../../config/claude-settings.ts';
+import { getPluginDir } from '../../hooks/plugin-discovery.ts';
+import { getShortPluginName } from '../../plugin-aliases.ts';
 
 /**
  * MCP server definition from han-plugin.yml
@@ -102,26 +68,34 @@ export interface McpServerConfig {
 }
 
 /**
- * Capability descriptions for each plugin type
+ * Capability descriptions keyed by short plugin name.
+ *
+ * Plugins are named after their directory (`github`), but installs made before
+ * the rename still carry the prefixed alias (`hashi-github`) in settings, so
+ * lookups go through the short name.
  */
 const CAPABILITY_DESCRIPTIONS: Record<string, string> = {
-  'hashi-github': 'Create branches, commits, PRs, manage issues, code search',
-  'hashi-gitlab': 'Manage merge requests, issues, CI/CD pipelines, code search',
-  'hashi-playwright-mcp':
-    'Navigate pages, fill forms, take screenshots, test UIs',
-  'hashi-linear': 'Create and manage issues, track projects, update status',
-  'hashi-jira': 'Manage tickets, JQL search, update issue status',
-  'hashi-clickup': 'Manage tasks, workspaces, project tracking',
-  'hashi-blueprints': 'Search, read, and write technical blueprints',
-  'hashi-figma': 'Access design components, specs, and design systems',
-  'hashi-sentry': 'Track errors, monitor performance, manage incidents',
+  github: 'Create branches, commits, PRs, manage issues, code search',
+  gitlab: 'Manage merge requests, issues, CI/CD pipelines, code search',
+  'playwright-mcp': 'Navigate pages, fill forms, take screenshots, test UIs',
+  linear: 'Create and manage issues, track projects, update status',
+  jira: 'Manage tickets, JQL search, update issue status',
+  clickup: 'Manage tasks, workspaces, project tracking',
+  blueprints: 'Search, read, and write technical blueprints',
+  figma: 'Access design components, specs, and design systems',
+  sentry: 'Track errors, monitor performance, manage incidents',
+  notion: 'Search pages and databases, create and update content',
+  reddit: 'Read subreddits, posts, and comments',
+  canva: 'Create and edit designs, export assets',
+  'agent-sop': 'Look up and apply standard operating procedures',
 };
 
 /**
- * Extract display name from plugin name (e.g., "hashi-github" -> "GitHub")
+ * Extract display name from a plugin name, tolerating the legacy `hashi-`
+ * prefix that older installs still record (`hashi-github` -> `GitHub`).
  */
 function extractDisplayName(pluginName: string): string {
-  const name = pluginName.replace(/^hashi-/, '');
+  const name = getShortPluginName(pluginName);
   const specialCases: Record<string, string> = {
     'playwright-mcp': 'Playwright',
     github: 'GitHub',
@@ -134,28 +108,6 @@ function extractDisplayName(pluginName: string): string {
   }
 
   return name.charAt(0).toUpperCase() + name.slice(1);
-}
-
-/**
- * Get plugin directory based on plugin name, marketplace, and marketplace config
- */
-function getPluginDir(
-  pluginName: string,
-  _marketplace: string,
-  marketplaceConfig: MarketplaceConfig | undefined
-): string | null {
-  if (marketplaceConfig?.source?.source === 'directory') {
-    const directoryPath = marketplaceConfig.source.path;
-    if (directoryPath) {
-      const absolutePath = resolvePathToAbsolute(directoryPath);
-      const found = findPluginInMarketplace(absolutePath, pluginName);
-      if (found) {
-        return found;
-      }
-    }
-  }
-
-  return null;
 }
 
 /**
@@ -199,13 +151,6 @@ export function discoverMcpServers(): McpServerConfig[] {
   const { plugins, marketplaces } = getMergedPluginsAndMarketplaces();
 
   for (const [pluginName, marketplace] of plugins.entries()) {
-    const isHashi = pluginName.startsWith('hashi-');
-    const isCore = pluginName === 'core';
-
-    if (!isHashi && !isCore) {
-      continue;
-    }
-
     const marketplaceConfig = marketplaces.get(marketplace);
     const pluginDir = getPluginDir(pluginName, marketplace, marketplaceConfig);
 
@@ -239,7 +184,7 @@ export function discoverMcpServers(): McpServerConfig[] {
           pluginName,
           serverName,
           description:
-            CAPABILITY_DESCRIPTIONS[pluginName] ||
+            CAPABILITY_DESCRIPTIONS[getShortPluginName(pluginName)] ||
             pluginJson.description ||
             `${displayName} integration`,
           command: serverDef.command,

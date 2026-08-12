@@ -26,6 +26,7 @@ import {
   getClaudeConfigDir,
   getMergedPluginsAndMarketplaces,
 } from '../config/claude-settings.ts';
+import { findPluginInMarketplace } from '../hooks/plugin-discovery.ts';
 import { loadPluginConfig } from '../hooks/hook-config.ts';
 import type {
   ExtractedObservation,
@@ -118,31 +119,6 @@ function resolveMarketplacePath(
     `[Provider Discovery] Cannot resolve relative path "${directoryPath}" without projectPath`
   );
   return directoryPath; // Return as-is, will fail to find
-}
-
-/**
- * Find plugin directory in marketplace structure
- */
-function findPluginInMarketplace(
-  marketplaceRoot: string,
-  pluginName: string
-): string | null {
-  // Check category directories first
-  const categories = ['jutsu', 'do', 'hashi'];
-  for (const category of categories) {
-    const categoryPath = join(marketplaceRoot, category, pluginName);
-    if (existsSync(categoryPath)) {
-      return categoryPath;
-    }
-  }
-
-  // Check root level
-  const rootPath = join(marketplaceRoot, pluginName);
-  if (existsSync(rootPath)) {
-    return rootPath;
-  }
-
-  return null;
 }
 
 /**

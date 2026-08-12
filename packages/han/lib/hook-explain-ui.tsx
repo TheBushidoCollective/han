@@ -2,6 +2,7 @@ import { Box, Text } from 'ink';
 import type React from 'react';
 import type { SettingsScope } from './config/claude-settings.ts';
 import type { HookDependency } from './hooks/hook-config.ts';
+import { HOOK_EVENT_TYPES } from './hooks/hook-events.ts';
 
 /**
  * Hook types where stdout is meant to inject context into Claude's conversation.
@@ -230,18 +231,11 @@ const HookTypeSection: React.FC<{
 };
 
 /**
- * Helper to sort hook types in logical order
+ * Sort hook types into the canonical Claude Code lifecycle order, with
+ * anything unrecognized after them alphabetically.
  */
 function sortHookTypes(types: string[]): string[] {
-  const eventOrder = [
-    'SessionStart',
-    'UserPromptSubmit',
-    'PreToolUse',
-    'PostToolUse',
-    'Stop',
-    'SubagentStart',
-    'SubagentStop',
-  ];
+  const eventOrder: readonly string[] = HOOK_EVENT_TYPES;
   return types.sort((a, b) => {
     const aIdx = eventOrder.indexOf(a);
     const bIdx = eventOrder.indexOf(b);

@@ -10,79 +10,14 @@ import {
 import { getPluginHookSettings } from '../config/han-settings.ts';
 import { getPluginNameFromRoot } from '../shared/index.ts';
 import { findDirectoriesWithMarkers } from './hook-cache.ts';
+import { HOOK_EVENT_TYPES, type HookEventType } from './hook-events.ts';
 
-/**
- * Claude Code hook event types that can trigger han hooks.
- * Complete as of Claude Code 2.1.215.
- */
-export type HookEventType =
-  | 'SessionStart'
-  | 'Setup'
-  | 'UserPromptSubmit'
-  | 'UserPromptExpansion'
-  | 'PreToolUse'
-  | 'PermissionRequest'
-  | 'PermissionDenied'
-  | 'PostToolUse'
-  | 'PostToolUseFailure'
-  | 'PostToolBatch'
-  | 'Notification'
-  | 'MessageDisplay'
-  | 'SubagentStart'
-  | 'SubagentStop'
-  | 'TaskCreated'
-  | 'TaskCompleted'
-  | 'Stop'
-  | 'StopFailure'
-  | 'TeammateIdle'
-  | 'InstructionsLoaded'
-  | 'ConfigChange'
-  | 'CwdChanged'
-  | 'FileChanged'
-  | 'WorktreeCreate'
-  | 'WorktreeRemove'
-  | 'PreCompact'
-  | 'PostCompact'
-  | 'Elicitation'
-  | 'ElicitationResult'
-  | 'SessionEnd';
+export { HOOK_EVENT_TYPES, type HookEventType } from './hook-events.ts';
 
 /**
  * Valid base event types for shorthand parsing validation.
- * Complete as of Claude Code 2.1.215.
  */
-const VALID_EVENT_TYPES = new Set<string>([
-  'SessionStart',
-  'Setup',
-  'UserPromptSubmit',
-  'UserPromptExpansion',
-  'PreToolUse',
-  'PermissionRequest',
-  'PermissionDenied',
-  'PostToolUse',
-  'PostToolUseFailure',
-  'PostToolBatch',
-  'Notification',
-  'MessageDisplay',
-  'SubagentStart',
-  'SubagentStop',
-  'TaskCreated',
-  'TaskCompleted',
-  'Stop',
-  'StopFailure',
-  'TeammateIdle',
-  'InstructionsLoaded',
-  'ConfigChange',
-  'CwdChanged',
-  'FileChanged',
-  'WorktreeCreate',
-  'WorktreeRemove',
-  'PreCompact',
-  'PostCompact',
-  'Elicitation',
-  'ElicitationResult',
-  'SessionEnd',
-]);
+const VALID_EVENT_TYPES: ReadonlySet<string> = new Set(HOOK_EVENT_TYPES);
 
 /**
  * Parsed event from shorthand syntax.
@@ -525,17 +460,18 @@ export function loadPluginConfig(
       return null;
     }
 
-    const config = convertYamlPluginConfig(yamlConfig);
-
+    // Validate the raw YAML, not the converted config. The validator's schema
+    // describes han-plugin.yml's snake_case surface, so validating after
+    // conversion would reject every camelCase field it produces.
     if (validate) {
-      const result = validatePluginConfig(config);
+      const result = validatePluginConfig(yamlConfig);
       if (!result.valid) {
         console.error(formatValidationErrors(yamlPath, result));
         return null;
       }
     }
 
-    return config;
+    return convertYamlPluginConfig(yamlConfig);
   } catch (error) {
     console.error(`Error loading plugin config from ${yamlPath}:`, error);
     return null;

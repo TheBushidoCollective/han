@@ -19,11 +19,13 @@ import {
   readSettingsFile,
   type SettingsScope,
 } from '../../config/claude-settings.ts';
+import { HOOK_EVENT_TYPES } from '../../hooks/hook-events.ts';
 import {
   getHookEvents,
   loadPluginConfig,
   type PluginHookDefinition,
 } from '../../hooks/index.ts';
+import { findPluginInMarketplace } from '../../hooks/plugin-discovery.ts';
 
 /**
  * Hook types where stdout is meant to inject context into Claude's conversation.
@@ -91,33 +93,6 @@ interface PhaseStats {
   failed: number;
   totalDuration: number;
   startTime?: number;
-}
-
-/**
- * Find plugin in a marketplace root directory
- */
-function findPluginInMarketplace(
-  marketplaceRoot: string,
-  pluginName: string
-): string | null {
-  const potentialPaths = [
-    join(marketplaceRoot, 'jutsu', pluginName),
-    join(marketplaceRoot, 'do', pluginName),
-    join(marketplaceRoot, 'hashi', pluginName),
-    join(marketplaceRoot, pluginName),
-  ];
-
-  if (pluginName === 'core') {
-    potentialPaths.push(join(marketplaceRoot, 'core'));
-  }
-
-  for (const path of potentialPaths) {
-    if (existsSync(path)) {
-      return path;
-    }
-  }
-
-  return null;
 }
 
 function resolveToAbsolute(path: string): string {
@@ -530,6 +505,122 @@ function generateStdinPayload(hookType: string): string {
       basePayload.message = 'Claude needs your permission';
       basePayload.notification_type = 'permission_prompt';
       break;
+
+    case 'PostToolBatch':
+      basePayload.tool_calls = [
+        {
+          tool_name: 'Write',
+          tool_input: {
+            file_path: '/tmp/test-file.txt',
+            content: 'test content',
+          },
+          tool_response: { filePath: '/tmp/test-file.txt', success: true },
+          tool_use_id: `toolu_01TEST${Date.now()}`,
+        },
+      ];
+      break;
+
+    case 'PermissionDenied':
+      basePayload.permission_mode = 'auto';
+      basePayload.tool_name = 'Bash';
+      basePayload.tool_input = {
+        command: 'rm -rf /tmp/build',
+        description: 'Clean build directory',
+      };
+      basePayload.tool_use_id = `toolu_01TEST${Date.now()}`;
+      basePayload.reason = 'Blocked by classifier';
+      break;
+
+    case 'UserPromptExpansion':
+      basePayload.expansion_type = 'slash_command';
+      basePayload.command_name = 'example-skill';
+      basePayload.command_args = 'arg1 arg2';
+      basePayload.command_source = 'plugin';
+      basePayload.prompt = '/example-skill arg1 arg2';
+      break;
+
+    case 'MessageDisplay':
+      basePayload.turn_id = `turn-${Date.now()}`;
+      basePayload.message_id = `msg-${Date.now()}`;
+      basePayload.index = 0;
+      basePayload.final = true;
+      basePayload.delta = 'Assistant message text\n';
+      break;
+
+    case 'InstructionsLoaded':
+      basePayload.file_path = `${process.cwd()}/CLAUDE.md`;
+      basePayload.memory_type = 'Project';
+      basePayload.load_reason = 'session_start';
+      break;
+
+    case 'TaskCreated':
+    case 'TaskCompleted':
+      basePayload.task_id = 'task-001';
+      basePayload.task_subject = 'Implement user authentication';
+      basePayload.task_description = 'Test task for hook execution';
+      break;
+
+    case 'StopFailure':
+      basePayload.error = 'rate_limit';
+      basePayload.error_details = 'Test rate limit error';
+      basePayload.last_assistant_message = 'Working on it';
+      break;
+
+    case 'TeammateIdle':
+      basePayload.teammate_name = 'researcher';
+      basePayload.team_name = 'session-a1b2c3d4';
+      break;
+
+    case 'ConfigChange':
+      basePayload.source = 'settings';
+      basePayload.file_path = `${process.cwd()}/.claude/settings.json`;
+      break;
+
+    case 'CwdChanged':
+      basePayload.old_cwd = process.cwd();
+      basePayload.new_cwd = `${process.cwd()}/src`;
+      break;
+
+    case 'DirectoryAdded':
+      basePayload.directory = `${process.cwd()}/packages`;
+      basePayload.source = 'slash_command';
+      break;
+
+    case 'FileChanged':
+      basePayload.file_path = `${process.cwd()}/.envrc`;
+      basePayload.event = 'change';
+      break;
+
+    case 'WorktreeCreate':
+      basePayload.name = 'feature-auth';
+      break;
+
+    case 'WorktreeRemove':
+      basePayload.worktree_path = `${process.cwd()}/.claude/worktrees/feature-auth`;
+      break;
+
+    case 'PostCompact':
+      basePayload.trigger = 'manual';
+      basePayload.compact_summary = 'Summary of the compacted conversation';
+      break;
+
+    case 'Elicitation':
+      basePayload.mcp_server_name = 'test-mcp-server';
+      basePayload.message = 'Please provide your credentials';
+      basePayload.mode = 'form';
+      basePayload.requested_schema = {
+        type: 'object',
+        properties: { username: { type: 'string', title: 'Username' } },
+      };
+      break;
+
+    case 'ElicitationResult':
+      basePayload.mcp_server_name = 'test-mcp-server';
+      basePayload.action = 'accept';
+      basePayload.mode = 'form';
+      basePayload.elicitation_id = 'elicit-123';
+      basePayload.content = { username: 'alice' };
+      break;
   }
 
   return JSON.stringify(basePayload, null, 2);
@@ -811,22 +902,8 @@ const HookTestUI: React.FC<TestUIProps> = ({
   const passed = Array.from(results.values()).filter((r) => r.success).length;
   const failed = Array.from(results.values()).filter((r) => !r.success).length;
 
-  // Sort phases in logical order
-  const eventOrder = [
-    'Setup',
-    'SessionStart',
-    'UserPromptSubmit',
-    'PreToolUse',
-    'PermissionRequest',
-    'PostToolUse',
-    'PostToolUseFailure',
-    'SubagentStart',
-    'SubagentStop',
-    'Stop',
-    'PreCompact',
-    'SessionEnd',
-    'Notification',
-  ];
+  // Sort phases into the canonical Claude Code lifecycle order
+  const eventOrder: readonly string[] = HOOK_EVENT_TYPES;
   const sortedPhases = Array.from(phaseStats.values()).sort((a, b) => {
     const aIdx = eventOrder.indexOf(a.hookType);
     const bIdx = eventOrder.indexOf(b.hookType);
@@ -1122,22 +1199,8 @@ async function runWithConsole(
     hooksByType.set(hook.hookType, existing);
   }
 
-  // Sort phases
-  const eventOrder = [
-    'Setup',
-    'SessionStart',
-    'UserPromptSubmit',
-    'PreToolUse',
-    'PermissionRequest',
-    'PostToolUse',
-    'PostToolUseFailure',
-    'SubagentStart',
-    'SubagentStop',
-    'Stop',
-    'PreCompact',
-    'SessionEnd',
-    'Notification',
-  ];
+  // Sort phases into the canonical Claude Code lifecycle order
+  const eventOrder: readonly string[] = HOOK_EVENT_TYPES;
   const sortedPhases = Array.from(hooksByType.keys()).sort((a, b) => {
     const aIdx = eventOrder.indexOf(a);
     const bIdx = eventOrder.indexOf(b);

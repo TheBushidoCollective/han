@@ -1,0 +1,13 @@
+hooks:
+  codegen:
+    event: Stop
+    command: "npx -y --package @graphql-codegen/cli graphql-codegen"
+    dirs_with:
+      - "codegen.ts"
+      - "codegen.yml"
+      - "codegen.yaml"
+      - "codegen.json"
+    if_changed:
+      - "**/*.graphql"
+      - "**/*.gql"
+      - "codegen.{ts,yml,yaml,json}"

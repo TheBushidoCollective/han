@@ -25,7 +25,7 @@ The essential infrastructure that powers Han. Always required.
 
 **When to install:**
 
-Always. Core is required for Han to function. Bushido is optional—install only if its philosophical approach resonates with you. All technical capabilities come from core.
+Always. Core is required for Han to function. Bushido is optional, so install it only if its philosophical approach resonates with you. All technical capabilities come from core.
 
 **Installation:**
 
@@ -212,16 +212,11 @@ Integration plugins connect Claude to external services via MCP (Model Context P
 - **playwright-mcp** - Browser automation via MCP
 - **blueprints** - Technical documentation management
 
-**Dual-Mode Operation:**
+**How tools reach Claude:**
 
-Integration plugins support two operation modes:
+An integration plugin declares a backend MCP server. When that server is marked `expose: true`, Han fronts it through its own `han mcp` entry and prefixes each tool with the server name (`context7_resolve-library-id`). Otherwise Claude Code connects to the plugin's server directly.
 
-| Mode | Tools Visible | Use Case |
-|------|---------------|----------|
-| **Orchestrator** (default) | None—Han manages all tools via `han_workflow` | Reduced context, unified interface |
-| **Direct** | All backend MCP tools exposed individually | Full tool access when needed |
-
-In orchestrator mode, Han exposes a single `han_workflow` tool that can invoke any backend capability. This reduces context usage from 50+ tools to ~5.
+Either way you get the backend's real tools. There is no "orchestrator" mode that collapses them into a single `han_workflow` tool; that was described in earlier documentation but never existed.
 
 **When to install:**
 
@@ -230,20 +225,22 @@ Install integration plugins for external services you use in your workflow. They
 **Installation:**
 
 ```bash
-# Install to user settings (recommended for MCP servers)
+# Integration plugins install at project scope like everything else
 han plugin install github
 han plugin install playwright-mcp
 
-# Or specify scope explicitly
-han plugin install blueprints --scope user
+# Or keep one to yourself
+han plugin install blueprints --scope local
 ```
 
-**Switching modes:**
+**Tuning the backend pool:**
 
 ```yaml
-# han.yml - disable orchestrator for direct MCP access
+# han.yml
 orchestrator:
-  enabled: false
+  backends:
+    idle_timeout: 300
+    max_connections: 10
 ```
 
 ## Discipline - Specialized AI Agents

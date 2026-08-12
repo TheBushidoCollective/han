@@ -15,12 +15,14 @@ import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { HAN_VERSION } from './build-info.generated.ts';
 import { registerAliasCommands } from './commands/aliases.ts';
+import { registerAuthCommands } from './commands/auth/index.ts';
 import { registerBlueprintsCommands } from './commands/blueprints/index.ts';
 import { browse } from './commands/browse/index.ts';
 import {
   handleGetCompletions,
   registerCompletionCommand,
 } from './commands/completion/index.ts';
+import { registerConfigCommands } from './commands/config/index.ts';
 import { registerCoordinatorCommands } from './commands/coordinator/index.ts';
 import { registerCreateCommands } from './commands/create/index.ts';
 import { registerDoctorCommand } from './commands/doctor.ts';
@@ -32,6 +34,7 @@ import { registerMemoryCommand } from './commands/memory/index.ts';
 import { registerParseCommands } from './commands/parse/index.ts';
 import { registerPluginCommands } from './commands/plugin/index.ts';
 import { registerSetupCommand } from './commands/setup/index.ts';
+import { registerSyncCommands } from './commands/sync/index.ts';
 import { registerWorktreeCommands } from './commands/worktree/index.ts';
 import { getMergedHanConfig } from './config/han-settings.ts';
 import { initTelemetry, shutdownTelemetry } from './telemetry/index.ts';
@@ -252,6 +255,9 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
   registerDoctorCommand(program);
   registerSetupCommand(program);
   registerWorktreeCommands(program);
+  registerConfigCommands(program);
+  registerAuthCommands(program);
+  registerSyncCommands(program);
 
   // Register browse command
   program

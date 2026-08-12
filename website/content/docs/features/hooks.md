@@ -13,12 +13,12 @@ Hooks make validation **automatic**. Write code, finish your conversation, and h
 
 ## The Hook Lifecycle
 
-Han hooks into Claude Code's execution at specific points:
+Claude Code fires 31 hook events over a session's life, and Han's `han-plugin.yml` accepts every one of them. The table below is the curated shortlist you will actually reach for when writing a validation plugin. For the complete 31-event reference, current as of Claude Code 2.1.228, see [plugin hook events](/docs/plugin-development/hooks#hook-lifecycle).
 
 | Hook | When It Fires | Purpose |
 |------|---------------|---------|
-| `SessionStart` | Session begins | Initialize state, capture checkpoints |
-| `SubagentStart` | Subagent spawns | Capture agent checkpoint |
+| `SessionStart` | Session begins | Initialize state |
+| `SubagentStart` | Subagent spawns | Inject context into subagents |
 | `UserPromptSubmit` | Before processing input | Pre-process, inject context |
 | `PreToolUse` | Before tool execution | Validate tool calls |
 | `PermissionRequest` | Permission dialog appears | Audit/auto-approve permissions |
@@ -35,7 +35,7 @@ Han hooks into Claude Code's execution at specific points:
 | `WorktreeCreate` | Git worktree created | Agent isolation tracking |
 | `WorktreeRemove` | Git worktree removed | Cleanup tracking |
 
-Most validation happens at `Stop` and `SubagentStop` - the natural checkpoints after work is done.
+Most validation happens at `Stop` and `SubagentStop` - the natural points after work is done. The events above are a curated subset, not the full set.
 
 ### New Hook Events (Claude Code 2.1.33+)
 
@@ -53,7 +53,7 @@ Several hook events have been added for tool failure tracking, permission auditi
 
 - **`TaskCompleted`** (2.1.33+): Fires when a task is marked as completed via `TaskUpdate`. Useful for task tracking dashboards, triggering follow-up workflows, and team notifications.
 
-- **`WorktreeCreate`** (2.1.50+): Fires when a worktree is being created. Receives `name` slug in the payload. When configured, replaces default git worktree behavior — the hook must print the created worktree path to stdout. Enables custom VCS support and tracking of parallel workstreams.
+- **`WorktreeCreate`** (2.1.50+): Fires when a worktree is being created. Receives `name` slug in the payload. When configured, replaces default git worktree behavior: the hook must print the created worktree path to stdout. Enables custom VCS support and tracking of parallel workstreams.
 
 - **`WorktreeRemove`** (2.1.50+): Fires when a worktree is being removed. Receives `worktree_path` in the payload. Cannot block removal. Useful for cleanup automation and resource tracking.
 
@@ -85,14 +85,12 @@ SessionStart
   └─ Stop (validates session changes)
 ```
 
-### Checkpoint Integration
+### How Validation Is Scoped
 
-- **SessionStart**: Creates session checkpoint
-- **SubagentStart**: Creates agent checkpoint
-- **Stop**: Validates against session checkpoint
-- **SubagentStop**: Validates against agent checkpoint
+- **Caching**: a hook is skipped when nothing the current session touched matches its `if_changed` patterns, and re-runs once a matching file's hash differs from the one recorded at its last validation
+- **Session filtering**: a hook whose command contains `${HAN_FILES}` is handed only the files the current session modified
 
-This ensures hooks only check files that changed since the relevant checkpoint.
+Between them, hooks avoid re-checking untouched code and avoid tripping over another session's edits. Han previously did this with explicit session and agent checkpoints; that mechanism has been removed.
 
 ## What Hooks Do
 
@@ -206,13 +204,15 @@ Skip hooks when files haven't changed:
 - Only re-validates modified files
 - Dramatically speeds up repeated runs
 
-### Checkpoint Filtering
+### Session Filtering
 
 Only validate your work:
 
-- Session hooks filter to session changes
-- Agent hooks filter to agent changes
-- Pre-existing issues are out of scope
+- A hook whose command contains `${HAN_FILES}` runs only against the files the current session modified
+- Pre-existing issues elsewhere in the repo stay out of scope
+- This is automatic. A command opts in by using `${HAN_FILES}` and opts out by not using it
+
+To turn session filtering off, set `hooks.checkpoints: false` in `han.yml`, pass `--no-checkpoints` to `han hook dispatch`, or export `HAN_NO_CHECKPOINTS=1`. Any of the three makes `${HAN_FILES}` expand to `.`, so hooks check the whole tree.
 
 ### Transcript Filtering
 
@@ -249,16 +249,16 @@ plugins:
           - "**/*.tsx"
 ```
 
-When transcript filtering is active:
+When a command uses `${HAN_FILES}`:
 
-- `${HAN_FILES}` is replaced with the session's modified files that match `if_changed` patterns
-- If no files match, `${HAN_FILES}` is replaced with `.` (fallback to full directory)
+- It is replaced with the session-modified files under the hook's directory that also match `if_changed`
+- If there is no session ID, the session modified nothing, or the lookup throws, it is replaced with `.` (fall back to the whole directory)
+- If the session did modify files but none of them match this directory and `if_changed`, the hook is skipped for that directory rather than run against `.`
 - Commands without `${HAN_FILES}` run unchanged (backward compatible)
-- When `cache=false` or transcript filter is disabled, `${HAN_FILES}` is replaced with `.` to run on all files
 
 This prevents the scenario where Session A's lint error causes Session B's hook to also fail.
 
-All smart behaviors are enabled by default. Disable with `--no-cache`, `--no-checkpoints`, or configure `transcript_filter: false`.
+Caching is the one smart behaviour with a working off switch: pass `--no-cache` to `han hook run`, set `HAN_NO_CACHE=1`, or set `hooks.cache: false` in `han.yml`.
 
 ## Configuration
 
@@ -270,8 +270,9 @@ In `han.yml`:
 hooks:
   enabled: true       # Master switch
   cache: true         # Smart caching (default: true)
-  checkpoints: true   # Session-scoped filtering (default: true)
 ```
+
+`hooks.enabled`, `hooks.cache`, and `hooks.checkpoints` are the keys the hook runner reads.
 
 ### Per-Plugin Settings
 
@@ -282,26 +283,27 @@ plugins:
       lint:
         enabled: true
         command: npx biome check --write .
-        cache: true
         if_changed:
           - "**/*.ts"
           - "**/*.tsx"
 ```
 
+A per-plugin hook override is read as `enabled`, `command`, `if_changed`, `idle_timeout`, and `before_all`. `han.yml` is parsed without schema validation, so any other key is silently ignored rather than reported.
+
 ### Conditional Execution
 
-Only run in directories with specific files:
+`dirs_with` and `dir_test` are plugin-author keys: they belong in the plugin's own `han-plugin.yml`, not in your `han.yml` overrides. Only run in directories with specific files:
 
 ```yaml
-plugins:
-  typescript:
-    hooks:
-      typecheck:
-        dirs_with:
-          - tsconfig.json
+# han-plugin.yml
+hooks:
+  typecheck:
+    command: npx tsc --noEmit
+    dirs_with:
+      - tsconfig.json
 ```
 
-Only run when specific patterns changed:
+From `han.yml`, narrow an existing hook by adding change patterns:
 
 ```yaml
 plugins:
@@ -317,10 +319,10 @@ plugins:
 
 Settings cascade with later overriding earlier:
 
-1. **Built-in defaults**: All features enabled
-2. **`han.yml`**: Your configuration
-3. **CLI flags**: `--no-cache`, `--no-fail-fast`
-4. **Environment variables**: `HAN_NO_CACHE=1`
+1. **Built-in defaults**: hooks and caching enabled
+2. **`han.yml`**: your configuration, merged user then project then local then root
+3. **CLI flags**: `--no-cache` on `han hook run`
+4. **Environment variables**: `HAN_NO_CACHE=1`, `HAN_DISABLE_HOOKS=1`
 
 ## Running Hooks Manually
 
@@ -385,7 +387,14 @@ han hook run biome lint --verbose
 View hook configuration:
 
 ```bash
-han hook info biome lint
+# Every configured hook, Han plugins plus Claude Code settings
+han hook explain
+
+# Narrow to a single event
+han hook explain Stop
+
+# Just the hooks discovered from installed plugins
+han hook list
 ```
 
 ### Force Re-run
@@ -417,6 +426,6 @@ Let hooks run automatically. Don't disable them because they found issues - fix 
 
 ## Next Steps
 
-- Learn about [checkpoints](/docs/features/checkpoints) for session-scoped validation
+- Read the full [hook event reference](/docs/plugin-development/hooks#hook-lifecycle) for all 31 events
 - Explore [configuration](/docs/configuration) for fine-tuning
 - See [CLI commands](/docs/cli/hooks) for manual execution

@@ -1,13 +1,20 @@
 /**
  * Shared plugin discovery utilities
  *
- * Provides consistent plugin directory resolution across all hook commands
- * (list, explain, run). Uses dynamic scanning for han-plugin.yml
- * files to support flexible directory structures.
+ * Provides consistent plugin directory resolution across every command that
+ * needs to locate a plugin on disk.
+ *
+ * A marketplace's `.claude-plugin/marketplace.json` is the authority: every
+ * entry carries a `source` pointing at its directory, and legacy names stay
+ * published as extra entries pointing at the same source. That makes the
+ * manifest the only place that knows both the current
+ * `plugins/<category>/<name>` layout and every historical alias. Scanning for
+ * `han-plugin.yml` is the fallback, since plugins that ship only agents or an
+ * MCP server have no such file.
  */
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { dirname, join, parse } from 'node:path';
+import { dirname, isAbsolute, join, parse, resolve, sep } from 'node:path';
 import {
   getClaudeConfigDir,
   getProjectDir,
@@ -44,19 +51,91 @@ function findMarketplaceRoot(startDir: string): string | null {
  */
 const pluginDirCache = new Map<string, Map<string, string>>();
 
+interface MarketplaceSourceObject {
+  source?: string;
+  path?: string;
+}
+
+interface MarketplaceManifest {
+  metadata?: { pluginRoot?: string };
+  plugins?: Array<{ name?: string; source?: string | MarketplaceSourceObject }>;
+}
+
 /**
- * Build plugin directory cache by scanning for han-plugin.yml files.
- * Recursively scans up to depth 3 to support directory structures like:
- * - plugins/validation/biome/han-plugin.yml
- * - plugins/services/github/han-plugin.yml
+ * Index every plugin entry in a marketplace manifest, canonical names and
+ * aliases alike, into `cache`.
+ *
+ * Remote sources (github, npm, archive, git) have no local directory and are
+ * skipped. A `source` that escapes the marketplace root is rejected, since a
+ * manifest is third-party content.
+ */
+function addManifestEntries(
+  marketplaceRoot: string,
+  cache: Map<string, string>
+): void {
+  const manifestPath = join(
+    marketplaceRoot,
+    '.claude-plugin',
+    'marketplace.json'
+  );
+  if (!existsSync(manifestPath)) return;
+
+  let manifest: MarketplaceManifest;
+  try {
+    manifest = JSON.parse(
+      readFileSync(manifestPath, 'utf-8')
+    ) as MarketplaceManifest;
+  } catch {
+    return;
+  }
+
+  const pluginRoot = manifest.metadata?.pluginRoot;
+  const rootPrefix = resolve(marketplaceRoot);
+
+  for (const entry of manifest.plugins ?? []) {
+    if (!entry?.name) continue;
+
+    const source = entry.source;
+    let relative: string | undefined;
+    if (typeof source === 'string') {
+      // `metadata.pluginRoot` prefixes bare sources, letting an entry say
+      // "formatter" instead of "./plugins/formatter".
+      relative =
+        pluginRoot && !source.startsWith('.') && !isAbsolute(source)
+          ? join(pluginRoot, source)
+          : source;
+    } else if (source?.source === 'directory' && source.path) {
+      relative = source.path;
+    }
+    if (!relative) continue;
+
+    const resolved = isAbsolute(relative)
+      ? relative
+      : join(marketplaceRoot, relative);
+    const target = resolve(resolved);
+    if (target !== rootPrefix && !target.startsWith(rootPrefix + sep)) continue;
+    if (!existsSync(resolved)) continue;
+
+    cache.set(entry.name.toLowerCase(), resolved);
+  }
+}
+
+/**
+ * Build the plugin name to directory map for a marketplace root.
+ *
+ * Reads `.claude-plugin/marketplace.json` first so canonical names and every
+ * published alias resolve, then scans up to depth 3 for `han-plugin.yml` to
+ * pick up plugins the manifest does not list.
  *
  * @param marketplaceRoot - Root directory of the marketplace to scan
- * @returns Map of plugin name to plugin directory path
+ * @returns Map of lowercased plugin name to plugin directory path
  */
 export function buildPluginDirCache(
   marketplaceRoot: string
 ): Map<string, string> {
   const cache = new Map<string, string>();
+
+  addManifestEntries(marketplaceRoot, cache);
 
   const scanDir = (dir: string, depth: number) => {
     // Depth 3 supports: plugins/category/plugin/han-plugin.yml
@@ -70,29 +149,26 @@ export function buildPluginDirCache(
 
         const subdir = join(dir, entry.name);
 
-        // Check if this directory has han-plugin.yml
         if (existsSync(join(subdir, 'han-plugin.yml'))) {
-          // Get plugin name from .claude-plugin/plugin.json if available
+          // Prefer the declared plugin name over the directory name.
+          let name = entry.name;
           const pluginJsonPath = join(subdir, '.claude-plugin', 'plugin.json');
           if (existsSync(pluginJsonPath)) {
             try {
               const pluginJson = JSON.parse(
                 readFileSync(pluginJsonPath, 'utf-8')
               );
-              if (pluginJson.name) {
-                cache.set(pluginJson.name, subdir);
-              }
+              if (pluginJson.name) name = pluginJson.name;
             } catch {
-              // Invalid plugin.json, fall back to directory name
-              cache.set(entry.name, subdir);
+              // Invalid plugin.json, keep the directory name.
             }
-          } else {
-            // No plugin.json, use directory name
-            cache.set(entry.name, subdir);
+          }
+          // The manifest wins when both know the name.
+          if (!cache.has(name.toLowerCase())) {
+            cache.set(name.toLowerCase(), subdir);
           }
         }
 
-        // Recurse into subdirectories
         scanDir(subdir, depth + 1);
       }
     } catch {
@@ -115,13 +191,15 @@ export function findPluginInMarketplace(
   marketplaceRoot: string,
   pluginName: string
 ): string | null {
-  // Use cached mapping if available
-  if (!pluginDirCache.has(marketplaceRoot)) {
-    pluginDirCache.set(marketplaceRoot, buildPluginDirCache(marketplaceRoot));
+  if (!pluginName) return null;
+
+  let cache = pluginDirCache.get(marketplaceRoot);
+  if (!cache) {
+    cache = buildPluginDirCache(marketplaceRoot);
+    pluginDirCache.set(marketplaceRoot, cache);
   }
 
-  const cache = pluginDirCache.get(marketplaceRoot);
-  return cache?.get(pluginName) ?? null;
+  return cache.get(pluginName.toLowerCase()) ?? null;
 }
 
 /**

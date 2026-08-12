@@ -44,39 +44,31 @@ Create validation hooks for languages, frameworks, or tools.
 plugins/languages/{name}/   # or plugins/validation/{name}/
 ├── .claude-plugin/
 │   └── plugin.json
+├── han-plugin.yml
 ├── hooks/
-│   └── hooks.json
+│   └── hooks.json        # Generated, do not hand-edit
 ├── skills/              # Optional
 └── README.md
 ```
 
-**Example hooks.json:**
+**Example `han-plugin.yml`:**
 
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han hook run --fail-fast --dirs-with package.json -- npm test"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "han hook run --fail-fast --dirs-with package.json -- npm test"
-          }
-        ]
-      }
-    ]
-  }
-}
+```yaml
+hooks:
+  test:
+    command: npm test
+    dirs_with:
+      - package.json
+    description: Run the project's test suite
+    if_changed:
+      - "**/*.ts"
+      - "**/*.test.ts"
+```
+
+Hooks default to the `Stop` and `SubagentStop` events, so most validation plugins do not need an explicit `event:` key. Generate `hooks/hooks.json` from that file rather than writing it by hand:
+
+```bash
+han plugin generate-hooks plugins/languages/{name}
 ```
 
 ### 🛤️ New Discipline Plugins
@@ -172,7 +164,7 @@ You can also use natural language prompts to create plugins. Here are example pr
 
 ```
 Add a validation plugin for <tool-name> that validates <what it validates>.
-It should use --dirs-with <marker-file> and run <validation-command>.
+It should use dirs_with <marker-file> and run <validation-command>.
 Include skills for <skill-topics>.
 ```
 
@@ -180,7 +172,7 @@ Include skills for <skill-topics>.
 
 ```
 Add a validation plugin for kubernetes that validates manifests.
-It should use --dirs-with *.yaml,*.yml and run kubeconform.
+It should use dirs_with *.yaml,*.yml and run kubeconform.
 Include skills for kubernetes-manifests, kubernetes-resources, and kubernetes-security.
 ```
 
@@ -281,7 +273,7 @@ When you request plugin generation, Claude will:
 
 After Claude generates files, review:
 
-1. **Hook Commands**: Ensure they use `han hook run --fail-fast --dirs-with`
+1. **Hook Commands**: Ensure hooks are declared in `han-plugin.yml` and `hooks/hooks.json` was regenerated with `han plugin generate-hooks`
 2. **Marker Files**: Verify marker files match project types
 3. **Skills**: Check that skills are comprehensive and accurate
 4. **Examples**: Ensure code examples are correct and follow best practices
@@ -400,16 +392,25 @@ npm test
 
 ## Validation Hook Guidelines
 
-### Use han hook run
+### Declare hooks in han-plugin.yml
 
-All validation plugins should use the `han hook run` command:
+Validation plugins declare their hooks in `han-plugin.yml`, then generate `hooks/hooks.json` from it:
 
-```json
-{
-  "type": "command",
-  "command": "han hook run --fail-fast --dirs-with <marker-file> -- <test-command>"
-}
+```yaml
+hooks:
+  test:
+    command: <test-command>
+    dirs_with:
+      - <marker-file>
 ```
+
+```bash
+han plugin generate-hooks
+```
+
+The generated `hooks.json` wires each hook to `han hook run <plugin> <hook>`. The older inline form, `han hook run --dirs-with <marker> -- <command>`, still works but is legacy: it cannot express `if_changed`, dependencies, event selection, or `${HAN_FILES}` targeting.
+
+There is no `--fail-fast` flag. Earlier documentation prescribed one; it does not exist in the CLI.
 
 ### Choose Appropriate Marker Files
 
@@ -427,14 +428,22 @@ Don't add redundant error messages after the hook command - it handles errors au
 
 **Good:**
 
-```json
-"command": "han hook run --fail-fast --dirs-with package.json -- npm test"
+```yaml
+hooks:
+  test:
+    command: npm test
+    dirs_with:
+      - package.json
 ```
 
 **Bad:**
 
-```json
-"command": "han hook run --fail-fast --dirs-with package.json -- npm test || (echo 'Tests failed'; exit 2)"
+```yaml
+hooks:
+  test:
+    command: npm test || (echo 'Tests failed'; exit 2)
+    dirs_with:
+      - package.json
 ```
 
 ## Review Process

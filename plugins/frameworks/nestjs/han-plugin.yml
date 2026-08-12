@@ -1,0 +1,12 @@
+hooks:
+  build:
+    event: Stop
+    command: "npx nest build"
+    dirs_with:
+      - "package.json"
+    dir_test: "grep -qE '\"@nestjs/core\":' package.json"
+    if_changed:
+      - "**/*.ts"
+      - "package.json"
+      - "nest-cli.json"
+      - "tsconfig*.json"

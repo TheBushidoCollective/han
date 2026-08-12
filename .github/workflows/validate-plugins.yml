@@ -1,0 +1,110 @@
+name: Validate Plugins
+
+on:
+  pull_request:
+    paths:
+      - "plugins/**"
+      - "examples/**"
+      - ".claude-plugin/marketplace.json"
+      - "packages/han/lib/commands/plugin/generate-hooks.ts"
+      - "packages/han/lib/hooks/**"
+      - ".github/workflows/validate-plugins.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "plugins/**"
+      - "examples/**"
+      - ".claude-plugin/marketplace.json"
+      - "packages/han/lib/commands/plugin/generate-hooks.ts"
+      - "packages/han/lib/hooks/**"
+      - ".github/workflows/validate-plugins.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        working-directory: ./packages/han
+
+      - name: Generate build-info stub
+        working-directory: ./packages/han
+        run: |
+          cat > lib/build-info.generated.ts << 'EOF'
+          // Auto-generated stub for CI
+          export const HAN_VERSION = "0.0.0-ci";
+          export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
+          export const version = "0.0.0-ci";
+          export const gitCommit = "ci";
+          export const buildDate = new Date().toISOString();
+          export const platform = "linux";
+          export const arch = "x64";
+          EOF
+
+      - name: Check generated hooks.json is up to date
+        working-directory: ./packages/han
+        run: |
+          if ! bun run lib/main.ts plugin generate-hooks --all --check; then
+            echo "::error::One or more hooks/hooks.json files are stale. Run 'han plugin generate-hooks --all' and commit the result."
+            exit 1
+          fi
+
+      - name: Validate plugins
+        run: |
+          han_cli="$PWD/packages/han/lib/main.ts"
+
+          plugin_list="$(mktemp)"
+          find plugins examples -type d -name .claude-plugin | sort > "$plugin_list"
+
+          plugin_dirs=()
+          while IFS= read -r claude_plugin_dir; do
+            plugin_dirs+=("${claude_plugin_dir%/.claude-plugin}")
+          done < "$plugin_list"
+          rm -f "$plugin_list"
+
+          echo "Discovered ${#plugin_dirs[@]} plugin(s)."
+          if [ "${#plugin_dirs[@]}" -eq 0 ]; then
+            echo "::error::No plugin directories discovered. Plugin validation would pass vacuously."
+            exit 1
+          fi
+
+          validated=0
+          failed_dirs=()
+
+          for plugin_dir in "${plugin_dirs[@]}"; do
+            echo "::group::$plugin_dir"
+            if (cd "$plugin_dir" && bun "$han_cli" plugin validate < /dev/null); then
+              echo "ok"
+            else
+              failed_dirs+=("$plugin_dir")
+            fi
+            validated=$((validated + 1))
+            echo "::endgroup::"
+          done
+
+          echo "Validated $validated plugin(s) of ${#plugin_dirs[@]} discovered, ${#failed_dirs[@]} failed."
+
+          if [ "$validated" -ne "${#plugin_dirs[@]}" ]; then
+            echo "::error::Validated $validated plugin(s) but discovered ${#plugin_dirs[@]}. Discovery and validation disagree."
+            exit 1
+          fi
+
+          if [ "${#failed_dirs[@]}" -gt 0 ]; then
+            for plugin_dir in "${failed_dirs[@]}"; do
+              echo "  - $plugin_dir"
+            done
+            echo "::error::${#failed_dirs[@]} plugin(s) failed 'han plugin validate'."
+            exit 1
+          fi

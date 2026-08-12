@@ -2,6 +2,8 @@
  * Tests for shell completion system
  */
 import { describe, expect, test } from 'bun:test';
+import { COMMANDS } from '../lib/commands/completion/completions.ts';
+import { makeProgram } from '../lib/main.ts';
 
 describe('completion', () => {
   describe('shell script generation', () => {
@@ -245,17 +247,34 @@ describe('completion', () => {
     });
 
     describe('COMMANDS structure', () => {
-      test('top-level commands are defined', async () => {
-        const { COMMANDS } = await import(
-          '../lib/commands/completion/completions.ts'
-        );
+      test('every advertised command is actually registered', () => {
+        const program = makeProgram({ exitOverride: true });
+        const registered = new Set(program.commands.map((c) => c.name()));
 
-        expect(COMMANDS['']).toContain('plugin');
-        expect(COMMANDS['']).toContain('hook');
-        expect(COMMANDS['']).toContain('memory');
-        expect(COMMANDS['']).toContain('metrics');
-        expect(COMMANDS['']).toContain('checkpoint');
-        expect(COMMANDS['']).toContain('completion');
+        // Shell completion presents these as real commands, so anything here
+        // that main.ts does not register is a lie to the user.
+        const phantom = COMMANDS[''].filter((name) => !registered.has(name));
+        expect(phantom).toEqual([]);
+      });
+
+      test('every advertised subcommand is actually registered', () => {
+        const program = makeProgram({ exitOverride: true });
+        const phantom: string[] = [];
+
+        for (const [group, subcommands] of Object.entries(COMMANDS)) {
+          if (group === '') continue;
+          const parent = program.commands.find((c) => c.name() === group);
+          if (!parent) {
+            phantom.push(group);
+            continue;
+          }
+          const registered = new Set(parent.commands.map((c) => c.name()));
+          for (const sub of subcommands) {
+            if (!registered.has(sub)) phantom.push(`${group} ${sub}`);
+          }
+        }
+
+        expect(phantom).toEqual([]);
       });
 
       test('plugin subcommands are defined', async () => {
@@ -277,16 +296,6 @@ describe('completion', () => {
         expect(COMMANDS.hook).toContain('run');
         expect(COMMANDS.hook).toContain('dispatch');
         expect(COMMANDS.hook).toContain('explain');
-      });
-
-      test('checkpoint subcommands are defined', async () => {
-        const { COMMANDS } = await import(
-          '../lib/commands/completion/completions.ts'
-        );
-
-        expect(COMMANDS.checkpoint).toContain('capture');
-        expect(COMMANDS.checkpoint).toContain('list');
-        expect(COMMANDS.checkpoint).toContain('clean');
       });
     });
 

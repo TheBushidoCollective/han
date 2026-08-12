@@ -15,12 +15,18 @@ const packageRoot = join(__dirname, '..');
 describe.serial('dispatch simple coverage', () => {
   let testDir: string;
   let configDir: string;
+  let projectDir: string;
+  // Absolute so each spawn can run from an isolated cwd. Running inside the
+  // han checkout would pull in the repo's own project settings and plugins.
+  const entrypoint = join(packageRoot, 'lib/main.ts');
 
   beforeEach(() => {
     // Create unique directory for each test to avoid race conditions
     testDir = `/tmp/test-dispatch-simple-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     configDir = join(testDir, 'config');
+    projectDir = join(testDir, 'project');
     mkdirSync(configDir, { recursive: true });
+    mkdirSync(projectDir, { recursive: true });
   });
 
   afterEach(() => {
@@ -30,11 +36,11 @@ describe.serial('dispatch simple coverage', () => {
   test('dispatch with HAN_DISABLE_HOOKS=true exits early', () => {
     const result = spawnSync(
       'bun',
-      ['run', 'lib/main.ts', 'hook', 'dispatch', 'SessionStart'],
+      ['run', entrypoint, 'hook', 'dispatch', 'SessionStart'],
       {
         encoding: 'utf-8',
         timeout: 10000,
-        cwd: packageRoot,
+        cwd: projectDir,
         env: {
           ...process.env,
           HAN_DISABLE_HOOKS: 'true',
@@ -54,11 +60,11 @@ describe.serial('dispatch simple coverage', () => {
 
     const result = spawnSync(
       'bun',
-      ['run', 'lib/main.ts', 'hook', 'dispatch', 'SessionStart'],
+      ['run', entrypoint, 'hook', 'dispatch', 'SessionStart'],
       {
         encoding: 'utf-8',
         timeout: 10000,
-        cwd: packageRoot,
+        cwd: projectDir,
         env: {
           ...process.env,
           CLAUDE_CONFIG_DIR: configDir,
@@ -85,11 +91,11 @@ describe.serial('dispatch simple coverage', () => {
 
     const result = spawnSync(
       'bun',
-      ['run', 'lib/main.ts', 'hook', 'dispatch', 'SessionStart', '--all'],
+      ['run', entrypoint, 'hook', 'dispatch', 'SessionStart', '--all'],
       {
         encoding: 'utf-8',
         timeout: 10000,
-        cwd: packageRoot,
+        cwd: projectDir,
         env: {
           ...process.env,
           CLAUDE_CONFIG_DIR: configDir,
@@ -119,19 +125,11 @@ describe.serial('dispatch simple coverage', () => {
 
       const result = spawnSync(
         'bun',
-        [
-          'run',
-          'lib/main.ts',
-          'hook',
-          'dispatch',
-          'Stop',
-          '--all',
-          '--no-cache',
-        ],
+        ['run', entrypoint, 'hook', 'dispatch', 'Stop', '--all', '--no-cache'],
         {
           encoding: 'utf-8',
           timeout: 10000,
-          cwd: packageRoot,
+          cwd: projectDir,
           env: {
             ...process.env,
             CLAUDE_CONFIG_DIR: configDir,
@@ -164,7 +162,7 @@ describe.serial('dispatch simple coverage', () => {
         'bun',
         [
           'run',
-          'lib/main.ts',
+          entrypoint,
           'hook',
           'dispatch',
           'Stop',
@@ -174,7 +172,7 @@ describe.serial('dispatch simple coverage', () => {
         {
           encoding: 'utf-8',
           timeout: 10000,
-          cwd: packageRoot,
+          cwd: projectDir,
           env: {
             ...process.env,
             CLAUDE_CONFIG_DIR: configDir,

@@ -1,0 +1,17 @@
+# graphql plugin configuration
+# Uses graphql-language-service-cli, the same toolchain this plugin's LSP
+# server runs (scripts/lsp-entrypoint.sh). Gating on a GraphQL config file
+# lets the CLI resolve schema and document locations itself instead of
+# assuming a fixed ./schema.graphql layout.
+
+hooks:
+  validate:
+    event: Stop
+    command: "npx -y --package graphql-language-service-cli graphql-lsp validate"
+    dirs_with:
+      - ".graphqlrc"
+      - ".graphqlrc.{yml,yaml,json,js,ts}"
+      - "graphql.config.{yml,yaml,json,js,ts}"
+    if_changed:
+      - "**/*.graphql"
+      - "**/*.gql"

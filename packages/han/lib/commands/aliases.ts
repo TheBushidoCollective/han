@@ -48,7 +48,7 @@ export function registerAliasCommands(program: Command): void {
   program
     .command('validate-legacy [ignored...]')
     .description(
-      "[DEPRECATED] Legacy validate format. Use 'han validate' instead.\n" +
+      "[DEPRECATED] Legacy validate format. Use 'han hook run' instead.\n" +
         'Requires -- before command (e.g., han validate-legacy --dirs-with package.json -- npm test)'
     )
     .option(

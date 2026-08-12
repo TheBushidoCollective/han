@@ -51,21 +51,25 @@ Checking skills...
 Plugin validation passed!
 ```
 
-## Local Installation
+## Testing Locally
 
-Install your plugin locally to test it in Claude Code:
+`han plugin install` resolves names against a marketplace; there is no `--path` flag for pointing it at a working directory. To exercise a plugin you are writing, work inside a checkout of the marketplace repository that registers it.
 
-### Method 1: Local Path Installation
+### Method 1: Run From the Marketplace Checkout
+
+Han discovers plugins through `.claude-plugin/marketplace.json`, so once your plugin is registered there you can drive it directly:
 
 ```bash
-# Install from local directory
-han plugin install --path ./my-plugin
+# From the plugin directory
+han plugin validate
+han plugin generate-hooks
 
-# Or with explicit scope
-han plugin install --path ./my-plugin --scope project
+# Then exercise the hook
+han hook run my-plugin lint --verbose
+han hook list --plugin my-plugin
 ```
 
-This creates a symlink to your plugin, so changes are reflected immediately.
+Edits to `han-plugin.yml` take effect as soon as you regenerate `hooks/hooks.json`.
 
 ### Method 2: Direct Configuration
 
@@ -104,8 +108,8 @@ han hook run my-plugin lint --verbose
 # Skip caching (force re-run)
 han hook run my-plugin lint --no-cache
 
-# Run in a specific directory
-han hook run my-plugin lint --directory ./packages/web
+# Run in a specific directory only
+han hook run my-plugin lint --only ./packages/web
 ```
 
 ### Verify Hook Conditions
@@ -241,12 +245,13 @@ npx -y @your-org/mcp-server-your-service --help
 
 ### Test Memory Provider
 
-If you configured a memory provider:
+If you configured a memory provider, start the Han MCP server and call its `memory` tool from a Claude Code session:
 
 ```bash
-# Query memory
-han memory query "search term relevant to your service"
+han mcp
 ```
+
+There is no `han memory query` subcommand. Bare `han memory` prints the memory system's status, and `han browse` gives you a searchable UI over indexed sessions.
 
 ## Debugging
 
@@ -263,27 +268,41 @@ han hook run my-plugin lint --verbose
 View hook configuration and state:
 
 ```bash
-han hook info my-plugin lint
+# Every configured hook, Han plugins plus Claude Code settings
+han hook explain
+
+# Just the hooks discovered from installed plugins
+han hook list --plugin my-plugin
+
+# Machine-readable
+han hook list --plugin my-plugin --json
 ```
 
-Output includes:
+Output includes the hook command, its conditions (`dirs_with`, `if_changed`), and its event.
 
-- Hook command
-- Conditions (dirs_with, if_changed)
-- Cache status
-- Last run result
+### Run Hooks As Claude Code Would
+
+`han hook test` executes hooks with a simulated Claude Code payload, which reproduces failures that only appear under a real event:
+
+```bash
+han hook test Stop
+
+# Show the stdin payload each hook receives
+han hook test Stop --payload
+
+# Narrow to your plugin's command
+han hook test --command my-plugin
+```
 
 ### View Cache
 
 Inspect the hook cache:
 
 ```bash
-# Cache is stored in ~/.han/cache/
-ls -la ~/.han/cache/hooks/
-
-# Clear cache to force re-runs
-han cache clear --hooks
+ls -la .claude/cache/hooks/
 ```
+
+There is no `han cache clear`. Force a re-run with `han hook run my-plugin lint --no-cache`, or delete the cache directory; Han rebuilds it on the next run.
 
 ### Check Plugin Registration
 
@@ -293,9 +312,11 @@ Verify your plugin is registered:
 # List all plugins
 han plugin list
 
-# Show plugin details
-han plugin info my-plugin
+# Validate the plugin in the current directory
+han plugin validate
 ```
+
+There is no `han plugin info`. `han plugin validate` reports structural and manifest problems for the plugin you are standing in.
 
 ### Debug Hook Failures
 

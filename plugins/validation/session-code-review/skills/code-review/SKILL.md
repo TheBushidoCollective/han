@@ -1,4 +1,5 @@
 ---
+name: code-review
 description: Review current branch changes against REVIEW.md guidelines
 ---
 

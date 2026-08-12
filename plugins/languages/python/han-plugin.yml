@@ -1,0 +1,35 @@
+hooks:
+  format:
+    event: [Stop, PostToolUse:Edit|Write|NotebookEdit]
+    command: "ruff format --check ${HAN_FILES}"
+    dirs_with:
+      - "pyproject.toml"
+    dir_test: "grep -qE '^\\[tool\\.ruff|\"ruff\"' pyproject.toml"
+    if_changed:
+      - "**/*.py"
+      - "**/*.pyi"
+      - "**/*.ipynb"
+
+  typecheck:
+    event: Stop
+    command: "npx -y pyright"
+    dirs_with:
+      - "pyproject.toml"
+    if_changed:
+      - "**/*.py"
+      - "**/*.pyi"
+      - "pyproject.toml"
+      - "pyrightconfig.json"
+
+  test:
+    event: Stop
+    command: "pytest"
+    dirs_with:
+      - "pyproject.toml"
+    dir_test: "grep -qE '^pytest[^a-zA-Z]|\"pytest\"' pyproject.toml"
+    if_changed:
+      - "**/*.py"
+      - "**/*.pyi"
+      - "pyproject.toml"
+      - "pytest.ini"
+      - "conftest.py"

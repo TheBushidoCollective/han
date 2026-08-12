@@ -3,154 +3,85 @@ title: "Distribution"
 description: "How to share your Han plugins via local paths, Git repositories, URLs, or the Han marketplace."
 ---
 
-Once your plugin is tested and ready, you have several options for distribution. This guide covers all methods from simple local sharing to marketplace submission.
+Once your plugin is tested and ready, you have two ways to distribute it: submit it to the Han marketplace, or publish it in a marketplace repository of your own.
+
+`han plugin install` resolves plugin names against a marketplace. It has no `--path`, `--git`, `--url`, `--branch`, or `--tag` flags; earlier documentation described those and none of them exist. The full option set is `--auto`, `--no-analyze`, `--scope`, and `--from`.
 
 ## Distribution Methods
 
 | Method | Best For | Installation |
 |--------|----------|--------------|
-| Local Path | Development, private plugins | `han plugin install --path ./my-plugin` |
-| Git Repository | Team sharing, open source | `han plugin install --git https://github.com/...` |
-| URL Archive | Quick sharing, no Git | `han plugin install --url https://.../plugin.tar.gz` |
-| Han Marketplace | Public distribution | `han plugin install my-plugin` |
+| Han marketplace | Public distribution | `han plugin install my-plugin` |
+| Your own marketplace repo | Team or private plugins | `han plugin install my-plugin --from myorg/my-plugins` |
+| Local development | Building and testing a plugin | Run from a checkout of the marketplace repo |
 
-## Local Path Distribution
+## External Marketplace Repositories
 
-The simplest method - share a directory:
-
-### Installation
+`--from` points Han at another GitHub repository that carries its own `.claude-plugin/marketplace.json`. This is how you ship plugins to a team without landing them in the public Han marketplace.
 
 ```bash
-# From absolute path
-han plugin install --path /Users/me/plugins/my-plugin
+# Install from another org's marketplace
+han plugin install ai-dlc --from thebushidocollective/ai-dlc
 
-# From relative path
-han plugin install --path ./my-plugin
-
-# With scope
-han plugin install --path ./my-plugin --scope project
+# Your own private plugin set
+han plugin install internal-linter --from myorg/claude-plugins
 ```
-
-### Use Cases
-
-- Local development and testing
-- Private plugins within an organization
-- Plugins embedded in monorepos
-
-### Sharing
-
-Share the plugin directory via:
-
-- File sharing (Dropbox, Google Drive)
-- Internal network drives
-- Copying to team members
-
-## Git Repository Distribution
-
-Host your plugin in a Git repository for version control and easy updates.
 
 ### Repository Structure
 
-Your repository should contain the plugin at its root:
-
-```
-my-plugin/
-├── .claude-plugin/
-│   └── plugin.json
-├── han-plugin.yml
-├── skills/
-├── README.md
-└── CHANGELOG.md
-```
-
-Or in a subdirectory:
+Mirror the Han marketplace layout: plugins in category directories, all of them registered in a root manifest.
 
 ```
 my-plugins-repo/
-├── biome/
-│   └── ...
-├── eslint/
-│   └── ...
+├── .claude-plugin/
+│   └── marketplace.json      # Registers every plugin below
+├── validation/
+│   └── internal-linter/
+│       ├── .claude-plugin/
+│       │   └── plugin.json
+│       ├── han-plugin.yml
+│       ├── skills/
+│       ├── README.md
+│       └── CHANGELOG.md
 └── README.md
 ```
 
-### Installation
+Each entry in `marketplace.json` needs `name`, `description`, `source` (the path to the plugin directory), `category`, and `keywords`:
 
-```bash
-# From GitHub (default branch)
-han plugin install --git https://github.com/user/my-plugin
-
-# Specific branch
-han plugin install --git https://github.com/user/my-plugin --branch main
-
-# Specific tag
-han plugin install --git https://github.com/user/my-plugin --tag v1.0.0
-
-# Subdirectory
-han plugin install --git https://github.com/user/plugins --path biome
+```json
+{
+  "name": "internal-linter",
+  "description": "House lint rules for our services.",
+  "source": "./validation/internal-linter",
+  "category": "Validation",
+  "keywords": ["lint", "internal"]
+}
 ```
 
-### Version Tags
+### Versioning Through Git
 
-Use Git tags for versioning:
+Han reads the repository's default branch, so tag releases for your own record-keeping and merge to the default branch to publish:
 
 ```bash
-# Create version tag
 git tag v1.0.0
 git push origin v1.0.0
-
-# Users install specific version
-han plugin install --git https://github.com/user/my-plugin --tag v1.0.0
 ```
 
-### Branch Strategy
+There is no `--tag` or `--branch` flag to pin an install to a specific ref.
 
-- `main` - Stable releases
-- `develop` - Development versions
-- `v*` tags - Specific versions
+## Local Development
 
-## URL Archive Distribution
-
-Distribute plugins as downloadable archives.
-
-### Creating Archives
+To iterate on a plugin, work inside a checkout of the marketplace repository that contains it. Han discovers plugins from the marketplace manifest, so a plugin registered in the local `.claude-plugin/marketplace.json` is visible to `han plugin install`, `han hook list`, and `han plugin validate` without any extra install step.
 
 ```bash
-# Create tar.gz
-tar -czvf my-plugin-1.0.0.tar.gz -C /path/to my-plugin
+# From the plugin directory
+han plugin validate
 
-# Create zip
-zip -r my-plugin-1.0.0.zip my-plugin
-```
+# Regenerate hooks.json after editing han-plugin.yml
+han plugin generate-hooks
 
-### Hosting Options
-
-- GitHub Releases
-- S3 / Cloud Storage
-- Personal website
-- CDN
-
-### Installation
-
-```bash
-# From URL
-han plugin install --url https://example.com/plugins/my-plugin-1.0.0.tar.gz
-
-# From GitHub Release
-han plugin install --url https://github.com/user/repo/releases/download/v1.0.0/my-plugin.tar.gz
-```
-
-### Archive Structure
-
-Archives should extract to a single directory:
-
-```
-my-plugin-1.0.0.tar.gz
-└── my-plugin/
-    ├── .claude-plugin/
-    │   └── plugin.json
-    ├── han-plugin.yml
-    └── ...
+# Run the hook you just defined
+han hook run my-plugin lint --verbose
 ```
 
 ## Han Marketplace Submission
@@ -159,7 +90,7 @@ For maximum visibility, submit to the Han marketplace.
 
 ### Prerequisites
 
-1. Plugin passes validation (`han plugin validate .`)
+1. Plugin passes validation (run `han plugin validate` from the plugin directory)
 2. Comprehensive README
 3. Proper versioning (semver)
 4. License specified
@@ -344,42 +275,33 @@ MIT
 
 For organization-internal plugins:
 
-### Option 1: Private Git Repository
+### Option 1: Private Marketplace Repository
+
+Put your plugins in a private GitHub repository with its own `.claude-plugin/marketplace.json`, then install by name with `--from`. Users need read access to the repo and a working `gh` or git credential for it.
 
 ```bash
-# Users install with credentials
-han plugin install --git https://github.com/org/private-plugin
-
-# Or via SSH
-han plugin install --git git@github.com:org/private-plugin.git
+han plugin install internal-linter --from org/private-plugins
 ```
 
-### Option 2: Private Registry
+### Option 2: Monorepo Embedding
 
-Set up an internal plugin registry:
-
-1. Host plugin archives internally
-2. Configure registry URL
-3. Users install normally
-
-### Option 3: Monorepo Embedding
-
-Include plugins in your project:
+Keep plugins in the project that uses them, registered in the repository's own marketplace manifest:
 
 ```
 your-project/
-├── .claude/
-│   └── plugins/
-│       └── my-internal-plugin/
-│           └── ...
+├── .claude-plugin/
+│   └── marketplace.json
+├── plugins/
+│   └── internal-linter/
+│       ├── .claude-plugin/
+│       │   └── plugin.json
+│       └── han-plugin.yml
 └── ...
 ```
 
-Install with:
+Han discovers plugins through the marketplace manifest, so a plugin registered here is available to `han hook run` and `han plugin validate` from inside the repo with no install step.
 
-```bash
-han plugin install --path .claude/plugins/my-internal-plugin --scope project
-```
+There is no private registry protocol and no `--path` or `--git` install flag. Both were described in earlier documentation; neither exists.
 
 ## Distribution Checklist
 

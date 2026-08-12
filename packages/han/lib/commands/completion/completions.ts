@@ -9,6 +9,7 @@ import {
   listAvailableHooks,
   loadPluginConfig,
 } from '../../hooks/hook-config.ts';
+import { findPluginInMarketplace } from '../../hooks/plugin-discovery.ts';
 import { getMarketplacePlugins } from '../../marketplace-cache.ts';
 import { getInstalledPlugins } from '../../shared.ts';
 
@@ -61,24 +62,15 @@ function findPluginRoot(pluginName: string): string | null {
   const configDir = process.env.CLAUDE_CONFIG_DIR || join(homeDir, '.claude');
   const marketplaceDir = join(configDir, 'plugins', 'marketplaces', 'han');
 
-  // Check common plugin directories
-  const prefixes = ['jutsu', 'do', 'hashi', 'core'];
-  for (const prefix of prefixes) {
-    const pluginPath = join(marketplaceDir, prefix, pluginName);
-    if (existsSync(join(pluginPath, 'han-plugin.yml'))) {
-      return pluginPath;
-    }
+  const installed = findPluginInMarketplace(marketplaceDir, pluginName);
+  if (installed) {
+    return installed;
   }
 
   // Also check if we're in the han repo itself (for development)
   const cwd = process.cwd();
   if (existsSync(join(cwd, '.claude-plugin', 'marketplace.json'))) {
-    for (const prefix of prefixes) {
-      const pluginPath = join(cwd, prefix, pluginName);
-      if (existsSync(join(pluginPath, 'han-plugin.yml'))) {
-        return pluginPath;
-      }
-    }
+    return findPluginInMarketplace(cwd, pluginName);
   }
 
   return null;
@@ -166,36 +158,82 @@ export const CHECKPOINT_TYPE_COMPLETIONS: CompletionItem[] = [
   { value: 'agent', description: 'Agent checkpoint' },
 ];
 
-// Command structure for completion
+// Command structure for completion.
+// Must mirror the groups registered in lib/main.ts. Advertising a command that
+// does not exist is worse than advertising none, since the shell presents it as
+// real.
 export const COMMANDS: Record<string, string[]> = {
   '': [
     'plugin',
+    'create',
     'hook',
-    'memory',
-    'metrics',
-    'checkpoint',
-    'index',
     'mcp',
-    'explain',
-    'summary',
-    'gaps',
+    'blueprints',
+    'memory',
+    'keep',
+    'parse',
+    'reindex',
+    'install',
+    'uninstall',
     'completion',
+    'doctor',
+    'setup',
+    'worktree',
+    'config',
+    'auth',
+    'sync',
+    'browse',
+    'coordinator',
   ],
-  plugin: ['install', 'list', 'uninstall', 'search', 'update'],
-  hook: ['run', 'dispatch', 'explain', 'test', 'verify', 'reference'],
-  metrics: [
-    'show',
-    'session-start',
-    'session-end',
-    'session-current',
-    'hook-exec',
-    'session-context',
-    'memory-context',
-    'detect-patterns',
+  plugin: [
+    'generate-hooks',
+    'install',
+    'list',
+    'migrate',
+    'uninstall',
+    'search',
+    'update-marketplace',
+    'validate',
   ],
-  checkpoint: ['capture', 'list', 'clean'],
-  index: ['run', 'search', 'status'],
-  mcp: ['blueprints'],
+  create: ['plugin'],
+  hook: [
+    'auto-detect',
+    'auto-detect-prompt',
+    'context',
+    'dispatch',
+    'explain',
+    'list',
+    'run',
+    'test',
+    'wrap-subagent-context',
+    'reference',
+  ],
+  mcp: ['blueprints', 'memory'],
+  blueprints: ['sync-index'],
+  keep: ['save', 'load', 'list', 'delete', 'clear'],
+  parse: [
+    'json',
+    'json-set',
+    'json-validate',
+    'yaml',
+    'yaml-set',
+    'yaml-to-json',
+    'json-to-yaml',
+  ],
+  worktree: ['add', 'remove', 'list', 'prune', 'discover'],
+  config: ['set', 'get', 'list'],
+  auth: ['login', 'logout', 'status'],
+  sync: ['status', 'session', 'all', 'queue', 'enqueue', 'watch', 'upload'],
+  coordinator: [
+    'start',
+    'stop',
+    'restart',
+    'status',
+    'ensure',
+    'logs',
+    'register',
+    'launchd',
+  ],
 };
 
 /**

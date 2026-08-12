@@ -29,18 +29,12 @@ A typical `han.yml` file has these main sections:
 ```yaml
 # Global hook settings
 hooks:
-  enabled: true            # Master switch for all hooks (default: true)
-  checkpoints: true        # Session/agent checkpoint filtering (default: true)
-  cache: true              # Smart caching - skip if no changes (default: true)
-  transcript_filter: true  # Multi-session conflict prevention (default: true, v2.3.0)
+  enabled: true       # Master switch for all hooks (default: true)
+  cache: true         # Smart caching - skip if no changes (default: true)
 
-# Orchestrator settings (controls MCP tool exposure)
-orchestrator:
-  enabled: true       # Use unified workflow interface (default: true)
-  workflow:
-    enabled: true     # Enable han_workflow tool
-    max_steps: 20     # Maximum workflow steps
-    timeout: 300      # Workflow timeout in seconds
+# Auto-detection behavior
+learn:
+  mode: auto          # auto | ask | none (default: auto)
 
 # Memory system
 memory:
@@ -50,19 +44,20 @@ memory:
 metrics:
   enabled: true       # Enable task metrics (default: true)
 
-# Plugin-specific settings
-biome:
-  lint:
-    enabled: true
-    command: npx biome check --write .
+# Per-plugin hook overrides
+plugins:
+  biome:
+    hooks:
+      lint:
+        enabled: true
+        command: npx biome check --write .
 
-typescript:
-  typecheck:
-    enabled: true
-    command: npx tsc --noEmit
+  typescript:
+    hooks:
+      typecheck:
+        enabled: true
+        command: npx tsc --noEmit
 ```
-
-**Note:** As of v2.0.0, all settings default to **enabled** (`true`). This means features are active by default unless explicitly disabled.
 
 ## Global Hook Settings
 
@@ -70,55 +65,58 @@ The `hooks` section controls behavior for all hooks across all plugins:
 
 ```yaml
 hooks:
-  enabled: true            # Master switch - disable all hooks
-  checkpoints: true        # Filter hooks by session/agent context
-  cache: true              # Skip hooks when files haven't changed
-  transcript_filter: true  # Filter by session's modified files (v2.3.0)
+  enabled: true   # Master switch - disable all hooks
+  cache: true     # Skip hooks when files haven't changed
 ```
 
 ### Global Hook Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `enabled` | boolean | `true` | Master switch to enable/disable all hooks |
-| `checkpoints` | boolean | `true` | Enable session-scoped filtering (only run relevant hooks) |
+| `enabled` | boolean | `true` | Master switch to enable or disable all hooks |
 | `cache` | boolean | `true` | Enable smart caching to skip unchanged files |
-| `transcript_filter` | boolean | `true` | Filter hooks to files THIS session modified (prevents multi-session conflicts) |
+| `checkpoints` | boolean | `true` | Scope `${HAN_FILES}` to the files this session modified. Set `false` to check the whole tree |
+
+These three are the only keys the hook runner reads. There is no
+`hooks.fail_fast` and no `hooks.transcript_filter`; both appeared in earlier
+documentation and neither exists in the code. See
+[session-scoped validation](/docs/features/checkpoints).
 
 ### Configuration Priority
 
 Settings are applied in this order (later overrides earlier):
 
-1. **Built-in defaults** - All settings default to `true` in v2.0.0
-2. **`han.yml` configuration** - Values from config hierarchy
-3. **CLI options** - Flags like `--no-cache`
-4. **Environment variables** - `HAN_HOOKS_CACHE=false`, etc.
+1. **Built-in defaults** - hooks and caching enabled
+2. **`han.yml` configuration** - merged across the file hierarchy above
+3. **CLI options** - flags like `--no-cache`
+4. **Environment variables** - `HAN_NO_CACHE=1`, `HAN_DISABLE_HOOKS=1`
 
 Example:
 
 ```bash
-# Disable caching via CLI (overrides han.yml)
-han hook run biome lint --cache=false
+# Disable caching for one run
+han hook run biome lint --no-cache
 
-# Disable via environment variable
-HAN_HOOKS_CACHE=false han hook run biome lint
+# Same, via environment variable
+HAN_NO_CACHE=1 han hook run biome lint
 ```
 
 ## Per-Hook Configuration
 
-Each plugin can define multiple hooks. You can configure them individually:
+Override an installed plugin's hook under `plugins.<plugin>.hooks.<hook>`:
 
 ```yaml
-biome:
-  lint:
-    enabled: true              # Enable/disable this hook
-    command: npx biome check   # Override the default command
-    cache: true                # Enable smart caching for this hook
-    dirs_with:                 # Only run in dirs with these files
-      - biome.json
-    if_changed:                # Only run if these patterns changed
-      - "**/*.ts"
-      - "**/*.tsx"
+plugins:
+  biome:
+    hooks:
+      lint:
+        enabled: true                     # Enable or disable this hook
+        command: npx biome check --write . # Override the default command
+        if_changed:                       # Add change patterns
+          - "**/*.ts"
+          - "**/*.tsx"
+        idle_timeout: 5                   # Seconds to wait for file stability
+        before_all: ./scripts/codegen.sh  # Run once before iterating directories
 ```
 
 ### Per-Hook Options
@@ -127,21 +125,29 @@ biome:
 |--------|------|-------------|
 | `enabled` | boolean | Enable or disable this specific hook |
 | `command` | string | Command to execute |
-| `cache` | boolean | Use smart caching (inherits global default: true) |
-| `dirs_with` | array | File patterns that must exist |
-| `if_changed` | array | Only run if matching files changed |
-| `idle_timeout` | number | Milliseconds to wait for file stability |
+| `if_changed` | array | Extra change patterns, merged with the plugin's own |
+| `idle_timeout` | number or `false` | Seconds to wait for file stability, or `false` to disable |
+| `before_all` | string | Script run once before all directory iterations |
 
-## Plugin Configuration Keys
+`han.yml` is parsed without schema validation, so an unrecognized key here is silently ignored rather than reported. `cache` and `dirs_with` are not valid per-hook overrides; see below.
 
-Han uses YAML configuration with snake_case keys:
+## Plugin Authoring Keys
+
+These keys belong in a plugin's own `han-plugin.yml`, not in your `han.yml` overrides:
 
 | Key | Description |
 |-----|-------------|
+| `event` | Hook event or events this hook responds to |
+| `tool_filter` | Restrict a tool event to specific tools |
 | `dirs_with` | Directory detection patterns |
 | `dir_test` | Directory test command |
+| `command` | Command to execute |
 | `if_changed` | File change patterns |
+| `timeout` | Maximum execution time in seconds |
 | `idle_timeout` | File stability timeout |
+| `depends_on` | Hooks that must run first |
+| `description`, `tip` | Human-facing text |
+| `mcp` | Expose the hook as an MCP tool |
 
 ## Example Configurations
 
@@ -151,50 +157,50 @@ Han uses YAML configuration with snake_case keys:
 hooks:
   enabled: true
 
-biome:
-  lint:
-    enabled: true
+plugins:
+  biome:
+    hooks:
+      lint:
+        enabled: true
 ```
 
 ### Full Configuration
 
 ```yaml
-# Global hook settings (all default to true in v2.0.0+)
 hooks:
-  enabled: true            # Master switch
-  checkpoints: true        # Session filtering
-  cache: true              # Smart caching
-  transcript_filter: true  # Multi-session conflict prevention (v2.3.0)
+  enabled: true
+  cache: true
 
-biome:
-  lint:
-    enabled: true
-    command: npx biome check --write .
-    cache: true
-    dirs_with:
-      - biome.json
-    if_changed:
-      - "**/*.ts"
-      - "**/*.tsx"
-      - "**/*.js"
+learn:
+  mode: ask
 
-typescript:
-  typecheck:
-    enabled: true
-    command: npx tsc --noEmit
-    cache: true
-    dirs_with:
-      - tsconfig.json
-    if_changed:
-      - "**/*.ts"
-      - "**/*.tsx"
+plugins:
+  biome:
+    hooks:
+      lint:
+        enabled: true
+        command: npx biome check --write ${HAN_FILES}
+        if_changed:
+          - "**/*.ts"
+          - "**/*.tsx"
+          - "**/*.js"
 
-markdown:
-  lint:
-    enabled: true
-    command: npx markdownlint-cli --fix .
-    if_changed:
-      - "**/*.md"
+  typescript:
+    hooks:
+      typecheck:
+        enabled: true
+        command: npx tsc --noEmit
+        if_changed:
+          - "**/*.ts"
+          - "**/*.tsx"
+
+  markdown:
+    hooks:
+      lint:
+        enabled: true
+        command: npx markdownlint-cli --fix .
+        if_changed:
+          - "**/*.md"
 ```
 
 ### Directory-Specific Configuration
@@ -203,9 +209,11 @@ You can create `han.yml` files in subdirectories to override settings:
 
 ```yaml
 # packages/frontend/han.yml
-biome:
-  lint:
-    command: npx biome check --write --config ../../biome.frontend.json .
+plugins:
+  biome:
+    hooks:
+      lint:
+        command: npx biome check --write --config ../../biome.frontend.json .
 ```
 
 ## Disabling Hooks
@@ -213,9 +221,11 @@ biome:
 To temporarily disable a specific hook without removing the plugin:
 
 ```yaml
-biome:
-  lint:
-    enabled: false
+plugins:
+  biome:
+    hooks:
+      lint:
+        enabled: false
 ```
 
 Or disable all hooks globally:
@@ -225,60 +235,42 @@ hooks:
   enabled: false
 ```
 
-You can also disable specific features:
+Or disable caching so hooks always run:
 
 ```yaml
 hooks:
-  cache: false              # Always run hooks, never use cache
-  checkpoints: false        # Run all hooks regardless of context
-  transcript_filter: false  # Ignore session transcript, use checkpoint-only filtering
+  cache: false
 ```
 
-Or via CLI for one-off runs:
+For a one-off run:
 
 ```bash
-# Disable caching for this run
-han hook run biome lint --cache=false
+han hook run biome lint --no-cache
 ```
 
-## Orchestrator Configuration
+## Auto-Detection
 
-The orchestrator controls how MCP service tools are exposed to Claude Code.
-
-### Orchestrator Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `enabled` | boolean | `true` | Enable unified workflow interface |
-| `workflow.enabled` | boolean | `true` | Expose the `han_workflow` tool |
-| `workflow.max_steps` | number | `20` | Maximum steps in a workflow |
-| `workflow.timeout` | number | `300` | Workflow timeout in seconds |
-
-### How It Works
-
-When orchestrator is **enabled** (default):
-
-- MCP servers return no tools (stub mode)
-- Han exposes a unified `han_workflow` tool
-- Reduces context from 50+ tools to ~5
-- Workflows can invoke any backend capability
-
-When orchestrator is **disabled**:
-
-- MCP servers proxy to actual backends
-- All individual MCP tools are exposed
-- Full access to service-specific tools
-- Higher context usage
-
-### Switching Modes
+The `learn` section controls whether Han installs plugins automatically when it detects marker files:
 
 ```yaml
-# han.yml - disable orchestrator for direct MCP access
-orchestrator:
-  enabled: false
+learn:
+  mode: auto   # Install detected plugins automatically (default)
+  # mode: ask  # Report what would be installed, install nothing
+  # mode: none # Disable auto-detection entirely
 ```
 
-This is useful when you need direct access to specific MCP tools rather than the unified workflow interface.
+## MCP Backend Pool
+
+Plugins that expose an MCP server are proxied through a connection pool. Tune it with:
+
+```yaml
+orchestrator:
+  backends:
+    idle_timeout: 300   # Seconds before an idle backend is closed
+    max_connections: 10
+```
+
+`orchestrator.backends` is the only `orchestrator` subsection Han reads.
 
 ## Best Practices
 
@@ -286,16 +278,20 @@ This is useful when you need direct access to specific MCP tools rather than the
 2. **Use local settings** (`.claude/han.local.yml`) for personal preferences
 3. **Keep it simple** - start with minimal configuration and add as needed
 4. **Document overrides** - add comments explaining why you've changed defaults
-5. **Test changes** - run hooks manually after configuration changes
+5. **Test changes** - run `han hook run <plugin> <hook>` after configuration changes
 
 ## Configuration Validation
 
-Han validates configuration on startup. If you have syntax errors or invalid options, you'll see:
+`han-plugin.yml` files are validated: unknown top-level keys and malformed hook definitions are reported as errors. Validate a plugin you are authoring with:
 
 ```bash
-han plugin install --auto
-# Error: Invalid configuration in .claude/han.yml
-# - biome.lint.enabled: must be boolean
+han plugin validate
+```
+
+`han.yml` is not schema-validated. A typo in a key name is ignored silently, so check your change actually took effect:
+
+```bash
+han hook explain
 ```
 
 ## Next Steps

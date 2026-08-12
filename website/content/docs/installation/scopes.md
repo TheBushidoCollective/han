@@ -1,43 +1,19 @@
 ---
 title: "Installation Scopes"
-description: "Choose where plugins are installed: user, local, or project scope."
+description: "Choose where plugins are installed: project or local scope, and why Han refuses user scope."
 ---
 
-Han supports three installation scopes that control where plugins are configured and who can access them. Understanding scopes helps you organize plugins effectively across your projects.
+Han installs plugins at one of two scopes, which controls where the plugin is configured and who on your team gets it.
 
-## User Scope (Default)
-
-Plugins installed at user scope apply across all your projects:
-
-```bash
-# User scope is the default
-han plugin install playwright-mcp
-
-# Or be explicit
-han plugin install playwright-mcp --scope user
-```
-
-**Configuration location:** `~/.claude/settings.json`
-
-**Best for:**
-
-- MCP server integrations (github, gitlab, playwright-mcp)
-- General-purpose tools used across multiple projects
-- Personal productivity plugins (Discipline plugins)
-- Plugins you want available everywhere
-
-**Advantages:**
-
-- Install once, use everywhere
-- No need to reinstall for each project
-- Reduces duplication in project settings
-- Ideal for personal tooling
-
-## Project Scope
+## Project Scope (Default)
 
 Plugins installed at project scope are shared with your team:
 
 ```bash
+# Project scope is the default
+han plugin install typescript
+
+# Or be explicit
 han plugin install typescript --scope project
 ```
 
@@ -48,14 +24,14 @@ han plugin install typescript --scope project
 - Project-specific validation hooks (biome, typescript, markdown)
 - Language-specific plugins needed by all contributors
 - Enforcing team standards and quality checks
-- Ensuring consistent development environment
+- MCP server integrations the whole team should share
 
 **Advantages:**
 
 - Team members get the same plugins automatically
 - Version-controlled plugin configuration
 - Enforces project standards across the team
-- Great for CI/CD integration
+- Works in CI, where there is no interactive user profile
 
 ## Local Scope
 
@@ -78,40 +54,60 @@ han plugin install playwright --scope local
 
 - Private to your environment
 - Won't affect other team members
-- Perfect for trying out new plugins
-- Override project settings without conflicts
+- Good for trying out a new plugin
+- Overrides project settings without conflicts
+
+## Why Not User Scope
+
+`han plugin install --scope user` is rejected:
+
+```text
+Error: --scope "user" is not supported. Han plugins must be installed at project or local scope.
+Use --scope "project" (default) or --scope "local" instead.
+```
+
+Han plugins carry validation hooks that run against a specific repository. Installing them globally in `~/.claude/settings.json` would fire a project's linters inside every unrelated project you open, and would make the set of active quality gates invisible to your team.
+
+User scope is not gone everywhere, though. `han plugin list --scope user` and `han plugin uninstall --scope user` both work, because Han still has to see and remove plugins written to `~/.claude/settings.json` by an older version or by hand. In fact `uninstall` defaults to `user`, so pass `--scope project` explicitly when removing a plugin you installed normally.
+
+## Scope Selection
+
+When you omit `--scope`, Han does not just assume `project`:
+
+1. If Han is already configured in `.claude/settings.local.json` or `.claude/settings.json`, it reuses that existing scope and tells you which one
+2. Otherwise it installs to `project` and prints `Installing to project scope (.claude/settings.json)`
+
+This keeps a repo from ending up with half its plugins in one file and half in the other.
 
 ## Scope Recommendations
 
-Here's a quick guide for choosing scopes:
-
 | Plugin Type | Recommended Scope | Example |
 |-------------|-------------------|---------|
-| MCP Servers (Integration) | User | github, playwright-mcp |
 | Validation plugins | Project | biome, typescript |
-| Team Standards | Project | markdown, shellcheck |
-| Discipline agents | User or Local | frontend, backend |
+| Team standards | Project | markdown, shellcheck |
+| MCP servers the team shares | Project | github, playwright-mcp |
+| Discipline agents | Project or Local | frontend, backend |
 | Experiments | Local | Any plugin you're testing |
 
 ## How Scopes Interact
 
-When plugins are installed at multiple scopes, Han merges the configurations with this precedence (later overrides earlier):
+Claude Code merges settings files with this precedence, later overriding earlier:
 
 1. User scope (`~/.claude/settings.json`)
 2. Project scope (`.claude/settings.json`)
 3. Local scope (`.claude/settings.local.json`)
 
-This means local settings always take precedence, allowing you to override team or personal defaults.
+Local settings win, so you can override a team default for yourself without touching the shared file.
 
 ## Changing Scopes
 
-To move a plugin between scopes, reinstall with the desired scope:
+To move a plugin between scopes, uninstall it from the old scope and install it to the new one:
 
 ```bash
-# Remove from current scope
-han plugin remove biome
+# Remove from its current scope
+han plugin uninstall biome --scope local
 
-# Install to new scope
+# Install to the new scope
 han plugin install biome --scope project
 ```
 
@@ -121,16 +117,17 @@ View which scope each plugin is installed in:
 
 ```bash
 han plugin list
-```
 
-The output shows the installation scope for each plugin, helping you understand your current configuration.
+# Or narrow to one scope
+han plugin list --scope project
+```
 
 ## Best Practices
 
-1. **Start with user scope** for general tools, then move to project scope when your team needs them
-2. **Use project scope** for validation hooks that enforce code quality standards
-3. **Reserve local scope** for personal preferences and experiments
-4. **Document project plugins** in your README so team members know what's expected
+1. **Default to project scope** so quality gates are visible and shared
+2. **Reserve local scope** for personal preferences and experiments
+3. **Document project plugins** in your README so team members know what's expected
+4. **Pass `--scope` explicitly when uninstalling**, since `uninstall` defaults to `user`
 5. **Review scopes periodically** to ensure plugins are in the right place
 
 ## Next Steps

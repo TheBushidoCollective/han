@@ -1,0 +1,21 @@
+hooks:
+  test:
+    event: Stop
+    command: "npx -y --package @cucumber/cucumber cucumber-js"
+    dirs_with:
+      - "package.json"
+    dir_test: "grep -qE '\"@cucumber/cucumber\":' package.json"
+    if_changed:
+      - "**/*.feature"
+      - "**/steps/**/*.{js,ts}"
+      - "**/step_definitions/**/*.{js,ts}"
+      - "cucumber.{js,cjs,mjs,json,yaml,yml}"
+
+  test-changed:
+    event: PostToolUse:Edit|Write
+    command: "npx -y --package @cucumber/cucumber cucumber-js ${HAN_FILES}"
+    dirs_with:
+      - "package.json"
+    dir_test: "grep -qE '\"@cucumber/cucumber\":' package.json"
+    if_changed:
+      - "**/*.feature"

@@ -1,0 +1,16 @@
+# absinthe-graphql plugin configuration
+# Absinthe validates schema definitions at compile time, so compiling with
+# warnings-as-errors is the schema validation step for an Absinthe project.
+
+hooks:
+  validate:
+    event: Stop
+    command: "mix compile --warnings-as-errors"
+    dirs_with:
+      - "mix.exs"
+    dir_test: "grep -qE ':absinthe' mix.exs"
+    if_changed:
+      - "**/*.ex"
+      - "**/*.exs"
+      - "mix.exs"
+      - "mix.lock"

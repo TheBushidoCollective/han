@@ -105,7 +105,7 @@ han plugin install biome --force
 To uninstall a plugin:
 
 ```bash
-han plugin remove biome
+han plugin uninstall biome --scope project
 ```
 
 This removes the plugin from your settings and cleans up any associated configuration.

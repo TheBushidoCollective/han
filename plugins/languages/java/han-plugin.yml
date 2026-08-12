@@ -1,0 +1,30 @@
+hooks:
+  build:
+    event: Stop
+    command: |
+      if [ -f pom.xml ]; then mvn -q -DskipTests compile
+      else ./gradlew --quiet classes; fi
+    dirs_with:
+      - "pom.xml"
+      - "build.gradle"
+      - "build.gradle.kts"
+    if_changed:
+      - "**/*.java"
+      - "pom.xml"
+      - "build.gradle"
+      - "build.gradle.kts"
+
+  test:
+    event: Stop
+    command: |
+      if [ -f pom.xml ]; then mvn -q test
+      else ./gradlew --quiet test; fi
+    dirs_with:
+      - "pom.xml"
+      - "build.gradle"
+      - "build.gradle.kts"
+    if_changed:
+      - "**/*.java"
+      - "pom.xml"
+      - "build.gradle"
+      - "build.gradle.kts"

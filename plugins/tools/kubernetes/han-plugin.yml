@@ -1,0 +1,11 @@
+hooks:
+  validate:
+    event: Stop
+    command: "kubectl apply --dry-run=client -f ."
+    dirs_with:
+      - "*.yaml"
+      - "*.yml"
+    dir_test: "grep -qsE '^apiVersion:' *.yaml *.yml"
+    if_changed:
+      - "**/*.yaml"
+      - "**/*.yml"

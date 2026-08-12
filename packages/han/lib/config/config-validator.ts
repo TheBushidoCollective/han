@@ -63,26 +63,26 @@ export function validatePluginConfig(config: unknown): ValidationResult {
       });
     }
 
-    // Optional: dirsWith (array of strings)
-    if ('dirsWith' in hook) {
-      if (!Array.isArray(hook.dirsWith)) {
+    // Optional: dirs_with (array of strings)
+    if ('dirs_with' in hook) {
+      if (!Array.isArray(hook.dirs_with)) {
         errors.push({
-          path: `${hookPath}.dirsWith`,
-          message: "'dirsWith' must be an array",
+          path: `${hookPath}.dirs_with`,
+          message: "'dirs_with' must be an array",
         });
-      } else if (!hook.dirsWith.every((item) => typeof item === 'string')) {
+      } else if (!hook.dirs_with.every((item) => typeof item === 'string')) {
         errors.push({
-          path: `${hookPath}.dirsWith`,
-          message: "'dirsWith' must contain only strings",
+          path: `${hookPath}.dirs_with`,
+          message: "'dirs_with' must contain only strings",
         });
       }
     }
 
-    // Optional: dirTest (string)
-    if ('dirTest' in hook && typeof hook.dirTest !== 'string') {
+    // Optional: dir_test (string)
+    if ('dir_test' in hook && typeof hook.dir_test !== 'string') {
       errors.push({
-        path: `${hookPath}.dirTest`,
-        message: "'dirTest' must be a string",
+        path: `${hookPath}.dir_test`,
+        message: "'dir_test' must be a string",
       });
     }
 
@@ -94,45 +94,45 @@ export function validatePluginConfig(config: unknown): ValidationResult {
       });
     }
 
-    // Optional: ifChanged (array of strings)
-    if ('ifChanged' in hook) {
-      if (!Array.isArray(hook.ifChanged)) {
+    // Optional: if_changed (array of strings)
+    if ('if_changed' in hook) {
+      if (!Array.isArray(hook.if_changed)) {
         errors.push({
-          path: `${hookPath}.ifChanged`,
-          message: "'ifChanged' must be an array",
+          path: `${hookPath}.if_changed`,
+          message: "'if_changed' must be an array",
         });
-      } else if (!hook.ifChanged.every((item) => typeof item === 'string')) {
+      } else if (!hook.if_changed.every((item) => typeof item === 'string')) {
         errors.push({
-          path: `${hookPath}.ifChanged`,
-          message: "'ifChanged' must contain only strings",
+          path: `${hookPath}.if_changed`,
+          message: "'if_changed' must contain only strings",
         });
       }
     }
 
-    // Optional: idleTimeout (positive integer, in seconds)
-    if ('idleTimeout' in hook) {
+    // Optional: idle_timeout (positive integer, in seconds)
+    if ('idle_timeout' in hook) {
       if (
-        typeof hook.idleTimeout !== 'number' ||
-        !Number.isInteger(hook.idleTimeout) ||
-        hook.idleTimeout < 0
+        typeof hook.idle_timeout !== 'number' ||
+        !Number.isInteger(hook.idle_timeout) ||
+        hook.idle_timeout < 0
       ) {
         errors.push({
-          path: `${hookPath}.idleTimeout`,
-          message: "'idleTimeout' must be a non-negative integer (seconds)",
+          path: `${hookPath}.idle_timeout`,
+          message: "'idle_timeout' must be a non-negative integer (seconds)",
         });
       }
     }
 
-    // Optional: dependsOn (array of dependencies)
-    if ('dependsOn' in hook) {
-      if (!Array.isArray(hook.dependsOn)) {
+    // Optional: depends_on (array of dependencies)
+    if ('depends_on' in hook) {
+      if (!Array.isArray(hook.depends_on)) {
         errors.push({
-          path: `${hookPath}.dependsOn`,
-          message: "'dependsOn' must be an array",
+          path: `${hookPath}.depends_on`,
+          message: "'depends_on' must be an array",
         });
       } else {
-        for (const [idx, dep] of hook.dependsOn.entries()) {
-          const depPath = `${hookPath}.dependsOn[${idx}]`;
+        for (const [idx, dep] of hook.depends_on.entries()) {
+          const depPath = `${hookPath}.depends_on[${idx}]`;
 
           if (typeof dep !== 'object' || dep === null) {
             errors.push({
@@ -182,28 +182,26 @@ export function validatePluginConfig(config: unknown): ValidationResult {
       }
     }
 
-    // Check for unknown properties (support both camelCase and snake_case)
+    // Check for unknown properties.
+    // This list is every han-plugin.yml hook field han actually reads:
+    // YamlPluginHookDefinition in lib/hooks/hook-config.ts for the hook
+    // runtime, plus `sync`, which only lib/commands/plugin/generate-hooks.ts
+    // reads (`const isAsync = !hookDef.sync`). An unknown key here stops the
+    // whole plugin from loading, so a field must be listed the moment any
+    // reader consumes it. Keep all three in sync.
     const validProperties = [
-      'command',
-      'dirsWith',
-      'dirs_with',
-      'dirTest',
-      'dir_test',
-      'description',
-      'ifChanged',
-      'if_changed',
-      'idleTimeout',
-      'idle_timeout',
-      'dependsOn',
-      'depends_on',
-      'tip',
       'event',
-      'toolFilter',
       'tool_filter',
+      'dirs_with',
+      'dir_test',
+      'command',
+      'description',
+      'if_changed',
+      'timeout',
+      'idle_timeout',
+      'tip',
+      'depends_on',
       'mcp',
-      'silent',
-      'test_dir',
-      'file_test',
       'sync',
     ];
     for (const key of Object.keys(hook)) {
@@ -216,9 +214,10 @@ export function validatePluginConfig(config: unknown): ValidationResult {
     }
   }
 
-  // Check for unknown top-level properties - strict validation
-  // Valid properties: hooks (required), mcp_servers, memory
-  const validTopLevel = ['hooks', 'mcp_servers', 'memory'];
+  // Check for unknown top-level properties - strict validation.
+  // `learn_patterns` is read by lib/marker-detection.ts and surfaced as
+  // detection.learnPatterns for prompt-based auto-detection.
+  const validTopLevel = ['hooks', 'mcp_servers', 'memory', 'learn_patterns'];
   for (const key of Object.keys(configObj)) {
     if (!validTopLevel.includes(key)) {
       errors.push({ path: key, message: `Unknown property '${key}'` });

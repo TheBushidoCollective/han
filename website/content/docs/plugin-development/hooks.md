@@ -161,6 +161,7 @@ Hooks run at specific points during Claude Code sessions:
 | `InstructionsLoaded` | CLAUDE.md/rules file loads (2.1.69+) | Observability |
 | `ConfigChange` | Configuration modified (2.1.49+) | Audit trails, config monitoring |
 | `CwdChanged` | Working directory changes (2.1.83+) | Reactive env management (direnv-style) |
+| `DirectoryAdded` | Working directory added mid-session via `/add-dir` or the SDK `register_repo_root` control request (2.1.219+) | Registering markers or hooks for a newly added root |
 | `FileChanged` | Watched file changes on disk (2.1.83+) | Reactive reloads |
 | `PreCompact` | Before context compaction (~2.1.50+, blocking since 2.1.105) | Save state before compaction |
 | `PostCompact` | After context compaction (2.1.76+) | Post-compaction cleanup |
@@ -170,7 +171,7 @@ Hooks run at specific points during Claude Code sessions:
 | `WorktreeRemove` | Worktree removed (2.1.50+) | Cleanup automation |
 | `SessionEnd` | Session ends | Cleanup |
 
-By default, validation and tool plugin hooks run at `Stop` and `SubagentStop`. Claude Code executes plugin hooks directly - you just define what to run. Han's `han-plugin.yml` accepts every event above as of Claude Code 2.1.215.
+This table is the canonical list of every event Han's `han-plugin.yml` accepts. It mirrors `HOOK_EVENT_TYPES` in `packages/han/lib/hooks/hook-config.ts` and is complete as of Claude Code 2.1.228. Event semantics follow the upstream [Claude Code hooks reference](https://code.claude.com/docs/en/hooks). By default, validation and tool plugin hooks run at `Stop` and `SubagentStop`. Claude Code executes plugin hooks directly - you just define what to run.
 
 ### New Hook Events (Claude Code 2.1.33+)
 
@@ -255,7 +256,7 @@ Fired when a task is marked as completed via `TaskUpdate`. Useful for task track
 
 #### WorktreeCreate (2.1.50+)
 
-Fired when a worktree is being created via `--worktree` flag or `isolation: "worktree"` in an agent definition. When configured, **replaces default git worktree behavior** — enabling non-git VCS support (SVN, Perforce, Mercurial).
+Fired when a worktree is being created via `--worktree` flag or `isolation: "worktree"` in an agent definition. When configured, **replaces default git worktree behavior**, enabling non-git VCS support (SVN, Perforce, Mercurial).
 
 The hook receives a `name` slug and **must print the absolute path** to the created worktree directory on stdout. Non-zero exit blocks creation. Only `type: "command"` hooks supported; no matchers.
 
@@ -270,7 +271,7 @@ The hook receives a `name` slug and **must print the absolute path** to the crea
 
 #### WorktreeRemove (2.1.50+)
 
-Fired when a worktree is being removed. Receives the `worktree_path` that was originally created. **Cannot block** removal — failures are logged in debug mode only. Only `type: "command"` hooks supported; no matchers.
+Fired when a worktree is being removed. Receives the `worktree_path` that was originally created. **Cannot block** removal; failures are logged in debug mode only. Only `type: "command"` hooks supported; no matchers.
 
 ```json
 {

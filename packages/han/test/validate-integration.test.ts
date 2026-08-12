@@ -171,8 +171,11 @@ describe('validate.ts helper functions', () => {
       writeFileSync(join(pkg1, 'package.json'), '{}');
       writeFileSync(join(pkg2, 'package.json'), '{}');
 
-      // Import and test
-      const { findDirectoriesWithMarkers } = require('../lib/hooks/index.ts');
+      // Import from the module that owns it. Requiring the hooks barrel pulls
+      // in an async module graph, which require() cannot load.
+      const {
+        findDirectoriesWithMarkers,
+      } = require('../lib/hooks/hook-cache.ts');
       const result = findDirectoriesWithMarkers(projectDir, ['package.json']);
 
       expect(result.length).toBe(2);
@@ -188,7 +191,9 @@ describe('validate.ts helper functions', () => {
       mkdirSync(nodeModules, { recursive: true });
       writeFileSync(join(nodeModules, 'package.json'), '{}');
 
-      const { findDirectoriesWithMarkers } = require('../lib/hooks/index.ts');
+      const {
+        findDirectoriesWithMarkers,
+      } = require('../lib/hooks/hook-cache.ts');
       const result = findDirectoriesWithMarkers(projectDir, ['package.json']);
 
       expect(result.length).toBe(0);
