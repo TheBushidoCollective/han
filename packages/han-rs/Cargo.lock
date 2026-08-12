@@ -2053,6 +2053,7 @@ name = "han-db"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "han-indexer",
  "sea-orm",
  "sea-orm-migration",
  "serde",

@@ -2077,12 +2077,98 @@ pub async fn index_session_file(
     })
 }
 
+/// Populate the aggregate tables from `messages` when they have never been
+/// filled, then leave them to `update_aggregates` to maintain incrementally.
+///
+/// `update_aggregates` only rebuilds the dates and hours a freshly indexed
+/// session touched, so on a database that predates these tables the dashboard
+/// would otherwise show only the days you happened to work after upgrading.
+///
+/// Full rebuild costs roughly 45 seconds per ~900k messages, so callers should
+/// run this off the startup path. It is idempotent.
+pub async fn backfill_aggregates_if_empty(db: &DatabaseConnection) -> ProcessorResult<bool> {
+    let already_filled = db
+        .query_one(Statement::from_string(
+            DbBackend::Sqlite,
+            "SELECT COUNT(*) AS count FROM global_aggregates".to_string(),
+        ))
+        .await
+        .map_err(|e| ProcessorError::Other(e.to_string()))?
+        .map(|row| row.try_get_by_index::<i64>(0).unwrap_or(0))
+        .unwrap_or(0)
+        > 0;
+
+    if already_filled {
+        return Ok(false);
+    }
+
+    tracing::info!("Backfilling dashboard aggregates from message history");
+
+    for (label, sql) in [
+        (
+            "daily_aggregates",
+            "INSERT OR REPLACE INTO daily_aggregates \
+                (date, session_count, message_count, input_tokens, output_tokens, \
+                 cache_read_tokens, lines_added, lines_removed, files_changed) \
+             SELECT DATE(timestamp, 'localtime'), COUNT(DISTINCT session_id), COUNT(*), \
+                    COALESCE(SUM(input_tokens), 0), COALESCE(SUM(output_tokens), 0), \
+                    COALESCE(SUM(cache_read_tokens), 0), COALESCE(SUM(lines_added), 0), \
+                    COALESCE(SUM(lines_removed), 0), COALESCE(SUM(files_changed), 0) \
+             FROM messages WHERE timestamp IS NOT NULL \
+             GROUP BY DATE(timestamp, 'localtime')",
+        ),
+        (
+            "hourly_aggregates",
+            "INSERT OR REPLACE INTO hourly_aggregates \
+                (hour, session_count, message_count, input_tokens, output_tokens, cache_read_tokens) \
+             SELECT CAST(strftime('%H', timestamp, 'localtime') AS INTEGER), \
+                    COUNT(DISTINCT session_id), COUNT(*), \
+                    COALESCE(SUM(input_tokens), 0), COALESCE(SUM(output_tokens), 0), \
+                    COALESCE(SUM(cache_read_tokens), 0) \
+             FROM messages WHERE timestamp IS NOT NULL \
+             GROUP BY CAST(strftime('%H', timestamp, 'localtime') AS INTEGER)",
+        ),
+        (
+            "global_aggregates",
+            "INSERT OR REPLACE INTO global_aggregates \
+                (id, total_sessions, total_messages, total_input_tokens, total_output_tokens, \
+                 total_cache_read_tokens, total_tasks, total_completed_tasks, last_updated) \
+             SELECT 1, \
+                    (SELECT COUNT(*) FROM sessions), \
+                    COALESCE((SELECT SUM(message_count) FROM daily_aggregates), 0), \
+                    COALESCE((SELECT SUM(input_tokens) FROM daily_aggregates), 0), \
+                    COALESCE((SELECT SUM(output_tokens) FROM daily_aggregates), 0), \
+                    COALESCE((SELECT SUM(cache_read_tokens) FROM daily_aggregates), 0), \
+                    (SELECT COUNT(*) FROM tasks) + (SELECT COUNT(*) FROM native_tasks), \
+                    (SELECT COUNT(*) FROM tasks WHERE completed_at IS NOT NULL) \
+                        + (SELECT COUNT(*) FROM native_tasks WHERE status = 'completed'), \
+                    datetime('now')",
+        ),
+    ] {
+        db.execute(Statement::from_string(DbBackend::Sqlite, sql.to_string()))
+            .await
+            .map_err(|e| ProcessorError::Other(format!("backfilling {label}: {e}")))?;
+    }
+
+    tracing::info!("Dashboard aggregates backfilled");
+    Ok(true)
+}
+
 /// Update pre-aggregated daily/hourly/global tables after indexing new messages.
 /// Uses INSERT OR REPLACE to rebuild affected rows from the messages table.
 /// This is fast because it only touches dates/hours that this session contributed to.
 async fn update_aggregates(db: &DatabaseConnection, session_id: &str) {
+    // Failures used to be discarded with `let _`, which is how a missing
+    // migration for these three tables reached users: every write failed
+    // silently and the dashboard only broke later, on read.
+    fn warn_if_failed(label: &str, result: Result<sea_orm::ExecResult, sea_orm::DbErr>) {
+        if let Err(e) = result {
+            tracing::warn!("Failed to update {label}: {e}");
+        }
+    }
+
     // Rebuild daily aggregates for dates this session has messages on
-    let _ = db.execute(Statement::from_sql_and_values(
+    warn_if_failed("daily_aggregates", db.execute(Statement::from_sql_and_values(
         DbBackend::Sqlite,
         "INSERT OR REPLACE INTO daily_aggregates (date, session_count, message_count, input_tokens, output_tokens, cache_read_tokens, lines_added, lines_removed, files_changed) \
          SELECT DATE(m.timestamp, 'localtime'), COUNT(DISTINCT m.session_id), COUNT(*), \
@@ -2093,10 +2179,10 @@ async fn update_aggregates(db: &DatabaseConnection, session_id: &str) {
          WHERE DATE(m.timestamp, 'localtime') IN (SELECT DISTINCT DATE(timestamp, 'localtime') FROM messages WHERE session_id = ?) \
          GROUP BY DATE(m.timestamp, 'localtime')",
         vec![session_id.into()],
-    )).await;
+    )).await);
 
     // Rebuild hourly aggregates for hours this session has messages on
-    let _ = db.execute(Statement::from_sql_and_values(
+    warn_if_failed("hourly_aggregates", db.execute(Statement::from_sql_and_values(
         DbBackend::Sqlite,
         "INSERT OR REPLACE INTO hourly_aggregates (hour, session_count, message_count, input_tokens, output_tokens, cache_read_tokens) \
          SELECT CAST(strftime('%H', m.timestamp, 'localtime') AS INTEGER), COUNT(DISTINCT m.session_id), COUNT(*), \
@@ -2107,10 +2193,10 @@ async fn update_aggregates(db: &DatabaseConnection, session_id: &str) {
                (SELECT DISTINCT CAST(strftime('%H', timestamp, 'localtime') AS INTEGER) FROM messages WHERE session_id = ?) \
          GROUP BY CAST(strftime('%H', m.timestamp, 'localtime') AS INTEGER)",
         vec![session_id.into()],
-    )).await;
+    )).await);
 
     // Rebuild global aggregates (single row — always a full refresh but only touches small tables + one COUNT/SUM)
-    let _ = db.execute(Statement::from_string(
+    warn_if_failed("global_aggregates", db.execute(Statement::from_string(
         DbBackend::Sqlite,
         "INSERT OR REPLACE INTO global_aggregates (id, total_sessions, total_messages, total_input_tokens, total_output_tokens, total_cache_read_tokens, total_tasks, total_completed_tasks, last_updated) \
          SELECT 1, \
@@ -2122,7 +2208,7 @@ async fn update_aggregates(db: &DatabaseConnection, session_id: &str) {
                 (SELECT COUNT(*) FROM tasks) + (SELECT COUNT(*) FROM native_tasks), \
                 (SELECT COUNT(*) FROM tasks WHERE completed_at IS NOT NULL) + (SELECT COUNT(*) FROM native_tasks WHERE status = 'completed'), \
                 datetime('now')".to_string(),
-    )).await;
+    )).await);
 }
 
 /// Generate a sentiment analysis event message for a user message.

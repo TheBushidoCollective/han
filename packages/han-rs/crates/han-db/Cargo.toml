@@ -27,4 +27,5 @@ thiserror = "2"
 tracing = "0.1"
 
 [dev-dependencies]
+han-indexer = { path = "../han-indexer" }
 tempfile = "3"

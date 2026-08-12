@@ -238,11 +238,31 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
     );
   }
 
-  // If not local mode, open remote dashboard and return
+  // Serve the hosted bundle from loopback rather than opening its public origin
+  // directly. See hosted-proxy.ts: a public-origin page cannot reach the
+  // coordinator on Chrome 151 without a permission nothing requests, so opening
+  // the public URL leaves the dashboard connecting forever.
   if (!local) {
-    const dashboardUrl = 'https://dashboard.local.han.guru';
-    console.log(`[han] Opening remote dashboard at ${dashboardUrl}`);
-    await openBrowser(dashboardUrl);
+    const { startHostedDashboardProxy } = await import('./hosted-proxy.ts');
+    const proxy = await startHostedDashboardProxy({ port });
+
+    console.log(`[han] Serving dashboard at ${proxy.url}`);
+    if (coordinatorRunning) {
+      console.log(
+        `[han] GraphQL at ${coordinatorProtocol}://${coordinatorHost}:${coordinatorPort}/graphql`
+      );
+    }
+    console.log('Press Ctrl+C to stop');
+
+    await openBrowser(proxy.url);
+
+    const stopped = Promise.withResolvers<void>();
+    const shutdown = () => {
+      void proxy.close().then(() => stopped.resolve());
+    };
+    process.once('SIGINT', shutdown);
+    process.once('SIGTERM', shutdown);
+    await stopped.promise;
     return;
   }
 
