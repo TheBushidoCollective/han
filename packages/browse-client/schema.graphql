@@ -1976,6 +1976,15 @@ type Session implements Node {
 	"""
 	version: String
 	"""
+	Coding agent that produced this session.
+	
+	One of `claude-code`, `omp`, `opencode`, `gemini-cli`, `kiro`, `codex`,
+	or `antigravity`. Never null: Claude Code was the only harness han
+	indexed before harness tracking existed, so a session with no recorded
+	harness reads as `claude-code`.
+	"""
+	harness: String!
+	"""
 	Session status (active, completed, etc.).
 	"""
 	status: String
@@ -2173,6 +2182,7 @@ input SessionFilter {
 	slug: StringFilter
 	prNumber: IntFilter
 	teamName: StringFilter
+	harness: StringFilter
 	"""
 	Association filter (auto-generated).
 	"""
@@ -2223,6 +2233,7 @@ input SessionOrderBy {
 	slug: OrderDirection
 	prNumber: OrderDirection
 	teamName: OrderDirection
+	harness: OrderDirection
 }
 
 """

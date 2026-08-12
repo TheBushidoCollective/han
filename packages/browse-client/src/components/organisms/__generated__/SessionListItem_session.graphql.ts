@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<6dbf20ff9c744f2a3864e98190fb704e>>
+ * @generated SignedSource<<21af9d8cf8b82094b1be4528d89cc56b>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -35,6 +35,7 @@ export type SessionListItem_session$data = {
   readonly duration: number | null | undefined;
   readonly estimatedCostUsd: number | null | undefined;
   readonly gitBranch: string | null | undefined;
+  readonly harness: string;
   readonly id: string;
   readonly messageCount: number;
   readonly name: string;
@@ -349,6 +350,13 @@ return {
       "alias": null,
       "args": null,
       "kind": "ScalarField",
+      "name": "harness",
+      "storageKey": null
+    },
+    {
+      "alias": null,
+      "args": null,
+      "kind": "ScalarField",
       "name": "turnCount",
       "storageKey": null
     },
@@ -379,6 +387,6 @@ return {
 };
 })();
 
-(node as any).hash = "455cb59b262725d1aa583312ff0491b5";
+(node as any).hash = "380b1d2338af8f9d4e2fb5290c5aa158";
 
 export default node;

@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<8a3760765f81963c8275b79641ca4111>>
+ * @generated SignedSource<<0455221deaff5e14a0dfd7316dae0368>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -391,6 +391,13 @@ return {
                     "alias": null,
                     "args": null,
                     "kind": "ScalarField",
+                    "name": "harness",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
                     "name": "turnCount",
                     "storageKey": null
                   },
@@ -428,12 +435,12 @@ return {
     ]
   },
   "params": {
-    "cacheID": "6ca24fbc1168a200f18056484873ce9a",
+    "cacheID": "8ef0052985cbaf7f5aa4adc997ece799",
     "id": null,
     "metadata": {},
     "name": "SessionListItemSubscription",
     "operationKind": "subscription",
-    "text": "subscription SessionListItemSubscription(\n  $id: ID!\n) {\n  nodeUpdated(id: $id) {\n    node {\n      __typename\n      ... on Session {\n        ...SessionListItem_session\n      }\n      id\n    }\n  }\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  owner {\n    id\n    name\n    email\n    avatarUrl\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n  gitBranch\n  prNumber\n  prUrl\n  teamName\n  turnCount\n  compactionCount\n  estimatedCostUsd\n  duration\n}\n"
+    "text": "subscription SessionListItemSubscription(\n  $id: ID!\n) {\n  nodeUpdated(id: $id) {\n    node {\n      __typename\n      ... on Session {\n        ...SessionListItem_session\n      }\n      id\n    }\n  }\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  owner {\n    id\n    name\n    email\n    avatarUrl\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n  gitBranch\n  prNumber\n  prUrl\n  teamName\n  harness\n  turnCount\n  compactionCount\n  estimatedCostUsd\n  duration\n}\n"
   }
 };
 })();

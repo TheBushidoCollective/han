@@ -95,13 +95,10 @@ function VirtualListInner<T>(
 	}: VirtualListProps<T>,
 	ref: React.ForwardedRef<VirtualListRef>,
 ) {
-	// biome-ignore lint/correctness/useHookAtTopLevel: forwardRef render function — hooks are valid here
 	const listRef = useRef<FlatList<T>>(null);
-	// biome-ignore lint/correctness/useHookAtTopLevel: forwardRef render function
 	const lastTailStateRef = useRef(true); // Track last state to avoid unnecessary callbacks
 
 	// Expose imperative methods
-	// biome-ignore lint/correctness/useHookAtTopLevel: forwardRef render function
 	useImperativeHandle(ref, () => ({
 		scrollToIndex: (index: number, animated = true) => {
 			listRef.current?.scrollToIndex({ index, animated });
@@ -115,7 +112,6 @@ function VirtualListInner<T>(
 	}));
 
 	// FlatList renderItem adapter
-	// biome-ignore lint/correctness/useHookAtTopLevel: forwardRef render function
 	const flatListRenderItem = useCallback(
 		({ item, index }: { item: T; index: number }) => {
 			const rendered = renderItem(item, index);
@@ -125,7 +121,6 @@ function VirtualListInner<T>(
 	);
 
 	// FlatList keyExtractor adapter
-	// biome-ignore lint/correctness/useHookAtTopLevel: forwardRef render function
 	const flatListKeyExtractor = useCallback(
 		(item: T, index: number) => {
 			if (keyExtractor) {
@@ -139,7 +134,6 @@ function VirtualListInner<T>(
 	);
 
 	// Get item layout for performance optimization
-	// biome-ignore lint/correctness/useHookAtTopLevel: forwardRef render function
 	const getItemLayout = useCallback(
 		(_data: ArrayLike<T> | null | undefined, index: number) => {
 			const height =
@@ -156,7 +150,6 @@ function VirtualListInner<T>(
 	);
 
 	// Handle scroll events to track tail state
-	// biome-ignore lint/correctness/useHookAtTopLevel: forwardRef render function
 	const handleScroll = useCallback(
 		(event: NativeSyntheticEvent<NativeScrollEvent>) => {
 			if (!onTailStateChange) return;
