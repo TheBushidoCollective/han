@@ -1,13 +1,6 @@
 import { execSync, spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  realpathSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import micromatch from 'micromatch';
@@ -44,11 +37,11 @@ import {
   type PluginHookDefinition,
   type ResolvedHookConfig,
 } from './hooks/hook-config.ts';
+import { findPluginInMarketplace } from './hooks/plugin-discovery.ts';
 import {
   buildCommandWithFiles,
   HAN_FILES_TEMPLATE,
 } from './hooks/transcript-filter.ts';
-import { findPluginInMarketplace } from './hooks/plugin-discovery.ts';
 import { getPluginNameFromRoot, isDebugMode } from './shared.ts';
 
 // Re-export for tests

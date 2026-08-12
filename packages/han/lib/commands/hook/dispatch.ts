@@ -11,7 +11,6 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import type { Command } from 'commander';
 import {
-  getClaudeConfigDir,
   getMergedPluginsAndMarketplaces,
   getSettingsPaths,
   type MarketplaceConfig,
@@ -22,8 +21,8 @@ import { getEventLogger, initEventLogger } from '../../events/logger.ts';
 import { isCoordinatorHealthy } from '../../grpc/client.ts';
 import { sessionFileChanges } from '../../grpc/data-access.ts';
 import { executeHooksViaGrpc } from '../../grpc/hook-executor.ts';
-import { getClaudeProjectPath } from '../../memory/paths.ts';
 import { getPluginDir } from '../../hooks/plugin-discovery.ts';
+import { getClaudeProjectPath } from '../../memory/paths.ts';
 import { getPluginNameFromRoot, isDebugMode } from '../../shared.ts';
 import { recordHookExecution as recordOtelHookExecution } from '../../telemetry/index.ts';
 
