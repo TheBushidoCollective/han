@@ -7,15 +7,17 @@
 use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{
-    extract::{State, WebSocketUpgrade},
-    response::{Html, IntoResponse},
+    extract::{Request, State, WebSocketUpgrade},
+    http::{HeaderValue, Uri},
+    middleware::{self, Next},
+    response::{Html, IntoResponse, Response},
     routing::{get, post},
     Router,
 };
 use han_api::HanSchema;
 use std::sync::Arc;
 use std::time::Instant;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
 /// Shared server state.
 #[derive(Clone)]
@@ -172,6 +174,63 @@ async fn graphiql_handler() -> impl IntoResponse {
     )
 }
 
+/// Origin of the hosted dashboard, which reaches this daemon over loopback.
+const DASHBOARD_ORIGIN: &str = "https://dashboard.local.han.guru";
+
+/// Whether an `Origin` header may talk to this coordinator.
+///
+/// Loopback origins are permitted on any port because a page already running on
+/// this machine gains nothing from being refused. Everything else must be the
+/// hosted dashboard exactly; no suffix matching, so `dashboard.local.han.guru.evil.com`
+/// is rejected.
+fn is_allowed_dashboard_origin(origin: &str) -> bool {
+    if origin == DASHBOARD_ORIGIN {
+        return true;
+    }
+
+    // Parse instead of splitting. This is a security boundary and hand rolled
+    // string cases already let `http://[::1]evil.com` through once.
+    let Ok(uri) = origin.parse::<Uri>() else {
+        return false;
+    };
+
+    let Some(scheme) = uri.scheme_str() else {
+        return false;
+    };
+    if !matches!(scheme, "http" | "https") {
+        return false;
+    }
+    let Some(authority) = uri.authority() else {
+        return false;
+    };
+
+    // Require the origin to round-trip. Anything the parser normalized, dropped
+    // or reinterpreted fails here, so a discrepancy between what the parser read
+    // and what the peer sent can never be read as an allowed host.
+    if origin.trim_end_matches('/') != format!("{scheme}://{authority}") {
+        return false;
+    }
+
+    // Compare the authority literal, not `Authority::host()`. For
+    // `[::1]evil.com` that accessor reports just `[::1]`, which would read as
+    // loopback and let the glued-on host through.
+    let authority = authority.as_str();
+    let host = match authority.rfind(':') {
+        // A colon after the closing bracket introduces a port. One inside the
+        // brackets belongs to the IPv6 literal.
+        Some(colon)
+            if authority[colon + 1..]
+                .parse::<u16>()
+                .is_ok_and(|_| authority.rfind(']').is_none_or(|close| close < colon)) =>
+        {
+            &authority[..colon]
+        }
+        _ => authority,
+    };
+
+    matches!(host, "localhost" | "127.0.0.1" | "[::1]")
+}
+
 /// Build the Axum router with GraphQL endpoints.
 pub fn build_router(schema: HanSchema, start_time: Instant) -> Router {
     let state = Arc::new(AppState {
@@ -179,8 +238,22 @@ pub fn build_router(schema: HanSchema, start_time: Instant) -> Router {
         start_time,
     });
 
+    // The dashboard is served from a public origin but talks to this loopback
+    // port, so Chrome applies Private Network Access: the preflight must carry
+    // `Access-Control-Allow-Private-Network: true` or the request hangs and the
+    // dashboard sits on "Connecting to Han Coordinator..." forever.
+    //
+    // That header must never be paired with a wildcard origin. It would let any
+    // page on the internet read this machine's session data, and PNA is the only
+    // thing standing in the way today. So origins are allowlisted instead: the
+    // hosted dashboard, and any loopback origin (already same-machine).
     let cors = CorsLayer::new()
-        .allow_origin(Any)
+        .allow_origin(AllowOrigin::predicate(|origin, _request_head| {
+            origin
+                .to_str()
+                .map(is_allowed_dashboard_origin)
+                .unwrap_or(false)
+        }))
         .allow_methods(vec![
             axum::http::Method::GET,
             axum::http::Method::POST,
@@ -192,8 +265,45 @@ pub fn build_router(schema: HanSchema, start_time: Instant) -> Router {
         .route("/health", get(health_handler))
         .route("/graphql", post(graphql_handler).get(graphql_ws_handler))
         .route("/graphiql", get(graphiql_handler))
+        // Order matters. `CorsLayer` answers a preflight itself and never calls
+        // the inner service, so the private network layer has to sit outside it
+        // to see that response. The last `.layer` is the outermost.
         .layer(cors)
+        .layer(middleware::from_fn(allow_private_network))
         .with_state(state)
+}
+
+/// Answer Chrome's Private Network Access preflight.
+///
+/// Runs outside the CORS layer so it sees the finished preflight response and
+/// only marks the ones CORS already approved for an allowlisted origin. A
+/// rejected origin gets no `Access-Control-Allow-Origin`, so it gets no private
+/// network grant either.
+///
+/// The grant is only emitted for a preflight that asked for it. An ordinary CORS
+/// preflight has no business advertising private network access.
+async fn allow_private_network(request: Request, next: Next) -> Response {
+    let asked_for_private_network = request.method() == axum::http::Method::OPTIONS
+        && request
+            .headers()
+            .get("access-control-request-private-network")
+            .and_then(|value| value.to_str().ok())
+            .is_some_and(|value| value.eq_ignore_ascii_case("true"));
+
+    let mut response = next.run(request).await;
+
+    if asked_for_private_network
+        && response
+            .headers()
+            .contains_key(axum::http::header::ACCESS_CONTROL_ALLOW_ORIGIN)
+    {
+        response.headers_mut().insert(
+            "access-control-allow-private-network",
+            HeaderValue::from_static("true"),
+        );
+    }
+
+    response
 }
 
 #[cfg(test)]
@@ -228,6 +338,124 @@ mod tests {
 
         let response = app.oneshot(req).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[test]
+    fn allows_dashboard_and_loopback_origins() {
+        assert!(is_allowed_dashboard_origin(
+            "https://dashboard.local.han.guru"
+        ));
+        assert!(is_allowed_dashboard_origin("http://localhost:41956"));
+        assert!(is_allowed_dashboard_origin("http://127.0.0.1:4899"));
+        assert!(is_allowed_dashboard_origin("http://[::1]:4899"));
+    }
+
+    #[test]
+    fn rejects_foreign_origins() {
+        // A lookalike host must not pass by suffix or prefix matching.
+        assert!(!is_allowed_dashboard_origin(
+            "https://dashboard.local.han.guru.evil.com"
+        ));
+        assert!(!is_allowed_dashboard_origin("https://evil.com"));
+        assert!(!is_allowed_dashboard_origin("http://localhost.evil.com"));
+        assert!(!is_allowed_dashboard_origin("https://notlocalhost"));
+        assert!(!is_allowed_dashboard_origin("null"));
+        // A bracketed IPv6 loopback with a hostname glued on. Ad hoc splitting
+        // read the host as "::1" and accepted this.
+        assert!(!is_allowed_dashboard_origin("http://[::1]evil.com"));
+        // An origin carries no path, so anything with one is not an origin.
+        assert!(!is_allowed_dashboard_origin("http://localhost.evil/path"));
+        assert!(!is_allowed_dashboard_origin(
+            "https://evil.com/dashboard.local.han.guru"
+        ));
+        // Scheme must be http(s); a file or data URL is not an allowed origin.
+        assert!(!is_allowed_dashboard_origin("file://localhost"));
+        assert!(!is_allowed_dashboard_origin("localhost:41956"));
+        assert!(!is_allowed_dashboard_origin(""));
+    }
+
+    /// Chrome hangs the request without this header, which is what left the
+    /// dashboard stuck on "Connecting to Han Coordinator...".
+    #[tokio::test]
+    async fn preflight_grants_private_network_to_dashboard() {
+        let app = build_router(test_schema(), Instant::now());
+
+        let req = Request::builder()
+            .method(axum::http::Method::OPTIONS)
+            .uri("/health")
+            .header("origin", "https://dashboard.local.han.guru")
+            .header("access-control-request-method", "GET")
+            .header("access-control-request-private-network", "true")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(req).await.unwrap();
+        assert_eq!(
+            response
+                .headers()
+                .get("access-control-allow-private-network")
+                .and_then(|v| v.to_str().ok()),
+            Some("true")
+        );
+    }
+
+    /// An ordinary CORS preflight did not ask for private network access, so the
+    /// response must not advertise it.
+    #[tokio::test]
+    async fn ordinary_preflight_omits_private_network_grant() {
+        let app = build_router(test_schema(), Instant::now());
+
+        let req = Request::builder()
+            .method(axum::http::Method::OPTIONS)
+            .uri("/health")
+            .header("origin", "https://dashboard.local.han.guru")
+            .header("access-control-request-method", "GET")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(req).await.unwrap();
+        assert!(
+            response
+                .headers()
+                .contains_key(axum::http::header::ACCESS_CONTROL_ALLOW_ORIGIN),
+            "the dashboard origin should still pass CORS"
+        );
+        assert!(
+            !response
+                .headers()
+                .contains_key("access-control-allow-private-network"),
+            "a preflight that did not request private network access must not receive a grant"
+        );
+    }
+
+    /// The grant is what makes loopback reachable from a web page, so it must
+    /// never be handed to an origin CORS did not approve.
+    #[tokio::test]
+    async fn preflight_denies_private_network_to_foreign_origin() {
+        let app = build_router(test_schema(), Instant::now());
+
+        let req = Request::builder()
+            .method(axum::http::Method::OPTIONS)
+            .uri("/health")
+            .header("origin", "https://evil.com")
+            .header("access-control-request-method", "GET")
+            .header("access-control-request-private-network", "true")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(req).await.unwrap();
+        assert!(
+            !response
+                .headers()
+                .contains_key("access-control-allow-private-network"),
+            "foreign origin must not receive a private network grant"
+        );
+        assert!(
+            !response
+                .headers()
+                .contains_key(axum::http::header::ACCESS_CONTROL_ALLOW_ORIGIN),
+            "foreign origin must not be approved by CORS"
+        );
     }
 
     #[tokio::test]

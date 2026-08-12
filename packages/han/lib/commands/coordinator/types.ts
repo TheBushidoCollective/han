@@ -15,6 +15,28 @@ export const COORDINATOR_PORT = DEFAULT_COORDINATOR_PORT;
 export const BROWSE_PORT = DEFAULT_BROWSE_PORT;
 
 /**
+ * Coordinator FQDN. The coordinator serves HTTPS under this name so that
+ * browsers get a valid certificate when real certs are available.
+ */
+export const COORDINATOR_HOST = 'coordinator.local.han.guru';
+
+/**
+ * Fetch options for talking to the local coordinator over HTTPS.
+ *
+ * When no Let's Encrypt cert has been cached the coordinator falls back to a
+ * self-signed one, which every default TLS client rejects. Bun and Node accept
+ * the override only under a nested `tls` key; a top-level `rejectUnauthorized`
+ * is silently ignored and the request still throws `self signed certificate`.
+ *
+ * Skipping verification is safe here and only here: the connection is to a
+ * loopback port owned by a process on this machine, so a CA chain proves
+ * nothing that the port itself does not.
+ */
+export const COORDINATOR_TLS_FETCH_OPTIONS = {
+  tls: { rejectUnauthorized: false },
+} as const;
+
+/**
  * Coordinator daemon status
  */
 export interface CoordinatorStatus {

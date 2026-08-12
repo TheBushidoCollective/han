@@ -74,32 +74,70 @@ struct Cli {
     pid_file: Option<String>,
 }
 
+/// How long a peer gets to finish its TLS handshake before being dropped.
+const TLS_HANDSHAKE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+
 /// TLS-wrapped TCP listener for axum::serve.
 ///
-/// Accepts TCP connections, performs TLS handshake, and yields TLS streams.
-/// Failed handshakes are logged and retried (the listener keeps accepting).
+/// Handshakes run in their own tasks. Doing one inline here would serialize the
+/// accept loop: a peer that completes the TCP handshake and then sends no
+/// ClientHello would block every later connection, and browsers open
+/// speculative sockets exactly like that. Each handshake is also bounded, so a
+/// stalled peer is dropped instead of accumulating.
 struct TlsListener {
     inner: tokio::net::TcpListener,
     acceptor: TlsAcceptor,
+    handshakes: tokio::task::JoinSet<Option<(TlsStreamOf<tokio::net::TcpStream>, SocketAddr)>>,
 }
 
+type TlsStreamOf<S> = tokio_rustls::server::TlsStream<S>;
+
 impl axum::serve::Listener for TlsListener {
-    type Io = tokio_rustls::server::TlsStream<tokio::net::TcpStream>;
+    type Io = TlsStreamOf<tokio::net::TcpStream>;
     type Addr = SocketAddr;
 
     async fn accept(&mut self) -> (Self::Io, Self::Addr) {
         loop {
-            match self.inner.accept().await {
-                Ok((tcp_stream, addr)) => match self.acceptor.accept(tcp_stream).await {
-                    Ok(tls_stream) => return (tls_stream, addr),
+            tokio::select! {
+                // Bias the completed handshakes so a busy listener still drains
+                // them instead of only ever taking new connections.
+                biased;
+
+                Some(joined) = self.handshakes.join_next(), if !self.handshakes.is_empty() => {
+                    match joined {
+                        Ok(Some(ready)) => return ready,
+                        Ok(None) => {}
+                        Err(e) => tracing::debug!("TLS handshake task failed: {}", e),
+                    }
+                }
+
+                result = self.inner.accept() => match result {
+                    Ok((tcp_stream, addr)) => {
+                        let acceptor = self.acceptor.clone();
+                        self.handshakes.spawn(async move {
+                            match tokio::time::timeout(
+                                TLS_HANDSHAKE_TIMEOUT,
+                                acceptor.accept(tcp_stream),
+                            )
+                            .await
+                            {
+                                Ok(Ok(tls_stream)) => Some((tls_stream, addr)),
+                                Ok(Err(e)) => {
+                                    tracing::debug!("TLS handshake failed from {}: {}", addr, e);
+                                    None
+                                }
+                                Err(_) => {
+                                    tracing::debug!("TLS handshake from {} timed out", addr);
+                                    None
+                                }
+                            }
+                        });
+                    }
                     Err(e) => {
-                        tracing::debug!("TLS handshake failed from {}: {}", addr, e);
+                        tracing::error!("TCP accept error: {}", e);
+                        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                     }
                 },
-                Err(e) => {
-                    tracing::error!("TCP accept error: {}", e);
-                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                }
             }
         }
     }
@@ -221,6 +259,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let listener = TlsListener {
             inner: tls_listener,
             acceptor,
+            handshakes: tokio::task::JoinSet::new(),
         };
         if let Err(e) = axum::serve(listener, router).await {
             tracing::error!("HTTPS server error: {}", e);
