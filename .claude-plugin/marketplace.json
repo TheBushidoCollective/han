@@ -1247,7 +1247,7 @@
     },
     {
       "name": "reddit",
-      "description": "MCP server for Reddit integration providing frontpage posts, subreddit information, hot/new/top/rising posts, and comment retrieval via uvx mcp-server-reddit.",
+      "description": "MCP server for Reddit integration providing frontpage posts, subreddit browsing, post content, comments, search, and the signed-in account surface of saved, upvoted, history, inbox, and subscriptions via remote HTTP OAuth server.",
       "source": "./plugins/services/reddit",
       "category": "Integration",
       "keywords": [
@@ -1258,6 +1258,7 @@
         "posts",
         "comments",
         "subreddits",
+        "oauth",
         "server"
       ]
     },
@@ -2655,7 +2656,7 @@
     },
     {
       "name": "hashi-reddit",
-      "description": "MCP server for Reddit integration providing frontpage posts, subreddit information, hot/new/top/rising posts, and comment retrieval via uvx mcp-server-reddit.",
+      "description": "MCP server for Reddit integration providing frontpage posts, subreddit browsing, post content, comments, search, and the signed-in account surface of saved, upvoted, history, inbox, and subscriptions via remote HTTP OAuth server.",
       "source": "./plugins/services/reddit",
       "category": "Integration",
       "keywords": [
@@ -2666,6 +2667,7 @@
         "posts",
         "comments",
         "subreddits",
+        "oauth",
         "server"
       ]
     },
