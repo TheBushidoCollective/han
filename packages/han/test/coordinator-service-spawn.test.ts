@@ -47,6 +47,18 @@ mock.module('node:fs', () => ({
   existsSync: () => true,
 }));
 
+// The spawn path fetches TLS certificates before launching the binary. Left
+// real, these tests would hit certs.han.guru and write into the developer's
+// ~/.claude/han/certs.
+const mockEnsureCertificates = mock(async () => ({
+  cert: '-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----',
+  key: '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
+}));
+
+mock.module('../lib/commands/coordinator/tls.ts', () => ({
+  ensureCertificates: mockEnsureCertificates,
+}));
+
 // Keep waitForHealthy short so tests don't time out while polling a
 // non-existent coordinator (production default is 30s).
 process.env.HAN_COORDINATOR_HEALTH_BUDGET_MS = '50';
@@ -125,6 +137,20 @@ describe('startCoordinatorService with binary found', () => {
         msg.includes('Failed')
     );
     expect(hasStartMsg).toBe(true);
+  });
+
+  // han-coordinator only reads the cert cache; it never fills it. If this step
+  // is skipped the daemon self-signs, and the dashboard's browser then refuses
+  // the connection and sits on "Connecting to Han Coordinator..." forever.
+  test('fetches TLS certificates before spawning the binary', async () => {
+    mockEnsureCertificates.mockClear();
+    await cs.stopCoordinatorService();
+    mockHealth.mockReset();
+    mockHealth.mockResolvedValue(false);
+
+    await cs.startCoordinatorService();
+
+    expect(mockEnsureCertificates).toHaveBeenCalled();
   });
 
   test('handles spawn failure gracefully', async () => {

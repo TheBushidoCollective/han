@@ -5,12 +5,11 @@
  * and healthy by making HTTPS requests to the health endpoint.
  */
 
-import { getCoordinatorPort } from './types.ts';
-
-/**
- * Coordinator FQDN for HTTPS connections
- */
-const COORDINATOR_HOST = 'coordinator.local.han.guru';
+import {
+  COORDINATOR_HOST,
+  COORDINATOR_TLS_FETCH_OPTIONS,
+  getCoordinatorPort,
+} from './types.ts';
 
 /**
  * Health check response
@@ -36,8 +35,7 @@ export async function checkHealth(
       `https://${COORDINATOR_HOST}:${effectivePort}/health`,
       {
         signal: AbortSignal.timeout(2000),
-        // @ts-expect-error - Node.js/Bun fetch option for self-signed certs
-        rejectUnauthorized: false,
+        ...COORDINATOR_TLS_FETCH_OPTIONS,
       }
     );
 
@@ -66,8 +64,7 @@ export async function checkHealthHttps(port?: number): Promise<{
       `https://${COORDINATOR_HOST}:${effectivePort}/health`,
       {
         signal: AbortSignal.timeout(2000),
-        // @ts-expect-error - Node.js/Bun fetch option for self-signed certs
-        rejectUnauthorized: false,
+        ...COORDINATOR_TLS_FETCH_OPTIONS,
       }
     );
 

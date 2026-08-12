@@ -8,12 +8,11 @@
  * are properly coordinated across all Claude sessions.
  */
 
-import { COORDINATOR_PORT } from '../commands/coordinator/types.ts';
-
-/**
- * Coordinator FQDN for HTTPS connections (matches health.ts pattern)
- */
-const COORDINATOR_HOST = 'coordinator.local.han.guru';
+import {
+  COORDINATOR_HOST,
+  COORDINATOR_PORT,
+  COORDINATOR_TLS_FETCH_OPTIONS,
+} from '../commands/coordinator/types.ts';
 
 /**
  * Debug logging
@@ -33,8 +32,7 @@ async function isCoordinatorAvailable(): Promise<boolean> {
       `https://${COORDINATOR_HOST}:${COORDINATOR_PORT}/health`,
       {
         signal: AbortSignal.timeout(1000),
-        // @ts-expect-error - Node.js/Bun fetch option for self-signed certs
-        rejectUnauthorized: false,
+        ...COORDINATOR_TLS_FETCH_OPTIONS,
       }
     );
     if (!response.ok) return false;
@@ -85,8 +83,7 @@ async function acquireFromCoordinator(
           variables: { sessionId, hookName, pid, pluginName },
         }),
         signal: AbortSignal.timeout(5000),
-        // @ts-expect-error - Node.js/Bun fetch option for self-signed certs
-        rejectUnauthorized: false,
+        ...COORDINATOR_TLS_FETCH_OPTIONS,
       }
     );
 
@@ -144,8 +141,7 @@ async function releaseToCoordinator(
           variables: { slotId, pid },
         }),
         signal: AbortSignal.timeout(5000),
-        // @ts-expect-error - Node.js/Bun fetch option for self-signed certs
-        rejectUnauthorized: false,
+        ...COORDINATOR_TLS_FETCH_OPTIONS,
       }
     );
 
@@ -360,8 +356,7 @@ export async function getSlotStatus(): Promise<{
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query }),
         signal: AbortSignal.timeout(5000),
-        // @ts-expect-error - Node.js/Bun fetch option for self-signed certs
-        rejectUnauthorized: false,
+        ...COORDINATOR_TLS_FETCH_OPTIONS,
       }
     );
 

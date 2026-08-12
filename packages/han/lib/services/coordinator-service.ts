@@ -17,6 +17,7 @@ import {
   createCoordinatorClients,
   isCoordinatorHealthy,
 } from '../grpc/client.ts';
+import { ensureCertificates } from '../commands/coordinator/tls.ts';
 
 const DEFAULT_PORT = 41957;
 
@@ -139,10 +140,8 @@ function findCoordinatorBinary(): string | null {
  */
 async function waitForHealthy(
   port: number,
-  budgetMs = parseInt(
-    process.env.HAN_COORDINATOR_HEALTH_BUDGET_MS || '',
-    10
-  ) || 30_000
+  budgetMs = parseInt(process.env.HAN_COORDINATOR_HEALTH_BUDGET_MS || '', 10) ||
+    30_000
 ): Promise<boolean> {
   const deadline = Date.now() + budgetMs;
   let delay = 100;
@@ -193,6 +192,19 @@ export async function startCoordinatorService(): Promise<void> {
   }
 
   console.log(`[coordinator] Starting ${binaryPath} on port ${port}`);
+
+  // Cache real Let's Encrypt certificates before the Rust binary reads them.
+  // han-coordinator only *reads* ~/.claude/han/certs and self-signs when that
+  // cache is empty, and a self-signed cert is one the dashboard's browser
+  // refuses, leaving it stuck on "Connecting to Han Coordinator...". Fetching
+  // is best-effort: on failure the coordinator still starts, just self-signed.
+  const credentials = await ensureCertificates();
+  if (!credentials) {
+    console.error(
+      '[coordinator] No trusted certificate available; the dashboard may not ' +
+        'be able to connect. Falling back to a self-signed certificate.'
+    );
+  }
 
   try {
     // Spawn Rust coordinator binary (daemonizes by default, no --daemon flag)
