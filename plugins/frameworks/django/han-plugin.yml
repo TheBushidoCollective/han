@@ -1,0 +1,19 @@
+hooks:
+  check:
+    event: Stop
+    command: "python manage.py check"
+    dirs_with:
+      - "manage.py"
+    if_changed:
+      - "**/*.py"
+      - "**/*.html"
+      - "manage.py"
+
+  test:
+    event: Stop
+    command: "python manage.py test"
+    dirs_with:
+      - "manage.py"
+    if_changed:
+      - "**/*.py"
+      - "manage.py"

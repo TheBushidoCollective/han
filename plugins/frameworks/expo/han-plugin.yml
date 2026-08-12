@@ -1,0 +1,13 @@
+hooks:
+  doctor:
+    event: Stop
+    command: "npx -y expo-doctor"
+    dirs_with:
+      - "package.json"
+    dir_test: "grep -qE '\"expo\":' package.json"
+    if_changed:
+      - "**/*.{ts,tsx,js,jsx}"
+      - "package.json"
+      - "app.json"
+      - "app.config.{js,ts}"
+      - "eas.json"

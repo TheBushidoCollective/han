@@ -48,7 +48,6 @@ hooks:
     if_changed:
       - "**/*_test.exs"
       - "**/test/**/*.exs"
-    file_test: grep -qE "(describe|test|doctest)" "${HAN_FILE}"
 
   typecheck:
     event: Stop

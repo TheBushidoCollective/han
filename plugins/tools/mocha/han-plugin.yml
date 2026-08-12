@@ -20,4 +20,3 @@ hooks:
       - "**/*.test.{js,ts}"
       - "**/*.spec.{js,ts}"
       - "**/test/**/*.{js,ts}"
-    file_test: grep -qE "(describe|it)\s*\(" "${HAN_FILE}"

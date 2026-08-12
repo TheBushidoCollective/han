@@ -22,4 +22,3 @@ hooks:
     if_changed:
       - "**/*_spec.rb"
       - "**/spec/**/*.rb"
-    file_test: grep -qE "(describe|it|context)\s" "${HAN_FILE}"

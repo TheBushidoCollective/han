@@ -1,0 +1,30 @@
+hooks:
+  format:
+    event: [Stop, PostToolUse:Edit|Write]
+    command: "vendor/bin/php-cs-fixer fix --dry-run --diff ${HAN_FILES}"
+    dirs_with:
+      - ".php-cs-fixer.dist.php"
+      - ".php-cs-fixer.php"
+    if_changed:
+      - "**/*.php"
+
+  syntax:
+    event: Stop
+    command: |
+      for f in ${HAN_FILES}; do php -l "$f" > /dev/null || exit 1; done
+    dirs_with:
+      - "composer.json"
+    if_changed:
+      - "**/*.php"
+
+  test:
+    event: Stop
+    command: "vendor/bin/phpunit"
+    dirs_with:
+      - "composer.json"
+    dir_test: "grep -qE '\"phpunit/phpunit\"' composer.json"
+    if_changed:
+      - "**/*.php"
+      - "composer.json"
+      - "phpunit.xml"
+      - "phpunit.xml.dist"

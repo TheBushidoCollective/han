@@ -1,0 +1,7 @@
+# bdd plugin configuration
+# Injects behavior-driven development enforcement at session start
+#
+# Hooks are defined in hooks/hooks.json for direct Claude Code integration
+# because they use `han hook reference`, which the generator does not emit
+
+hooks: {}

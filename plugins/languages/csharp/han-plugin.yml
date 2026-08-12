@@ -1,0 +1,33 @@
+hooks:
+  format:
+    event: [Stop, PostToolUse:Edit|Write]
+    command: "dotnet format --verify-no-changes"
+    dirs_with:
+      - "*.sln"
+      - "*.csproj"
+    if_changed:
+      - "**/*.cs"
+      - "**/*.csproj"
+      - ".editorconfig"
+
+  build:
+    event: Stop
+    command: "dotnet build --nologo"
+    dirs_with:
+      - "*.sln"
+      - "*.csproj"
+    if_changed:
+      - "**/*.cs"
+      - "**/*.csproj"
+      - "**/*.sln"
+
+  test:
+    event: Stop
+    command: "dotnet test --nologo"
+    dirs_with:
+      - "*.sln"
+      - "*.csproj"
+    if_changed:
+      - "**/*.cs"
+      - "**/*.csproj"
+      - "**/*.sln"

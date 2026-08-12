@@ -40,6 +40,4 @@ hooks:
       - "**/package.json"
     tip: "Formats package.json files consistently across the monorepo."
 
-mcp: null
-
 memory: null

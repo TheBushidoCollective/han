@@ -183,11 +183,12 @@ export function validatePluginConfig(config: unknown): ValidationResult {
     }
 
     // Check for unknown properties.
-    // This list is the union of every han-plugin.yml hook field the code
-    // actually reads: YamlPluginHookDefinition in lib/hooks/hook-config.ts for
-    // the hook runtime, plus `sync`, which only
-    // lib/commands/plugin/generate-hooks.ts reads (`const isAsync =
-    // !hookDef.sync`). Keep all three in sync.
+    // This list is every han-plugin.yml hook field han actually reads:
+    // YamlPluginHookDefinition in lib/hooks/hook-config.ts for the hook
+    // runtime, plus `sync`, which only lib/commands/plugin/generate-hooks.ts
+    // reads (`const isAsync = !hookDef.sync`). An unknown key here stops the
+    // whole plugin from loading, so a field must be listed the moment any
+    // reader consumes it. Keep all three in sync.
     const validProperties = [
       'event',
       'tool_filter',
@@ -213,9 +214,10 @@ export function validatePluginConfig(config: unknown): ValidationResult {
     }
   }
 
-  // Check for unknown top-level properties - strict validation
-  // Valid properties: hooks (required), mcp_servers, memory
-  const validTopLevel = ['hooks', 'mcp_servers', 'memory'];
+  // Check for unknown top-level properties - strict validation.
+  // `learn_patterns` is read by lib/marker-detection.ts and surfaced as
+  // detection.learnPatterns for prompt-based auto-detection.
+  const validTopLevel = ['hooks', 'mcp_servers', 'memory', 'learn_patterns'];
   for (const key of Object.keys(configObj)) {
     if (!validTopLevel.includes(key)) {
       errors.push({ path: key, message: `Unknown property '${key}'` });

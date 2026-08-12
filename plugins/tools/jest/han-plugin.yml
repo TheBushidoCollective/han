@@ -26,4 +26,3 @@ hooks:
     if_changed:
       - "**/*.test.{js,jsx,ts,tsx}"
       - "**/*.spec.{js,jsx,ts,tsx}"
-    file_test: grep -qE "(describe|it|test)\s*\(" "${HAN_FILE}"

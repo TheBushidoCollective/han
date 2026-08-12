@@ -1,0 +1,22 @@
+hooks:
+  format:
+    event: [Stop, PostToolUse:Edit|Write]
+    command: "clang-format --dry-run --Werror ${HAN_FILES}"
+    dirs_with:
+      - ".clang-format"
+    if_changed:
+      - "**/*.m"
+      - "**/*.mm"
+      - "**/*.h"
+
+  build:
+    event: Stop
+    command: "xcodebuild -quiet build"
+    dirs_with:
+      - "*.xcodeproj"
+      - "*.xcworkspace"
+    if_changed:
+      - "**/*.m"
+      - "**/*.mm"
+      - "**/*.h"
+      - "**/project.pbxproj"

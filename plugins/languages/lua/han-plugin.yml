@@ -1,0 +1,18 @@
+hooks:
+  format:
+    event: [Stop, PostToolUse:Edit|Write]
+    command: "stylua --check ${HAN_FILES}"
+    dirs_with:
+      - ".stylua.toml"
+      - "stylua.toml"
+    if_changed:
+      - "**/*.lua"
+
+  lint:
+    event: Stop
+    command: "luacheck ."
+    dirs_with:
+      - ".luacheckrc"
+    if_changed:
+      - "**/*.lua"
+      - ".luacheckrc"

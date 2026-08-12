@@ -1,0 +1,11 @@
+hooks:
+  lint:
+    event: Stop
+    command: "npx next lint"
+    dirs_with:
+      - "package.json"
+    dir_test: "grep -qE '\"next\":' package.json"
+    if_changed:
+      - "**/*.{ts,tsx,js,jsx,mjs}"
+      - "package.json"
+      - "next.config.{js,mjs,ts}"

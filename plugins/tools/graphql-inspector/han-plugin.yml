@@ -19,5 +19,4 @@ hooks:
       - "schema.graphql"
       - "**/schema.graphql"
 
-mcp: null
 memory: null

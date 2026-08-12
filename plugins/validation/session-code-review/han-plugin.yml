@@ -1,2 +1,9 @@
-dependencies:
-  - bushido
+# session-code-review plugin configuration
+# Backpressure code review before session completion and before commits
+#
+# Hooks are hand-authored in hooks/hooks.json and intentionally stay there:
+# they use the `agent` handler type with a prompt, which `han plugin
+# generate-hooks` cannot emit (it only emits `type: command` running
+# `han hook run`). Do not "fix" this by generating hook entries here.
+
+hooks: {}
