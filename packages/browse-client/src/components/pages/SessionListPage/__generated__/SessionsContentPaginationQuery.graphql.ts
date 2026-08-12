@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<ed4620c977aeaf0b9de01de82ab80d1e>>
+ * @generated SignedSource<<ea3a0ce824f8fd13ada3577d41460b0c>>
  * @lightSyntaxTransform
  * @nogrep
  */
@@ -14,6 +14,7 @@ export type SessionFilter = {
   _and?: ReadonlyArray<SessionFilter> | null | undefined;
   _not?: SessionFilter | null | undefined;
   _or?: ReadonlyArray<SessionFilter> | null | undefined;
+  harness?: StringFilter | null | undefined;
   id?: StringFilter | null | undefined;
   prNumber?: IntFilter | null | undefined;
   project?: ProjectFilter | null | undefined;
@@ -449,6 +450,13 @@ return {
                     "alias": null,
                     "args": null,
                     "kind": "ScalarField",
+                    "name": "harness",
+                    "storageKey": null
+                  },
+                  {
+                    "alias": null,
+                    "args": null,
+                    "kind": "ScalarField",
                     "name": "compactionCount",
                     "storageKey": null
                   },
@@ -527,12 +535,12 @@ return {
     ]
   },
   "params": {
-    "cacheID": "e4b67fc10f78e2dfa1f7df529b0aa368",
+    "cacheID": "f7a3bedfcc9f9536ffd0494d676cd560",
     "id": null,
     "metadata": {},
     "name": "SessionsContentPaginationQuery",
     "operationKind": "query",
-    "text": "query SessionsContentPaginationQuery(\n  $after: String\n  $filter: SessionFilter\n  $first: Int = 50\n) {\n  ...SessionsContent_query_G9cLv\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  owner {\n    id\n    name\n    email\n    avatarUrl\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n  gitBranch\n  prNumber\n  prUrl\n  teamName\n  turnCount\n  compactionCount\n  estimatedCostUsd\n  duration\n}\n\nfragment SessionsContent_query_G9cLv on Query {\n  sessions(first: $first, after: $after, filter: $filter) {\n    edges {\n      node {\n        id\n        sessionId\n        projectName\n        worktreeName\n        summary\n        updatedAt\n        startedAt\n        gitBranch\n        estimatedCostUsd\n        turnCount\n        duration\n        ...SessionListItem_session\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n    totalCount\n  }\n}\n"
+    "text": "query SessionsContentPaginationQuery(\n  $after: String\n  $filter: SessionFilter\n  $first: Int = 50\n) {\n  ...SessionsContent_query_G9cLv\n}\n\nfragment SessionListItem_session on Session {\n  id\n  sessionId\n  name\n  projectName\n  projectSlug\n  projectId\n  worktreeName\n  summary\n  messageCount\n  startedAt\n  updatedAt\n  owner {\n    id\n    name\n    email\n    avatarUrl\n  }\n  currentTodo {\n    content\n    activeForm\n    status\n    id\n  }\n  activeTasks {\n    totalCount\n    edges {\n      node {\n        id\n        taskId\n        description\n        type\n        status\n      }\n    }\n  }\n  todoCounts {\n    total\n    pending\n    inProgress\n    completed\n  }\n  gitBranch\n  prNumber\n  prUrl\n  teamName\n  harness\n  turnCount\n  compactionCount\n  estimatedCostUsd\n  duration\n}\n\nfragment SessionsContent_query_G9cLv on Query {\n  sessions(first: $first, after: $after, filter: $filter) {\n    edges {\n      node {\n        id\n        sessionId\n        projectName\n        worktreeName\n        summary\n        updatedAt\n        startedAt\n        gitBranch\n        estimatedCostUsd\n        turnCount\n        duration\n        ...SessionListItem_session\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n    }\n    totalCount\n  }\n}\n"
   }
 };
 })();

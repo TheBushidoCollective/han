@@ -18,7 +18,8 @@
 		"test": "npm run bdd:generate && playwright test",
 		"test:ui": "npm run bdd:generate && playwright test --ui",
 		"test:headed": "npm run bdd:generate && playwright test --headed",
-		"test:report": "playwright show-report"
+		"test:report": "playwright show-report",
+		"test:unit": "bun test src"
 	},
 	"dependencies": {
 		"@sentry/react": "^10.39.0",
