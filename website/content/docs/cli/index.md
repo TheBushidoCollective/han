@@ -42,12 +42,12 @@ han hook list
 
 ### [Other Commands](/docs/cli/other)
 
-Version, help, and update commands.
+Diagnostics, storage, parsing, worktrees, the coordinator daemon, and the browse dashboard.
 
 ```bash
-han --version
-han --help
-han update
+han doctor
+han browse
+han keep list
 ```
 
 ## Global Options
@@ -66,14 +66,19 @@ Han respects these environment variables:
 | Variable | Description |
 |----------|-------------|
 | `HAN_DISABLE_HOOKS` | Set to `1` or `true` to disable all hooks |
+| `HAN_FORCE_HOOKS` | Set to `1` or `true` to run hooks even where they would otherwise be suppressed |
 | `HAN_HOOK_RUN_VERBOSE` | Set to `1` or `true` to enable verbose hook output |
 | `HAN_NO_CACHE` | Set to `1` to disable smart caching (force hooks to run) |
-| `HAN_NO_FAIL_FAST` | Set to `1` to continue running hooks even after failures |
-| `HAN_NO_CHECKPOINTS` | Set to `1` to disable checkpoint-based filtering |
-| `HAN_CHECKPOINT_TYPE` | Checkpoint type for filtering (`session` or `agent`) |
-| `HAN_CHECKPOINT_ID` | Checkpoint ID for filtering hooks |
+| `HAN_SESSION_ID` | Session ID used for event logging, cache tracking, and lock scoping |
+| `HAN_DEBUG` | Set to `1` or `true` for debug diagnostics on stderr |
+| `HAN_BINARY` | Override the han binary command or path |
+| `HAN_DATA_DIR` | Override the Han data directory (default: `~/.han`) |
+| `HAN_COORDINATOR_PORT` | Coordinator daemon port (default: 41957) |
+| `HAN_BROWSE_PORT` | Browse UI port (default: 41956) |
 | `CLAUDE_CODE_ENABLE_TELEMETRY` | Set to `1` to enable OpenTelemetry export |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OpenTelemetry collector endpoint |
+
+`HAN_NO_CHECKPOINTS=1` turns off session-scoped `${HAN_FILES}` filtering. `HAN_CHECKPOINT_TYPE` and `HAN_CHECKPOINT_ID` are still set by `han hook dispatch` but are no longer read by anything. See [session-scoped validation](/docs/features/checkpoints).
 
 **Note:** Environment variables override `han.yml` settings at runtime.
 
@@ -91,4 +96,4 @@ See [OpenTelemetry](/docs/metrics/opentelemetry) for more telemetry variables.
 
 - [Plugin Commands](/docs/cli/plugins) - Detailed plugin management reference
 - [Hook Commands](/docs/cli/hooks) - Detailed hook management reference
-- [Other Commands](/docs/cli/other) - Version, help, and update commands
+- [Other Commands](/docs/cli/other) - Everything else the CLI exposes

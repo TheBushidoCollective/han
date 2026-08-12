@@ -3,7 +3,7 @@ title: "What is Han?"
 description: "Han is a plugin system for Claude Code that adds automatic quality gates through validation hooks, metrics tracking, and MCP integrations."
 ---
 
-Han brings automatic quality gates to Claude Code. Every conversation ends with validation—linting, formatting, type-checking, and tests run automatically, catching issues before they ship.
+Han brings automatic quality gates to Claude Code. Every conversation ends with validation: linting, formatting, type-checking, and tests run automatically, catching issues before they ship.
 
 ## How It Works
 
@@ -29,7 +29,7 @@ You continue working with Claude Code exactly as before. Han operates transparen
 
 Stop hooks run automatically when conversations end. Linters, formatters, type checkers, and tests are all verified.
 
-If validation fails, Claude sees the errors and can fix them immediately—no manual intervention required.
+If validation fails, Claude sees the errors and can fix them immediately, with no manual intervention required.
 
 ### 4. Learn
 
@@ -68,7 +68,7 @@ Validation that would take seconds runs in milliseconds when files haven't chang
 
 All data stays on your machine:
 
-- Metrics stored locally in `~/.claude/metrics.db`
+- Metrics stored locally in `~/.han/han.db`
 - No telemetry or phone-home
 - No cloud dependencies
 - Works completely offline

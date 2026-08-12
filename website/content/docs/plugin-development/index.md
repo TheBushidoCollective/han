@@ -37,24 +37,53 @@ Han plugins are organized into nine categories based on their technical layer:
 
 ## Plugin Structure
 
-All plugins share a common base structure:
+What a Han plugin typically contains:
 
 ```
 your-plugin/
 ├── .claude-plugin/
-│   └── plugin.json      # Required: Plugin metadata
-├── han-plugin.yml       # Hook configuration (optional)
+│   └── plugin.json      # Plugin manifest
+├── han-plugin.yml       # Han hook configuration (optional)
+├── hooks/
+│   └── hooks.json       # Generated from han-plugin.yml
 ├── skills/              # Skills (optional)
 │   └── skill-name/
 │       └── SKILL.md
-├── commands/            # Slash commands (optional)
-│   └── command-name.md
 ├── agents/              # Agents for discipline plugins (optional)
 │   └── agent-name.md
 ├── .mcp.json            # MCP server config for integration plugins
 ├── README.md            # Documentation
 └── CHANGELOG.md         # Version history
 ```
+
+### The Full Claude Code Component Set
+
+Han plugins use a subset of what Claude Code supports. The complete set of components a plugin can ship, and where each lives:
+
+| Component | Location | Han's usage |
+|-----------|----------|-------------|
+| Manifest | `.claude-plugin/plugin.json` | Required by Han's marketplace |
+| Skills | `skills/<name>/SKILL.md` | Han's convention for plugin knowledge |
+| Commands | `commands/<name>.md` | Skills as flat markdown. Valid, but no Han plugin uses it |
+| Agents | `agents/<name>.md` | Used by discipline plugins |
+| Hooks | `hooks/hooks.json` | Generated from `han-plugin.yml` |
+| MCP servers | `.mcp.json` | Used by integration plugins |
+| LSP servers | `.lsp.json` | Not modeled by Han |
+| Workflows | `workflows/` | Not modeled by Han |
+| Output styles | `output-styles/` | Not modeled by Han |
+| Themes | `themes/` | Experimental upstream. Not modeled by Han |
+| Monitors | `monitors/monitors.json` | Experimental upstream. Not modeled by Han |
+| Executables | `bin/` | Files here join the Bash tool's `PATH` and are invokable as bare commands while the plugin is enabled. Not modeled by Han |
+| Settings | `settings.json` | Default configuration applied when the plugin is enabled. Only the `agent` and `subagentStatusLine` keys are supported. Not modeled by Han |
+
+"Not modeled by Han" means Han's own tooling does not generate or validate the component; Claude Code still loads it normally if your plugin ships one.
+
+Two notes on the ones that overlap with Han's conventions:
+
+- `commands/` is accepted by Claude Code, so a plugin containing one is not invalid. It is not Han's convention: every plugin in the marketplace uses `skills/` with a `SKILL.md`, and none ships a `commands/` directory. Write a skill unless you specifically need explicit `/command` invocation.
+- `hooks/hooks.json` should be generated with `han plugin generate-hooks` rather than hand-written, so `han-plugin.yml` stays the single source of truth.
+
+Everything except `.claude-plugin/plugin.json` lives at the plugin root, not inside `.claude-plugin/`.
 
 ## Required Files
 

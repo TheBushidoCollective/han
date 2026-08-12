@@ -75,7 +75,7 @@
 					"slug": "features/hooks"
 				},
 				{
-					"title": "Checkpoints",
+					"title": "Session-Scoped Validation",
 					"slug": "features/checkpoints"
 				},
 				{

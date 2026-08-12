@@ -11,7 +11,7 @@ OpenTelemetry (OTel) is an open-source standard for collecting telemetry data (m
 
 ## Why Export Han Metrics?
 
-While Han stores metrics locally in `~/.claude/han/metrics/`, exporting to OpenTelemetry enables:
+While Han stores metrics locally in `~/.han/han.db`, exporting to OpenTelemetry enables:
 
 - **Dashboards** - Visualize task success rates, hook failures, and calibration trends
 - **Alerting** - Get notified when hook failure rates spike or calibration degrades
@@ -183,7 +183,7 @@ unset CLAUDE_CODE_ENABLE_TELEMETRY
 export CLAUDE_CODE_ENABLE_TELEMETRY=0
 ```
 
-Local metrics in `~/.claude/han/metrics/` continue to work regardless of OpenTelemetry settings.
+Local metrics in `~/.han/han.db` continue to work regardless of OpenTelemetry settings.
 
 ## Getting Started
 

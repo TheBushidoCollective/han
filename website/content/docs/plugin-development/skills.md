@@ -1,18 +1,22 @@
 ---
-title: "Skills and Commands"
-description: "How to create skills and slash commands that teach Claude specialized knowledge and workflows."
+title: "Skills"
+description: "How to create skills that teach Claude specialized knowledge and workflows."
 ---
 
-Skills and commands give Claude specialized knowledge about tools and workflows. They're markdown files with YAML frontmatter that Claude reads when relevant topics come up.
+Skills give Claude specialized knowledge about tools and workflows. They're markdown files with YAML frontmatter that Claude reads when relevant topics come up.
 
-## Skills vs Commands
+## Skills, Not Commands
 
-| Feature | Skills | Commands |
-|---------|--------|----------|
+Han plugins package their knowledge as skills. Claude Code also supports a `commands/` directory of slash-command markdown files, and a plugin that ships one still loads correctly, but that is not Han's convention: every plugin in the marketplace uses `skills/` and none ships `commands/`.
+
+| Feature | Skills (Han's convention) | Commands (Claude Code, unused by Han) |
+|---------|---------------------------|----------------------------------------|
 | Location | `skills/skill-name/SKILL.md` | `commands/command-name.md` |
 | Purpose | Deep knowledge about a topic | Specific workflow or action |
 | Invocation | Automatic when topic is relevant | Explicit via `/command` |
 | Length | Typically longer, more comprehensive | Usually focused and actionable |
+
+Reach for a skill by default. A skill surfaces itself when the topic is relevant, which is what you want from a plugin that teaches Claude how to use a tool.
 
 ## Creating Skills
 
@@ -142,9 +146,9 @@ When rules conflict with your codebase:
 3. Document disabled rules with comments
 ```
 
-## Creating Commands
+## Appendix: Slash Commands
 
-Commands are slash commands users invoke directly:
+No Han plugin uses this. It is documented only so you recognize the shape if you meet it in a third-party plugin, or genuinely need explicit `/command` invocation. Claude Code reads slash commands from a `commands/` directory:
 
 ```
 your-plugin/

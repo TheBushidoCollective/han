@@ -7,7 +7,7 @@ Han uses the Model Context Protocol (MCP) to connect Claude Code to external ser
 
 ## Han's Built-in MCP Server
 
-Han provides its own MCP server that runs via `han mcp server` and exposes powerful built-in capabilities. When you install the core plugin, Han registers as an MCP server in Claude Code's configuration.
+Han provides its own MCP server, started with `han mcp`, which exposes built-in capabilities. When you install the core plugin, Han registers as an MCP server in Claude Code's configuration.
 
 ### How It Works
 
@@ -18,168 +18,99 @@ The Han MCP server is automatically configured:
   "mcpServers": {
     "han": {
       "command": "han",
-      "args": ["mcp", "server"]
+      "args": ["mcp"]
     }
   }
 }
 ```
 
-The server implements MCP protocol version 2024-11-05 and exposes tools in four categories:
+The server implements MCP protocol version 2024-11-05.
 
-### 1. Plugin Hook Tools (Dynamic)
+### What It Exposes
 
-Every hook defined in an installed plugin automatically becomes an MCP tool. When you install `typescript`, Claude immediately gains access to a `typescript_typecheck` tool.
+The main `han mcp` server exposes a deliberately small surface:
 
-Example from `bun/han-plugin.yml`:
+| Tool | Purpose |
+|------|---------|
+| `memory` | Query memory with auto-routing across personal sessions, team knowledge, and project conventions |
 
-```yaml
-hooks:
-  test:
-    command: bun test --only-failures
-    dirsWith: [bun.lock, bun.lockb]
-    description: Run Bun tests
-```
-
-This becomes an MCP tool:
+That is the server's only tool of its own. It takes a `question` string and an optional `session_id`, and routes the question to the right memory layer itself, so there is no separate tool per layer:
 
 ```javascript
-{
-  name: "bun_test",
-  description: "Run Bun tests. Triggers: 'run the tests'...",
-  inputSchema: {
-    type: "object",
-    properties: {
-      cache: { type: "boolean" },
-      directory: { type: "string" },
-      verbose: { type: "boolean" }
-    }
-  }
-}
+memory({ question: "what was I working on?" })
+memory({ question: "who knows about authentication?" })
+memory({ question: "how do we handle errors?" })
 ```
 
-All plugin hooks support three standard parameters:
+`memory` disappears from the tool list when `memory.enabled` is `false` in `han.yml`.
 
-| Parameter | Default | Purpose |
-|-----------|---------|---------|
-| `cache` | `true` | Skip if files unchanged since last run |
-| `directory` | all | Target specific directory |
-| `verbose` | `false` | Stream output in real-time |
+### Re-exposed Backend Tools
 
-### 2. Memory Tools (Self-Learning)
+Beyond its own tool, `han mcp` re-exposes the tools of any installed plugin whose MCP server sets `expose: true`. Those arrive prefixed with the server name, so `context7`'s `resolve-library-id` becomes `context7_resolve-library-id`, and their descriptions are tagged with the originating server.
 
-Han's memory system lets Claude write to `.claude/rules/` to capture project knowledge.
+This is how a single `han` entry in `mcpServers` can front several backends without you registering each one.
 
-**`learn`** - Capture project knowledge:
+## Specialized MCP Servers
 
-```javascript
-learn({
-  content: "# API Rules\n\n- Validate all inputs with zod",
-  domain: "api",
-  paths: ["src/api/**/*.ts"],  // Optional: path-specific rules
-  scope: "project",  // or "user" for personal preferences
-  append: true  // Add to existing file
-})
-```
+Two further servers ship alongside the main one and are started explicitly.
 
-**`memory_list`** - See existing domains:
+### `han mcp blueprints`
 
-```javascript
-memory_list({ scope: "project" })
-// Returns: ["api", "testing", "commands"]
-```
+Technical blueprint documentation management.
 
-**`memory_read`** - Read domain content:
+| Tool | Purpose |
+|------|---------|
+| `list_blueprints` | List every blueprint in the repository with summaries |
+| `search_blueprints` | Filter blueprints by keyword, to avoid duplicating an existing one |
+| `read_blueprint` | Read one blueprint's full markdown content |
+| `write_blueprint` | Create or update a blueprint, managing frontmatter automatically |
 
-```javascript
-memory_read({ domain: "api", scope: "project" })
-```
+### `han mcp memory`
 
-Memory scopes:
+The read-only Memory Data Access Layer, for agents that need to drive search directly rather than through the auto-routing `memory` tool.
 
-| Scope | Location | Purpose |
-|-------|----------|---------|
-| `project` | `.claude/rules/` | Team knowledge, git-tracked |
-| `user` | `~/.claude/rules/` | Personal preferences |
+| Tool | Purpose |
+|------|---------|
+| `memory_search_multi_strategy` | Recommended. Runs several strategies in parallel and fuses them with Reciprocal Rank Fusion |
+| `memory_search_with_fallbacks` | Multi-strategy search that escalates through fallbacks when nothing matches |
+| `memory_search_hybrid` | FTS plus vector similarity, fused |
+| `memory_search_fts` | Full-text BM25 search, best for exact phrases |
+| `memory_search_vector` | Semantic similarity search |
+| `memory_grep_transcripts` | Raw grep over transcript JSONL, a last resort |
+| `memory_scan_recent_sessions` | Scan most recently modified sessions, for temporal queries |
+| `memory_list_layers` | List which memory layers have data |
 
-### 3. Metrics Tools (Self-Awareness)
-
-Task tracking with confidence calibration. See [Local Metrics](/docs/metrics) for details.
-
-**`start_task`** - Begin tracking:
-
-```javascript
-start_task({
-  description: "Fix authentication timeout bug",
-  type: "fix",
-  estimated_complexity: "moderate"
-})
-```
-
-**`complete_task`** - Record outcome:
-
-```javascript
-complete_task({
-  task_id: "task_abc123",
-  outcome: "success",
-  confidence: 0.85,
-  files_modified: ["src/auth/session.ts"]
-})
-```
-
-**`query_metrics`** - Analyze performance:
-
-```javascript
-query_metrics({
-  period: "week",
-  task_type: "fix"
-})
-```
-
-### 4. Checkpoint Tools (Smart Caching)
-
-Track file changes since last hook run for intelligent caching.
-
-**`checkpoint_list`** - See existing checkpoints
-**`checkpoint_clean`** - Remove stale checkpoints
+The searchable layers are `rules` (project conventions from `.claude/rules/`), `transcripts` (past sessions), `summaries` (session summaries with topics), and `team` (git commits and PRs, available when a git remote is configured).
 
 ## External MCP Servers (Integration Plugins)
 
 Integration plugins connect Claude to external services via MCP. Each integration plugin provides tools for interacting with a specific service, with Han managing how those tools are exposed to Claude Code.
 
-### Dual-Mode Architecture
+### How Integration Plugins Are Wired
 
-Han uses a **dual-mode architecture** for integration plugins that optimizes context usage:
+An integration plugin ships a `.mcp.json` (or an `mcp_servers:` block in `han-plugin.yml`) declaring its backend server. Claude Code can talk to that server directly, and Han additionally re-exposes it through `han mcp` when the plugin marks it `expose: true`:
 
-| Mode | When Active | Behavior |
-|------|-------------|----------|
-| **Orchestrator** (default) | `orchestrator.enabled: true` | Han manages all tools centrally. Integration MCP servers return no tools—Han's orchestrator exposes a unified workflow interface. |
-| **Direct** | `orchestrator.enabled: false` | Each integration plugin proxies directly to its MCP server, exposing all tools individually. |
-
-**Why this matters:**
-
-- **Orchestrator mode** reduces context overhead by exposing ~5 tools instead of 50+ from multiple backends
-- **Direct mode** gives you full access to individual MCP tools when needed
-- Switch between modes via `han.yml` configuration
-
-### How It Works
-
-When you install an integration plugin, it registers an MCP server that routes through Han:
-
-```json
-{
-  "mcpServers": {
-    "github": {
-      "command": "han",
-      "args": ["mcp", "github", "github"]
-    }
-  }
-}
+```yaml
+# han-plugin.yml
+mcp_servers:
+  github:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    expose: true
 ```
 
-Han then decides what to expose based on orchestrator configuration:
+With `expose: true`, Han opens a pooled connection to the backend, prefixes each of its tools with the server name, and serves them from the single `han` MCP entry. Without it, the plugin's server stands on its own and Claude Code connects to it directly.
 
-- **Orchestrator enabled**: Returns a stub MCP with no tools. Han's main MCP server provides a `han_workflow` tool that can invoke any backend capability.
-- **Orchestrator disabled**: Proxies to the actual MCP server (e.g., GitHub's official MCP), exposing all its tools directly.
+Pool behaviour is tunable in `han.yml`:
+
+```yaml
+orchestrator:
+  backends:
+    idle_timeout: 300   # Seconds before an idle backend connection is closed
+    max_connections: 10
+```
+
+`orchestrator.backends` is the only `orchestrator` subsection Han reads. Earlier documentation described an `orchestrator.enabled` switch and a unified `han_workflow` tool that toggled between "orchestrator" and "direct" modes; neither exists in the code.
 
 ### Available Integration Plugins
 
@@ -214,22 +145,15 @@ This adds the MCP server to your Claude Code configuration, routing through Han:
 }
 ```
 
-### Configuring the Orchestrator
+### Tuning the Backend Pool
 
-Control orchestrator behavior in `han.yml`:
+The only MCP behaviour you configure in `han.yml` is the connection pool Han keeps for exposed backends:
 
 ```yaml
-# Enable orchestrator (default) - Han manages all tools
 orchestrator:
-  enabled: true
-  workflow:
-    enabled: true
-    max_steps: 20
-    timeout: 300
-
-# Or disable to use direct MCP access
-orchestrator:
-  enabled: false
+  backends:
+    idle_timeout: 300   # Seconds before an idle backend connection is closed
+    max_connections: 10
 ```
 
 ### How MCP Tools Appear in Claude Code

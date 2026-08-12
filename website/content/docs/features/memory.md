@@ -310,23 +310,18 @@ All layers (except rules) are indexed for fast search using SQLite FTS5.
 ### CLI Commands
 
 ```bash
-# Index all content for current project
-han index run
+# Clear the database and rebuild it from the JSONL session logs
+han reindex
+han reindex --verbose
 
-# Index specific layer
-han index run --layer transcripts
-han index run --layer team
-
-# Index specific session
-han index run --session "<session-id>"
-
-# Search indexed content
-han index search "authentication"
-han index search "error handling" --layer team --limit 20
+# Search the index (for testing)
+han reindex search "authentication"
 
 # Check index status
-han index status
+han reindex status
 ```
+
+The command is `han reindex`, not `han index`. It always rebuilds the whole index; there are no `--layer` or `--session` flags.
 
 ### Automatic Indexing
 
@@ -357,20 +352,24 @@ You don't think about layers - you just ask questions.
 ## Storage Layout
 
 ```text
-~/.claude/
-  han/
-    han.db                  # SQLite database (Layer 2: indexed sessions)
-    memory/
-      projects/
-        github.com_org_repo/
-          meta.yaml         # Team memory metadata
+~/.han/                     # Han data directory (override with HAN_DATA_DIR)
+  han.db                    # SQLite database (Layer 2: indexed sessions)
+  memory/
+    personal/
+      sessions/             # Session observations and han events (JSONL)
+      summaries/            # Session summaries
+    projects/
+      github.com_org_repo/  # Team memory metadata
 
+~/.claude/
   projects/
     {project-slug}/         # Layer 3: Claude transcripts (JSONL)
 
 .claude/                    # In project repo (git-tracked)
   rules/                    # Layer 1: Permanent rules
 ```
+
+Han migrated this directory from `~/.claude/han` to `~/.han`; the move happens automatically on first run when only the old path exists.
 
 ---
 
@@ -400,6 +399,6 @@ memory:
 
 ## Next Steps
 
-- Learn about [checkpoints](/docs/features/checkpoints) for session-scoped validation
+- Learn about [session-scoped validation](/docs/features/checkpoints) for how hooks narrow their scope
 - Explore the [MCP integrations](/docs/integrations) Han provides
 - Read about [configuration](/docs/configuration) options

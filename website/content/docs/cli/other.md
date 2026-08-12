@@ -1,25 +1,19 @@
 ---
 title: "Other Commands"
-description: "Additional CLI commands for version, help, and updates."
+description: "Version, help, diagnostics, storage, parsing, and the remaining top-level han commands."
 ---
 
-Additional Han CLI commands for version information, help, and updates.
+Everything the `han` CLI exposes outside the plugin and hook command groups.
 
 ## `han --version`
 
-Show the current Han version.
+Show the current Han version, along with the binary location and config status.
 
 ### Usage
 
 ```bash
 han --version
 han -V
-```
-
-### Output
-
-```
-1.61.6
 ```
 
 ### Example
@@ -30,7 +24,7 @@ $ han --version
 1.61.6
 
 # Use in scripts
-if [ "$(han --version | cut -d. -f1)" -ge 2 ]; then
+if [ "$(han --version | head -1 | cut -d. -f1)" -ge 2 ]; then
   echo "Han v2+ detected"
 fi
 ```
@@ -51,358 +45,242 @@ han plugin --help
 han hook run --help
 ```
 
-### Output
+### Command groups
 
-```
-Usage: han [options] [command]
+| Command | Purpose |
+|---------|---------|
+| `plugin` | Manage Han plugins |
+| `create` | Scaffold new Han resources |
+| `hook` | Hook utilities |
+| `mcp` | Start a Han MCP server |
+| `blueprints` | Manage technical blueprint documentation |
+| `memory` | Memory system status |
+| `keep` | Scoped key-value storage across sessions |
+| `parse` | JSON and YAML parsing utilities |
+| `reindex` | Clear the database and reindex from JSONL logs |
+| `worktree` | Git worktree management |
+| `coordinator` | Manage the coordinator daemon |
+| `config` | Manage Han CLI configuration |
+| `auth` | Manage authentication with the Han team server |
+| `sync` | Manage data synchronization to the team platform |
+| `browse` | Start the Han system browser dashboard |
+| `doctor` | Run diagnostics |
+| `setup` | Generate config files for non-Claude-Code agents |
+| `completion` | Generate a shell completion script |
+| `install` | Alias for `plugin install --auto` |
+| `uninstall` | Remove the Han marketplace and plugins |
 
-Utilities for The Bushido Collective's Han Code Marketplace
+## Updating Han
 
-Options:
-  -V, --version   output the version number
-  -h, --help      display help for command
+There is no `han update` subcommand. Update through whichever channel installed the binary:
 
-Commands:
-  plugin          Manage Han plugins
-  hook            Hook utilities
-  mcp             MCP server utilities
-  memory          Memory management
-  metrics         Metrics and analytics
-  checkpoint      Checkpoint management
-  explain         Show comprehensive overview of Han configuration
-  summary         AI-powered summary of how Han is improving this repository
-  gaps            AI-powered analysis of repository gaps and Han plugin recommendations
-  help [command]  display help for command
-```
-
-### Examples
+**Homebrew:**
 
 ```bash
-# General help
-han --help
-
-# Plugin command help
-han plugin --help
-
-# Hook run command help
-han hook run --help
+brew update
+brew upgrade thebushidocollective/tap/han
 ```
 
-## `han update`
+**curl installer:**
 
-Update Han to the latest version.
+```bash
+curl -fsSL https://han.guru/install.sh | bash
+```
+
+**npm:**
+
+```bash
+npm update -g @thebushidocollective/han
+```
+
+To refresh the plugin marketplace cache rather than the binary, use `han plugin update-marketplace`.
+
+## `han doctor`
+
+Run diagnostics against your Han installation: binary location, config file discovery, coordinator health, and index database status.
 
 ### Usage
 
 ```bash
-# Update to latest version
-han update
+han doctor
 
-# Update to specific version
-han update --version 1.61.6
-
-# Check for updates without installing
-han update --check
+# Machine-readable
+han doctor --json
 ```
 
 ### Options
 
 | Option | Description |
 |--------|-------------|
-| `--version <version>` | Update to specific version |
-| `--check` | Check for updates without installing |
-| `--force` | Force reinstall even if up to date |
+| `--json` | Output results as JSON |
 
-### Update Methods
+## `han browse`
 
-The update behavior depends on how Han was installed:
-
-**Homebrew installation:**
-
-```bash
-# Update via Homebrew
-brew update
-brew upgrade thebushidocollective/tap/han
-```
-
-**curl installation:**
-
-```bash
-# Update via installer script
-curl -fsSL https://han.guru/install.sh | bash
-```
-
-**npm installation:**
-
-```bash
-# Update via npm
-npm update -g @thebushidocollective/han
-```
-
-### Examples
-
-```bash
-# Update to latest
-han update
-
-# Check current version first
-han --version
-han update --check
-
-# Update to specific version
-han update --version 1.61.0
-```
-
-## `han explain`
-
-Show comprehensive overview of Han configuration.
+Start the Han system browser dashboard, a local UI for searching session history and inspecting hook activity.
 
 ### Usage
 
 ```bash
-han explain
+han browse
+
+# Pick a port
+han browse --port 41956
+
+# Run the local dev server over HTTP instead of opening the remote dashboard
+han browse --local
 ```
 
-### Output
-
-Displays:
-
-- Installed plugins by scope (user, project, local)
-- Active hooks and their triggers
-- MCP servers and their status
-- Configuration file locations
-- Checkpoint and metrics status
-
-### Example
-
-```bash
-$ han explain
-
-Han Configuration Overview
-==========================
-
-Installed Plugins (user):
-  - github (v1.2.3) - GitHub integration
-  - bun (v1.0.0) - Bun runtime support
-
-Installed Plugins (project):
-  - typescript (v1.1.0) - TypeScript validation
-
-Active Hooks:
-  bun/test (Stop hook)
-  typescript/typecheck (Stop hook)
-
-MCP Servers:
-  - han (built-in)
-  - github (github plugin)
-
-Configuration:
-  User: ~/.claude/han.yml
-  Project: .claude/han.yml
-  Local: .claude/han.local.yml (not found)
-
-Metrics: ~/.claude/han/metrics/
-Checkpoints: ~/.claude/han/checkpoints/
-```
-
-## `han summary`
-
-AI-powered summary of how Han is improving the repository.
-
-### Usage
-
-```bash
-han summary
-```
-
-Analyzes:
-
-- Hook execution history
-- Task completion metrics
-- Calibration trends
-- Plugin usage patterns
-
-Generates a natural language summary of Han's impact on your development workflow.
-
-### Example
-
-```bash
-$ han summary
-
-Analyzing Han's impact on your repository...
-
-Over the past month, Han has:
-- Run 147 validation hooks with 94% success rate
-- Tracked 23 tasks with average confidence of 0.82
-- Detected and prevented 8 potential issues before commit
-- Improved calibration accuracy from 0.68 to 0.79
-
-Top performing hooks:
-  1. bun/test (100% success)
-  2. typescript/typecheck (96% success)
-  3. biome/lint (92% success)
-
-Recommendations:
-- Consider adding playwright-mcp for browser testing
-- Hook failure rate for biome/lint suggests review of lint rules
-```
-
-## `han gaps`
-
-AI-powered analysis of repository gaps and plugin recommendations.
-
-### Usage
-
-```bash
-han gaps
-```
-
-Analyzes your repository and suggests Han plugins that could add value based on:
-
-- Detected technologies and frameworks
-- Missing validation hooks
-- Development patterns
-- Team workflows
-
-### Example
-
-```bash
-$ han gaps
-
-Analyzing repository for improvement opportunities...
-
-Detected Technologies:
-  - TypeScript (✓ typescript installed)
-  - Bun (✓ bun installed)
-  - React (missing plugin)
-  - PostgreSQL (missing integration)
-
-Recommended Plugins:
-
-  react - React development patterns and hooks
-    Why: 23 React components detected without validation
-
-  postgresql - PostgreSQL database integration
-    Why: Database queries found without schema validation
-
-  code-reviewer - Multi-agent code review system
-    Why: No automated code review process detected
-
-Install with:
-  han plugin install react postgresql code-reviewer
-```
-
-## `han checkpoint`
-
-Manage session and agent checkpoints for validation filtering.
-
-Checkpoints capture the state of files at specific points (session start, subagent start) to enable efficient validation filtering. Hooks can use the `if_changed` option to only run when relevant files have changed since the checkpoint.
-
-### `han checkpoint capture`
-
-Capture a checkpoint of current file state. Can read from stdin (hook payload) or use explicit options.
-
-#### Usage
-
-```bash
-# From hook (reads stdin JSON with hook_event_name and session_id/agent_id)
-echo '{"hook_event_name": "SessionStart", "session_id": "abc123"}' | han checkpoint capture
-
-# With explicit options
-han checkpoint capture --type session --id abc123
-han checkpoint capture --type agent --id agent-xyz
-```
-
-#### Auto-detection
-
-When reading from stdin, checkpoint type is automatically determined:
-
-- `SessionStart` → captures session checkpoint using `session_id`
-- `SubagentStart` → captures agent checkpoint using `agent_id`
-
-#### Options
+### Options
 
 | Option | Description |
 |--------|-------------|
-| `--type <type>` | Checkpoint type: `session` or `agent` |
-| `--id <id>` | Checkpoint ID (session_id or agent_id) |
+| `-p, --port <port>` | Port to run the server on (default: 41956) |
+| `-l, --local` | Run the local dev server for offline use |
 
-#### Example
+## `han setup`
 
-```bash
-# Typically called from SessionStart hook
-han checkpoint capture < /tmp/hook-payload.json
+Generate config files so agents other than Claude Code can invoke Han's hook dispatch.
 
-# Manual capture
-han checkpoint capture --type session --id my-session-123
-
-# Output
-Checkpoint captured: session/my-session-123
-```
-
-### `han checkpoint list`
-
-List active checkpoints for the current project.
-
-#### Usage
+### Usage
 
 ```bash
-han checkpoint list
+# All supported agents
+han setup
+
+# One agent
+han setup --agent codex
+
+# Overwrite existing files
+han setup --agent opencode --force
 ```
 
-#### Output
-
-```bash
-$ han checkpoint list
-
-Active Checkpoints
-==================
-
-Session Checkpoints:
-  - abc123 (captured 2 hours ago)
-  - def456 (captured 1 day ago)
-
-Agent Checkpoints:
-  - agent-xyz (captured 5 minutes ago)
-  - agent-abc (captured 3 hours ago)
-
-Total: 4 checkpoints
-```
-
-### `han checkpoint clean`
-
-Remove stale checkpoints older than specified age.
-
-#### Usage
-
-```bash
-# Remove checkpoints older than 24 hours (default)
-han checkpoint clean
-
-# Custom age in hours
-han checkpoint clean --max-age 48
-```
-
-#### Options
+### Options
 
 | Option | Description |
 |--------|-------------|
-| `--max-age <hours>` | Remove checkpoints older than N hours (default: 24) |
+| `--agent <name>` | One of `codex`, `kiro`, `gemini`, `opencode`, `agents-md` |
+| `--all` | Generate configs for all agents (default) |
+| `--force` | Overwrite existing config files |
 
-#### Example
+## `han keep`
+
+Scoped key-value storage for persisting state across sessions.
+
+### Usage
 
 ```bash
-$ han checkpoint clean --max-age 48
+# Save (reads stdin when no content is given)
+han keep save build-notes "release blocked on flaky test"
+cat notes.md | han keep save notes
 
-Cleaning checkpoints older than 48 hours...
+# Read it back
+han keep load build-notes
 
-Removed:
-  - session/old-session-1 (72 hours old)
-  - session/old-session-2 (96 hours old)
-  - agent/old-agent-1 (120 hours old)
-
-Cleaned 3 checkpoints
+# Inspect and clean up
+han keep list
+han keep delete build-notes
+han keep clear
 ```
+
+Every subcommand takes `--global` or `--repo` to choose the storage scope.
+
+## `han parse`
+
+JSON and YAML utilities so plugin hooks do not need `jq` or `yq` on the box.
+
+```bash
+# Extract a path from JSON on stdin
+echo '{"a":{"b":[1,2]}}' | han parse json a.b[0]
+
+# Set a value
+echo '{}' | han parse json-set a.b 42
+
+# Validate a shape
+echo '{"name":"x"}' | han parse json-validate --schema '{"name":"string"}'
+
+# YAML, including markdown frontmatter
+cat SKILL.md | han parse yaml name
+cat SKILL.md | han parse yaml-set version 2.0.0
+
+# Convert between the two
+han parse yaml-to-json < config.yml
+han parse json-to-yaml < config.json
+```
+
+## `han reindex`
+
+Clear the index database and rebuild it from the JSONL session logs.
+
+```bash
+# Rebuild (default subcommand)
+han reindex
+han reindex --verbose
+
+# Query the index, for testing
+han reindex search "auth refactor"
+
+# Check index state
+han reindex status
+```
+
+## `han memory`
+
+Prints the current state of the memory system. Memory is indexed automatically from Claude Code session transcripts, so there is nothing to run by hand; use `han browse` to search session history.
+
+```bash
+han memory
+```
+
+## `han worktree`
+
+Git worktree management for parallel development.
+
+```bash
+han worktree add ../feature-x feature/x --create-branch
+han worktree list --json
+han worktree discover
+han worktree remove ../feature-x --force
+han worktree prune --dry-run
+```
+
+## `han coordinator`
+
+Manage the coordinator daemon that indexes sessions in the background.
+
+```bash
+han coordinator start
+han coordinator status
+han coordinator logs --follow
+han coordinator restart
+han coordinator stop
+```
+
+On macOS, `han coordinator launchd install` registers the daemon to start on login, with matching `uninstall` and `status` subcommands.
+
+## `han completion`
+
+Generate a shell completion script.
+
+```bash
+han completion bash
+han completion zsh
+han completion fish
+```
+
+## `han install` and `han uninstall`
+
+Top-level aliases kept for backwards compatibility.
+
+```bash
+# Same as: han plugin install --auto
+han install
+han install --scope local
+
+# Remove the Han marketplace and all its plugins
+han uninstall
+```
+
+`han install --scope` accepts `project` (default) or `local`.
 
 ## Learn More
 

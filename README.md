@@ -3,7 +3,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/thebushidocollective/han)](https://github.com/thebushidocollective/han/releases)
 [![codecov](https://codecov.io/gh/thebushidocollective/han/graph/badge.svg)](https://codecov.io/gh/thebushidocollective/han)
 
-Ship-ready code from your AI coding agent. 139+ plugins for quality gates, tooling, memory, and specialized agents — so your AI writes code that's ready to merge.
+Ship-ready code from your AI coding agent. 340 plugins for quality gates, tooling, memory, and specialized agents, so your AI writes code that's ready to merge.
 
 ## Getting Started
 
@@ -35,16 +35,19 @@ brew install thebushidocollective/tap/han
 
 ## Plugin Categories
 
-139 plugins across six categories:
+340 plugins across nine categories:
 
 | Category | Description | Examples |
 |----------|-------------|----------|
-| **Core** | Essential infrastructure. Auto-installs han binary, provides metrics and MCP servers | Always required |
-| **Languages** | Validation plugins for your language/runtime | TypeScript, Rust, Python, Go, Ruby |
-| **Validation** | Linters, formatters, and quality tools | Biome, ESLint, ShellCheck, Pytest |
-| **Disciplines** | Specialized AI agents for engineering domains | Security, accessibility, API design, architecture |
-| **Services** | MCP servers for external platforms | GitHub, GitLab, Linear |
-| **Tools** | MCP servers for development utilities | Playwright, Blueprints, Context7 |
+| **Core** | Essential infrastructure. Auto-installs the han binary, provides metrics and MCP servers | core, bushido |
+| **Language** | Deep knowledge of a programming language | TypeScript, Rust, Python, Go, Ruby |
+| **Framework** | Web, mobile, and backend framework expertise | React, Next.js, Django, Rails, Phoenix |
+| **Validation** | Linters, formatters, and static analysis | Biome, ESLint, RuboCop, ShellCheck |
+| **Tool** | Build systems, test runners, and dev utilities | Playwright, Jest, Pytest, Terraform |
+| **Integration** | MCP servers for external services | GitHub, GitLab, Linear, Sentry |
+| **Discipline** | Specialized AI agents for engineering domains | Security, accessibility, API design, architecture |
+| **Pattern** | Methodologies and workflow practices | TDD, BDD, AI-DLC, git worktrees |
+| **Specialized** | Domain-specific plugins that don't fit elsewhere | Android, iOS, embedded |
 
 Browse all plugins at [han.guru/plugins](https://han.guru/plugins/)
 

@@ -7,21 +7,17 @@ Han's smart caching system eliminates redundant hook executions, saving time and
 
 ## Breaking Change in v2.0.0
 
-Han v2.0.0 introduced a **default-ON** philosophy for performance features:
+Han v2.0.0 made caching **default-ON**:
 
 | Feature | v1.x Default | v2.0.0+ Default | Migration |
 |---------|--------------|-----------------|-----------|
 | `cache` | OFF | **ON** | Use `--no-cache` or `HAN_NO_CACHE=1` |
-| `checkpoints` | OFF | **ON** | Use `--no-checkpoints` or `hooks.checkpoints: false` |
-| `fail_fast` | OFF | **ON** | Use `--no-fail-fast` or `hooks.fail_fast: false` |
 
-**Why this change?** Most users want optimized, fast hook execution by default. The new defaults provide:
+**Why this change?** Most users want fast hook execution by default, and a hook that re-lints an untouched tree on every turn is pure latency.
 
-- Faster development cycles through smart caching
-- Fresh validation at session boundaries via checkpoints
-- Quicker feedback via fail-fast behavior
+**Upgrading from v1.x:** If you relied on opt-in caching, your hooks now cache by default. To restore v1.x behavior, set `hooks.cache: false` in your `han.yml`.
 
-**Upgrading from v1.x:** If you relied on opt-in caching, your hooks will now cache by default. To restore v1.x behavior, set `hooks.cache: false` in your `han.yml`.
+`hooks.fail_fast` and `--fail-fast`, which older releases shipped alongside caching, no longer exist anywhere in the code. `hooks.checkpoints` and `--no-checkpoints` do still work: they control session-scoped `${HAN_FILES}` filtering rather than caching. See [session-scoped validation](/docs/features/checkpoints#turning-session-filtering-off).
 
 ## How Caching Works
 
@@ -41,20 +37,19 @@ This means hooks only run when something meaningful has changed.
 
 ## Cache Granularity
 
-**Caching is session-scoped by default** through checkpoints (enabled by default as of v2.0.0):
+Caching is scoped to the current session's file changes:
 
 ```yaml
 hooks:
-  cache: true         # Enabled by default
-  checkpoints: true   # Enabled by default - cache resets at session boundaries
+  cache: true   # Enabled by default
 ```
 
-This ensures:
+Before running a hook, Han builds the manifest of files matching its `if_changed` patterns and asks two questions in order:
 
-- Fresh validation at the start of each work session
-- No stale results from previous days
-- Consistent behavior across team members
-- Automatic cache invalidation at natural boundaries
+1. Did this session touch any file in the manifest? If not, skip the hook.
+2. For the files that are there, does any hash differ from the one recorded at its last validation, or was a validated file deleted? If so, run the hook.
+
+On any error reading cache state, Han assumes changes and runs the hook, so a cache fault never silently skips validation.
 
 ## File-Based Cache Invalidation
 
@@ -174,7 +169,7 @@ biome:
 Cache data is stored in:
 
 - `.claude/cache/hooks/` - Project-specific hook results
-- Session checkpoints - Temporal boundaries for cache validity
+- Per-session file validations - the hashes each hook last validated, used to decide what changed
 
 Cache files are safe to delete - Han will rebuild them on the next run.
 
@@ -240,7 +235,7 @@ Common scenarios that invalidate cache:
 | Edit non-matching file | No | Outside `if_changed` patterns |
 | Change hook command | Yes | Cache key includes command |
 | Update plugin | Yes | Version in cache key changed |
-| New session (checkpoints on) | Yes | Session boundary reached |
+| New session | Yes | Session file validations start empty |
 | Delete cached file | No | Cache persists until invalidation |
 
 ## Best Practices
@@ -258,12 +253,7 @@ Common scenarios that invalidate cache:
      - "**/*"
    ```
 
-2. **Keep checkpoints enabled** (default) for session-scoped freshness - disable only if you understand the implications:
-
-   ```yaml
-   hooks:
-     checkpoints: true  # Default - recommended for most workflows
-   ```
+2. **Let session scoping do its job** - a hook only fires on files the current session touched, so resist widening `if_changed` to force runs
 
 3. **Monitor cache hits** - if you're seeing frequent misses, patterns may be too broad
 
@@ -272,9 +262,13 @@ Common scenarios that invalidate cache:
 5. **Document cache requirements** - if a hook needs cache disabled, explain why in comments:
 
    ```yaml
-   custom-validator:
-     validate:
-       cache: false  # Disabled because this hook checks external state
+   plugins:
+     custom-validator:
+       hooks:
+         validate:
+           # Documented here because this hook checks external state;
+           # disable caching globally with hooks.cache: false or per-run with --no-cache
+           command: ./scripts/check-external.sh
    ```
 
 ## Troubleshooting

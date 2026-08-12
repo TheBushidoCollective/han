@@ -104,7 +104,7 @@ Returns aggregated statistics including success rates by confidence bucket, enab
 
 ## What Gets Stored
 
-All metrics are stored locally in SQLite at `~/.claude/han/han.db`. **No data leaves your machine.** You control it entirely.
+All metrics are stored locally in SQLite at `~/.han/han.db`, or under `$HAN_DATA_DIR` when that is set. **No data leaves your machine.** You control it entirely.
 
 The database contains tables for:
 
