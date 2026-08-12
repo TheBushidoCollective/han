@@ -46,6 +46,7 @@ export {
   getHookConfigs,
   getHookDefinition,
   getHookEvents,
+  HOOK_EVENT_TYPES,
   type HookCategory,
   type HookDependency,
   type HookEventType,

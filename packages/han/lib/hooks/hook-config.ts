@@ -12,46 +12,15 @@ import { getPluginNameFromRoot } from '../shared/index.ts';
 import { findDirectoriesWithMarkers } from './hook-cache.ts';
 
 /**
- * Claude Code hook event types that can trigger han hooks.
- * Complete as of Claude Code 2.1.215.
+ * Every Claude Code hook event, in the order han writes them into a generated
+ * `hooks.json`. This is the single source of truth: the `HookEventType` union,
+ * shorthand validation, and hooks.json key ordering all derive from it, so a
+ * new upstream event is added in exactly one place.
+ *
+ * Complete as of Claude Code 2.1.228.
+ * See https://code.claude.com/docs/en/plugins-reference#hooks
  */
-export type HookEventType =
-  | 'SessionStart'
-  | 'Setup'
-  | 'UserPromptSubmit'
-  | 'UserPromptExpansion'
-  | 'PreToolUse'
-  | 'PermissionRequest'
-  | 'PermissionDenied'
-  | 'PostToolUse'
-  | 'PostToolUseFailure'
-  | 'PostToolBatch'
-  | 'Notification'
-  | 'MessageDisplay'
-  | 'SubagentStart'
-  | 'SubagentStop'
-  | 'TaskCreated'
-  | 'TaskCompleted'
-  | 'Stop'
-  | 'StopFailure'
-  | 'TeammateIdle'
-  | 'InstructionsLoaded'
-  | 'ConfigChange'
-  | 'CwdChanged'
-  | 'FileChanged'
-  | 'WorktreeCreate'
-  | 'WorktreeRemove'
-  | 'PreCompact'
-  | 'PostCompact'
-  | 'Elicitation'
-  | 'ElicitationResult'
-  | 'SessionEnd';
-
-/**
- * Valid base event types for shorthand parsing validation.
- * Complete as of Claude Code 2.1.215.
- */
-const VALID_EVENT_TYPES = new Set<string>([
+export const HOOK_EVENT_TYPES = [
   'SessionStart',
   'Setup',
   'UserPromptSubmit',
@@ -64,16 +33,17 @@ const VALID_EVENT_TYPES = new Set<string>([
   'PostToolBatch',
   'Notification',
   'MessageDisplay',
-  'SubagentStart',
+  'Stop',
   'SubagentStop',
+  'SubagentStart',
   'TaskCreated',
   'TaskCompleted',
-  'Stop',
   'StopFailure',
   'TeammateIdle',
   'InstructionsLoaded',
   'ConfigChange',
   'CwdChanged',
+  'DirectoryAdded',
   'FileChanged',
   'WorktreeCreate',
   'WorktreeRemove',
@@ -82,7 +52,17 @@ const VALID_EVENT_TYPES = new Set<string>([
   'Elicitation',
   'ElicitationResult',
   'SessionEnd',
-]);
+] as const;
+
+/**
+ * Claude Code hook event types that can trigger han hooks.
+ */
+export type HookEventType = (typeof HOOK_EVENT_TYPES)[number];
+
+/**
+ * Valid base event types for shorthand parsing validation.
+ */
+const VALID_EVENT_TYPES: ReadonlySet<string> = new Set(HOOK_EVENT_TYPES);
 
 /**
  * Parsed event from shorthand syntax.
@@ -525,17 +505,18 @@ export function loadPluginConfig(
       return null;
     }
 
-    const config = convertYamlPluginConfig(yamlConfig);
-
+    // Validate the raw YAML, not the converted config. The validator's schema
+    // describes han-plugin.yml's snake_case surface, so validating after
+    // conversion would reject every camelCase field it produces.
     if (validate) {
-      const result = validatePluginConfig(config);
+      const result = validatePluginConfig(yamlConfig);
       if (!result.valid) {
         console.error(formatValidationErrors(yamlPath, result));
         return null;
       }
     }
 
-    return config;
+    return convertYamlPluginConfig(yamlConfig);
   } catch (error) {
     console.error(`Error loading plugin config from ${yamlPath}:`, error);
     return null;

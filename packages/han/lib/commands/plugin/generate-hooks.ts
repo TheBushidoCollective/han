@@ -21,6 +21,7 @@ import { basename, join } from 'node:path';
 import type { Command } from 'commander';
 import { parse as parseYaml } from 'yaml';
 import {
+  HOOK_EVENT_TYPES,
   type HookEventType,
   parseEventShorthands,
 } from '../../hooks/hook-config.ts';
@@ -144,38 +145,7 @@ export function generateHooksJson(
   // Build the final hooks object with deterministic key order.
   // Events not in this list are appended in sorted order so that
   // newly added Claude Code events are never silently dropped.
-  const orderedEvents: HookEventType[] = [
-    'SessionStart',
-    'Setup',
-    'UserPromptSubmit',
-    'UserPromptExpansion',
-    'PreToolUse',
-    'PermissionRequest',
-    'PermissionDenied',
-    'PostToolUse',
-    'PostToolUseFailure',
-    'PostToolBatch',
-    'Notification',
-    'MessageDisplay',
-    'Stop',
-    'SubagentStop',
-    'SubagentStart',
-    'TaskCreated',
-    'TaskCompleted',
-    'StopFailure',
-    'TeammateIdle',
-    'InstructionsLoaded',
-    'ConfigChange',
-    'CwdChanged',
-    'FileChanged',
-    'WorktreeCreate',
-    'WorktreeRemove',
-    'PreCompact',
-    'PostCompact',
-    'Elicitation',
-    'ElicitationResult',
-    'SessionEnd',
-  ];
+  const orderedEvents: readonly HookEventType[] = HOOK_EVENT_TYPES;
 
   const orderedKeys = [
     ...orderedEvents,
