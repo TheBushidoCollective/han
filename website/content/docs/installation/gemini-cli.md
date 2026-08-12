@@ -84,7 +84,7 @@ The bridge maps Claude Code's hook events to Gemini CLI's extension hooks:
 | **PreCompact** | `PreCompress` | Implemented | Event log flush before context compression |
 | **Skills** | GEMINI.md context | Partial | Skills discovered and counted; use Gemini CLI's native skill system |
 | **Disciplines** | GEMINI.md context | Partial | Disciplines discovered and counted |
-| **Event Logging** | JSONL + coordinator | Implemented | Browse UI visibility for Gemini CLI sessions |
+| **Event Logging** | JSONL + coordinator | Implemented | Gemini CLI sessions indexed as first-class sessions, attributed to the `gemini-cli` harness |
 | BeforeModel/AfterModel/BeforeToolSelection | — | Intentionally unsupported | Han has no model-level hooks |
 | SubagentStart/Stop | — | Not available | No Gemini CLI equivalent |
 | MCP tool events | — | Not available | AfterTool doesn't fire for MCP tool calls |
@@ -209,15 +209,19 @@ Gemini CLI Extension System
   |
   |-- GEMINI.md ──────────> Core guidelines (loaded automatically)
   |
-  |-- JSONL logger ───────> Browse UI visibility
+  |-- JSONL logger ───────> Indexed as `gemini-cli` sessions
         ~/.han/gemini-cli/projects/{slug}/
 ```
 
-## Event Logging
+## Event Logging and Metrics
 
-The bridge writes Han-format JSONL events to `~/.han/gemini-cli/projects/`. Each event includes `provider: "gemini-cli"` to distinguish Gemini CLI sessions from Claude Code and OpenCode sessions.
+The bridge writes Han-format JSONL events to `~/.han/gemini-cli/projects/{slug}/{sessionId}-han.jsonl`. Every event carries `harness: "gemini-cli"`, the canonical id Han uses for Gemini CLI wherever it reports on a session.
 
-On SessionStart, the bridge launches the Han coordinator in the background. The coordinator indexes events into SQLite and serves them through the Browse UI alongside Claude Code and OpenCode sessions.
+Gemini CLI writes no native transcript into that directory, so the events file is the session's entire record. Han indexes a `*-han.jsonl` file that has no sibling `{sessionId}.jsonl` as a session in its own right rather than as a supplement to a Claude Code transcript, and stamps the harness onto the session row. Gemini CLI sessions show up in the Browse UI and in metrics queries beside Claude Code sessions, attributed to `gemini-cli` rather than folded into it.
+
+The coordinator finds the directory without being told about it. Every child of `~/.han` holding a `projects` directory is a harness root, so a bridge needs no registration step and no watch flag. On SessionStart the bridge runs `han coordinator ensure --background` to make sure the coordinator is up.
+
+For what the harness dimension buys you once the data is indexed, see [Local Metrics](/docs/metrics#the-harness-dimension).
 
 ## Remaining Gaps
 

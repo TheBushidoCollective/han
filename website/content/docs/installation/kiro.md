@@ -70,7 +70,7 @@ The bridge maps Claude Code's hook events to Kiro's hook system:
 | **Stop** | `stop` | Implemented | Full project validation; failures emit `{"decision":"block","reason":...}` so the agent keeps working until validation passes |
 | **SessionStart** | `agentSpawn` | Implemented | Core guidelines injected on agent start |
 | **UserPromptSubmit** | `userPromptSubmit` | Implemented | Current datetime injected on every prompt |
-| **Event Logging** | JSONL + coordinator | Implemented | Browse UI visibility for Kiro sessions |
+| **Event Logging** | JSONL + coordinator | Implemented | Kiro sessions indexed as first-class sessions, attributed to the `kiro` harness |
 | **Permission denial** | Exit code 2 | Implemented | Kiro's native blocking mechanism |
 | SubagentStart/Stop | — | Not available | No Kiro equivalent |
 | MCP tool events | `@mcp/tool` matchers | Partial | Kiro supports MCP tool matchers in hooks |
@@ -199,11 +199,15 @@ You can customize this by:
 - Adjusting timeouts
 - Merging hooks into your own custom agent
 
-## Event Logging
+## Event Logging and Metrics
 
-The bridge writes Han-format JSONL events to `~/.han/kiro/projects/`. Each event includes `provider: "kiro"` to distinguish Kiro sessions from Claude Code and OpenCode sessions.
+The bridge writes Han-format JSONL events to `~/.han/kiro/projects/{slug}/{sessionId}-han.jsonl`. Every event carries `harness: "kiro"`, the canonical id Han uses for Kiro wherever it reports on a session.
 
-On agent start, the bridge launches the Han coordinator in the background, making events visible in the Browse UI.
+Kiro writes no native transcript, so that events file is the session's entire record. Han indexes a `*-han.jsonl` file that has no sibling `{sessionId}.jsonl` as a session in its own right rather than as a supplement to a Claude Code transcript, and stamps the harness onto the session row. Kiro sessions show up in the Browse UI and in metrics queries beside Claude Code sessions, attributed to `kiro` rather than folded into it.
+
+The coordinator finds the directory without being told about it. Every child of `~/.han` holding a `projects` directory is a harness root, so a bridge needs no registration step and no watch flag. On agent start the bridge runs `han coordinator ensure --background` to make sure the coordinator is up.
+
+For what the harness dimension buys you once the data is indexed, see [Local Metrics](/docs/metrics#the-harness-dimension).
 
 ## Remaining Gaps
 
