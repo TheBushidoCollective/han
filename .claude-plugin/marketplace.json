@@ -996,6 +996,21 @@
       ]
     },
     {
+      "name": "omp",
+      "description": "Bridge plugin that records Oh My Pi (omp) sessions into Han's metrics store, including per-turn token counts and dollar cost read from omp's own session file.",
+      "source": "./plugins/bridges/omp",
+      "category": "Integration",
+      "keywords": [
+        "omp",
+        "oh-my-pi",
+        "bridge",
+        "metrics",
+        "telemetry",
+        "tokens",
+        "cost"
+      ]
+    },
+    {
       "name": "kiro",
       "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with Kiro CLI by translating Kiro hook events into Han hook executions.",
       "source": "./plugins/bridges/kiro",

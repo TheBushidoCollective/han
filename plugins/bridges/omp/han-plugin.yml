@@ -1,0 +1,18 @@
+# Han plugin configuration for the omp (Oh My Pi) bridge.
+#
+# This plugin has no hooks of its own. It is a telemetry bridge: it loads
+# inside omp as an omp extension and writes Han events describing what the
+# omp session did, so omp work is countable in Han.
+#
+# Installation:
+#   1. omp plugin marketplace add thebushidocollective/han
+#   2. omp plugin install omp@han
+#   3. Restart omp. Extension modules are only picked up at session start.
+#
+# See README.md for the manual `extensions:` alternative.
+
+hooks: {}
+
+learn_patterns:
+  - "omp"
+  - "oh.?my.?pi"
