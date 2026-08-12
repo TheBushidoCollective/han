@@ -25,9 +25,9 @@ pub use parser::{
     jsonl_count_lines, jsonl_read_page, jsonl_read_reverse, JsonlLine, PaginatedResult,
 };
 pub use processor::{
-    bridge_harness_roots, check_indexer_version, full_scan_and_index, handle_file_event,
-    harness_from_path, index_project_directory, index_session_file, DEFAULT_HARNESS,
-    INDEXER_VERSION,
+    backfill_aggregates_if_empty, bridge_harness_roots, check_indexer_version, full_scan_and_index,
+    handle_file_event, harness_from_path, index_project_directory, index_session_file,
+    DEFAULT_HARNESS, INDEXER_VERSION,
 };
 pub use sentiment::{analyze_sentiment, FrustrationLevel, SentimentLevel, SentimentResult};
 pub use task_timeline::{TaskTimeRange, TaskTimeline};

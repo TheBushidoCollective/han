@@ -335,6 +335,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Fill the dashboard aggregate tables in the background. Only does work the
+    // first time, but a full rebuild is far too slow to sit on the startup path.
+    {
+        let backfill_db = db.clone();
+        tokio::spawn(async move {
+            match han_indexer::backfill_aggregates_if_empty(&backfill_db).await {
+                Ok(true) => tracing::info!("Dashboard aggregates ready"),
+                Ok(false) => {}
+                Err(e) => tracing::warn!("Aggregate backfill failed: {}", e),
+            }
+        });
+    }
+
     // Setup signal handling
     let shutdown = tokio::signal::ctrl_c();
 
