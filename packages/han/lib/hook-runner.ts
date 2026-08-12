@@ -11,6 +11,7 @@ import {
 import {
   getPluginHookSettings,
   isCacheEnabled,
+  isSessionFilteringEnabled,
 } from './config/han-settings.ts';
 import { getEventLogger } from './events/logger.ts';
 import {
@@ -1603,6 +1604,10 @@ export async function runAsyncPostToolUse(
  * Gets session-modified files, filters them to the config's directory and
  * ifChanged patterns, and substitutes the template variable.
  *
+ * Falling back to `.` means "check everything", which is the correct behaviour
+ * whenever the session file set is unavailable or the user has turned session
+ * filtering off.
+ *
  * @returns The modified command, or null if no matching files exist (skip this config)
  */
 export async function substituteHanFilesForStop(
@@ -1615,8 +1620,12 @@ export async function substituteHanFilesForStop(
     return { command, skipped: false };
   }
 
-  if (!sessionId) {
-    // No session ID - fall back to "." (check all files)
+  // `hooks.checkpoints: false` in han.yml, or --no-checkpoints on the
+  // dispatching command, turns session-scoped filtering off.
+  const filteringDisabled =
+    process.env.HAN_NO_CHECKPOINTS === '1' || !isSessionFilteringEnabled();
+
+  if (!sessionId || filteringDisabled) {
     return { command: buildCommandWithFiles(command, []), skipped: false };
   }
 
