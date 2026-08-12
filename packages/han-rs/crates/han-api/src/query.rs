@@ -2579,6 +2579,7 @@ pub fn session_model_to_data(m: sessions::Model) -> SessionData {
         version: None,
         worktree_name: None,
         source_config_dir: m.source_config_dir,
+        harness: m.harness,
         status: m.status,
         pr_number: m.pr_number,
         pr_url: m.pr_url,
@@ -2599,6 +2600,7 @@ mod tests {
             transcript_path: Some("/home/user/.claude/sessions/sess-abc.jsonl".into()),
             source_config_dir: Some("/home/user/.claude".into()),
             last_indexed_line: Some(100),
+            harness: Some("omp".into()),
             pr_number: None,
             pr_url: None,
             team_name: None,
@@ -2633,6 +2635,12 @@ mod tests {
     fn session_model_to_data_maps_source_config_dir() {
         let sd = session_model_to_data(make_session_model());
         assert_eq!(sd.source_config_dir, Some("/home/user/.claude".into()));
+    }
+
+    #[test]
+    fn session_model_to_data_maps_harness() {
+        let sd = session_model_to_data(make_session_model());
+        assert_eq!(sd.harness, Some("omp".into()));
     }
 
     #[test]
@@ -2671,6 +2679,7 @@ mod tests {
             transcript_path: None,
             source_config_dir: None,
             last_indexed_line: None,
+            harness: None,
             pr_number: None,
             pr_url: None,
             team_name: None,
@@ -2680,5 +2689,8 @@ mod tests {
         assert!(sd.status.is_none());
         assert!(sd.slug.is_none());
         assert!(sd.source_config_dir.is_none());
+        // A NULL harness column stays None here: the Session resolver is what
+        // coalesces it to claude-code.
+        assert!(sd.harness.is_none());
     }
 }

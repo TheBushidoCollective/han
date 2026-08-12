@@ -31,4 +31,5 @@ gix = { version = "0.72", default-features = false, features = ["max-performance
 
 [dev-dependencies]
 tempfile = "3"
+sea-orm-migration = "1"
 tokio = { version = "1", features = ["test-util", "macros"] }

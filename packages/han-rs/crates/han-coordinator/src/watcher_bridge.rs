@@ -58,7 +58,12 @@ pub fn start_watcher_bridge(
     })
 }
 
-/// Register additional config directory watch paths, then start the watcher loop.
+/// Register additional watch paths, then start the watcher loop.
+///
+/// Two sources beyond the default `~/.claude/projects`: config directories
+/// registered in the database, and the roots bridged harnesses write to under
+/// `~/.han/<harness>/projects`. The latter are discovered from disk so a bridge
+/// needs no registration step to be watched.
 async fn add_extra_watch_paths(
     mut watcher: WatcherService,
     extra_config_dirs: Vec<String>,
@@ -69,16 +74,21 @@ async fn add_extra_watch_paths(
         .map(|h| h.join(".claude").to_string_lossy().to_string())
         .unwrap_or_default();
 
-    for config_dir in &extra_config_dirs {
+    let roots = extra_config_dirs
+        .iter()
+        .map(std::path::PathBuf::from)
+        .chain(han_indexer::bridge_harness_roots());
+
+    for root in roots {
         // Skip the default — WatcherService::new already watches it
-        if config_dir == &default_claude {
+        if root.to_string_lossy() == default_claude {
             continue;
         }
-        let projects_path = std::path::PathBuf::from(config_dir).join("projects");
+        let projects_path = root.join("projects");
         if !projects_path.exists() {
             continue;
         }
-        match watcher.add_watch_path(config_dir, Some(&projects_path)) {
+        match watcher.add_watch_path(&root.to_string_lossy(), Some(&projects_path)) {
             Ok(true) => {
                 tracing::info!("Added watch path: {:?}", projects_path);
             }

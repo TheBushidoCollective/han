@@ -2088,6 +2088,7 @@ dependencies = [
  "once_cell",
  "regex",
  "sea-orm",
+ "sea-orm-migration",
  "serde",
  "serde_json",
  "sha2",

@@ -35,6 +35,14 @@ export interface BaseEvent {
   cwd?: string;
   /** Git branch (matches Claude's gitBranch field) */
   gitBranch?: string;
+  /**
+   * Coding agent that produced this event: `claude-code`, `omp`, `opencode`,
+   * `gemini-cli`, `kiro`, `codex`, or `antigravity`.
+   *
+   * Absent means `claude-code`, which is the only harness that wrote events
+   * before harness tracking existed.
+   */
+  harness?: string;
 }
 
 /**
@@ -434,6 +442,35 @@ export interface FrustrationDetectedEvent extends BaseEvent {
 export type FrustrationDetectedEvents = FrustrationDetectedEvent;
 
 /**
+ * Token and cost accounting for one model turn.
+ *
+ * Claude Code records usage in its own transcript, so han never needed an
+ * event for it. Every other harness reports through han events only, so this
+ * is the sole path by which their cost and token metrics reach the database.
+ * The indexer lifts these counts into the `messages` token columns, which is
+ * what the existing token and cost aggregates read.
+ */
+export interface TokenUsageEvent extends BaseEvent {
+  type: 'token_usage';
+  data: {
+    /** Model that served the turn, for example `claude-sonnet-4-5`. */
+    model: string;
+    /** Provider that served the turn, when the harness reports one. */
+    provider?: string;
+    input_tokens: number;
+    output_tokens: number;
+    cache_read_tokens: number;
+    cache_creation_tokens: number;
+    /**
+     * Cost in USD as computed by the harness. Omitted rather than zeroed when
+     * the harness reports no cost, so a free turn stays distinguishable from
+     * an unknown one.
+     */
+    cost_usd?: number;
+  };
+}
+
+/**
  * Union of all Han event types
  */
 /**
@@ -461,6 +498,7 @@ export type HanEvent =
   | MemoryEvent
   | SentimentEvent
   | TaskEvent
+  | TokenUsageEvent
   | FrustrationDetectedEvents;
 
 /**

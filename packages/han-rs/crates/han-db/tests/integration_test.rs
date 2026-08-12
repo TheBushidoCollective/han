@@ -194,6 +194,7 @@ async fn test_sessions_crud() {
         Some("/tmp/transcript.jsonl".to_string()),
         Some("fancy-session".to_string()),
         None,
+        None,
     )
     .await
     .expect("Failed to create session");
@@ -321,6 +322,7 @@ async fn test_messages_crud() {
         "session-msg".to_string(),
         None,
         Some("active".to_string()),
+        None,
         None,
         None,
         None,
@@ -578,6 +580,7 @@ async fn test_native_tasks_crud() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -776,6 +779,7 @@ async fn test_async_hooks_crud() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -833,6 +837,7 @@ async fn test_session_files_crud() {
         "session-sf".to_string(),
         None,
         Some("active".to_string()),
+        None,
         None,
         None,
         None,
@@ -901,6 +906,7 @@ async fn test_fts5_search_messages() {
         "session-fts".to_string(),
         None,
         Some("active".to_string()),
+        None,
         None,
         None,
         None,
@@ -1035,6 +1041,7 @@ async fn test_dashboard_aggregates() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -1142,6 +1149,7 @@ async fn test_activity_aggregates() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -1210,6 +1218,7 @@ async fn test_frustration_crud() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -1268,6 +1277,7 @@ async fn test_session_summaries_crud() {
         "session-ss".to_string(),
         None,
         Some("active".to_string()),
+        None,
         None,
         None,
         None,
@@ -1341,6 +1351,7 @@ async fn test_session_compacts_crud() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -1411,6 +1422,7 @@ async fn test_session_todos_crud() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -1477,6 +1489,7 @@ async fn test_generated_summaries_crud() {
         None,
         None,
         None,
+        None,
     )
     .await
     .unwrap();
@@ -1486,6 +1499,7 @@ async fn test_generated_summaries_crud() {
         "session-gs-2".to_string(),
         None,
         Some("completed".to_string()),
+        None,
         None,
         None,
         None,
@@ -1569,6 +1583,7 @@ async fn test_file_changes_crud() {
         "session-fc".to_string(),
         None,
         Some("active".to_string()),
+        None,
         None,
         None,
         None,
@@ -1657,6 +1672,7 @@ async fn test_file_validations_crud() {
         "session-fv".to_string(),
         None,
         Some("active".to_string()),
+        None,
         None,
         None,
         None,

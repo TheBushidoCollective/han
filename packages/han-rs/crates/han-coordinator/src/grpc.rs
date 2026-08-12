@@ -549,6 +549,7 @@ mod tests {
             pr_number: None,
             pr_url: None,
             team_name: None,
+            harness: None,
         };
 
         let data = model_to_session_data(&model);
@@ -783,6 +784,7 @@ mod tests {
             pr_number: None,
             pr_url: None,
             team_name: None,
+            harness: None,
         };
 
         let data = model_to_session_data(&model);
@@ -807,6 +809,7 @@ mod tests {
             pr_number: None,
             pr_url: None,
             team_name: None,
+            harness: None,
         };
 
         let data = model_to_session_data(&model);
@@ -834,6 +837,7 @@ mod tests {
             pr_number: None,
             pr_url: None,
             team_name: None,
+            harness: None,
         };
 
         let data = model_to_session_data(&model);

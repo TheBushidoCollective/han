@@ -14,6 +14,7 @@ import { dirname, join } from 'node:path';
 import { getGitBranch as nativeGetGitBranch } from '../bun-utils.ts';
 import { ensureMemoryDirs, getHanEventsFilePath } from '../memory/paths.ts';
 import { isDebugMode } from '../shared.ts';
+import { HARNESS } from './harness.ts';
 import type {
   EventLogConfig,
   FrustrationLevel,
@@ -136,6 +137,7 @@ export class EventLogger {
     timestamp: string;
     cwd?: string;
     gitBranch?: string;
+    harness: string;
   } {
     return {
       uuid: this.generateUuid(),
@@ -145,6 +147,7 @@ export class EventLogger {
       timestamp: new Date().toISOString(),
       ...(this.cwd && { cwd: this.cwd }),
       ...(this.gitBranch && { gitBranch: this.gitBranch }),
+      harness: HARNESS,
     };
   }
 
