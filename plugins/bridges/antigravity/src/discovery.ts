@@ -6,62 +6,62 @@
  * to extract hook definitions.
  *
  * Shared logic with the OpenCode bridge - reads the same settings
- * and marketplace files since Han plugins are provider-agnostic.
+ * and marketplace files since Han plugins are harness-agnostic.
  */
 
-import { readFileSync, readdirSync, existsSync } from "node:fs"
-import { join, resolve, dirname } from "node:path"
-import { homedir } from "node:os"
-import type { HookDefinition } from "./types"
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import type { HookDefinition } from './types';
 
 // ─── Settings Discovery ─────────────────────────────────────────────────────
 
 interface PluginEntry {
-  enabled?: boolean
+  enabled?: boolean;
 }
 
 interface ClaudeSettings {
   /** Legacy map: { "biome@han": { "enabled": true } } */
-  plugins?: Record<string, PluginEntry>
+  plugins?: Record<string, PluginEntry>;
   /** Current Claude Code map: { "biome@han": true } */
-  enabledPlugins?: Record<string, boolean>
+  enabledPlugins?: Record<string, boolean>;
 }
 
 interface MarketplacePlugin {
-  name: string
-  source: string
+  name: string;
+  source: string;
 }
 
 interface Marketplace {
-  name?: string
-  plugins: MarketplacePlugin[]
+  name?: string;
+  plugins: MarketplacePlugin[];
 }
 
 /**
  * Find all enabled Han plugins by merging user, project, and local settings.
  */
 function getEnabledPlugins(projectDir: string): string[] {
-  const pluginNames = new Set<string>()
+  const pluginNames = new Set<string>();
 
   const settingsPaths = [
-    join(homedir(), ".claude", "settings.json"), // user scope
-    join(projectDir, ".claude", "settings.json"), // project scope
-    join(projectDir, ".claude", "settings.local.json"), // local scope
-  ]
+    join(homedir(), '.claude', 'settings.json'), // user scope
+    join(projectDir, '.claude', 'settings.json'), // project scope
+    join(projectDir, '.claude', 'settings.local.json'), // local scope
+  ];
 
   for (const path of settingsPaths) {
-    if (!existsSync(path)) continue
+    if (!existsSync(path)) continue;
     try {
-      const content = readFileSync(path, "utf-8")
-      const settings: ClaudeSettings = JSON.parse(content)
+      const content = readFileSync(path, 'utf-8');
+      const settings: ClaudeSettings = JSON.parse(content);
 
       // Legacy `plugins` map
       if (settings.plugins) {
         for (const [name, entry] of Object.entries(settings.plugins)) {
           if (entry.enabled !== false) {
             // Strip @han suffix if present: "biome@han" -> "biome"
-            const cleanName = name.replace(/@han$/, "")
-            pluginNames.add(cleanName)
+            const cleanName = name.replace(/@han$/, '');
+            pluginNames.add(cleanName);
           }
         }
       }
@@ -69,8 +69,8 @@ function getEnabledPlugins(projectDir: string): string[] {
       // Current `enabledPlugins` map (what `han plugin install` writes)
       if (settings.enabledPlugins) {
         for (const [name, enabled] of Object.entries(settings.enabledPlugins)) {
-          if (enabled && name.endsWith("@han")) {
-            pluginNames.add(name.replace(/@han$/, ""))
+          if (enabled && name.endsWith('@han')) {
+            pluginNames.add(name.replace(/@han$/, ''));
           }
         }
       }
@@ -79,7 +79,7 @@ function getEnabledPlugins(projectDir: string): string[] {
     }
   }
 
-  return Array.from(pluginNames)
+  return Array.from(pluginNames);
 }
 
 // ─── Marketplace Resolution ──────────────────────────────────────────────────
@@ -92,34 +92,34 @@ function getEnabledPlugins(projectDir: string): string[] {
  */
 function marketplaceCandidateDirs(projectDir: string): string[] {
   const candidates = [
-    join(projectDir, ".claude-plugin"),
-    join(homedir(), ".claude"),
-  ]
+    join(projectDir, '.claude-plugin'),
+    join(homedir(), '.claude'),
+  ];
 
   // Walk up directories looking for .claude-plugin/marketplace.json
-  let dir = projectDir
+  let dir = projectDir;
   for (let i = 0; i < 10; i++) {
-    const candidate = join(dir, ".claude-plugin")
+    const candidate = join(dir, '.claude-plugin');
     if (
-      existsSync(join(candidate, "marketplace.json")) &&
+      existsSync(join(candidate, 'marketplace.json')) &&
       !candidates.includes(candidate)
     ) {
-      candidates.unshift(candidate)
+      candidates.unshift(candidate);
     }
-    const parent = dirname(dir)
-    if (parent === dir) break
-    dir = parent
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
   }
 
   // Installed marketplaces: ~/.claude/plugins/marketplaces/<name>/.claude-plugin
-  const installedRoot = join(homedir(), ".claude", "plugins", "marketplaces")
+  const installedRoot = join(homedir(), '.claude', 'plugins', 'marketplaces');
   if (existsSync(installedRoot)) {
     try {
       for (const entry of readdirSync(installedRoot, { withFileTypes: true })) {
-        if (!entry.isDirectory()) continue
-        const candidate = join(installedRoot, entry.name, ".claude-plugin")
-        if (existsSync(join(candidate, "marketplace.json"))) {
-          candidates.push(candidate)
+        if (!entry.isDirectory()) continue;
+        const candidate = join(installedRoot, entry.name, '.claude-plugin');
+        if (existsSync(join(candidate, 'marketplace.json'))) {
+          candidates.push(candidate);
         }
       }
     } catch {
@@ -127,12 +127,12 @@ function marketplaceCandidateDirs(projectDir: string): string[] {
     }
   }
 
-  return candidates
+  return candidates;
 }
 
 interface MarketplaceLocation {
-  dir: string
-  marketplace: Marketplace
+  dir: string;
+  marketplace: Marketplace;
 }
 
 /**
@@ -142,26 +142,24 @@ interface MarketplaceLocation {
  * differently named one.
  */
 function findMarketplaceLocation(
-  projectDir: string,
+  projectDir: string
 ): MarketplaceLocation | null {
-  let fallback: MarketplaceLocation | null = null
+  let fallback: MarketplaceLocation | null = null;
 
   for (const dir of marketplaceCandidateDirs(projectDir)) {
-    const path = join(dir, "marketplace.json")
-    if (!existsSync(path)) continue
+    const path = join(dir, 'marketplace.json');
+    if (!existsSync(path)) continue;
     try {
-      const marketplace = JSON.parse(readFileSync(path, "utf-8")) as
+      const marketplace = JSON.parse(readFileSync(path, 'utf-8')) as
         | Marketplace
-        | undefined
-      if (!marketplace || !Array.isArray(marketplace.plugins)) continue
-      if (marketplace.name === "han") return { dir, marketplace }
-      if (!fallback) fallback = { dir, marketplace }
-    } catch {
-      continue
-    }
+        | undefined;
+      if (!marketplace || !Array.isArray(marketplace.plugins)) continue;
+      if (marketplace.name === 'han') return { dir, marketplace };
+      if (!fallback) fallback = { dir, marketplace };
+    } catch {}
   }
 
-  return fallback
+  return fallback;
 }
 
 /**
@@ -169,7 +167,7 @@ function findMarketplaceLocation(
  * the han repository root, then installed marketplaces.
  */
 function findMarketplace(projectDir: string): Marketplace | null {
-  return findMarketplaceLocation(projectDir)?.marketplace ?? null
+  return findMarketplaceLocation(projectDir)?.marketplace ?? null;
 }
 
 /**
@@ -178,32 +176,32 @@ function findMarketplace(projectDir: string): Marketplace | null {
 function resolvePluginPath(
   pluginName: string,
   marketplace: Marketplace,
-  marketplaceDir: string,
+  marketplaceDir: string
 ): string | null {
-  const entry = marketplace.plugins.find((p) => p.name === pluginName)
-  if (!entry) return null
+  const entry = marketplace.plugins.find((p) => p.name === pluginName);
+  if (!entry) return null;
 
   // source is relative to the marketplace root (the parent of .claude-plugin/),
   // e.g. "./plugins/validation/biome" resolves to <repo>/plugins/validation/biome
-  const marketplaceRoot = dirname(marketplaceDir)
-  const pluginPath = resolve(marketplaceRoot, entry.source)
-  return existsSync(pluginPath) ? pluginPath : null
+  const marketplaceRoot = dirname(marketplaceDir);
+  const pluginPath = resolve(marketplaceRoot, entry.source);
+  return existsSync(pluginPath) ? pluginPath : null;
 }
 
 // ─── han-plugin.yml Parsing ──────────────────────────────────────────────────
 
 interface RawHookDef {
-  event?: string | string[]
-  command?: string
-  tool_filter?: string[]
-  file_filter?: string[]
-  dirs_with?: string[]
-  dir_test?: string
-  timeout?: number
+  event?: string | string[];
+  command?: string;
+  tool_filter?: string[];
+  file_filter?: string[];
+  dirs_with?: string[];
+  dir_test?: string;
+  timeout?: number;
 }
 
 interface RawPluginConfig {
-  hooks?: Record<string, RawHookDef>
+  hooks?: Record<string, RawHookDef>;
 }
 
 /**
@@ -211,95 +209,94 @@ interface RawPluginConfig {
  * Handles the subset of YAML used by Han plugin configs.
  */
 function parseSimpleYaml(content: string): RawPluginConfig {
-  const result: RawPluginConfig = { hooks: {} }
-  const lines = content.split("\n")
+  const result: RawPluginConfig = { hooks: {} };
+  const lines = content.split('\n');
 
-  let currentSection: string | null = null
-  let currentHook: string | null = null
-  let currentField: string | null = null
+  let currentSection: string | null = null;
+  let currentHook: string | null = null;
+  let currentField: string | null = null;
 
   for (const line of lines) {
-    const trimmed = line.trimEnd()
+    const trimmed = line.trimEnd();
 
     // Top-level section
     if (/^hooks:\s*$/.test(trimmed)) {
-      currentSection = "hooks"
-      continue
+      currentSection = 'hooks';
+      continue;
     }
 
-    if (currentSection !== "hooks") continue
+    if (currentSection !== 'hooks') continue;
 
     // Hook name (2-space indent)
-    const hookMatch = trimmed.match(/^  (\S+):\s*$/)
+    const hookMatch = trimmed.match(/^ {2}(\S+):\s*$/);
     if (hookMatch) {
-      currentHook = hookMatch[1]
-      result.hooks![currentHook] = {}
-      currentField = null
-      continue
+      currentHook = hookMatch[1];
+      result.hooks![currentHook] = {};
+      currentField = null;
+      continue;
     }
 
-    if (!currentHook) continue
-    const hook = result.hooks![currentHook]
+    if (!currentHook) continue;
+    const hook = result.hooks![currentHook];
 
     // Simple key-value (4-space indent)
-    const kvMatch = trimmed.match(/^    (\S+):\s*(.+)$/)
+    const kvMatch = trimmed.match(/^ {4}(\S+):\s*(.+)$/);
     if (kvMatch) {
-      const [, key, value] = kvMatch
-      const cleanValue = value.replace(/^["']|["']$/g, "")
-      currentField = null
+      const [, key, value] = kvMatch;
+      const cleanValue = value.replace(/^["']|["']$/g, '');
+      currentField = null;
 
-      if (key === "event") {
-        if (cleanValue.startsWith("[")) {
+      if (key === 'event') {
+        if (cleanValue.startsWith('[')) {
           hook.event = cleanValue
-            .replace(/^\[|\]$/g, "")
-            .split(",")
-            .map((s) => s.trim())
+            .replace(/^\[|\]$/g, '')
+            .split(',')
+            .map((s) => s.trim());
         } else {
-          hook.event = cleanValue
+          hook.event = cleanValue;
         }
-      } else if (key === "command") {
-        hook.command = cleanValue
-      } else if (key === "dir_test") {
-        hook.dir_test = cleanValue
-      } else if (key === "timeout") {
-        hook.timeout = parseInt(cleanValue, 10)
+      } else if (key === 'command') {
+        hook.command = cleanValue;
+      } else if (key === 'dir_test') {
+        hook.dir_test = cleanValue;
+      } else if (key === 'timeout') {
+        hook.timeout = parseInt(cleanValue, 10);
       } else if (
-        key === "tool_filter" ||
-        key === "file_filter" ||
-        key === "dirs_with"
+        key === 'tool_filter' ||
+        key === 'file_filter' ||
+        key === 'dirs_with'
       ) {
-        if (cleanValue.startsWith("[")) {
-          ;(hook as any)[key] = cleanValue
-            .replace(/^\[|\]$/g, "")
-            .split(",")
-            .map((s) => s.trim().replace(/^["']|["']$/g, ""))
+        if (cleanValue.startsWith('[')) {
+          (hook as any)[key] = cleanValue
+            .replace(/^\[|\]$/g, '')
+            .split(',')
+            .map((s) => s.trim().replace(/^["']|["']$/g, ''));
         } else {
-          currentField = key
+          currentField = key;
         }
       }
-      continue
+      continue;
     }
 
     // Array item (6-space indent with -)
-    const arrayMatch = trimmed.match(/^      - (.+)$/)
+    const arrayMatch = trimmed.match(/^ {6}- (.+)$/);
     if (arrayMatch && currentField) {
-      const value = arrayMatch[1].replace(/^["']|["']$/g, "")
+      const value = arrayMatch[1].replace(/^["']|["']$/g, '');
       if (!(hook as any)[currentField]) {
-        ;(hook as any)[currentField] = []
+        (hook as any)[currentField] = [];
       }
-      ;(hook as any)[currentField].push(value)
-      continue
+      (hook as any)[currentField].push(value);
+      continue;
     }
 
     // Key with no value starts an array
-    const arrayKeyMatch = trimmed.match(/^    (\S+):\s*$/)
+    const arrayKeyMatch = trimmed.match(/^ {4}(\S+):\s*$/);
     if (arrayKeyMatch) {
-      currentField = arrayKeyMatch[1]
-      continue
+      currentField = arrayKeyMatch[1];
     }
   }
 
-  return result
+  return result;
 }
 
 /**
@@ -307,37 +304,37 @@ function parseSimpleYaml(content: string): RawPluginConfig {
  */
 function parsePluginHooks(
   pluginName: string,
-  pluginRoot: string,
+  pluginRoot: string
 ): HookDefinition[] {
-  const ymlPath = join(pluginRoot, "han-plugin.yml")
-  if (!existsSync(ymlPath)) return []
+  const ymlPath = join(pluginRoot, 'han-plugin.yml');
+  if (!existsSync(ymlPath)) return [];
 
   try {
-    const content = readFileSync(ymlPath, "utf-8")
-    const config = parseSimpleYaml(content)
-    if (!config.hooks) return []
+    const content = readFileSync(ymlPath, 'utf-8');
+    const config = parseSimpleYaml(content);
+    if (!config.hooks) return [];
 
-    const hooks: HookDefinition[] = []
+    const hooks: HookDefinition[] = [];
 
     for (const [name, def] of Object.entries(config.hooks)) {
-      if (!def.command) continue
+      if (!def.command) continue;
 
       // Events can carry Claude Code tool matchers: "PostToolUse:Edit|Write".
       // Split the suffix off so the base event matches and the tools act as
       // the hook's tool filter.
-      const rawEvents = def.event ?? "Stop" // Default event is Stop
-      const events = Array.isArray(rawEvents) ? rawEvents : [rawEvents]
-      const baseEvents: string[] = []
-      const suffixTools: string[] = []
+      const rawEvents = def.event ?? 'Stop'; // Default event is Stop
+      const events = Array.isArray(rawEvents) ? rawEvents : [rawEvents];
+      const baseEvents: string[] = [];
+      const suffixTools: string[] = [];
       for (const e of events) {
-        const [base, tools] = e.split(":", 2)
-        baseEvents.push(base)
+        const [base, tools] = e.split(':', 2);
+        baseEvents.push(base);
         if (tools) {
-          suffixTools.push(...tools.split("|").map((t) => t.trim()))
+          suffixTools.push(...tools.split('|').map((t) => t.trim()));
         }
       }
 
-      const toolFilter = [...(def.tool_filter ?? []), ...suffixTools]
+      const toolFilter = [...(def.tool_filter ?? []), ...suffixTools];
 
       hooks.push({
         name,
@@ -350,12 +347,12 @@ function parsePluginHooks(
         dirsWith: def.dirs_with,
         dirTest: def.dir_test,
         timeout: def.timeout,
-      })
+      });
     }
 
-    return hooks
+    return hooks;
   } catch {
-    return []
+    return [];
   }
 }
 
@@ -366,48 +363,52 @@ function parsePluginHooks(
  * Returns a map of plugin name -> absolute plugin root path.
  */
 export function resolvePluginPaths(projectDir: string): Map<string, string> {
-  const resolved = new Map<string, string>()
-  const enabledPlugins = getEnabledPlugins(projectDir)
-  if (enabledPlugins.length === 0) return resolved
+  const resolved = new Map<string, string>();
+  const enabledPlugins = getEnabledPlugins(projectDir);
+  if (enabledPlugins.length === 0) return resolved;
 
-  const marketplace = findMarketplace(projectDir)
-  if (!marketplace) return resolved
+  const marketplace = findMarketplace(projectDir);
+  if (!marketplace) return resolved;
 
-  const marketplaceDir = findMarketplaceDir(projectDir)
-  if (!marketplaceDir) return resolved
+  const marketplaceDir = findMarketplaceDir(projectDir);
+  if (!marketplaceDir) return resolved;
 
   for (const pluginName of enabledPlugins) {
-    const pluginPath = resolvePluginPath(pluginName, marketplace, marketplaceDir)
+    const pluginPath = resolvePluginPath(
+      pluginName,
+      marketplace,
+      marketplaceDir
+    );
     if (pluginPath) {
-      resolved.set(pluginName, pluginPath)
+      resolved.set(pluginName, pluginPath);
     }
   }
 
-  return resolved
+  return resolved;
 }
 
 /**
  * Find the directory containing marketplace.json.
  */
 function findMarketplaceDir(projectDir: string): string | null {
-  return findMarketplaceLocation(projectDir)?.dir ?? null
+  return findMarketplaceLocation(projectDir)?.dir ?? null;
 }
 
 /**
  * Discover all hook definitions from installed Han plugins.
  */
 export function discoverHooks(projectDir: string): HookDefinition[] {
-  const resolved = resolvePluginPaths(projectDir)
-  if (resolved.size === 0) return []
+  const resolved = resolvePluginPaths(projectDir);
+  if (resolved.size === 0) return [];
 
-  const allHooks: HookDefinition[] = []
+  const allHooks: HookDefinition[] = [];
 
   for (const [pluginName, pluginPath] of resolved) {
-    const hooks = parsePluginHooks(pluginName, pluginPath)
-    allHooks.push(...hooks)
+    const hooks = parsePluginHooks(pluginName, pluginPath);
+    allHooks.push(...hooks);
   }
 
-  return allHooks
+  return allHooks;
 }
 
 /**
@@ -415,10 +416,10 @@ export function discoverHooks(projectDir: string): HookDefinition[] {
  */
 export function getHooksByEvent(
   hooks: HookDefinition[],
-  event: string,
+  event: string
 ): HookDefinition[] {
   return hooks.filter((h) => {
-    if (Array.isArray(h.event)) return h.event.includes(event)
-    return h.event === event
-  })
+    if (Array.isArray(h.event)) return h.event.includes(event);
+    return h.event === event;
+  });
 }

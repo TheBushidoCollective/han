@@ -11,7 +11,7 @@ Han plugins define validation hooks, specialized skills, and agent disciplines t
 3. **Validation** -- On-demand linting, type checking, and formatting via `han_validate`
 4. **Sync** -- Copy skills and rules to `.agent/` for native Antigravity discovery
 5. **Context** -- Current time and session state via `han_context`
-6. **Events** -- Unified JSONL logging with `provider: "antigravity"` for Browse UI
+6. **Events** -- Unified JSONL logging with `harness: "antigravity"` for Browse UI
 
 ## How It Works
 
@@ -125,7 +125,7 @@ Bridge Internals:
   matcher.ts       Filter hooks by tool name, file globs, dirsWith
   executor.ts      Spawn hook commands as parallel promises
   formatter.ts     Structure results for MCP tool responses
-  events.ts        JSONL event logger (provider="antigravity")
+  events.ts        JSONL event logger (harness="antigravity")
   cache.ts         Content-hash caching (SHA-256)
 ```
 
@@ -138,7 +138,7 @@ Bridge Internals:
 | Context injection | experimental.chat.system.transform | .agent/rules/ + han_context |
 | Skill discovery | han_skills tool | han_skills tool + .agent/skills/ sync |
 | Stop validation | Automatic (session.idle/stop) | On-demand (han_validate mode=project) |
-| Event logging | provider: "opencode" | provider: "antigravity" |
+| Event logging | harness: "opencode" | harness: "antigravity" |
 
 ## Remaining Gaps
 
@@ -169,7 +169,7 @@ When activated, the discipline's context is returned with each `han_context` cal
 
 ## Event Logging
 
-Events are logged to `~/.han/antigravity/projects/{slug}/{sessionId}-han.jsonl` with `provider: "antigravity"`. The Han coordinator indexes these files and serves them through the Browse UI alongside Claude Code and OpenCode sessions.
+Events are logged to `~/.han/antigravity/projects/{slug}/{sessionId}-han.jsonl` with `harness: "antigravity"`. The coordinator discovers `~/.han/<harness>/projects` on disk, watches it, and indexes each `<sessionId>-han.jsonl` as a session attributed to that harness, so Antigravity sessions show up in the Browse UI alongside Claude Code and OpenCode sessions. There is no registration step and no `--watch-path` flag. The coordinator enumerates those roots when it starts, so the very first session from a newly installed bridge is picked up at the next coordinator start or scan rather than live. Every session after that is live.
 
 ## Development
 

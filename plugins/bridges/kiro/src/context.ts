@@ -3,7 +3,7 @@
  *
  * Replicates the core plugin's SessionStart and UserPromptSubmit
  * context injection for Kiro. These guidelines are LLM-universal
- * (not Claude-specific) and improve agent quality regardless of provider.
+ * (not Claude-specific) and improve agent quality regardless of harness.
  *
  * agentSpawn context → stdout (persistent via Kiro agent config)
  * userPromptSubmit context → stdout (per-prompt)

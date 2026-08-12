@@ -147,17 +147,47 @@ export interface HookResult {
   skipped: boolean;
 }
 
-// ─── Provider ────────────────────────────────────────────────────────────────
+// ─── Harness ─────────────────────────────────────────────────────────────────
 
 /**
- * Han provider identifies which AI coding tool is running the session.
+ * Han harness identifies which AI coding tool is running the session.
+ *
+ * The union is shared verbatim across every Han bridge so a harness id
+ * means the same thing in every JSONL event stream. Defaults to
+ * 'claude-code' when HAN_PROVIDER is not set or is unrecognized.
  */
-export type HanProvider = 'codex' | 'claude-code';
+export type HanHarness =
+  | 'claude-code'
+  | 'omp'
+  | 'opencode'
+  | 'gemini-cli'
+  | 'kiro'
+  | 'codex'
+  | 'antigravity';
 
-export function getProvider(): HanProvider {
+const HAN_HARNESSES: readonly HanHarness[] = [
+  'claude-code',
+  'omp',
+  'opencode',
+  'gemini-cli',
+  'kiro',
+  'codex',
+  'antigravity',
+];
+
+function isHanHarness(value: string | undefined): value is HanHarness {
+  return (
+    value !== undefined && (HAN_HARNESSES as readonly string[]).includes(value)
+  );
+}
+
+/**
+ * Resolve the harness running this session from the environment.
+ * The Codex bridge sets HAN_PROVIDER for its own child processes.
+ */
+export function getHarness(): HanHarness {
   const env = process.env.HAN_PROVIDER;
-  if (env === 'codex') return 'codex';
-  return 'claude-code';
+  return isHanHarness(env) ? env : 'claude-code';
 }
 
 // ─── Codex → Claude Code Tool Name Mapping ───────────────────────────────────

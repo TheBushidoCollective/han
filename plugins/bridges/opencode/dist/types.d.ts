@@ -106,11 +106,18 @@ export interface HookResult {
     skipped: boolean;
 }
 /**
- * Han provider identifies which AI coding tool is running the session.
- * Defaults to "claude-code" when HAN_PROVIDER is not set.
+ * Han harness identifies which AI coding tool is running the session.
+ *
+ * The union is shared verbatim across every Han bridge so a harness id
+ * means the same thing in every JSONL event stream. Defaults to
+ * 'claude-code' when HAN_PROVIDER is not set or is unrecognized.
  */
-export type HanProvider = 'opencode' | 'claude-code';
-export declare function getProvider(): HanProvider;
+export type HanHarness = 'claude-code' | 'omp' | 'opencode' | 'gemini-cli' | 'kiro' | 'codex' | 'antigravity';
+/**
+ * Resolve the harness running this session from the environment.
+ * The OpenCode bridge sets HAN_PROVIDER for its own child processes.
+ */
+export declare function getHarness(): HanHarness;
 /**
  * Map OpenCode tool names to Claude Code tool names.
  * OpenCode uses lowercase; Claude Code uses PascalCase.

@@ -10,7 +10,7 @@ Han plugins define validation hooks, specialized skills, and agent disciplines t
 2. **Guidelines** — Core principles (professional honesty, no excuses, skill selection) injected on session start
 3. **Datetime** — Current time injected on every user prompt
 4. **PreToolUse blocking** — JSON permission decisions deny tool execution per Codex convention
-5. **Events** — Unified JSONL logging with `provider: "codex"` for Browse UI visibility
+5. **Events** — Unified JSONL logging with `harness: "codex"` for Browse UI visibility
 
 ## Coverage Matrix
 
@@ -289,7 +289,7 @@ Bridge Internals:
   matcher.ts       Filter by tool name, file globs, dirsWith
   executor.ts      Spawn hook commands as parallel promises
   formatter.ts     Structure results as Codex JSON decisions
-  events.ts        JSONL event logger (provider="codex")
+  events.ts        JSONL event logger (harness="codex")
   cache.ts         Content-hash caching (SHA-256)
 ```
 
@@ -305,16 +305,16 @@ Codex CLI uses different tool names than Claude Code. The bridge maps them befor
 | `spawn_agent` | `Agent` |
 | `mcp__server__tool` | passed through as-is |
 
-## Event Logging & Provider Architecture
+## Event Logging & Harness Attribution
 
-The bridge writes Han-format JSONL events to `~/.han/codex/projects/{slug}/{sessionId}-han.jsonl`. Each event includes `provider: "codex"` so the coordinator can distinguish Codex sessions from Claude Code and OpenCode sessions.
+The bridge writes Han-format JSONL events to `~/.han/codex/projects/{slug}/{sessionId}-han.jsonl`. Each event includes `harness: "codex"` so the coordinator can distinguish Codex sessions from Claude Code and OpenCode sessions.
 
 Events logged:
 
 - `hook_run` / `hook_result` — Hook execution lifecycle (start, success/failure, duration)
 - `hook_file_change` — File edits detected via `PostToolUse`
 
-The bridge sets `HAN_PROVIDER=codex` in the environment for child processes and starts the Han coordinator in the background on `SessionStart`. The coordinator indexes these JSONL files into SQLite and serves them through the Browse UI alongside other provider sessions.
+The bridge sets `HAN_PROVIDER=codex` in the environment for child processes and starts the Han coordinator in the background on `SessionStart` with `han coordinator ensure --background`. The coordinator discovers `~/.han/<harness>/projects` on disk, watches it, and indexes each `<sessionId>-han.jsonl` into SQLite as a session attributed to that harness, which is how Codex sessions reach the Browse UI. There is no registration step and no `--watch-path` flag. The coordinator enumerates those roots when it starts, so the very first session from a newly installed bridge is picked up at the next coordinator start or scan rather than live. Every session after that is live.
 
 ## Remaining Gaps
 

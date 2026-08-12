@@ -170,7 +170,7 @@ declare function hanBridgePlugin(ctx: OpenCodePluginContext): Promise<{
      * Runs before opencode compacts the session. Han PreCompact hook
      * output is appended to the compaction prompt as extra context.
      */
-    'experimental.session.compacting': (_input: {
+    'experimental.session.compacting': (input: {
         sessionID: string;
     }, output: {
         context: string[];

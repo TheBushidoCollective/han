@@ -33,57 +33,57 @@
  * via rules to call han_validate after edits.
  */
 
-import { spawn } from "node:child_process"
-import { discoverHooks, resolvePluginPaths, getHooksByEvent } from "./discovery"
-import { matchPostToolUseHooks, matchStopHooks } from "./matcher"
-import { executeHooksParallel } from "./executor"
-import { invalidateFile } from "./cache"
-import { formatValidationResults } from "./formatter"
-import { mapToolName, type HookDefinition } from "./types"
-import { BridgeEventLogger } from "./events"
+import { spawn } from 'node:child_process';
+import { invalidateFile } from './cache';
+import { buildPromptContext } from './context';
 import {
-  discoverAllSkills,
-  loadSkillContent,
-  formatSkillList,
-  type SkillInfo,
-} from "./skills"
-import {
-  discoverDisciplines,
-  formatDisciplineList,
   buildDisciplineContext,
   type DisciplineInfo,
-} from "./disciplines"
-import { buildPromptContext } from "./context"
-import { syncAll } from "./sync"
+  discoverDisciplines,
+  formatDisciplineList,
+} from './disciplines';
+import {
+  discoverHooks,
+  getHooksByEvent,
+  resolvePluginPaths,
+} from './discovery';
+import { BridgeEventLogger } from './events';
+import { executeHooksParallel } from './executor';
+import { formatValidationResults } from './formatter';
+import { matchPostToolUseHooks, matchStopHooks } from './matcher';
+import {
+  discoverAllSkills,
+  formatSkillList,
+  loadSkillContent,
+  type SkillInfo,
+} from './skills';
+import { syncAll } from './sync';
+import { type HookDefinition, mapToolName } from './types';
 
-const PREFIX = "[han]"
+const PREFIX = '[han]';
 
 /**
  * Start the Han coordinator daemon in the background.
  */
-function startCoordinator(watchDir: string): void {
-  const child = spawn(
-    "han",
-    ["coordinator", "ensure", "--background", "--watch-path", watchDir],
-    {
-      stdio: "ignore",
-      detached: true,
-      env: {
-        ...process.env,
-        HAN_PROVIDER: "antigravity",
-      },
+function startCoordinator(): void {
+  const child = spawn('han', ['coordinator', 'ensure', '--background'], {
+    stdio: 'ignore',
+    detached: true,
+    env: {
+      ...process.env,
+      HAN_PROVIDER: 'antigravity',
     },
-  )
+  });
 
-  child.on("error", () => {
+  child.on('error', () => {
     console.error(
       `${PREFIX} Could not start coordinator (han CLI not found). ` +
-        `Browse UI won't show Antigravity sessions.`,
-    )
-  })
+        `Browse UI won't show Antigravity sessions.`
+    );
+  });
 
-  child.unref()
-  console.error(`${PREFIX} Coordinator ensure started (watch: ${watchDir})`)
+  child.unref();
+  console.error(`${PREFIX} Coordinator ensure started`);
 }
 
 /**
@@ -94,62 +94,62 @@ function startCoordinator(watchDir: string): void {
  */
 export async function createHanMcpServer(projectDir: string) {
   // ─── Plugin Discovery ───────────────────────────────────────────────────
-  const resolvedPlugins = resolvePluginPaths(projectDir)
+  const resolvedPlugins = resolvePluginPaths(projectDir);
 
   // ─── Hook Discovery ──────────────────────────────────────────────────────
-  const allHooks = discoverHooks(projectDir)
-  const postToolUseHooks = getHooksByEvent(allHooks, "PostToolUse")
-  const stopHooks = getHooksByEvent(allHooks, "Stop")
+  const allHooks = discoverHooks(projectDir);
+  const postToolUseHooks = getHooksByEvent(allHooks, 'PostToolUse');
+  const stopHooks = getHooksByEvent(allHooks, 'Stop');
 
   // ─── Skill Discovery ──────────────────────────────────────────────────────
-  const allSkills = discoverAllSkills(resolvedPlugins)
-  const skillsByName = new Map<string, SkillInfo>()
+  const allSkills = discoverAllSkills(resolvedPlugins);
+  const skillsByName = new Map<string, SkillInfo>();
   for (const skill of allSkills) {
-    skillsByName.set(skill.name, skill)
+    skillsByName.set(skill.name, skill);
   }
 
   // ─── Discipline Discovery ──────────────────────────────────────────────────
-  const allDisciplines = discoverDisciplines(resolvedPlugins, allSkills)
-  const disciplinesByName = new Map<string, DisciplineInfo>()
+  const allDisciplines = discoverDisciplines(resolvedPlugins, allSkills);
+  const disciplinesByName = new Map<string, DisciplineInfo>();
   for (const d of allDisciplines) {
-    disciplinesByName.set(d.name, d)
+    disciplinesByName.set(d.name, d);
   }
 
-  let activeDiscipline: DisciplineInfo | null = null
+  let activeDiscipline: DisciplineInfo | null = null;
 
   // ─── Logging ──────────────────────────────────────────────────────────────
-  const pluginCount = resolvedPlugins.size
-  const skillCount = allSkills.length
-  const disciplineCount = allDisciplines.length
+  const pluginCount = resolvedPlugins.size;
+  const skillCount = allSkills.length;
+  const disciplineCount = allDisciplines.length;
 
   if (pluginCount === 0) {
     console.error(
       `${PREFIX} No Han plugins found. ` +
-        `Install plugins: han plugin install --auto`,
-    )
+        `Install plugins: han plugin install --auto`
+    );
   } else {
     console.error(
       `${PREFIX} Discovered ${pluginCount} plugins: ` +
         `${postToolUseHooks.length} PostToolUse, ` +
         `${stopHooks.length} Stop hooks, ` +
         `${skillCount} skills, ` +
-        `${disciplineCount} disciplines`,
-    )
+        `${disciplineCount} disciplines`
+    );
   }
 
   // ─── Session State ───────────────────────────────────────────────────────
-  const sessionId = crypto.randomUUID()
+  const sessionId = crypto.randomUUID();
 
   // ─── Event Logger ──────────────────────────────────────────────────────
-  const eventLogger = new BridgeEventLogger(sessionId, projectDir)
+  const eventLogger = new BridgeEventLogger(sessionId, projectDir);
 
   // ─── Coordinator ───────────────────────────────────────────────────────
-  startCoordinator(eventLogger.getWatchDir())
+  startCoordinator();
 
   // ─── MCP Tool Definitions ─────────────────────────────────────────────
   return {
-    name: "han",
-    version: "0.1.0",
+    name: 'han',
+    version: '0.1.0',
     eventLogger,
     tools: {
       /**
@@ -157,60 +157,98 @@ export async function createHanMcpServer(projectDir: string) {
        */
       han_skills: {
         description:
-          "Browse and load Han skills (400+ specialized coding skills). " +
+          'Browse and load Han skills (400+ specialized coding skills). ' +
           'Use action="list" to search available skills, ' +
           'action="load" with skill name to get full skill content.',
         inputSchema: {
-          type: "object" as const,
+          type: 'object' as const,
           properties: {
             action: {
-              type: "string" as const,
-              enum: ["list", "load"],
+              type: 'string' as const,
+              enum: ['list', 'load'],
               description: 'Action: "list" to search, "load" to get content',
             },
             skill: {
-              type: "string" as const,
-              description: "Skill name to load (required for action=load)",
+              type: 'string' as const,
+              description: 'Skill name to load (required for action=load)',
             },
             filter: {
-              type: "string" as const,
-              description: "Search filter (optional for action=list)",
+              type: 'string' as const,
+              description: 'Search filter (optional for action=list)',
             },
           },
-          required: ["action"],
+          required: ['action'],
         },
-        async execute(args: { action: string; skill?: string; filter?: string }) {
-          if (args.action === "load") {
+        async execute(args: {
+          action: string;
+          skill?: string;
+          filter?: string;
+        }) {
+          if (args.action === 'load') {
             if (!args.skill) {
-              return { content: [{ type: "text" as const, text: "Error: skill parameter required for action=load" }] }
+              return {
+                content: [
+                  {
+                    type: 'text' as const,
+                    text: 'Error: skill parameter required for action=load',
+                  },
+                ],
+              };
             }
 
-            const skill = skillsByName.get(args.skill)
+            const skill = skillsByName.get(args.skill);
             if (!skill) {
               const matches = allSkills.filter((s) =>
-                s.name.toLowerCase().includes(args.skill!.toLowerCase()),
-              )
+                s.name.toLowerCase().includes(args.skill!.toLowerCase())
+              );
               if (matches.length === 1) {
-                return { content: [{ type: "text" as const, text: loadSkillContent(matches[0]) }] }
+                return {
+                  content: [
+                    {
+                      type: 'text' as const,
+                      text: loadSkillContent(matches[0]),
+                    },
+                  ],
+                };
               }
               if (matches.length > 1) {
                 return {
-                  content: [{
-                    type: "text" as const,
-                    text:
-                      `Multiple skills match "${args.skill}":\n` +
-                      matches.map((s) => `- ${s.name}`).join("\n") +
-                      "\n\nBe more specific.",
-                  }],
-                }
+                  content: [
+                    {
+                      type: 'text' as const,
+                      text:
+                        `Multiple skills match "${args.skill}":\n` +
+                        matches.map((s) => `- ${s.name}`).join('\n') +
+                        '\n\nBe more specific.',
+                    },
+                  ],
+                };
               }
-              return { content: [{ type: "text" as const, text: `Skill "${args.skill}" not found. Use action="list" to see available skills.` }] }
+              return {
+                content: [
+                  {
+                    type: 'text' as const,
+                    text: `Skill "${args.skill}" not found. Use action="list" to see available skills.`,
+                  },
+                ],
+              };
             }
 
-            return { content: [{ type: "text" as const, text: loadSkillContent(skill) }] }
+            return {
+              content: [
+                { type: 'text' as const, text: loadSkillContent(skill) },
+              ],
+            };
           }
 
-          return { content: [{ type: "text" as const, text: formatSkillList(allSkills, args.filter) }] }
+          return {
+            content: [
+              {
+                type: 'text' as const,
+                text: formatSkillList(allSkills, args.filter),
+              },
+            ],
+          };
         },
       },
 
@@ -219,72 +257,92 @@ export async function createHanMcpServer(projectDir: string) {
        */
       han_discipline: {
         description:
-          "Activate a Han discipline (specialized agent persona). " +
+          'Activate a Han discipline (specialized agent persona). ' +
           'Use action="list" to see available disciplines, ' +
           'action="activate" to switch, action="deactivate" to clear.',
         inputSchema: {
-          type: "object" as const,
+          type: 'object' as const,
           properties: {
             action: {
-              type: "string" as const,
-              enum: ["list", "activate", "deactivate"],
+              type: 'string' as const,
+              enum: ['list', 'activate', 'deactivate'],
               description: 'Action: "list", "activate", or "deactivate"',
             },
             discipline: {
-              type: "string" as const,
-              description: "Discipline name (required for activate)",
+              type: 'string' as const,
+              description: 'Discipline name (required for activate)',
             },
           },
-          required: ["action"],
+          required: ['action'],
         },
         async execute(args: { action: string; discipline?: string }) {
-          if (args.action === "activate") {
+          if (args.action === 'activate') {
             if (!args.discipline) {
-              return { content: [{ type: "text" as const, text: "Error: discipline parameter required for activate" }] }
+              return {
+                content: [
+                  {
+                    type: 'text' as const,
+                    text: 'Error: discipline parameter required for activate',
+                  },
+                ],
+              };
             }
 
-            const d = disciplinesByName.get(args.discipline)
+            const d = disciplinesByName.get(args.discipline);
             if (!d) {
               return {
-                content: [{
-                  type: "text" as const,
+                content: [
+                  {
+                    type: 'text' as const,
+                    text:
+                      `Discipline "${args.discipline}" not found.\n\n` +
+                      formatDisciplineList(allDisciplines),
+                  },
+                ],
+              };
+            }
+
+            activeDiscipline = d;
+            return {
+              content: [
+                {
+                  type: 'text' as const,
                   text:
-                    `Discipline "${args.discipline}" not found.\n\n` +
-                    formatDisciplineList(allDisciplines),
-                }],
-              }
-            }
-
-            activeDiscipline = d
-            return {
-              content: [{
-                type: "text" as const,
-                text:
-                  `Activated discipline: **${d.name}**\n\n` +
-                  `${d.description}\n\n` +
-                  (d.skills.length > 0
-                    ? `${d.skills.length} specialized skills available. ` +
-                      `Use han_skills to load any of them.\n\n` +
-                      buildDisciplineContext(d)
-                    : ""),
-              }],
-            }
+                    `Activated discipline: **${d.name}**\n\n` +
+                    `${d.description}\n\n` +
+                    (d.skills.length > 0
+                      ? `${d.skills.length} specialized skills available. ` +
+                        `Use han_skills to load any of them.\n\n` +
+                        buildDisciplineContext(d)
+                      : ''),
+                },
+              ],
+            };
           }
 
-          if (args.action === "deactivate") {
-            const prev = activeDiscipline?.name
-            activeDiscipline = null
+          if (args.action === 'deactivate') {
+            const prev = activeDiscipline?.name;
+            activeDiscipline = null;
             return {
-              content: [{
-                type: "text" as const,
-                text: prev
-                  ? `Deactivated discipline: ${prev}`
-                  : "No discipline was active.",
-              }],
-            }
+              content: [
+                {
+                  type: 'text' as const,
+                  text: prev
+                    ? `Deactivated discipline: ${prev}`
+                    : 'No discipline was active.',
+                },
+              ],
+            };
           }
 
-          return { content: [{ type: "text" as const, text: formatDisciplineList(allDisciplines) }] }
+          return {
+            content: [
+              {
+                type: 'text' as const,
+                text: formatDisciplineList(allDisciplines),
+              },
+            ],
+          };
         },
       },
 
@@ -300,73 +358,83 @@ export async function createHanMcpServer(projectDir: string) {
        */
       han_validate: {
         description:
-          "Run Han validation hooks (linting, type checking, formatting). " +
+          'Run Han validation hooks (linting, type checking, formatting). ' +
           'Use mode="file" with file paths after editing files, or ' +
           'mode="project" for full project validation before completing a task.',
         inputSchema: {
-          type: "object" as const,
+          type: 'object' as const,
           properties: {
             mode: {
-              type: "string" as const,
-              enum: ["file", "project"],
-              description: '"file" for per-file validation, "project" for full project check',
+              type: 'string' as const,
+              enum: ['file', 'project'],
+              description:
+                '"file" for per-file validation, "project" for full project check',
             },
             files: {
-              type: "array" as const,
-              items: { type: "string" as const },
-              description: "File paths to validate (required for mode=file)",
+              type: 'array' as const,
+              items: { type: 'string' as const },
+              description: 'File paths to validate (required for mode=file)',
             },
             tool: {
-              type: "string" as const,
-              description: 'Tool that edited the files (e.g. "Edit", "Write"). Defaults to "Edit".',
+              type: 'string' as const,
+              description:
+                'Tool that edited the files (e.g. "Edit", "Write"). Defaults to "Edit".',
             },
           },
-          required: ["mode"],
+          required: ['mode'],
         },
         async execute(args: { mode: string; files?: string[]; tool?: string }) {
-          if (args.mode === "file") {
+          if (args.mode === 'file') {
             if (!args.files || args.files.length === 0) {
-              return { content: [{ type: "text" as const, text: "Error: files parameter required for mode=file" }] }
+              return {
+                content: [
+                  {
+                    type: 'text' as const,
+                    text: 'Error: files parameter required for mode=file',
+                  },
+                ],
+              };
             }
 
-            const claudeToolName = args.tool
-              ? mapToolName(args.tool)
-              : "Edit"
+            const claudeToolName = args.tool ? mapToolName(args.tool) : 'Edit';
 
             // Invalidate cache for edited files
             for (const fp of args.files) {
-              invalidateFile(fp)
+              invalidateFile(fp);
             }
 
             // Match hooks per-file, then group files by their matched hook
             // so mixed-extension file sets (e.g. .ts + .py) each run only
             // the hooks that actually apply to them.
-            const hookToFiles = new Map<HookDefinition, string[]>()
+            const hookToFiles = new Map<HookDefinition, string[]>();
             for (const file of args.files) {
               const matched = matchPostToolUseHooks(
                 postToolUseHooks,
                 claudeToolName,
                 file,
-                projectDir,
-              )
+                projectDir
+              );
               for (const hook of matched) {
-                const files = hookToFiles.get(hook)
+                const files = hookToFiles.get(hook);
                 if (files) {
-                  files.push(file)
+                  files.push(file);
                 } else {
-                  hookToFiles.set(hook, [file])
+                  hookToFiles.set(hook, [file]);
                 }
               }
             }
 
             if (hookToFiles.size === 0) {
               return {
-                content: [{
-                  type: "text" as const,
-                  text: `No validation hooks matched for ${args.files.join(", ")}. ` +
-                    `(${postToolUseHooks.length} PostToolUse hooks registered)`,
-                }],
-              }
+                content: [
+                  {
+                    type: 'text' as const,
+                    text:
+                      `No validation hooks matched for ${args.files.join(', ')}. ` +
+                      `(${postToolUseHooks.length} PostToolUse hooks registered)`,
+                  },
+                ],
+              };
             }
 
             const results = (
@@ -376,31 +444,36 @@ export async function createHanMcpServer(projectDir: string) {
                     cwd: projectDir,
                     sessionId,
                     eventLogger,
-                    hookType: "PostToolUse",
-                  }),
-                ),
+                    hookType: 'PostToolUse',
+                  })
+                )
               )
-            ).flat()
+            ).flat();
 
             return {
-              content: [{
-                type: "text" as const,
-                text: formatValidationResults(results, args.files),
-              }],
-            }
+              content: [
+                {
+                  type: 'text' as const,
+                  text: formatValidationResults(results, args.files),
+                },
+              ],
+            };
           }
 
-          if (args.mode === "project") {
-            const matching = matchStopHooks(stopHooks, projectDir)
+          if (args.mode === 'project') {
+            const matching = matchStopHooks(stopHooks, projectDir);
 
             if (matching.length === 0) {
               return {
-                content: [{
-                  type: "text" as const,
-                  text: `No project validation hooks matched. ` +
-                    `(${stopHooks.length} Stop hooks registered)`,
-                }],
-              }
+                content: [
+                  {
+                    type: 'text' as const,
+                    text:
+                      `No project validation hooks matched. ` +
+                      `(${stopHooks.length} Stop hooks registered)`,
+                  },
+                ],
+              };
             }
 
             const results = await executeHooksParallel(matching, [], {
@@ -408,26 +481,30 @@ export async function createHanMcpServer(projectDir: string) {
               sessionId,
               timeout: 120_000,
               eventLogger,
-              hookType: "Stop",
-            })
+              hookType: 'Stop',
+            });
 
-            eventLogger.flush()
+            eventLogger.flush();
 
             return {
-              content: [{
-                type: "text" as const,
-                text: formatValidationResults(results),
-              }],
-            }
+              content: [
+                {
+                  type: 'text' as const,
+                  text: formatValidationResults(results),
+                },
+              ],
+            };
           }
 
           return {
-            content: [{
-              type: "text" as const,
-              text: 'Error: mode must be "file" or "project"',
-            }],
+            content: [
+              {
+                type: 'text' as const,
+                text: 'Error: mode must be "file" or "project"',
+              },
+            ],
             isError: true,
-          }
+          };
         },
       },
 
@@ -440,16 +517,16 @@ export async function createHanMcpServer(projectDir: string) {
       han_sync: {
         description:
           "Sync Han skills and rules to Antigravity's native directories " +
-          "(.agent/skills/ and .agent/rules/). This lets Antigravity discover " +
+          '(.agent/skills/ and .agent/rules/). This lets Antigravity discover ' +
           "Han's skills natively. Run once after installing new plugins.",
         inputSchema: {
-          type: "object" as const,
+          type: 'object' as const,
           properties: {},
           required: [],
         },
         async execute() {
-          const result = syncAll(projectDir, allSkills, allDisciplines)
-          return { content: [{ type: "text" as const, text: result }] }
+          const result = syncAll(projectDir, allSkills, allDisciplines);
+          return { content: [{ type: 'text' as const, text: result }] };
         },
       },
 
@@ -461,35 +538,43 @@ export async function createHanMcpServer(projectDir: string) {
        */
       han_context: {
         description:
-          "Get current Han session context including time, active discipline, " +
-          "and capabilities summary.",
+          'Get current Han session context including time, active discipline, ' +
+          'and capabilities summary.',
         inputSchema: {
-          type: "object" as const,
+          type: 'object' as const,
           properties: {},
           required: [],
         },
         async execute() {
-          const lines: string[] = []
+          const lines: string[] = [];
 
-          lines.push(buildPromptContext())
-          lines.push("")
+          lines.push(buildPromptContext());
+          lines.push('');
 
           if (activeDiscipline) {
-            lines.push(`Active discipline: **${activeDiscipline.name}**`)
-            lines.push(buildDisciplineContext(activeDiscipline))
+            lines.push(`Active discipline: **${activeDiscipline.name}**`);
+            lines.push(buildDisciplineContext(activeDiscipline));
           } else {
-            lines.push("No discipline active. Use han_discipline to activate one.")
+            lines.push(
+              'No discipline active. Use han_discipline to activate one.'
+            );
           }
 
-          lines.push("")
-          lines.push(`Available: ${skillCount} skills, ${disciplineCount} disciplines`)
-          lines.push(`Validation: ${postToolUseHooks.length} PostToolUse hooks, ${stopHooks.length} Stop hooks`)
+          lines.push('');
+          lines.push(
+            `Available: ${skillCount} skills, ${disciplineCount} disciplines`
+          );
+          lines.push(
+            `Validation: ${postToolUseHooks.length} PostToolUse hooks, ${stopHooks.length} Stop hooks`
+          );
 
-          return { content: [{ type: "text" as const, text: lines.join("\n") }] }
+          return {
+            content: [{ type: 'text' as const, text: lines.join('\n') }],
+          };
         },
       },
     },
-  }
+  };
 }
 
 /**
@@ -506,129 +591,131 @@ export async function createHanMcpServer(projectDir: string) {
  * }
  */
 async function main() {
-  const projectDir = process.argv.includes("--project-dir")
-    ? process.argv[process.argv.indexOf("--project-dir") + 1]
-    : process.cwd()
+  const projectDir = process.argv.includes('--project-dir')
+    ? process.argv[process.argv.indexOf('--project-dir') + 1]
+    : process.cwd();
 
-  console.error(`${PREFIX} Starting Han MCP server for Antigravity`)
-  console.error(`${PREFIX} Project: ${projectDir}`)
+  console.error(`${PREFIX} Starting Han MCP server for Antigravity`);
+  console.error(`${PREFIX} Project: ${projectDir}`);
 
-  const server = await createHanMcpServer(projectDir)
-  const eventLogger = server.eventLogger
+  const server = await createHanMcpServer(projectDir);
+  const eventLogger = server.eventLogger;
 
   // MCP stdio transport: read JSON-RPC from stdin, write to stdout
-  const { createInterface } = await import("node:readline")
-  const rl = createInterface({ input: process.stdin })
+  const { createInterface } = await import('node:readline');
+  const rl = createInterface({ input: process.stdin });
 
-  const tools = server.tools
+  const tools = server.tools;
 
-  rl.on("line", async (line) => {
+  rl.on('line', async (line) => {
     try {
-      const request = JSON.parse(line)
+      const request = JSON.parse(line);
 
-      if (request.method === "initialize") {
+      if (request.method === 'initialize') {
         const response = {
-          jsonrpc: "2.0",
+          jsonrpc: '2.0',
           id: request.id,
           result: {
-            protocolVersion: "2024-11-05",
+            protocolVersion: '2024-11-05',
             serverInfo: { name: server.name, version: server.version },
             capabilities: {
               tools: {},
             },
           },
-        }
-        process.stdout.write(JSON.stringify(response) + "\n")
-        return
+        };
+        process.stdout.write(JSON.stringify(response) + '\n');
+        return;
       }
 
-      if (request.method === "tools/list") {
+      if (request.method === 'tools/list') {
         const toolList = Object.entries(tools).map(([name, tool]) => ({
           name,
           description: tool.description,
           inputSchema: tool.inputSchema,
-        }))
+        }));
         const response = {
-          jsonrpc: "2.0",
+          jsonrpc: '2.0',
           id: request.id,
           result: { tools: toolList },
-        }
-        process.stdout.write(JSON.stringify(response) + "\n")
-        return
+        };
+        process.stdout.write(JSON.stringify(response) + '\n');
+        return;
       }
 
-      if (request.method === "tools/call") {
-        const { name, arguments: args } = request.params
-        const tool = tools[name as keyof typeof tools]
+      if (request.method === 'tools/call') {
+        const { name, arguments: args } = request.params;
+        const tool = tools[name as keyof typeof tools];
         if (!tool) {
           const response = {
-            jsonrpc: "2.0",
+            jsonrpc: '2.0',
             id: request.id,
             error: { code: -32601, message: `Unknown tool: ${name}` },
-          }
-          process.stdout.write(JSON.stringify(response) + "\n")
-          return
+          };
+          process.stdout.write(JSON.stringify(response) + '\n');
+          return;
         }
 
         try {
-          const result = await tool.execute(args ?? {})
+          const result = await tool.execute(args ?? {});
           const response = {
-            jsonrpc: "2.0",
+            jsonrpc: '2.0',
             id: request.id,
             result,
-          }
-          process.stdout.write(JSON.stringify(response) + "\n")
+          };
+          process.stdout.write(JSON.stringify(response) + '\n');
         } catch (err) {
           const response = {
-            jsonrpc: "2.0",
+            jsonrpc: '2.0',
             id: request.id,
             result: {
-              content: [{
-                type: "text",
-                text: `Error: ${err instanceof Error ? err.message : String(err)}`,
-              }],
+              content: [
+                {
+                  type: 'text',
+                  text: `Error: ${err instanceof Error ? err.message : String(err)}`,
+                },
+              ],
               isError: true,
             },
-          }
-          process.stdout.write(JSON.stringify(response) + "\n")
+          };
+          process.stdout.write(JSON.stringify(response) + '\n');
         }
-        return
+        return;
       }
 
-      if (request.method === "notifications/initialized") {
+      if (request.method === 'notifications/initialized') {
         // No response needed for notifications
-        return
+        return;
       }
 
       // Unknown method
       const response = {
-        jsonrpc: "2.0",
+        jsonrpc: '2.0',
         id: request.id,
         error: { code: -32601, message: `Method not found: ${request.method}` },
-      }
-      process.stdout.write(JSON.stringify(response) + "\n")
+      };
+      process.stdout.write(JSON.stringify(response) + '\n');
     } catch (err) {
-      console.error(`${PREFIX} Parse error:`, err)
+      console.error(`${PREFIX} Parse error:`, err);
     }
-  })
+  });
 
-  rl.on("close", () => {
-    console.error(`${PREFIX} MCP server shutting down`)
-    eventLogger.flush()
-    process.exit(0)
-  })
+  rl.on('close', () => {
+    console.error(`${PREFIX} MCP server shutting down`);
+    eventLogger.flush();
+    process.exit(0);
+  });
 }
 
 // Run if invoked directly (ESM has no require.main; compare against the
 // invoked script path instead, with a Bun-specific fallback for dev runs).
 if (
   import.meta.url === `file://${process.argv[1]}` ||
-  process.argv[1]?.endsWith("index.ts")
+  process.argv[1]?.endsWith('index.ts')
 ) {
   main().catch((err) => {
-    console.error(`${PREFIX} Fatal error:`, err)
-    process.exit(1)
-  })
+    console.error(`${PREFIX} Fatal error:`, err);
+    process.exit(1);
+  });
 }
 
-export default createHanMcpServer
+export default createHanMcpServer;

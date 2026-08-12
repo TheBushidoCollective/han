@@ -1,11 +1,25 @@
 /**
  * Shared type definitions for the Han-OpenCode bridge.
  */
-export function getProvider() {
+const HAN_HARNESSES = [
+    'claude-code',
+    'omp',
+    'opencode',
+    'gemini-cli',
+    'kiro',
+    'codex',
+    'antigravity',
+];
+function isHanHarness(value) {
+    return (value !== undefined && HAN_HARNESSES.includes(value));
+}
+/**
+ * Resolve the harness running this session from the environment.
+ * The OpenCode bridge sets HAN_PROVIDER for its own child processes.
+ */
+export function getHarness() {
     const env = process.env.HAN_PROVIDER;
-    if (env === 'opencode')
-        return 'opencode';
-    return 'claude-code';
+    return isHanHarness(env) ? env : 'claude-code';
 }
 // ─── OpenCode → Claude Code Tool Name Mapping ───────────────────────────────
 /**

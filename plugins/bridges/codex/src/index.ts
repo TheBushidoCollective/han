@@ -147,27 +147,23 @@ function extractFilePaths(payload: CodexHookPayload): string[] {
  * Start the Han coordinator daemon in the background.
  * The coordinator indexes JSONL event files and serves the Browse UI.
  */
-function startCoordinator(watchDir: string): void {
+function startCoordinator(): void {
   try {
     const { spawn } =
       require('node:child_process') as typeof import('node:child_process');
 
-    const child = spawn(
-      'han',
-      ['coordinator', 'ensure', '--background', '--watch-path', watchDir],
-      {
-        stdio: 'ignore',
-        detached: true,
-        env: {
-          ...process.env,
-          HAN_PROVIDER: 'codex',
-          HAN_SESSION_ID: process.env.HAN_SESSION_ID ?? '',
-        },
-      }
-    );
+    const child = spawn('han', ['coordinator', 'ensure', '--background'], {
+      stdio: 'ignore',
+      detached: true,
+      env: {
+        ...process.env,
+        HAN_PROVIDER: 'codex',
+        HAN_SESSION_ID: process.env.HAN_SESSION_ID ?? '',
+      },
+    });
 
     child.unref();
-    console.error(`${PREFIX} Coordinator ensure started (watch: ${watchDir})`);
+    console.error(`${PREFIX} Coordinator ensure started`);
   } catch {
     console.error(
       `${PREFIX} Could not start coordinator (han CLI not found). ` +
@@ -221,7 +217,7 @@ async function runPreToolHooks(
 async function handleSessionStart(
   _payload: CodexHookPayload,
   directory: string,
-  sessionId: string
+  _sessionId: string
 ): Promise<CodexHookOutput> {
   const resolvedPlugins = resolvePluginPaths(directory);
   const allSkills = discoverAllSkills(resolvedPlugins);
@@ -248,8 +244,7 @@ async function handleSessionStart(
   }
 
   // Start coordinator for Browse UI visibility
-  const eventLogger = new BridgeEventLogger(sessionId, directory);
-  startCoordinator(eventLogger.getWatchDir());
+  startCoordinator();
 
   return {
     hookSpecificOutput: {
@@ -406,7 +401,8 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  // Set provider env for child processes
+  // Name the harness for child processes. The variable keeps its
+  // HAN_PROVIDER spelling; han reads it as the harness id.
   process.env.HAN_PROVIDER = 'codex';
 
   const payload = await readStdin();

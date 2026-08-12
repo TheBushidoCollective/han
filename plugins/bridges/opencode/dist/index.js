@@ -80,13 +80,13 @@ function extractFilePaths(input, output) {
 /**
  * Start the Han coordinator daemon in the background.
  * The coordinator indexes JSONL event files and serves the Browse UI.
- * We pass the OpenCode watch path so it picks up our events.
+ * It discovers this bridge's events by watching ~/.han/<harness>/projects.
  */
-function startCoordinator(watchDir) {
+function startCoordinator() {
     try {
         const { spawn } = require('node:child_process');
         // Start coordinator if not already running
-        const child = spawn('han', ['coordinator', 'ensure', '--background', '--watch-path', watchDir], {
+        const child = spawn('han', ['coordinator', 'ensure', '--background'], {
             stdio: 'ignore',
             detached: true,
             env: {
@@ -96,7 +96,7 @@ function startCoordinator(watchDir) {
         });
         // Unref so the coordinator doesn't prevent OpenCode from exiting
         child.unref();
-        console.error(`${PREFIX} Coordinator ensure started (watch: ${watchDir})`);
+        console.error(`${PREFIX} Coordinator ensure started`);
     }
     catch {
         // han CLI not installed - coordinator won't index our events
@@ -150,10 +150,27 @@ async function hanBridgePlugin(ctx) {
         `${skillCount} skills, ` +
         `${disciplineCount} disciplines`);
     // ─── Session State ───────────────────────────────────────────────────────
-    const sessionId = crypto.randomUUID();
+    // The plugin is constructed once per opencode process, before any event
+    // arrives, so there is no host session id yet. Every handler that logs
+    // events is handed opencode's own sessionID, so loggers are built per
+    // session on demand and the generated id is used only when the host does
+    // not supply one. Resolving once at load time would file an entire
+    // opencode run under a synthetic id that matches nothing opencode knows.
+    const fallbackSessionId = crypto.randomUUID();
+    const eventLoggers = new Map();
     const pendingValidations = new Map();
-    // ─── Event Logger ──────────────────────────────────────────────────────
-    const eventLogger = new BridgeEventLogger(sessionId, directory);
+    function resolveSessionId(hostSessionId) {
+        return hostSessionId ?? fallbackSessionId;
+    }
+    function loggerFor(hostSessionId) {
+        const id = resolveSessionId(hostSessionId);
+        let logger = eventLoggers.get(id);
+        if (!logger) {
+            logger = new BridgeEventLogger(id, directory);
+            eventLoggers.set(id, logger);
+        }
+        return logger;
+    }
     // ─── Status Writer (for the TUI plugin) ─────────────────────────────────
     const statusWriter = new BridgeStatusWriter(directory, {
         plugins: pluginCount,
@@ -163,11 +180,12 @@ async function hanBridgePlugin(ctx) {
         skills: skillCount,
         disciplines: disciplineCount,
     });
-    // Set HAN_PROVIDER for child processes (hook commands)
+    // Set HAN_PROVIDER for child processes (hook commands). HAN_SESSION_ID is
+    // not set here: executeHooksParallel stamps the resolved per-event session
+    // id on each child, and a load-time value could only disagree with it.
     process.env.HAN_PROVIDER = 'opencode';
-    process.env.HAN_SESSION_ID = sessionId;
     // ─── Coordinator ───────────────────────────────────────────────────────
-    startCoordinator(eventLogger.getWatchDir());
+    startCoordinator();
     // ─── Plugin Return ─────────────────────────────────────────────────────
     return {
         // ─── Custom Tools ─────────────────────────────────────────────────────
@@ -356,8 +374,8 @@ async function hanBridgePlugin(ctx) {
                 if (matching.length > 0) {
                     const results = await executeHooksParallel(matching, [], {
                         cwd: directory,
-                        sessionId,
-                        eventLogger,
+                        sessionId: resolveSessionId(input.sessionID),
+                        eventLogger: loggerFor(input.sessionID),
                         hookType: 'PreToolUse',
                     });
                     // If any PreToolUse hook fails, log it as a warning in output
@@ -383,6 +401,7 @@ async function hanBridgePlugin(ctx) {
             const filePaths = extractFilePaths(input, output);
             if (filePaths.length === 0)
                 return;
+            const eventLogger = loggerFor(input.sessionID);
             // Log file changes and invalidate cache
             for (const fp of filePaths) {
                 eventLogger.logFileChange(claudeToolName, fp);
@@ -398,7 +417,7 @@ async function hanBridgePlugin(ctx) {
                 try {
                     const results = await executeHooksParallel(matching, filePaths, {
                         cwd: directory,
-                        sessionId,
+                        sessionId: resolveSessionId(input.sessionID),
                         eventLogger,
                         hookType: 'PostToolUse',
                     });
@@ -441,15 +460,15 @@ async function hanBridgePlugin(ctx) {
          * Runs before opencode compacts the session. Han PreCompact hook
          * output is appended to the compaction prompt as extra context.
          */
-        'experimental.session.compacting': async (_input, output) => {
+        'experimental.session.compacting': async (input, output) => {
             if (preCompactHooks.length === 0)
                 return;
             try {
                 const results = await executeHooksParallel(preCompactHooks, [], {
                     cwd: directory,
-                    sessionId,
+                    sessionId: resolveSessionId(input.sessionID),
                     timeout: 30_000,
-                    eventLogger,
+                    eventLogger: loggerFor(input.sessionID),
                     hookType: 'PreCompact',
                 });
                 for (const result of results) {
@@ -481,9 +500,9 @@ async function hanBridgePlugin(ctx) {
                 try {
                     const results = await executeHooksParallel(matching, [], {
                         cwd: directory,
-                        sessionId,
+                        sessionId: resolveSessionId(eventSessionId),
                         timeout: 120_000, // Stop hooks get more time
-                        eventLogger,
+                        eventLogger: loggerFor(eventSessionId),
                         hookType: 'Stop',
                     });
                     statusWriter.recordRun('Stop', results);

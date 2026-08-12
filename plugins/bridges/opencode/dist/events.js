@@ -1,14 +1,14 @@
 /**
  * Lightweight event logger for the OpenCode bridge.
  *
- * Writes Han-format JSONL events with provider="opencode" so the
+ * Writes Han-format JSONL events with harness="opencode" so the
  * coordinator can index them alongside Claude Code session data.
  *
- * Path: ~/.han/opencode/{project-slug}/{sessionId}-han.jsonl
+ * Path: ~/.han/opencode/projects/{project-slug}/{sessionId}-han.jsonl
  *
  * This is intentionally NOT under ~/.claude/ because OpenCode sessions
- * are not Claude Code sessions. The coordinator watches this directory
- * via addWatchPath().
+ * are not Claude Code sessions. The coordinator watches
+ * ~/.han/<harness>/projects for standalone han-event files.
  */
 import { randomUUID } from 'node:crypto';
 import { appendFileSync, mkdirSync } from 'node:fs';
@@ -48,7 +48,7 @@ function truncateOutput(output) {
  * Event logger for OpenCode bridge sessions.
  *
  * Writes the same JSONL event format as Han's EventLogger but with
- * a provider field set to "opencode". Events are buffered and flushed
+ * a harness field set to "opencode". Events are buffered and flushed
  * on result events or every 100ms.
  */
 export class BridgeEventLogger {
@@ -56,7 +56,7 @@ export class BridgeEventLogger {
     buffer = [];
     flushTimer = null;
     sessionId;
-    provider = 'opencode';
+    harness = 'opencode';
     cwd;
     constructor(sessionId, projectDir) {
         this.sessionId = sessionId;
@@ -79,7 +79,7 @@ export class BridgeEventLogger {
             sessionId: this.sessionId,
             type,
             timestamp: new Date().toISOString(),
-            provider: this.provider,
+            harness: this.harness,
             cwd: this.cwd,
         };
     }
@@ -176,11 +176,5 @@ export class BridgeEventLogger {
      */
     getLogPath() {
         return this.logPath;
-    }
-    /**
-     * Get the projects directory (for coordinator watch path).
-     */
-    getWatchDir() {
-        return join(getHanOpenCodeRoot(), 'projects');
     }
 }

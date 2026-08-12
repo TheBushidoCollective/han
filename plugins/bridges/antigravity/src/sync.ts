@@ -13,19 +13,19 @@
  */
 
 import {
-  readFileSync,
-  writeFileSync,
-  mkdirSync,
   existsSync,
+  mkdirSync,
   readdirSync,
+  readFileSync,
   rmSync,
-} from "node:fs"
-import { join, basename } from "node:path"
-import type { SkillInfo } from "./skills"
-import type { DisciplineInfo } from "./disciplines"
-import { buildRulesContent } from "./context"
+  writeFileSync,
+} from 'node:fs';
+import { basename, join } from 'node:path';
+import { buildRulesContent } from './context';
+import type { DisciplineInfo } from './disciplines';
+import type { SkillInfo } from './skills';
 
-const HAN_SYNC_MARKER = "<!-- managed by han bridge - do not edit -->"
+const HAN_SYNC_MARKER = '<!-- managed by han bridge - do not edit -->';
 
 /**
  * Sync skills to .agent/skills/ directory.
@@ -37,65 +37,68 @@ const HAN_SYNC_MARKER = "<!-- managed by han bridge - do not edit -->"
  */
 export function syncSkills(
   projectDir: string,
-  skills: SkillInfo[],
+  skills: SkillInfo[]
 ): { synced: number; removed: number } {
-  const agentSkillsDir = join(projectDir, ".agent", "skills")
-  mkdirSync(agentSkillsDir, { recursive: true })
+  const agentSkillsDir = join(projectDir, '.agent', 'skills');
+  mkdirSync(agentSkillsDir, { recursive: true });
 
   // Track which skill directories we manage
-  const managedSkills = new Set<string>()
-  let synced = 0
+  const managedSkills = new Set<string>();
+  let synced = 0;
 
   for (const skill of skills) {
-    const skillDir = join(agentSkillsDir, `han-${skill.pluginName}-${skill.name}`)
-    managedSkills.add(basename(skillDir))
+    const skillDir = join(
+      agentSkillsDir,
+      `han-${skill.pluginName}-${skill.name}`
+    );
+    managedSkills.add(basename(skillDir));
 
-    mkdirSync(skillDir, { recursive: true })
+    mkdirSync(skillDir, { recursive: true });
 
     // Read source SKILL.md
-    let content: string
+    let content: string;
     try {
-      content = readFileSync(skill.filePath, "utf-8")
+      content = readFileSync(skill.filePath, 'utf-8');
     } catch {
-      continue
+      continue;
     }
 
     // Add managed marker to content
-    const markedContent = `${HAN_SYNC_MARKER}\n${content}`
+    const markedContent = `${HAN_SYNC_MARKER}\n${content}`;
 
-    const targetPath = join(skillDir, "SKILL.md")
+    const targetPath = join(skillDir, 'SKILL.md');
 
     // Only write if content changed
     if (existsSync(targetPath)) {
       try {
-        const existing = readFileSync(targetPath, "utf-8")
-        if (existing === markedContent) continue
+        const existing = readFileSync(targetPath, 'utf-8');
+        if (existing === markedContent) continue;
       } catch {
         // Re-write on read error
       }
     }
 
-    writeFileSync(targetPath, markedContent)
-    synced++
+    writeFileSync(targetPath, markedContent);
+    synced++;
   }
 
   // Remove skills we previously synced but are no longer active
-  let removed = 0
+  let removed = 0;
   try {
-    const entries = readdirSync(agentSkillsDir, { withFileTypes: true })
+    const entries = readdirSync(agentSkillsDir, { withFileTypes: true });
     for (const entry of entries) {
-      if (!entry.isDirectory()) continue
-      if (!entry.name.startsWith("han-")) continue
-      if (managedSkills.has(entry.name)) continue
+      if (!entry.isDirectory()) continue;
+      if (!entry.name.startsWith('han-')) continue;
+      if (managedSkills.has(entry.name)) continue;
 
       // Check if it has our marker before removing
-      const skillMd = join(agentSkillsDir, entry.name, "SKILL.md")
+      const skillMd = join(agentSkillsDir, entry.name, 'SKILL.md');
       if (existsSync(skillMd)) {
         try {
-          const content = readFileSync(skillMd, "utf-8")
+          const content = readFileSync(skillMd, 'utf-8');
           if (content.startsWith(HAN_SYNC_MARKER)) {
-            rmSync(join(agentSkillsDir, entry.name), { recursive: true })
-            removed++
+            rmSync(join(agentSkillsDir, entry.name), { recursive: true });
+            removed++;
           }
         } catch {
           // Skip if can't read
@@ -106,7 +109,7 @@ export function syncSkills(
     // Directory might not exist yet
   }
 
-  return { synced, removed }
+  return { synced, removed };
 }
 
 /**
@@ -120,26 +123,26 @@ export function syncSkills(
 export function syncRules(
   projectDir: string,
   skillCount: number,
-  disciplineCount: number,
+  disciplineCount: number
 ): boolean {
-  const rulesDir = join(projectDir, ".agent", "rules")
-  mkdirSync(rulesDir, { recursive: true })
+  const rulesDir = join(projectDir, '.agent', 'rules');
+  mkdirSync(rulesDir, { recursive: true });
 
-  const rulesPath = join(rulesDir, "han-guidelines.md")
-  const content = `${HAN_SYNC_MARKER}\n${buildRulesContent(skillCount, disciplineCount)}`
+  const rulesPath = join(rulesDir, 'han-guidelines.md');
+  const content = `${HAN_SYNC_MARKER}\n${buildRulesContent(skillCount, disciplineCount)}`;
 
   // Only write if changed
   if (existsSync(rulesPath)) {
     try {
-      const existing = readFileSync(rulesPath, "utf-8")
-      if (existing === content) return false
+      const existing = readFileSync(rulesPath, 'utf-8');
+      if (existing === content) return false;
     } catch {
       // Re-write on read error
     }
   }
 
-  writeFileSync(rulesPath, content)
-  return true
+  writeFileSync(rulesPath, content);
+  return true;
 }
 
 /**
@@ -152,13 +155,13 @@ export function generateMcpConfig(projectDir: string): string {
   const config = {
     mcpServers: {
       han: {
-        command: "npx",
-        args: ["-y", "antigravity-han-mcp", "--project-dir", projectDir],
+        command: 'npx',
+        args: ['-y', 'antigravity-han-mcp', '--project-dir', projectDir],
       },
     },
-  }
+  };
 
-  return JSON.stringify(config, null, 2)
+  return JSON.stringify(config, null, 2);
 }
 
 /**
@@ -167,26 +170,30 @@ export function generateMcpConfig(projectDir: string): string {
 export function syncAll(
   projectDir: string,
   skills: SkillInfo[],
-  disciplines: DisciplineInfo[],
+  disciplines: DisciplineInfo[]
 ): string {
-  const skillResult = syncSkills(projectDir, skills)
-  const rulesUpdated = syncRules(projectDir, skills.length, disciplines.length)
+  const skillResult = syncSkills(projectDir, skills);
+  const rulesUpdated = syncRules(projectDir, skills.length, disciplines.length);
 
-  const lines: string[] = ["Han sync complete:\n"]
+  const lines: string[] = ['Han sync complete:\n'];
 
-  lines.push(`- Skills: ${skillResult.synced} synced to .agent/skills/`)
+  lines.push(`- Skills: ${skillResult.synced} synced to .agent/skills/`);
   if (skillResult.removed > 0) {
-    lines.push(`  (${skillResult.removed} stale skills removed)`)
+    lines.push(`  (${skillResult.removed} stale skills removed)`);
   }
 
-  lines.push(`- Rules: ${rulesUpdated ? "updated" : "up to date"} at .agent/rules/han-guidelines.md`)
-  lines.push(`\nAntigravity will now discover ${skills.length} skills natively.`)
+  lines.push(
+    `- Rules: ${rulesUpdated ? 'updated' : 'up to date'} at .agent/rules/han-guidelines.md`
+  );
+  lines.push(
+    `\nAntigravity will now discover ${skills.length} skills natively.`
+  );
 
   if (disciplines.length > 0) {
     lines.push(
-      `\n${disciplines.length} disciplines available via han_discipline tool.`,
-    )
+      `\n${disciplines.length} disciplines available via han_discipline tool.`
+    );
   }
 
-  return lines.join("\n")
+  return lines.join('\n');
 }

@@ -3,7 +3,7 @@
  *
  * Replicates the core plugin's SessionStart and UserPromptSubmit
  * context injection for Codex. These guidelines are LLM-universal
- * (not Claude-specific) and improve agent quality regardless of provider.
+ * (not Claude-specific) and improve agent quality regardless of harness.
  *
  * Codex injects context via AGENTS.md and config.toml hooks.
  */

@@ -129,27 +129,23 @@ function extractFilePaths(payload: KiroHookPayload): string[] {
 /**
  * Start the Han coordinator daemon in the background.
  */
-function startCoordinator(watchDir: string): void {
+function startCoordinator(): void {
   try {
     const { spawn } =
       require('node:child_process') as typeof import('node:child_process');
 
-    const child = spawn(
-      'han',
-      ['coordinator', 'ensure', '--background', '--watch-path', watchDir],
-      {
-        stdio: 'ignore',
-        detached: true,
-        env: {
-          ...process.env,
-          HAN_PROVIDER: 'kiro',
-          HAN_SESSION_ID: process.env.HAN_SESSION_ID ?? '',
-        },
-      }
-    );
+    const child = spawn('han', ['coordinator', 'ensure', '--background'], {
+      stdio: 'ignore',
+      detached: true,
+      env: {
+        ...process.env,
+        HAN_PROVIDER: 'kiro',
+        HAN_SESSION_ID: process.env.HAN_SESSION_ID ?? '',
+      },
+    });
 
     child.unref();
-    console.error(`${PREFIX} Coordinator ensure started (watch: ${watchDir})`);
+    console.error(`${PREFIX} Coordinator ensure started`);
   } catch {
     console.error(
       `${PREFIX} Could not start coordinator (han CLI not found). ` +
@@ -329,22 +325,22 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Set provider env for child processes
+  // Name the harness for child processes. The variable keeps its
+  // HAN_PROVIDER spelling; han reads it as the harness id.
   process.env.HAN_PROVIDER = 'kiro';
 
-  // Generate a session ID if not already set
-  if (!process.env.HAN_SESSION_ID) {
-    process.env.HAN_SESSION_ID = crypto.randomUUID();
-  }
+  const payload = await readStdin();
+
+  // Resolve the session id from the payload before anything logs an event.
+  // Kiro sends a stable session_id on every hook payload; using it here, and
+  // exporting it, keeps agent-spawn, the hook handlers, and child hook
+  // processes on one session instead of scattering them across ids.
+  process.env.HAN_SESSION_ID = resolveSessionId(payload);
 
   // Start coordinator on first invocation (agent-spawn)
   if (event === 'agent-spawn') {
-    const cwd = process.cwd();
-    const eventLogger = new BridgeEventLogger(process.env.HAN_SESSION_ID, cwd);
-    startCoordinator(eventLogger.getWatchDir());
+    startCoordinator();
   }
-
-  const payload = await readStdin();
 
   try {
     switch (event) {

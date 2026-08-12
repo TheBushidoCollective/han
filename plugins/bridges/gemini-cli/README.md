@@ -9,7 +9,7 @@ Han plugins define validation hooks, specialized skills, and agent disciplines t
 1. **Hooks** — PreToolUse, PostToolUse, and Stop validation (biome, eslint, tsc, etc.) with parallel execution
 2. **Guidelines** — Core principles (professional honesty, no excuses, skill selection) injected via GEMINI.md
 3. **Datetime** — Current time injected on every agent turn via BeforeAgent
-4. **Events** — Unified JSONL logging with `provider: "gemini-cli"` for Browse UI visibility
+4. **Events** — Unified JSONL logging with `harness: "gemini-cli"` for Browse UI visibility
 
 ## Coverage Matrix
 
@@ -135,7 +135,7 @@ Gemini CLI Hook System
   |     (loaded automatically)       (professional honesty, no excuses, etc.)
   |
   |-- JSONL event logger ────────> Browse UI visibility
-        ~/.han/gemini-cli/projects/   (provider="gemini-cli")
+        ~/.han/gemini-cli/projects/   (harness="gemini-cli")
 
 Bridge Internals (src/):
   bridge.ts        Entry point (stdin JSON → handler → stdout JSON)
@@ -147,7 +147,7 @@ Bridge Internals (src/):
   context.ts       Session context + datetime injection
   skills.ts        Skill discovery (counting)
   disciplines.ts   Discipline discovery (counting)
-  events.ts        JSONL event logger (provider="gemini-cli")
+  events.ts        JSONL event logger (harness="gemini-cli")
   types.ts         Gemini CLI + Han type definitions
 ```
 
@@ -190,15 +190,16 @@ Exit codes:
 
 ## Event Logging
 
-The bridge writes Han-format JSONL events to `~/.han/gemini-cli/projects/`. Each event includes `provider: "gemini-cli"` to distinguish Gemini CLI sessions from Claude Code and OpenCode sessions.
+The bridge writes Han-format JSONL events to `~/.han/gemini-cli/projects/`. Each event includes `harness: "gemini-cli"` to distinguish Gemini CLI sessions from Claude Code and OpenCode sessions.
 
-On SessionStart, the bridge launches the Han coordinator in the background. The coordinator watches the events directory and indexes events into SQLite, making them visible in the Browse UI.
+On SessionStart, the bridge launches the Han coordinator in the background with `han coordinator ensure --background`. The coordinator discovers `~/.han/<harness>/projects` on disk, watches it, and indexes each `<sessionId>-han.jsonl` into SQLite as a session attributed to that harness, which is what makes those sessions visible in the Browse UI. There is no registration step and no `--watch-path` flag. The coordinator enumerates those roots when it starts, so the very first session from a newly installed bridge is picked up at the next coordinator start or scan rather than live. Every session after that is live.
 
 ## Remaining Gaps
 
 - **MCP tool events**: Gemini CLI doesn't fire AfterTool for MCP server tool calls. Validation only runs for built-in tools.
 - **Subagent hooks**: No Gemini CLI equivalent for SubagentStart/SubagentStop.
 - **Persistent state**: Each hook invocation is a separate process. Plugin discovery runs on every invocation (fast but not cached across invocations).
+- **Session correlation across processes**: Gemini CLI puts no session id on the hook payload, and nothing in this repo establishes that it exports `GEMINI_SESSION_ID`. The bridge reads that variable in exactly one place and memoizes the result, so a single process can no longer scatter its events across several ids. It cannot fix the cross-process case: Gemini CLI runs the bridge as a fresh process per hook event, so if the variable is unset, every hook event still becomes its own session. Closing this needs a real session id from the host.
 
 ## Development
 
