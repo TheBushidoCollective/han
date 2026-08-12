@@ -48,6 +48,7 @@ import {
   buildCommandWithFiles,
   HAN_FILES_TEMPLATE,
 } from './hooks/transcript-filter.ts';
+import { findPluginInMarketplace } from './hooks/plugin-discovery.ts';
 import { getPluginNameFromRoot, isDebugMode } from './shared.ts';
 
 // Re-export for tests
@@ -561,103 +562,6 @@ export async function validate(options: ValidateOptions): Promise<void> {
 // ============================================
 // Plugin Discovery (for running outside hook context)
 // ============================================
-
-/**
- * Find plugin in a marketplace root directory using multiple discovery methods.
- *
- * Discovery order:
- * 1. Check marketplace.json for the plugin's source path
- * 2. Scan for han-plugin.yml files (for external plugins)
- * 3. Fall back to legacy directory patterns
- */
-function findPluginInMarketplace(
-  marketplaceRoot: string,
-  pluginName: string
-): string | null {
-  // 1. Try marketplace.json first (most reliable for han marketplace)
-  const marketplaceJsonPath = join(
-    marketplaceRoot,
-    '.claude-plugin',
-    'marketplace.json'
-  );
-  if (existsSync(marketplaceJsonPath)) {
-    try {
-      const marketplaceJson = JSON.parse(
-        readFileSync(marketplaceJsonPath, 'utf8')
-      );
-      const plugin = marketplaceJson.plugins?.find(
-        (p: { name: string }) => p.name === pluginName
-      );
-      if (plugin?.source) {
-        // Source is relative to marketplace root (e.g., "./plugins/validation/biome")
-        const pluginPath = join(marketplaceRoot, plugin.source);
-        if (existsSync(pluginPath)) {
-          return pluginPath;
-        }
-      }
-    } catch {
-      // Ignore parse errors, try other methods
-    }
-  }
-
-  // 2. Scan for han-plugin.yml files in the marketplace (for external plugins)
-  // Look for directories containing han-plugin.yml where the directory name matches
-  const scanDirs = [marketplaceRoot, join(marketplaceRoot, 'plugins')];
-  for (const scanDir of scanDirs) {
-    if (!existsSync(scanDir)) continue;
-    try {
-      const entries = readdirSync(scanDir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
-        const dirPath = join(scanDir, entry.name);
-        // Check direct match
-        if (entry.name === pluginName) {
-          const hanPluginPath = join(dirPath, 'han-plugin.yml');
-          if (existsSync(hanPluginPath)) {
-            return dirPath;
-          }
-        }
-        // Check subdirectories (one level deep for category dirs)
-        try {
-          const subEntries = readdirSync(dirPath, { withFileTypes: true });
-          for (const subEntry of subEntries) {
-            if (!subEntry.isDirectory()) continue;
-            if (subEntry.name === pluginName) {
-              const hanPluginPath = join(
-                dirPath,
-                subEntry.name,
-                'han-plugin.yml'
-              );
-              if (existsSync(hanPluginPath)) {
-                return join(dirPath, subEntry.name);
-              }
-            }
-          }
-        } catch {
-          // Ignore permission errors
-        }
-      }
-    } catch {
-      // Ignore permission errors
-    }
-  }
-
-  // 3. Legacy directory patterns (for backwards compatibility)
-  const legacyPaths = [
-    join(marketplaceRoot, 'jutsu', pluginName),
-    join(marketplaceRoot, 'do', pluginName),
-    join(marketplaceRoot, 'hashi', pluginName),
-    join(marketplaceRoot, pluginName),
-  ];
-
-  for (const path of legacyPaths) {
-    if (existsSync(path)) {
-      return path;
-    }
-  }
-
-  return null;
-}
 
 /**
  * Resolve a path to absolute, relative to cwd

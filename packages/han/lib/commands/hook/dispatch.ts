@@ -23,6 +23,7 @@ import { isCoordinatorHealthy } from '../../grpc/client.ts';
 import { sessionFileChanges } from '../../grpc/data-access.ts';
 import { executeHooksViaGrpc } from '../../grpc/hook-executor.ts';
 import { getClaudeProjectPath } from '../../memory/paths.ts';
+import { getPluginDir } from '../../hooks/plugin-discovery.ts';
 import { getPluginNameFromRoot, isDebugMode } from '../../shared.ts';
 import { recordHookExecution as recordOtelHookExecution } from '../../telemetry/index.ts';
 
@@ -180,44 +181,58 @@ function _getSessionIdFromStdin(): string | undefined {
 }
 
 /**
- * Hook definition from hooks.json
+ * Hook handler from hooks.json.
+ *
+ * Claude Code defines five handler types. Only `command` runs locally here;
+ * `http`, `mcp_tool`, `prompt`, and `agent` are executed by Claude Code
+ * itself and are skipped so this dispatcher never double-fires them.
  */
 interface HookEntry {
-  type: 'command' | 'prompt';
+  type: 'command' | 'http' | 'mcp_tool' | 'prompt' | 'agent';
   command?: string;
   prompt?: string;
+  /** Seconds, per the Claude Code hook schema. */
   timeout?: number;
 }
 
+/**
+ * Fallback timeout, in seconds, for a hooks.json entry that omits `timeout`.
+ *
+ * Claude Code's own default is 600s, but a hook run through this dispatcher is
+ * already blocking a session turn, so han caps the wait far lower.
+ */
+const DEFAULT_HOOK_TIMEOUT_SECONDS = 30;
+
 interface HookGroup {
+  /**
+   * Regex matched against the tool name on tool events. Absent or empty means
+   * the group runs for every tool.
+   */
+  matcher?: string;
   hooks: HookEntry[];
+}
+
+/**
+ * Decide whether a hook group applies to the event being dispatched.
+ *
+ * Claude Code treats `matcher` as a regex anchored to the whole tool name. A
+ * group with a matcher never runs on a non-tool event, which carries no tool
+ * name.
+ */
+function matchesHookGroup(group: HookGroup, toolName?: string): boolean {
+  const matcher = group.matcher;
+  if (!matcher || matcher === '*') return true;
+  if (!toolName) return false;
+  try {
+    return new RegExp(`^(?:${matcher})$`).test(toolName);
+  } catch {
+    // A malformed matcher must not silently swallow the hook.
+    return true;
+  }
 }
 
 interface PluginHooks {
   hooks: Record<string, HookGroup[]>;
-}
-
-/**
- * Find plugin in a marketplace root directory
- */
-function findPluginInMarketplace(
-  marketplaceRoot: string,
-  pluginName: string
-): string | null {
-  const potentialPaths = [
-    join(marketplaceRoot, 'jutsu', pluginName),
-    join(marketplaceRoot, 'do', pluginName),
-    join(marketplaceRoot, 'hashi', pluginName),
-    join(marketplaceRoot, pluginName),
-  ];
-
-  for (const path of potentialPaths) {
-    if (existsSync(path)) {
-      return path;
-    }
-  }
-
-  return null;
 }
 
 /**
@@ -228,55 +243,6 @@ export function resolveToAbsolute(path: string): string {
     return path;
   }
   return join(process.cwd(), path);
-}
-
-/**
- * Get plugin directory based on plugin name, marketplace, and marketplace config
- */
-function getPluginDir(
-  pluginName: string,
-  marketplace: string,
-  marketplaceConfig: MarketplaceConfig | undefined
-): string | null {
-  // If marketplace config specifies a directory source, use that path
-  if (marketplaceConfig?.source?.source === 'directory') {
-    const directoryPath = marketplaceConfig.source.path;
-    if (directoryPath) {
-      const absolutePath = resolveToAbsolute(directoryPath);
-      const found = findPluginInMarketplace(absolutePath, pluginName);
-      if (found) {
-        return found;
-      }
-    }
-  }
-
-  // Check if we're in the marketplace repo itself (for development)
-  const cwd = process.cwd();
-  if (existsSync(join(cwd, '.claude-plugin', 'marketplace.json'))) {
-    const found = findPluginInMarketplace(cwd, pluginName);
-    if (found) {
-      return found;
-    }
-  }
-
-  // Fall back to the default shared config path
-  const configDir = getClaudeConfigDir();
-  if (!configDir) {
-    return null;
-  }
-
-  const marketplaceRoot = join(
-    configDir,
-    'plugins',
-    'marketplaces',
-    marketplace
-  );
-
-  if (!existsSync(marketplaceRoot)) {
-    return null;
-  }
-
-  return findPluginInMarketplace(marketplaceRoot, pluginName);
 }
 
 /**
@@ -309,13 +275,17 @@ function loadPluginHooks(
 }
 
 /**
- * Execute a command hook and return its output
- * Also reports execution to metrics and logs events
+ * Execute a command hook and return its output.
+ * Also reports execution to metrics and logs events.
+ *
+ * @param timeoutSeconds - Hook timeout in SECONDS, matching the `timeout`
+ *   field in the Claude Code hooks schema. Converted to milliseconds for
+ *   `execSync`, which takes milliseconds.
  */
 function executeCommandHook(
   command: string,
   pluginRoot: string,
-  timeout: number,
+  timeoutSeconds: number,
   hookType: string,
   hookName: string,
   noCache = false,
@@ -371,7 +341,7 @@ function executeCommandHook(
 
     const output = execSync(resolvedCommand, {
       encoding: 'utf-8',
-      timeout,
+      timeout: timeoutSeconds * 1000,
       stdio: ['pipe', 'pipe', 'pipe'],
       shell: '/bin/sh',
       cwd: process.cwd(),
@@ -516,93 +486,93 @@ export function deriveHookName(command: string, pluginName: string): string {
 }
 
 /**
+ * Run every command handler in a list of hook groups whose matcher applies.
+ */
+function runHookGroups(
+  groups: unknown,
+  hookType: string,
+  toolName: string | undefined,
+  outputs: string[],
+  noCache: boolean,
+  noCheckpoints: boolean
+): void {
+  if (!Array.isArray(groups)) return;
+  for (const group of groups) {
+    if (
+      typeof group !== 'object' ||
+      group === null ||
+      !('hooks' in group) ||
+      !Array.isArray((group as HookGroup).hooks)
+    ) {
+      continue;
+    }
+    if (!matchesHookGroup(group as HookGroup, toolName)) {
+      continue;
+    }
+    for (const hook of (group as HookGroup).hooks) {
+      if (hook.type !== 'command' || !hook.command) continue;
+      const output = executeCommandHook(
+        hook.command,
+        process.cwd(),
+        hook.timeout ?? DEFAULT_HOOK_TIMEOUT_SECONDS,
+        hookType,
+        'settings-hook',
+        noCache,
+        noCheckpoints
+      );
+      if (output) {
+        outputs.push(output);
+      }
+    }
+  }
+}
+
+/**
  * Execute hooks from settings files (not from Han plugins)
  */
 function dispatchSettingsHooks(
   hookType: string,
+  toolName: string | undefined,
   outputs: string[],
   noCache = false,
   noCheckpoints = false
 ): void {
   for (const { path } of getSettingsPaths()) {
-    // Check settings.json for hooks
     const settings = readSettingsFile(path);
     if (settings?.hooks) {
-      const hookGroups = (settings.hooks as Record<string, unknown>)[hookType];
-      if (Array.isArray(hookGroups)) {
-        for (const group of hookGroups) {
-          if (
-            typeof group === 'object' &&
-            group !== null &&
-            'hooks' in group &&
-            Array.isArray(group.hooks)
-          ) {
-            for (const hook of group.hooks as HookEntry[]) {
-              if (hook.type === 'command' && hook.command) {
-                const output = executeCommandHook(
-                  hook.command,
-                  process.cwd(),
-                  hook.timeout || 30000,
-                  hookType,
-                  'settings-hook',
-                  noCache,
-                  noCheckpoints
-                );
-                if (output) {
-                  outputs.push(output);
-                }
-              }
-            }
-          }
-        }
-      }
+      runHookGroups(
+        (settings.hooks as Record<string, unknown>)[hookType],
+        hookType,
+        toolName,
+        outputs,
+        noCache,
+        noCheckpoints
+      );
     }
 
-    // Also check for hooks.json in the same directory
+    // A hooks.json can sit beside settings.json, with the events either at the
+    // root or under a "hooks" key.
     const hooksJsonPath = path.replace(
       /settings(\.local)?\.json$/,
       'hooks.json'
     );
-    if (hooksJsonPath !== path && existsSync(hooksJsonPath)) {
-      try {
-        const content = readFileSync(hooksJsonPath, 'utf-8');
-        const hooksJson = JSON.parse(content) as Record<string, unknown>;
-
-        // hooks.json can have hooks at root level or under "hooks" key
-        const hooksObj =
-          (hooksJson.hooks as Record<string, unknown>) ?? hooksJson;
-        const hookGroups = hooksObj[hookType];
-
-        if (Array.isArray(hookGroups)) {
-          for (const group of hookGroups) {
-            if (
-              typeof group === 'object' &&
-              group !== null &&
-              'hooks' in group &&
-              Array.isArray(group.hooks)
-            ) {
-              for (const hook of group.hooks as HookEntry[]) {
-                if (hook.type === 'command' && hook.command) {
-                  const output = executeCommandHook(
-                    hook.command,
-                    process.cwd(),
-                    hook.timeout || 30000,
-                    hookType,
-                    'settings-hook',
-                    noCache,
-                    noCheckpoints
-                  );
-                  if (output) {
-                    outputs.push(output);
-                  }
-                }
-              }
-            }
-          }
-        }
-      } catch {
-        // Invalid JSON, skip
-      }
+    if (hooksJsonPath === path || !existsSync(hooksJsonPath)) continue;
+    try {
+      const hooksJson = JSON.parse(
+        readFileSync(hooksJsonPath, 'utf-8')
+      ) as Record<string, unknown>;
+      const hooksObj =
+        (hooksJson.hooks as Record<string, unknown>) ?? hooksJson;
+      runHookGroups(
+        hooksObj[hookType],
+        hookType,
+        toolName,
+        outputs,
+        noCache,
+        noCheckpoints
+      );
+    } catch {
+      // Invalid JSON, skip
     }
   }
 }
@@ -655,6 +625,20 @@ async function dispatchHooks(
     process.env.HAN_DISABLE_HOOKS === '1'
   ) {
     process.exit(0);
+  }
+
+  // `plugins/core` registers `han hook dispatch <Event>` as one of its own
+  // hooks.json entries so events Claude Code does not surface to plugins still
+  // reach han. Without this guard the dispatcher would rediscover that entry
+  // and re-exec itself forever. Children of executeCommandHook carry
+  // HAN_DISPATCH=1.
+  if (process.env.HAN_DISPATCH === '1') {
+    if (isDebugMode()) {
+      console.error(
+        `[dispatch] Skipping nested dispatch of ${hookType} (HAN_DISPATCH=1)`
+      );
+    }
+    return;
   }
 
   // Initialize event logger for this session
@@ -726,7 +710,13 @@ async function dispatchHooks(
 
   // Dispatch settings hooks if --all is specified
   if (includeSettings) {
-    dispatchSettingsHooks(hookType, outputs, noCache, noCheckpoints);
+    dispatchSettingsHooks(
+      hookType,
+      typeof payload?.tool_name === 'string' ? payload.tool_name : undefined,
+      outputs,
+      noCache,
+      noCheckpoints
+    );
   }
 
   // Dispatch Han plugin hooks
@@ -744,8 +734,12 @@ async function dispatchHooks(
     const hookGroups = pluginHooks.hooks[hookType];
 
     for (const group of hookGroups) {
+      if (!matchesHookGroup(group, payload?.tool_name)) {
+        continue;
+      }
       for (const hook of group.hooks) {
-        // Only execute command hooks - prompt hooks are handled by Claude Code directly
+        // Only command hooks run here. Claude Code executes http, mcp_tool,
+        // prompt, and agent handlers itself.
         if (hook.type === 'command' && hook.command) {
           // Derive hook name from command or use plugin name
           const hookName = deriveHookName(hook.command, pluginName);
@@ -753,7 +747,7 @@ async function dispatchHooks(
           const output = executeCommandHook(
             hook.command,
             pluginRoot,
-            hook.timeout || 30000,
+            hook.timeout ?? DEFAULT_HOOK_TIMEOUT_SECONDS,
             hookType,
             hookName,
             noCache,

@@ -75,13 +75,22 @@ describe('CLI integration tests', () => {
 
   describe('han hook dispatch', () => {
     test('exits cleanly when no plugins installed', () => {
+      // Run from an isolated cwd. Inside the han checkout the repo's own
+      // project settings enable plugins, which is the opposite of what this
+      // test asserts.
       const result = spawnSync(
         'bun',
-        ['run', 'lib/main.ts', 'hook', 'dispatch', 'SessionStart'],
+        [
+          'run',
+          join(packageRoot, 'lib/main.ts'),
+          'hook',
+          'dispatch',
+          'SessionStart',
+        ],
         {
           encoding: 'utf-8',
           timeout: 30000,
-          cwd: packageRoot,
+          cwd: join(testDir, 'project'),
           env: {
             ...process.env,
             CLAUDE_CONFIG_DIR: join(testDir, 'config'),
@@ -92,6 +101,7 @@ describe('CLI integration tests', () => {
 
       // Should exit cleanly with no output when no plugins have hooks
       expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe('');
     });
 
     test('respects HAN_DISABLE_HOOKS=true', () => {

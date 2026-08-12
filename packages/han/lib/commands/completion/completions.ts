@@ -9,6 +9,7 @@ import {
   listAvailableHooks,
   loadPluginConfig,
 } from '../../hooks/hook-config.ts';
+import { findPluginInMarketplace } from '../../hooks/plugin-discovery.ts';
 import { getMarketplacePlugins } from '../../marketplace-cache.ts';
 import { getInstalledPlugins } from '../../shared.ts';
 
@@ -61,24 +62,15 @@ function findPluginRoot(pluginName: string): string | null {
   const configDir = process.env.CLAUDE_CONFIG_DIR || join(homeDir, '.claude');
   const marketplaceDir = join(configDir, 'plugins', 'marketplaces', 'han');
 
-  // Check common plugin directories
-  const prefixes = ['jutsu', 'do', 'hashi', 'core'];
-  for (const prefix of prefixes) {
-    const pluginPath = join(marketplaceDir, prefix, pluginName);
-    if (existsSync(join(pluginPath, 'han-plugin.yml'))) {
-      return pluginPath;
-    }
+  const installed = findPluginInMarketplace(marketplaceDir, pluginName);
+  if (installed) {
+    return installed;
   }
 
   // Also check if we're in the han repo itself (for development)
   const cwd = process.cwd();
   if (existsSync(join(cwd, '.claude-plugin', 'marketplace.json'))) {
-    for (const prefix of prefixes) {
-      const pluginPath = join(cwd, prefix, pluginName);
-      if (existsSync(join(pluginPath, 'han-plugin.yml'))) {
-        return pluginPath;
-      }
-    }
+    return findPluginInMarketplace(cwd, pluginName);
   }
 
   return null;
