@@ -78,6 +78,7 @@ const RECOGNIZED_MANIFEST_FIELDS: Record<string, true> = {
   experimental: true,
   userConfig: true,
   channels: true,
+  settings: true,
   dependencies: true,
 };
 
@@ -117,9 +118,7 @@ export function validatePlugin(pluginPath: string): PluginValidationResult {
   } else {
     // Validate plugin.json
     try {
-      const parsed: unknown = JSON.parse(
-        readFileSync(pluginJsonPath, 'utf-8')
-      );
+      const parsed: unknown = JSON.parse(readFileSync(pluginJsonPath, 'utf-8'));
 
       if (
         typeof parsed !== 'object' ||
