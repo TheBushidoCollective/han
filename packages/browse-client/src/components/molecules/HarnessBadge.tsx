@@ -1,4 +1,4 @@
-import { Badge } from '../atoms/index.ts';
+import { Badge } from "../atoms/index.ts";
 
 /**
  * Harness every session is attributed to when nothing else is recorded.
@@ -6,20 +6,20 @@ import { Badge } from '../atoms/index.ts';
  * Claude Code was the only harness han indexed before harness tracking, and it
  * remains the overwhelming majority of sessions.
  */
-const DEFAULT_HARNESS = 'claude-code';
+const DEFAULT_HARNESS = "claude-code";
 
 /** Human-readable names for harnesses whose id is not already presentable. */
 const DISPLAY_NAMES: Record<string, string> = {
-  'gemini-cli': 'Gemini CLI',
-  antigravity: 'Antigravity',
-  codex: 'Codex',
-  kiro: 'Kiro',
-  omp: 'omp',
-  opencode: 'OpenCode',
+	"gemini-cli": "Gemini CLI",
+	antigravity: "Antigravity",
+	codex: "Codex",
+	kiro: "Kiro",
+	omp: "omp",
+	opencode: "OpenCode",
 };
 
 export interface HarnessBadgeProps {
-  harness: string | null | undefined;
+	harness: string | null | undefined;
 }
 
 /**
@@ -30,6 +30,6 @@ export interface HarnessBadgeProps {
  * session came from somewhere else.
  */
 export function HarnessBadge({ harness }: HarnessBadgeProps) {
-  if (!harness || harness === DEFAULT_HARNESS) return null;
-  return <Badge variant="info">{DISPLAY_NAMES[harness] ?? harness}</Badge>;
+	if (!harness || harness === DEFAULT_HARNESS) return null;
+	return <Badge variant="info">{DISPLAY_NAMES[harness] ?? harness}</Badge>;
 }

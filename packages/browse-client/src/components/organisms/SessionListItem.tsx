@@ -244,17 +244,22 @@ export function SessionListItem({
             </Text>
           )}
           {session.prNumber != null &&
-            (session.prUrl ? (
-              <Pressable
-                onPress={() => {
-                  window.open(session.prUrl!, '_blank', 'noopener,noreferrer');
-                }}
-              >
+            (() => {
+              const prUrl = session.prUrl;
+              const badge = (
                 <Badge variant="success">PR #{session.prNumber}</Badge>
-              </Pressable>
-            ) : (
-              <Badge variant="success">PR #{session.prNumber}</Badge>
-            ))}
+              );
+              if (!prUrl) return badge;
+              return (
+                <Pressable
+                  onPress={() => {
+                    window.open(prUrl, '_blank', 'noopener,noreferrer');
+                  }}
+                >
+                  {badge}
+                </Pressable>
+              );
+            })()}
           {session.teamName && (
             <Badge variant="purple">{session.teamName}</Badge>
           )}
