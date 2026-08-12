@@ -1,7 +1,8 @@
 import { Box, Text } from 'ink';
 import type React from 'react';
 import type { SettingsScope } from './config/claude-settings.ts';
-import { HOOK_EVENT_TYPES, type HookDependency } from './hooks/hook-config.ts';
+import type { HookDependency } from './hooks/hook-config.ts';
+import { HOOK_EVENT_TYPES } from './hooks/hook-events.ts';
 
 /**
  * Hook types where stdout is meant to inject context into Claude's conversation.

@@ -19,9 +19,9 @@ import {
   readSettingsFile,
   type SettingsScope,
 } from '../../config/claude-settings.ts';
+import { HOOK_EVENT_TYPES } from '../../hooks/hook-events.ts';
 import {
   getHookEvents,
-  HOOK_EVENT_TYPES,
   loadPluginConfig,
   type PluginHookDefinition,
 } from '../../hooks/index.ts';

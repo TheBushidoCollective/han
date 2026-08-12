@@ -20,11 +20,11 @@ import {
 import { basename, join } from 'node:path';
 import type { Command } from 'commander';
 import { parse as parseYaml } from 'yaml';
+import { parseEventShorthands } from '../../hooks/hook-config.ts';
 import {
   HOOK_EVENT_TYPES,
   type HookEventType,
-  parseEventShorthands,
-} from '../../hooks/hook-config.ts';
+} from '../../hooks/hook-events.ts';
 
 /**
  * Claude Code hooks.json structure
