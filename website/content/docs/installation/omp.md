@@ -63,13 +63,14 @@ extensions:
   - ~/dev/src/github.com/thebushidocollective/han/plugins/bridges/omp
 ```
 
-omp resolves a directory through its `package.json` `omp.extensions` entry first, then `index.ts`, then a one-level scan. The project-scoped equivalents are `<cwd>/.omp/extensions/` and the `extensions:` key in `<cwd>/.omp/config.yml`. Under `omp --profile <name>` the user directory becomes `~/.omp/profiles/<name>/agent/`.
+Point it at the plugin **directory**, not a file. omp resolves a directory through its `package.json` `omp.extensions` entry, which in this package is `["./src/index.ts"]`, before falling back to `index.ts` or a one-level scan. The project-scoped equivalents are `<cwd>/.omp/extensions/` and the `extensions:` key in `<cwd>/.omp/config.yml`. Under `omp --profile <name>` the user directory becomes `~/.omp/profiles/<name>/agent/`.
 
 ## What Gets Recorded
 
 | omp Event | Han Event | Hook Type |
 |---|---|---|
 | `session_start` | `hook_run` + `hook_result` | `SessionStart` |
+| `session_switch` | closes the outgoing session, opens the incoming one | `Stop`, then `SessionStart` |
 | `session_compact` | `hook_run` + `hook_result` | `PreCompact` |
 | `session_shutdown` | `hook_run` + `hook_result` | `Stop` |
 | `tool_execution_start` | `hook_run` | `PostToolUse` |
@@ -79,6 +80,8 @@ omp resolves a directory through its `package.json` `omp.extensions` entry first
 The `plugin` field on those hook events is the literal `omp-bridge`. The `hook` field is the tool name for tool events, `session` for session start and end, and `compact` for compaction. Nothing is aggregated: one `token_usage` event per assistant message.
 
 A tool still running when the session dies leaves a `hook_run` with no matching `hook_result`, which is how Han represents abandoned work rather than a defect in the bridge.
+
+`session_switch` is wired because omp retargets the session file mid-process. Without it, every tool call and every token after a switch would be billed to the session you just left.
 
 ## Tool Name Mapping
 
@@ -104,9 +107,13 @@ Unrecognized names, including MCP server tools and other extensions' tools, pass
 
 ## Token and Cost Accounting
 
-omp's extension event bus carries no token counts and no dollar cost. The only place those numbers exist is omp's own session JSONL, where omp has already computed them, so the bridge reads them back out of that file on `turn_end` and emits one `token_usage` event per new assistant message.
+omp's extension event bus carries no completed token counts and no dollar cost, so the bridge reads them out of omp's own session JSONL on `turn_end` and emits one `token_usage` event per new assistant message.
 
-Each persisted assistant message carries `model`, `provider`, and a `usage` object with `input`, `output`, `cacheRead`, `cacheWrite`, and a `cost` breakdown including `cost.total`. That shape was verified against a real session written by omp 17.2.15.
+This is not a workaround for an event that would have been easier. The nearest candidate, `after_provider_response`, fires *before the response stream body is consumed*, so final output token counts cannot exist yet; the only usage consumer on that path records provider rate-limit and quota headers, not per-message accounting. The session file is where the completed numbers live, and it is the only place they live.
+
+Each persisted assistant message carries `model`, `provider`, and a `usage` object with `input`, `output`, `cacheRead`, `cacheWrite`, and a `cost` breakdown including `cost.total`.
+
+Both the load path and the event surface were observed rather than inferred. Running the extension under real omp 17.2.15 with `omp -p --tools=bash --extension <plugin>/src/index.ts "run echo hello-han"` produced eight events in `~/.han/omp/projects/<slug>/<sessionId>-han.jsonl`, each tagged `harness=omp`: a `SessionStart` pair, a `PostToolUse` pair for `Bash`, two `token_usage` events carrying model and dollar cost, and a `Stop` pair.
 
 **This is a genuine dependency on omp's on-disk format, and you should know about it.** If omp changes the shape of its session entries, cost tracking for omp goes quiet. It degrades to producing no usage events rather than to producing wrong numbers, which is the right direction to fail, but a silent stop is still a stop. A provider omp cannot price, such as a local model, reports no cost rather than a zero, so a genuinely free turn stays distinguishable from an unpriced one.
 

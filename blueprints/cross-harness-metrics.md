@@ -146,6 +146,8 @@ Closing the gap is a per-bridge change that needs nothing from the indexer: the 
 
 `cost_usd` is omitted rather than zeroed when a harness reports no cost, so a free turn stays distinguishable from an unmeasured one.
 
+One trap specific to omp, recorded so nobody "simplifies" it: the omp bridge reads token and cost figures out of omp's session JSONL rather than off an event. That looks like an avoidable on-disk coupling until you check the alternative. `after_provider_response` fires before the response stream body is consumed, so final output token counts do not exist yet, and the only usage consumer on that path handles provider rate-limit headers rather than per-message accounting. Moving usage onto that event would produce numbers that are silently incomplete rather than an error.
+
 ## API / Interface
 
 `Session.harness` is a non-null `String`. The resolver coalesces a NULL column to `DEFAULT_HARNESS` defensively; after the backfill no row should need it, but the column is still nullable and a future writer could omit it.
@@ -203,6 +205,7 @@ The assumption is the thing to watch for. Any new code that pairs a han events f
 - `packages/han-rs/crates/han-db/src/crud/sessions.rs` - `upsert` harness argument
 - `packages/han-rs/crates/han-api/src/types/sessions/mod.rs` - `Session.harness`, `SessionFilterSource`
 - `plugins/bridges/{opencode,gemini-cli,kiro,codex,antigravity}/src/types.ts` - `HanHarness` union, `HAN_HARNESSES`, and `getHarness()` resolving from `HAN_PROVIDER`
+- `plugins/bridges/omp/src/index.ts` - The only bridge emitting `token_usage`; wires `session_start`, `session_switch`, `session_shutdown`, `session_compact`, `tool_execution_start`, `tool_execution_end`, `turn_end`
 - `plugins/bridges/omp/src/types.ts` - Fixed `HAN_HARNESS = 'omp'`, `TOOL_NAME_MAP`, and the omp session-entry types; no union and no resolution
 - `plugins/bridges/omp/src/session.ts` - Session id and slug derivation, and usage extraction from omp's session JSONL
 - `plugins/bridges/*/src/events.ts` - Per-bridge event envelope; omp's is the only one emitting `token_usage`
