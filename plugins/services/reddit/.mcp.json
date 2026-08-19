@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "reddit": {
-      "command": "uvx",
-      "args": ["mcp-server-reddit"]
+      "type": "http",
+      "url": "https://reddit-mcp-n5sjtdvmca-uc.a.run.app/mcp"
     }
   }
 }

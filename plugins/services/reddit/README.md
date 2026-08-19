@@ -1,49 +1,54 @@
 # Reddit
 
-MCP server integration for Reddit, enabling Claude Code to fetch frontpage posts, subreddit information, hot/new/top/rising posts, post content, and comments directly from Reddit's public API.
+Connect Claude Code to Reddit through a hosted MCP server that signs in as you, so the assistant can read your account surface (saved, upvoted, history, inbox, subscriptions) alongside the public site.
+
+**OAuth Enabled**: Sign in to Reddit once in the browser on first use. Nothing to install, no API keys to manage, no Reddit credentials on your machine.
 
 ## What This Plugin Provides
 
 ### MCP Server: reddit
 
-This plugin connects Claude Code to Reddit and provides read-only access to Reddit content:
+The plugin is a pointer at [thebushidocollective/reddit-mcp](https://github.com/thebushidocollective/reddit-mcp), a remote HTTP MCP server. Earlier versions ran a local Python process against Reddit's public API, which meant it could read all of Reddit except the parts that are actually yours. This version authenticates, so the account surface is available:
 
-- **Frontpage Posts**: Fetch hot posts from Reddit's frontpage
-- **Subreddit Information**: Get details about any subreddit
-- **Post Listings**: Retrieve hot, new, top, and rising posts from subreddits
-- **Post Content**: Get detailed content of specific posts
-- **Comments**: Fetch comments from any post with configurable depth
+- **Your Account**: saved items, upvotes, downvotes, hidden posts, your posts and comments, inbox, subscriptions, multireddits
+- **Frontpage**: hot posts from your logged-in frontpage
+- **Subreddits**: info plus hot, new, top, and rising listings
+- **Posts and Comments**: full post content and comment trees
+- **Search**: search across Reddit, and search your own saved items
+- **Users**: public profile for any user
 
-### Available Tools
+## Available Tools
 
-Once installed, Claude Code gains access to these tools:
+### Your Account
 
-- `get_frontpage_posts`: Get hot posts from Reddit frontpage
-- `get_subreddit_info`: Get information about a subreddit
-- `get_subreddit_hot_posts`: Get hot posts from a specific subreddit
-- `get_subreddit_new_posts`: Get new posts from a specific subreddit
-- `get_subreddit_top_posts`: Get top posts from a specific subreddit
-- `get_subreddit_rising_posts`: Get rising posts from a specific subreddit
-- `get_post_content`: Get detailed content of a specific post
-- `get_post_comments`: Get comments from a post
+- `get_me`: the signed-in account's profile
+- `get_saved`: saved posts and comments
+- `search_saved`: search within saved items
+- `get_upvoted`: upvoted posts
+- `get_downvoted`: downvoted posts
+- `get_hidden`: hidden posts
+- `get_my_posts`: posts you submitted
+- `get_my_comments`: comments you wrote
+- `get_subscribed_subreddits`: subreddits you subscribe to
+- `get_inbox`: inbox messages and replies
+- `get_multireddits`: your multireddits
+
+### Public Reddit
+
+- `get_frontpage_posts`: hot posts from the frontpage
+- `get_subreddit_info`: information about a subreddit
+- `get_subreddit_hot_posts`: hot posts in a subreddit
+- `get_subreddit_new_posts`: new posts in a subreddit
+- `get_subreddit_rising_posts`: rising posts in a subreddit
+- `get_subreddit_top_posts`: top posts in a subreddit
+- `get_post_content`: full content of a post
+- `get_post_comments`: comments on a post
+- `search_reddit`: search posts across Reddit or within a subreddit
+- `get_user_profile`: public profile for a user
+
+Parameters for each tool are documented in the [server repository](https://github.com/thebushidocollective/reddit-mcp), which is the source of truth as tools evolve.
 
 ## Installation
-
-### Prerequisites
-
-- [uv](https://github.com/astral-sh/uv) (Astral's Python package manager)
-
-Install uv if you don't have it:
-
-```bash
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Windows
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-### Via Han Marketplace
 
 ```bash
 han plugin install reddit
@@ -56,153 +61,98 @@ claude plugin marketplace add thebushidocollective/han
 claude plugin install reddit@han
 ```
 
-### Manual Installation
-
-If not using Han, add to your Claude Code settings (`~/.claude/settings.json`):
+If not using Han, add the remote server to your Claude Code settings (`~/.claude/settings.json`):
 
 ```json
 {
   "mcpServers": {
     "reddit": {
-      "command": "uvx",
-      "args": ["mcp-server-reddit"]
+      "type": "http",
+      "url": "https://reddit-mcp-n5sjtdvmca-uc.a.run.app/mcp"
     }
   }
 }
 ```
 
+There is no prerequisite to install. Previous versions required [uv](https://github.com/astral-sh/uv) and Python to run `uvx mcp-server-reddit`; that dependency is gone.
+
+## Authentication
+
+1. Install the plugin and use any Reddit tool.
+2. Your client opens the server's authorization page in the browser.
+3. Sign in to Reddit and approve the read scopes.
+4. The browser returns to your client and tools start working.
+
+Your Reddit credentials never touch this machine. You type them into Reddit, Reddit hands the server a token for your account, and the server holds it. Your client stores only a token for the MCP server itself, which you can drop by signing out in the client. To cut the server off entirely, revoke its access from the authorized applications list in your Reddit account settings.
+
+## Read Only
+
+Every tool reads. There is no voting, posting, commenting, saving, subscribing, or messaging, and this is structural rather than a matter of convention: the server's Reddit client exposes only GET operations, so no tool can write even by accident.
+
 ## Usage
 
-### Example 1: Check What's Popular on Reddit
+### Example 1: Mine Your Own Saved Items
 
 ```
-User: What's trending on Reddit's frontpage right now?
-Claude: [uses get_frontpage_posts tool to fetch current hot posts]
+User: What did I save about Postgres indexing?
+Claude: [uses search_saved to search your saved posts and comments]
 ```
 
-### Example 2: Research a Subreddit
+### Example 2: Catch Up on Subscriptions
+
+```
+User: What's happening in the subreddits I follow?
+Claude: [uses get_subscribed_subreddits, then get_subreddit_hot_posts for each]
+```
+
+### Example 3: Check Your Inbox
+
+```
+User: Did anyone reply to my comment on that thread?
+Claude: [uses get_inbox to read replies]
+```
+
+### Example 4: Research a Subreddit
 
 ```
 User: Tell me about r/programming - what are the hot topics?
-Claude: [uses get_subreddit_info and get_subreddit_hot_posts tools]
+Claude: [uses get_subreddit_info and get_subreddit_hot_posts]
 ```
 
-### Example 3: Deep Dive into a Post
+### Example 5: Deep Dive into a Post
 
 ```
-User: I want to see what people are saying about post xyz123
-Claude: [uses get_post_content and get_post_comments tools to fetch full discussion]
+User: What are people saying about this thread?
+Claude: [uses get_post_content and get_post_comments to read the discussion]
 ```
-
-### Example 4: Find Top Posts of All Time
-
-```
-User: What are the top posts of all time on r/learnprogramming?
-Claude: [uses get_subreddit_top_posts with time='all' parameter]
-```
-
-## Tool Reference
-
-### `get_frontpage_posts`
-
-**Purpose**: Get hot posts from Reddit frontpage
-
-**Parameters**:
-
-- `limit` (optional, 1-100, default: 10): Number of posts to return
-
-### `get_subreddit_info`
-
-**Purpose**: Get information about a subreddit
-
-**Parameters**:
-
-- `subreddit_name` (required): Name of the subreddit (without r/ prefix)
-
-### `get_subreddit_hot_posts`
-
-**Purpose**: Get hot posts from a specific subreddit
-
-**Parameters**:
-
-- `subreddit_name` (required): Name of the subreddit
-- `limit` (optional, 1-100, default: 10): Number of posts to return
-
-### `get_subreddit_new_posts`
-
-**Purpose**: Get new posts from a specific subreddit
-
-**Parameters**:
-
-- `subreddit_name` (required): Name of the subreddit
-- `limit` (optional, 1-100, default: 10): Number of posts to return
-
-### `get_subreddit_top_posts`
-
-**Purpose**: Get top posts from a specific subreddit
-
-**Parameters**:
-
-- `subreddit_name` (required): Name of the subreddit
-- `limit` (optional, 1-100, default: 10): Number of posts to return
-- `time` (optional): Time filter - 'hour', 'day', 'week', 'month', 'year', 'all'
-
-### `get_subreddit_rising_posts`
-
-**Purpose**: Get rising posts from a specific subreddit
-
-**Parameters**:
-
-- `subreddit_name` (required): Name of the subreddit
-- `limit` (optional, 1-100, default: 10): Number of posts to return
-
-### `get_post_content`
-
-**Purpose**: Get detailed content of a specific post
-
-**Parameters**:
-
-- `post_id` (required): Reddit post ID
-- `comment_limit` (optional, 1-100, default: 10): Number of comments to include
-- `comment_depth` (optional, 1-10, default: 3): Depth of comment replies
-
-### `get_post_comments`
-
-**Purpose**: Get comments from a post
-
-**Parameters**:
-
-- `post_id` (required): Reddit post ID
-- `limit` (optional, 1-100, default: 10): Number of comments to return
 
 ## Use Cases
 
-- **Research**: Gather community perspectives on topics
-- **Trend Analysis**: Monitor what's popular in specific subreddits
-- **Community Feedback**: Understand discussions around products or technologies
-- **Content Discovery**: Find relevant posts and discussions
-- **Sentiment Analysis**: Analyze comments on specific topics
+- **Personal Recall**: search the things you saved instead of trying to remember where you saw them
+- **Research**: gather community perspectives on a topic
+- **Trend Analysis**: monitor what is popular in specific subreddits
+- **Community Feedback**: understand discussions around products or technologies
+- **Sentiment Analysis**: read comments on specific topics
 
 ## Limitations
 
-- **Read-only**: This MCP server only provides read access to Reddit
-- **Public Content Only**: Can only access publicly available posts and comments
-- **No Authentication**: Uses Reddit's public API without authentication
-- **Rate Limits**: Subject to Reddit's API rate limits
+- **Read-only**: no writes of any kind
+- **Your Visibility**: account tools return what your Reddit account can see, so private subreddits you do not belong to stay invisible
+- **Rate Limits**: subject to Reddit's API rate limits
 
 ## Troubleshooting
 
-### Issue: uvx command not found
+### Issue: Tools return an authentication error
 
-**Solution**: Install uv following the prerequisites section above.
+**Solution**: Re-run the sign-in flow from your client's MCP authentication command. Tokens expire, and revoking the app in Reddit's settings invalidates the server's copy immediately.
+
+### Issue: Account tools return nothing
+
+**Solution**: Confirm you approved the read scopes during sign in, and that you are signed in as the account that owns the items. An empty saved list is a valid answer.
 
 ### Issue: Connection errors
 
-**Solution**: Verify you have internet access and Reddit is reachable. The MCP server uses the redditwarp library which accesses Reddit's public API.
-
-### Issue: Empty responses
-
-**Solution**: Some subreddits may be private or have restrictions. Try with a popular public subreddit like r/programming.
+**Solution**: Check that `https://reddit-mcp-n5sjtdvmca-uc.a.run.app/health` responds. If it does and tools still fail, open an issue on the [server repository](https://github.com/thebushidocollective/reddit-mcp).
 
 ## Related Plugins
 

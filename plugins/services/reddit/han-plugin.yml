@@ -1,6 +1,7 @@
 # reddit plugin configuration
-# This plugin provides Reddit integration via MCP server
+# This plugin provides Reddit integration via a hosted remote HTTP MCP server
 # MCP server is defined in .mcp.json for direct exposure to Claude Code
+# Users authenticate to Reddit through the server's OAuth flow, so no credentials live here
 
 # No hooks - MCP server plugins don't have validation hooks
 hooks: {}
@@ -9,15 +10,21 @@ hooks: {}
 # Convention: provider name = plugin name
 memory:
   allowed_tools:
+    - mcp__reddit__search_reddit
     - mcp__reddit__get_frontpage_posts
     - mcp__reddit__get_subreddit_info
     - mcp__reddit__get_subreddit_hot_posts
     - mcp__reddit__get_subreddit_top_posts
     - mcp__reddit__get_post_content
     - mcp__reddit__get_post_comments
+    - mcp__reddit__search_saved
+    - mcp__reddit__get_saved
   system_prompt: |
     Search Reddit for posts and discussions relevant to the query.
+    Use search_reddit to find threads by keyword across Reddit or within a subreddit.
     Use get_subreddit_hot_posts to find current discussions.
     Use get_subreddit_top_posts with time filters for popular content.
     Use get_post_comments to understand community sentiment.
+    The account is signed in, so search_saved and get_saved surface what this user
+    already decided was worth keeping - prefer them when the query sounds like recall.
     Return relevant findings with post titles, subreddits, and key insights.
