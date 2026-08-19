@@ -23,7 +23,9 @@ import {
   initTable,
   searchFts,
 } from './indexer.ts';
-import { getGitRemote, normalizeGitRemote } from './paths.ts';
+import { getGitRemote, normalizeGitRemote, pathToSlug } from './paths.ts';
+
+export { pathToSlug } from './paths.ts';
 
 /**
  * Transcript message types
@@ -136,14 +138,6 @@ export function getClaudeProjectsDir(): string {
 }
 
 /**
- * Convert a filesystem path to Claude project slug
- * e.g., /Volumes/dev/src/github.com/foo -> -Volumes-dev-src-github-com-foo
- */
-export function pathToSlug(path: string): string {
-  return path.replace(/[/.]/g, '-');
-}
-
-/**
  * Convert a Claude project slug back to filesystem path
  * e.g., -Volumes-dev-src-github-com-foo -> /Volumes/dev/src/github.com/foo
  *
@@ -175,9 +169,9 @@ export function slugToPath(slug: string): string {
   else if (path.startsWith('tmp-') || path.startsWith('private-tmp-')) {
     path = `/${path.replace(/-/g, '/')}`;
   }
-  // C:\... (Windows)
-  else if (/^[A-Z]-/.test(path)) {
-    path = `${path[0]}:\\${path.slice(2).replace(/-/g, '\\')}`;
+  // C:\... (Windows); Claude replaces both the drive colon and separator.
+  else if (/^[A-Za-z]--/.test(path)) {
+    path = `${path[0]}:\\${path.slice(3).replace(/-/g, '\\')}`;
   }
   // Default: assume Unix-style path
   else {
