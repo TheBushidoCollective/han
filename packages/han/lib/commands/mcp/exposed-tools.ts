@@ -85,6 +85,7 @@ const CAPABILITY_DESCRIPTIONS: Record<string, string> = {
   figma: 'Access design components, specs, and design systems',
   sentry: 'Track errors, monitor performance, manage incidents',
   notion: 'Search pages and databases, create and update content',
+  reddit: 'Read subreddits, posts, and comments',
   canva: 'Create and edit designs, export assets',
   'agent-sop': 'Look up and apply standard operating procedures',
 };

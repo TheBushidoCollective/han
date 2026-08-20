@@ -52,6 +52,7 @@
     "plugin-development@han": true,
     "prompts@han": true,
     "react@han": true,
+    "reddit@han": true,
     "relay@han": true,
     "rust@han": true,
     "shellcheck@han": true,

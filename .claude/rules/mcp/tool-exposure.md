@@ -18,7 +18,7 @@ mcp:
   name: my-server
   # No expose flag - accessed via han_workflow
 ```
-**Used by:** All other service plugins (github, notion, playwright, etc.)
+**Used by:** All other service plugins (github, reddit, playwright, etc.)
 
 ## han_workflow Tool
 
@@ -30,7 +30,7 @@ The orchestrator provides a single `han_workflow` tool that:
 
 Example usage:
 ```
-han_workflow({ intent: "Find the launch plan in Notion" })
+han_workflow({ intent: "Get hot posts from r/ClaudeAI" })
 ```
 
-The orchestrator dynamically connects to the notion MCP server without needing `expose: true`.
+The orchestrator dynamically connects to the reddit MCP server without needing `expose: true`.

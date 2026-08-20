@@ -26,8 +26,8 @@ import {
   getClaudeConfigDir,
   getMergedPluginsAndMarketplaces,
 } from '../config/claude-settings.ts';
-import { loadPluginConfig } from '../hooks/hook-config.ts';
 import { findPluginInMarketplace } from '../hooks/plugin-discovery.ts';
+import { loadPluginConfig } from '../hooks/hook-config.ts';
 import type {
   ExtractedObservation,
   ExtractOptions,

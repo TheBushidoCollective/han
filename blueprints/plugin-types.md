@@ -159,6 +159,7 @@ plugins/services/{service}/
 | `linear` | Linear API | Issues, projects, workflows | Project management |
 | `jira` | Jira API | Tickets, sprints, boards | Issue tracking |
 | `sentry` | Error tracking | Issues, performance, releases | Error monitoring |
+| `reddit` | Reddit API | Posts, comments, subreddits | Community monitoring |
 
 ### MCP Configuration
 

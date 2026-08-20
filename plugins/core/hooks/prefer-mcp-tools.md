@@ -17,6 +17,7 @@
 | Get issue | `mcp__github__get_issue` | `gh issue view` |
 | Search code | `mcp__github__search_code` | `gh search code` |
 | List MRs | `mcp__plugin_gitlab_gitlab__list_merge_requests` | `glab mr list` |
+| Search Reddit | `mcp__plugin_reddit_reddit__get_subreddit_hot_posts` | manual web fetch |
 | Query docs | `mcp__plugin_core_context7__query-docs` | web search |
 
 ## When CLI Is Acceptable

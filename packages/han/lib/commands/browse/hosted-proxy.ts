@@ -12,8 +12,8 @@
  * process fetches upstream itself, which is unrestricted.
  */
 
-import type { Server } from 'node:http';
 import { createServer } from 'node:http';
+import type { Server } from 'node:http';
 
 /** Origin the dashboard bundle is published to. */
 export const HOSTED_DASHBOARD_ORIGIN = 'https://dashboard.local.han.guru';

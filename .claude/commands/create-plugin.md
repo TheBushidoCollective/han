@@ -18,7 +18,7 @@ First, determine what type of plugin to create based on the user's request:
 
 ### Service Plugin
 **Use when**: The plugin provides MCP server integration with an external service
-- Examples: github, gitlab, notion, playwright-mcp, sentry
+- Examples: github, gitlab, reddit, playwright-mcp, sentry
 - Key feature: Connects Claude Code to external APIs via MCP
 - Structure: `services/{name}/`
 
