@@ -275,7 +275,6 @@ Options:
 **Blog post creation**:
 
 1. **Research context** (optional):
-   - Use `reddit` to find related community discussions
    - Identify pain points the feature addresses
    - Understand how users talk about this problem
 

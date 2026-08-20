@@ -26,7 +26,7 @@ plugins/services/{service-name}/
 
 | Category | For | Examples |
 |----------|-----|---------|
-| `services/` | External service integrations | github, gitlab, sentry, reddit |
+| `services/` | External service integrations | github, gitlab, sentry, notion |
 | `bridges/` | AI tool bridges | gemini-cli, opencode, kiro |
 
 **IMPORTANT**:
@@ -168,7 +168,7 @@ Add your plugin to `.claude-plugin/marketplace.json`:
 
 - **github**: HTTP transport with OAuth
 - **sentry**: HTTP-based MCP server
-- **reddit**: Simple uvx-based MCP server
+- **notion**: Remote HTTP transport
 
 ## Questions?
 

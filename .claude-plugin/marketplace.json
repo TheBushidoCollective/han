@@ -1262,23 +1262,6 @@
       ]
     },
     {
-      "name": "reddit",
-      "description": "MCP server for Reddit integration providing frontpage posts, subreddit browsing, post content, comments, search, and the signed-in account surface of saved, upvoted, history, inbox, and subscriptions via remote HTTP OAuth server.",
-      "source": "./plugins/services/reddit",
-      "category": "Integration",
-      "keywords": [
-        "mcp",
-        "reddit",
-        "social-media",
-        "content",
-        "posts",
-        "comments",
-        "subreddits",
-        "oauth",
-        "server"
-      ]
-    },
-    {
       "name": "relay",
       "description": "Advanced Relay GraphQL framework skills for React applications",
       "source": "./plugins/frameworks/relay",
@@ -2669,23 +2652,6 @@
       "source": "./plugins/services/playwright-mcp",
       "category": "Integration",
       "keywords": ["mcp", "playwright", "testing", "automation", "server"]
-    },
-    {
-      "name": "hashi-reddit",
-      "description": "MCP server for Reddit integration providing frontpage posts, subreddit browsing, post content, comments, search, and the signed-in account surface of saved, upvoted, history, inbox, and subscriptions via remote HTTP OAuth server.",
-      "source": "./plugins/services/reddit",
-      "category": "Integration",
-      "keywords": [
-        "mcp",
-        "reddit",
-        "social-media",
-        "content",
-        "posts",
-        "comments",
-        "subreddits",
-        "oauth",
-        "server"
-      ]
     },
     {
       "name": "hashi-sentry",
