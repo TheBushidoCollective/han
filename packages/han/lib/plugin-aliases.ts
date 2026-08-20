@@ -175,7 +175,6 @@ export const PLUGIN_ALIASES: Record<string, string> = {
   'hashi-linear': 'services/linear',
   'hashi-notion': 'services/notion',
   'hashi-playwright-mcp': 'services/playwright-mcp',
-  'hashi-reddit': 'services/reddit',
   'hashi-sentry': 'services/sentry',
   'hashi-sentry-mcp': 'services/sentry',
 
