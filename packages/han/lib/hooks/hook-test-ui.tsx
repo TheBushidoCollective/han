@@ -557,8 +557,7 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
       isRunning && liveLines ? liveLines : result?.output || [];
     const visibleLines = outputLines
       .slice(scrollOffset, scrollOffset + viewportHeight)
-      .map((line, i) => ({ lineNum: scrollOffset + i, line } as const)
-    );
+      .map((line, i) => ({ lineNum: scrollOffset + i, line }) as const);
     const canScrollUp = scrollOffset > 0;
     const canScrollDown = scrollOffset + viewportHeight < outputLines.length;
 
@@ -710,13 +709,15 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
                     </Box>
                     {result.output.length > 0 && (
                       <Box flexDirection="column" marginLeft={2} marginTop={1}>
-                        {Array.from(result.output.slice(0, 10).entries()).map(([pos, line]) => (
-                          <Text
-                            key={`failed-${hookType}-${result.plugin}-${result.command}-line-${pos}`}
-                          >
-                            {line}
-                          </Text>
-                        ))}
+                        {Array.from(result.output.slice(0, 10).entries()).map(
+                          ([pos, line]) => (
+                            <Text
+                              key={`failed-${hookType}-${result.plugin}-${result.command}-line-${pos}`}
+                            >
+                              {line}
+                            </Text>
+                          )
+                        )}
                         {result.output.length > 10 && (
                           <Text dimColor>
                             ... and {result.output.length - 10} more lines
@@ -756,14 +757,16 @@ export const HookTestUI: React.FC<HookTestUIProps> = ({
                   </Box>
                   {result.output.length > 0 && (
                     <Box flexDirection="column" marginLeft={2}>
-                      {Array.from(result.output.entries()).map(([pos, line]) => (
-                        <Text
-                          key={`${hookType}-${result.plugin}-${result.command}-line-${pos}`}
-                          dimColor
-                        >
-                          {line}
-                        </Text>
-                      ))}
+                      {Array.from(result.output.entries()).map(
+                        ([pos, line]) => (
+                          <Text
+                            key={`${hookType}-${result.plugin}-${result.command}-line-${pos}`}
+                            dimColor
+                          >
+                            {line}
+                          </Text>
+                        )
+                      )}
                     </Box>
                   )}
                 </Box>

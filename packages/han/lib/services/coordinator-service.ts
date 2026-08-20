@@ -13,11 +13,11 @@
 
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { ensureCertificates } from '../commands/coordinator/tls.ts';
 import {
   createCoordinatorClients,
   isCoordinatorHealthy,
 } from '../grpc/client.ts';
-import { ensureCertificates } from '../commands/coordinator/tls.ts';
 
 const DEFAULT_PORT = 41957;
 
