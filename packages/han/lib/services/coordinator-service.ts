@@ -4,7 +4,7 @@
  * Manages the Rust han-coordinator binary lifecycle:
  * 1. Discovery: finds the coordinator binary
  * 2. Auto-start: spawns as daemon process
- * 3. Health check: gRPC health probe with retry
+ * 3. Health check: HTTPS /health probe with retry
  * 4. Shutdown: graceful stop via gRPC
  *
  * The Rust coordinator handles all internal operations:
@@ -20,11 +20,26 @@ import {
 } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { getHanDataDir } from '../config/claude-settings.ts';
-import {
-  createCoordinatorClients,
-  isCoordinatorHealthy,
-} from '../grpc/client.ts';
+import { createCoordinatorClients } from '../grpc/client.ts';
+import { checkHealth } from '../commands/coordinator/health.ts';
 import { ensureCertificates } from '../commands/coordinator/tls.ts';
+
+/**
+ * Is a coordinator serving on this port?
+ *
+ * Asks the HTTPS `/health` route, which the Rust coordinator actually
+ * mounts (see han-rs/crates/han-coordinator/src/server.rs: `/health`,
+ * `/graphql`, `/graphiql`). It deliberately does not use the gRPC client's
+ * `isCoordinatorHealthy`: that sends a Connect RPC to
+ * `https://coordinator.local.han.guru:<https-port>/han.coordinator.CoordinatorService/Health`,
+ * which the HTTPS router has no route for and answers 404, while the real
+ * RPC surface is plain h2c gRPC on the separate gRPC port. So that probe
+ * returned false against a perfectly healthy coordinator, every time, and
+ * every han invocation concluded there was none and spawned another one.
+ */
+async function isCoordinatorServing(port: number): Promise<boolean> {
+  return (await checkHealth(port)) !== null;
+}
 
 const DEFAULT_PORT = 41957;
 
@@ -174,7 +189,7 @@ async function waitForHealthy(
   const deadline = Date.now() + budgetMs;
   let delay = 100;
   while (Date.now() < deadline) {
-    if (await isCoordinatorHealthy(port, 2000)) {
+    if (await isCoordinatorServing(port)) {
       return true;
     }
     await Bun.sleep(Math.min(delay, deadline - Date.now()));
@@ -257,7 +272,7 @@ function writeSpawnGuard(guardPath: string): boolean {
 /**
  * Atomically claim the cross-process spawn guard.
  *
- * N simultaneous `han` invocations can each pass the isCoordinatorHealthy
+ * N simultaneous `han` invocations can each pass the isCoordinatorServing
  * check in startCoordinatorService and each spawn their own han-coordinator
  * against the same (potentially multi-GB) database. Only the caller that
  * claims this guard actually spawns; everyone else falls through to
@@ -359,7 +374,7 @@ export async function startCoordinatorService(): Promise<void> {
   const port = getEffectivePort();
 
   // Check if coordinator is already running (from another process)
-  if (await isCoordinatorHealthy(port)) {
+  if (await isCoordinatorServing(port)) {
     console.log('[coordinator] Coordinator already running, connecting...');
     state.isRunning = true;
     state.port = port;
@@ -379,7 +394,7 @@ export async function startCoordinatorService(): Promise<void> {
 
   // Cross-process spawn guard. An unhealthy coordinator doesn't mean no one
   // else is racing to start one right now: every simultaneous `han`
-  // invocation just passed the same isCoordinatorHealthy check above and is
+  // invocation just passed the same isCoordinatorServing check above and is
   // about to spawn its own han-coordinator against the same database. Only
   // the process that claims this guard spawns; everyone else waits on
   // health instead of piling on more processes.
@@ -585,7 +600,7 @@ export async function indexFile(filePath: string): Promise<void> {
  * Returns true if coordinator is available.
  */
 export async function ensureCoordinator(): Promise<boolean> {
-  if (state.isRunning && (await isCoordinatorHealthy(state.port))) {
+  if (state.isRunning && (await isCoordinatorServing(state.port))) {
     return true;
   }
 

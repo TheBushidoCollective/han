@@ -53,6 +53,19 @@ mock.module('../lib/grpc/client.ts', () => ({
   }),
 }));
 
+// The lifecycle's liveness probe is the coordinator's HTTPS /health route,
+// not a gRPC call. Drive it from the same mockHealth boolean these tests
+// already set, so "healthy" and "not running" stay controllable and no test
+// reaches the network.
+const realHealthModule = require('../lib/commands/coordinator/health.ts');
+mock.module('../lib/commands/coordinator/health.ts', () => ({
+  ...realHealthModule,
+  checkHealth: async (port?: number) =>
+    (await mockHealth(port))
+      ? { status: 'ok', pid: 4242, uptime: 1, version: 'test' }
+      : null,
+}));
+
 // Mock existsSync so findCoordinatorBinary doesn't find real binaries
 mock.module('node:fs', () => ({
   existsSync: () => false,
@@ -91,6 +104,7 @@ afterAll(() => {
   const realFs = require('node:fs');
   mock.module('node:fs', () => realFs);
   mock.module('../lib/grpc/client.ts', () => realGrpcClient);
+  mock.module('../lib/commands/coordinator/health.ts', () => realHealthModule);
 });
 
 // ============================================================================

@@ -43,6 +43,19 @@ mock.module('../lib/grpc/client.ts', () => ({
   getCoordinatorClients: () => ({}),
 }));
 
+// The lifecycle's liveness probe is the coordinator's HTTPS /health route,
+// not a gRPC call, so drive it from the same mockHealth boolean every test
+// below already sets. Left real, these tests would hit the network and, on
+// a machine running han, get a truthful "yes, one is already serving".
+const realHealthModule = require('../lib/commands/coordinator/health.ts');
+mock.module('../lib/commands/coordinator/health.ts', () => ({
+  ...realHealthModule,
+  checkHealth: async (port?: number) =>
+    (await mockHealth(port))
+      ? { status: 'ok', pid: 4242, uptime: 1, version: 'test' }
+      : null,
+}));
+
 // existsSync returns true so findCoordinatorBinary "finds" a binary path.
 // Spread the real fs module (captured before this call) so the spawn
 // guard's own mkdirSync/readFileSync/writeFileSync/unlinkSync still hit
@@ -61,8 +74,7 @@ const originalBunSpawn = Bun.spawn;
 const mockBunSpawn = mock(() => {
   throw new Error('ENOENT: no such file or directory (test double)');
 });
-// @ts-expect-error test double narrower than Bun.spawn's real overloads
-Bun.spawn = mockBunSpawn;
+Bun.spawn = mockBunSpawn as unknown as typeof Bun.spawn;
 
 // The spawn path fetches TLS certificates before launching the binary. Left
 // real, these tests would hit certs.han.guru and write into the developer's
@@ -114,6 +126,7 @@ afterEach(async () => {
 afterAll(() => {
   mock.module('node:fs', () => realFs);
   mock.module('../lib/grpc/client.ts', () => realGrpcClient);
+  mock.module('../lib/commands/coordinator/health.ts', () => realHealthModule);
   Bun.spawn = originalBunSpawn;
 });
 
