@@ -185,9 +185,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    // Acquire coordinator lock
+    // Acquire coordinator lock. Another live coordinator already holding it
+    // is not an error: exit cleanly (status 0) so the TypeScript supervisor's
+    // retry logic sees a normal, quiet exit rather than a failure to retry.
     let lock = CoordinatorLock::new()?;
-    lock.acquire(Some(cli.port))?;
+    match lock.acquire(Some(cli.port)) {
+        Ok(()) => {}
+        Err(lock::LockError::AlreadyLocked { pid, port }) => {
+            tracing::info!(
+                "Coordinator already running (pid={}, port={:?}); exiting",
+                pid,
+                port
+            );
+            return Ok(());
+        }
+        Err(e) => return Err(e.into()),
+    }
 
     // Start heartbeat task
     let lock_path = lock.lock_path().to_path_buf();
@@ -195,8 +208,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let heartbeat_lock = lock::CoordinatorLock::with_path(lock_path);
         loop {
             tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-            if let Err(e) = heartbeat_lock.heartbeat() {
-                tracing::warn!("Heartbeat failed: {}", e);
+            match heartbeat_lock.heartbeat() {
+                Ok(true) => {}
+                Ok(false) => {
+                    tracing::warn!(
+                        "Lock no longer owned by this process; stopping heartbeat"
+                    );
+                    break;
+                }
+                Err(e) => {
+                    tracing::warn!("Heartbeat failed: {}", e);
+                }
             }
         }
     });
@@ -251,7 +273,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let certs = tls::ensure_certificates()?;
     let tls_config = tls::build_tls_config(&certs)?;
     let acceptor = TlsAcceptor::from(Arc::new(tls_config));
-    let tls_listener = tokio::net::TcpListener::bind(server_addr).await?;
+    let tls_listener = match tokio::net::TcpListener::bind(server_addr).await {
+        Ok(listener) => listener,
+        Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
+            tracing::info!(
+                "Another process is already serving on {}; exiting",
+                server_addr
+            );
+            return Ok(());
+        }
+        Err(e) => return Err(e.into()),
+    };
 
     tracing::info!("HTTPS server listening on {}", server_addr);
 
