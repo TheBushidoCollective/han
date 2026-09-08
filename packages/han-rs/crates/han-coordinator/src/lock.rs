@@ -5,16 +5,19 @@
 //! not one per port. A lock is considered stale after 30 seconds without a
 //! heartbeat or if the owning process no longer exists.
 //!
-//! Acquisition publishes the lock file atomically: the full contents are
-//! written to a private temp file first, then published under the real lock
-//! path with `hard_link`, which fails atomically if the path already exists.
-//! That means a racing reader can never observe a lock file that exists but
-//! is only partially written (unlike a bare `create_new` followed by a
-//! separate write, where a reader can land in that window and mistake a
-//! winner's in-progress lock for corruption). `release` and `heartbeat` are
-//! owner-checked: both read the lock file first and act only when it still
-//! names our own pid, so a process can never delete or refresh a lock it
-//! does not own.
+//! Both writers publish atomically, never in place. Acquisition writes the
+//! full contents to a private temp file first, then publishes it under the
+//! real lock path with `hard_link`, which fails atomically if the path
+//! already exists. The heartbeat refresh does the same via a temp file plus
+//! `fs::rename`, which atomically replaces the directory entry on the same
+//! filesystem. Either way, the lock path's directory entry always points at
+//! a fully-written inode: a racing reader can never observe a lock file
+//! that exists but is only partially written, and a racing `acquire` can
+//! never mistake an in-flight heartbeat write for corruption and delete a
+//! live incumbent's lock (an in-place `fs::write` truncate-then-write would
+//! reopen exactly that window). `release` and `heartbeat` are owner-checked:
+//! both read the lock file first and act only when it still names our own
+//! pid, so a process can never delete or refresh a lock it does not own.
 
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -159,16 +162,30 @@ impl CoordinatorLock {
     /// when the lock is missing, corrupted, or owned by another process (in
     /// which case nothing was written). Never writes to a lock file that
     /// names a different pid.
+    ///
+    /// Publishes atomically via a temp file plus `fs::rename`, not an
+    /// in-place `fs::write`. An in-place write truncates before it writes,
+    /// so a concurrent `acquire` racing a stale takeover could `read_lock`
+    /// mid-truncate, see empty or partial JSON, treat it as corruption, and
+    /// delete a lock we still legitimately hold. `rename` replaces the
+    /// directory entry atomically, so the path is always either the old,
+    /// complete content or the new, complete content.
     pub fn heartbeat(&self) -> Result<bool, LockError> {
-        match self.read_lock() {
-            Ok(mut data) if data.pid == std::process::id() => {
-                data.heartbeat_at = chrono::Utc::now().to_rfc3339();
-                let json = serde_json::to_string_pretty(&data)?;
-                fs::write(&self.lock_path, json)?;
-                Ok(true)
-            }
-            _ => Ok(false),
+        let mut data = match self.read_lock() {
+            Ok(data) if data.pid == std::process::id() => data,
+            _ => return Ok(false),
+        };
+        data.heartbeat_at = chrono::Utc::now().to_rfc3339();
+        let json = serde_json::to_string_pretty(&data)?;
+
+        let tmp_path = self.unique_tmp_path();
+        fs::write(&tmp_path, json.as_bytes())?;
+        let rename_result = fs::rename(&tmp_path, &self.lock_path);
+        if rename_result.is_err() {
+            let _ = fs::remove_file(&tmp_path);
         }
+        rename_result?;
+        Ok(true)
     }
 
     /// Release the lock, but only if we own it. Reads the lock file first
@@ -379,6 +396,46 @@ mod tests {
     }
 
     #[test]
+    fn test_concurrent_heartbeat_never_visible_as_torn() {
+        use std::sync::atomic::AtomicBool;
+        use std::sync::Arc;
+
+        let dir = TempDir::new().unwrap();
+        let lock = test_lock(&dir);
+        lock.acquire(None).unwrap();
+
+        let lock_path = lock.lock_path().to_path_buf();
+        let stop = Arc::new(AtomicBool::new(false));
+        let stop_writer = stop.clone();
+        let writer_path = lock_path.clone();
+
+        // Hammer the heartbeat in one thread while another thread reads the
+        // same file hundreds of times. An in-place fs::write truncates
+        // before writing, so a reader lands in that window often enough to
+        // observe empty or partial JSON within a few hundred iterations; an
+        // atomic temp-file-plus-rename publish never has that window.
+        let writer = std::thread::spawn(move || {
+            let heartbeat_lock = CoordinatorLock::with_path(writer_path);
+            while !stop_writer.load(Ordering::Relaxed) {
+                heartbeat_lock.heartbeat().unwrap();
+            }
+        });
+
+        let reader = CoordinatorLock::with_path(lock_path);
+        for _ in 0..500 {
+            let data = reader
+                .read_lock()
+                .expect("read must never observe a torn heartbeat write");
+            assert_eq!(data.pid, std::process::id());
+        }
+
+        stop.store(true, Ordering::Relaxed);
+        writer.join().unwrap();
+
+        lock.release().unwrap();
+    }
+
+    #[test]
     fn test_heartbeat_by_non_owner_is_refused() {
         let dir = TempDir::new().unwrap();
         let lock = test_lock(&dir);
@@ -486,7 +543,6 @@ mod tests {
         assert_eq!(ok_count, 1, "exactly one thread should acquire the lock");
         assert_eq!(locked_count, 7);
     }
-
 
     #[test]
     fn test_corrupted_lock_overwritten() {
