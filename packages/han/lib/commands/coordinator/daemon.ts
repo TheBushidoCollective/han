@@ -12,6 +12,9 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
@@ -38,6 +41,41 @@ export function getLogFilePath(): string {
  */
 function getPidFilePath(): string {
   return join(getHanDataDir(), 'coordinator.pid');
+}
+
+/**
+ * Rotate the coordinator log once it exceeds this size. A spawn storm can
+ * turn a single restart-attempt message into megabytes of repeated lines;
+ * rotating keeps the file bounded instead of growing forever.
+ */
+export const LOG_ROTATE_THRESHOLD_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Rotate ~/.han/coordinator.log to coordinator.log.1 if it has grown past
+ * the threshold. Called before the log stream is opened, both from the
+ * background daemon spawn path and from the foreground path. Best effort:
+ * a rotation failure must never prevent the coordinator from starting.
+ */
+export function rotateLogIfNeeded(): void {
+  try {
+    const logPath = getLogFilePath();
+    const logDir = dirname(logPath);
+    if (!existsSync(logDir)) {
+      mkdirSync(logDir, { recursive: true });
+    }
+    if (!existsSync(logPath)) return;
+    if (statSync(logPath).size <= LOG_ROTATE_THRESHOLD_BYTES) return;
+
+    const rotatedPath = `${logPath}.1`;
+    if (existsSync(rotatedPath)) {
+      rmSync(rotatedPath, { force: true });
+    }
+    renameSync(logPath, rotatedPath);
+  } catch (error) {
+    if (process.env.HAN_DEBUG) {
+      console.error('[coordinator] Log rotation failed:', error);
+    }
+  }
 }
 
 /**
@@ -177,6 +215,7 @@ export async function startDaemon(
   console.log('[coordinator] Starting daemon...');
 
   // Setup log file for daemon output
+  rotateLogIfNeeded();
   const logPath = getLogFilePath();
   const logDir = dirname(logPath);
   if (!existsSync(logDir)) {
@@ -345,6 +384,23 @@ const RESTART_BACKOFF_MULTIPLIER = 1.5;
  * Run coordinator in foreground with auto-restart on crash
  */
 async function runForeground(port: number): Promise<void> {
+  // One supervisor per machine. writePid() below would otherwise let every
+  // concurrent invocation clobber the PID file and idle forever even after
+  // a healthy coordinator is already up under a different pid.
+  const existingPid = readPid();
+  if (
+    existingPid &&
+    existingPid !== process.pid &&
+    isProcessRunning(existingPid)
+  ) {
+    console.log(
+      `[coordinator] Another coordinator supervisor is already running (PID: ${existingPid}). Exiting.`
+    );
+    return;
+  }
+
+  rotateLogIfNeeded();
+
   // Write PID file
   writePid(process.pid);
 
@@ -382,6 +438,25 @@ async function runForeground(port: number): Promise<void> {
       // Start server
       await startServer({ port });
 
+      // startServer resolving is not proof the coordinator is reachable:
+      // startCoordinatorService swallows a failed spawn or health check
+      // into a logged error instead of throwing, so without this check a
+      // silent no-op "success" fell straight into the keep-alive loop below
+      // with no coordinator ever listening on the port.
+      const timeoutMs = parseInt(
+        process.env.HAN_COORDINATOR_TIMEOUT || '60000',
+        10
+      );
+      const healthy = await waitForHealth(port, timeoutMs, 100);
+      if (!healthy) {
+        console.error(
+          `[coordinator] Coordinator on port ${port} never became reachable ` +
+            `within ${timeoutMs / 1000}s. See ${getLogFilePath()} for details.`
+        );
+        removePidFile();
+        process.exit(1);
+      }
+
       console.log('[coordinator] Running. Press Ctrl+C to stop.');
 
       // Reset restart attempts on successful start
@@ -391,7 +466,9 @@ async function runForeground(port: number): Promise<void> {
       // Keep process alive until shutdown signal
       // Use a simple polling approach that properly exits
       while (!shuttingDown) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const { promise, resolve } = Promise.withResolvers<void>();
+        setTimeout(resolve, 1000);
+        await promise;
       }
     } catch (error) {
       if (shuttingDown) break;
