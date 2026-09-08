@@ -875,7 +875,10 @@ mod tests {
             let _ = child.wait();
         }
 
-        assert_eq!(won_count, 1, "exactly one process must win the takeover race");
+        assert_eq!(
+            won_count, 1,
+            "exactly one process must win the takeover race"
+        );
         assert_eq!(blocked_count, n - 1, "all other processes must be blocked");
     }
 }

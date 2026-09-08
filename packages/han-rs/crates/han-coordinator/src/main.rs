@@ -211,9 +211,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             match heartbeat_lock.heartbeat() {
                 Ok(true) => {}
                 Ok(false) => {
-                    tracing::warn!(
-                        "Lock no longer owned by this process; stopping heartbeat"
-                    );
+                    tracing::warn!("Lock no longer owned by this process; stopping heartbeat");
                     break;
                 }
                 Err(e) => {
