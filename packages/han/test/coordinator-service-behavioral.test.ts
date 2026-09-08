@@ -53,6 +53,19 @@ mock.module('../lib/grpc/client.ts', () => ({
   }),
 }));
 
+// The lifecycle's liveness probe is the coordinator's HTTPS /health route,
+// not a gRPC call. Drive it from the same mockHealth boolean these tests
+// already set, so "healthy" and "not running" stay controllable and no test
+// reaches the network.
+const realHealthModule = require('../lib/commands/coordinator/health.ts');
+mock.module('../lib/commands/coordinator/health.ts', () => ({
+  ...realHealthModule,
+  checkHealth: async (port?: number) =>
+    (await mockHealth(port))
+      ? { status: 'ok', pid: 4242, uptime: 1, version: 'test' }
+      : null,
+}));
+
 // Mock existsSync so findCoordinatorBinary doesn't find real binaries
 mock.module('node:fs', () => ({
   existsSync: () => false,
@@ -91,6 +104,7 @@ afterAll(() => {
   const realFs = require('node:fs');
   mock.module('node:fs', () => realFs);
   mock.module('../lib/grpc/client.ts', () => realGrpcClient);
+  mock.module('../lib/commands/coordinator/health.ts', () => realHealthModule);
 });
 
 // ============================================================================
@@ -182,21 +196,6 @@ describe('startCoordinatorService', () => {
 // ============================================================================
 
 describe('stopCoordinatorService', () => {
-  test('sends graceful shutdown via gRPC', async () => {
-    // First make it think it's running
-    mockHealth.mockResolvedValue(true);
-    await cs.startCoordinatorService();
-
-    // Now stop it
-    mockShutdown.mockResolvedValueOnce({});
-    await cs.stopCoordinatorService();
-
-    expect(mockShutdown).toHaveBeenCalledTimes(1);
-    const shutdownArgs = mockShutdown.mock.calls[0][0];
-    expect(shutdownArgs.graceful).toBe(true);
-    expect(shutdownArgs.timeoutSeconds).toBe(5);
-  });
-
   test('when not running, does nothing', async () => {
     // Ensure stopped
     await cs.stopCoordinatorService();
@@ -207,18 +206,18 @@ describe('stopCoordinatorService', () => {
     expect(mockShutdown).not.toHaveBeenCalled();
   });
 
-  test('falls back to process kill if gRPC shutdown fails', async () => {
-    // Make it running first
+  test('attach path (already-healthy coordinator we did not spawn) sends no shutdown', async () => {
+    // startCoordinatorService takes the attach path here: it finds an
+    // already-healthy coordinator and connects to it without spawning
+    // anything. Every other attached `han` invocation may be relying on
+    // that same coordinator, so tearing it down from here would be wrong.
     mockHealth.mockResolvedValue(true);
     await cs.startCoordinatorService();
 
-    // Make shutdown fail
-    mockShutdown.mockRejectedValueOnce(new Error('connection refused'));
-
+    mockShutdown.mockReset();
     await cs.stopCoordinatorService();
 
-    const hasStoppedMsg = consoleOutput.some((msg) => msg.includes('stopped'));
-    expect(hasStoppedMsg).toBe(true);
+    expect(mockShutdown).not.toHaveBeenCalled();
   });
 });
 

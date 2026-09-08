@@ -12,6 +12,9 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
@@ -41,6 +44,41 @@ function getPidFilePath(): string {
 }
 
 /**
+ * Rotate the coordinator log once it exceeds this size. A spawn storm can
+ * turn a single restart-attempt message into megabytes of repeated lines;
+ * rotating keeps the file bounded instead of growing forever.
+ */
+export const LOG_ROTATE_THRESHOLD_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Rotate ~/.han/coordinator.log to coordinator.log.1 if it has grown past
+ * the threshold. Called before the log stream is opened, both from the
+ * background daemon spawn path and from the foreground path. Best effort:
+ * a rotation failure must never prevent the coordinator from starting.
+ */
+export function rotateLogIfNeeded(): void {
+  try {
+    const logPath = getLogFilePath();
+    const logDir = dirname(logPath);
+    if (!existsSync(logDir)) {
+      mkdirSync(logDir, { recursive: true });
+    }
+    if (!existsSync(logPath)) return;
+    if (statSync(logPath).size <= LOG_ROTATE_THRESHOLD_BYTES) return;
+
+    const rotatedPath = `${logPath}.1`;
+    if (existsSync(rotatedPath)) {
+      rmSync(rotatedPath, { force: true });
+    }
+    renameSync(logPath, rotatedPath);
+  } catch (error) {
+    if (process.env.HAN_DEBUG) {
+      console.error('[coordinator] Log rotation failed:', error);
+    }
+  }
+}
+
+/**
  * Read PID from file
  */
 function readPid(): number | null {
@@ -57,20 +95,115 @@ function readPid(): number | null {
 }
 
 /**
- * Write PID to file
+ * How long a takeover marker is honored before it is treated as abandoned.
  */
-function writePid(pid: number): void {
+const TAKEOVER_MARKER_STALE_MS = 5000;
+
+/**
+ * Claim the supervisor PID file for this process, atomically.
+ *
+ * Returns the live pid already holding it, or null once we own it.
+ *
+ * A plain read-then-write loses the race it exists to win: several
+ * `han coordinator start --foreground` invocations landing together all read
+ * an empty file, all conclude they are first, and all sit in the keep-alive
+ * loop forever. An exclusive create has exactly one winner.
+ *
+ * Taking over a dead holder's file needs its own serialization, because
+ * "unlink what I just saw" can delete a file a fresh winner created a
+ * moment ago, and then two callers both believe they won. So the removal
+ * runs behind an exclusively created marker: only one caller ever removes a
+ * stale file, and a caller that wins the pid file by fast path in that
+ * window simply blocks the marker holder instead.
+ *
+ * Exported so the concurrency behaviour can be tested across real processes.
+ */
+export function claimPidFile(): number | null {
   const pidPath = getPidFilePath();
-  writeFileSync(pidPath, String(pid), 'utf-8');
+  const markerPath = `${pidPath}.takeover`;
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if (tryCreateExclusive(pidPath, String(process.pid))) return null;
+
+    const holder = readPid();
+    if (holder === process.pid) return null;
+    if (holder && isProcessRunning(holder)) return holder;
+
+    // The file names a dead pid, or holds nothing readable. Serialize the
+    // takeover so only one caller removes it.
+    if (!tryCreateExclusive(markerPath, String(process.pid))) {
+      clearStaleMarker(markerPath);
+      Bun.sleepSync(25);
+      continue;
+    }
+
+    try {
+      const current = readPid();
+      const revived =
+        current && current !== process.pid && isProcessRunning(current);
+      if (!revived) {
+        try {
+          unlinkSync(pidPath);
+        } catch {
+          // Already gone.
+        }
+      }
+    } finally {
+      try {
+        unlinkSync(markerPath);
+      } catch {
+        // Already gone.
+      }
+    }
+  }
+
+  const holder = readPid();
+  return holder && holder !== process.pid ? holder : null;
 }
 
 /**
- * Remove PID file
+ * Create `path` with `contents` only if it does not exist yet. Returns
+ * whether this call created it.
  */
-function removePidFile(): void {
+function tryCreateExclusive(path: string, contents: string): boolean {
+  try {
+    writeFileSync(path, contents, { encoding: 'utf-8', flag: 'wx' });
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') return false;
+    throw error;
+  }
+}
+
+/**
+ * Drop a takeover marker whose owner died or which is simply too old to
+ * still be meaningful, so a crash mid-takeover cannot wedge every later
+ * claim.
+ */
+function clearStaleMarker(markerPath: string): void {
+  try {
+    const owner = parseInt(readFileSync(markerPath, 'utf-8').trim(), 10);
+    const ageMs = Date.now() - statSync(markerPath).mtimeMs;
+    if (
+      ageMs > TAKEOVER_MARKER_STALE_MS ||
+      (!Number.isNaN(owner) && !isProcessRunning(owner))
+    ) {
+      unlinkSync(markerPath);
+    }
+  } catch {
+    // Missing or unreadable marker: nothing to clear.
+  }
+}
+
+/**
+ * Remove the PID file. Owner-checked by default: a supervisor that lost the
+ * claim race must never delete the winner's file on its way out. `stopDaemon`
+ * passes force after killing the holder, since the pid it names is gone.
+ */
+function removePidFile(force = false): void {
   const pidPath = getPidFilePath();
   try {
-    if (existsSync(pidPath)) {
+    if (existsSync(pidPath) && (force || readPid() === process.pid)) {
       unlinkSync(pidPath);
     }
   } catch {
@@ -135,7 +268,7 @@ export async function getStatus(port?: number): Promise<CoordinatorStatus> {
 
   // Clean up stale PID file
   if (pid && !isProcessRunning(pid)) {
-    removePidFile();
+    removePidFile(true);
   }
 
   return {
@@ -163,7 +296,7 @@ export async function startDaemon(
   // Clean up stale PID file
   const stalePid = readPid();
   if (stalePid && !isProcessRunning(stalePid)) {
-    removePidFile();
+    removePidFile(true);
   }
 
   // Run in foreground mode
@@ -177,6 +310,7 @@ export async function startDaemon(
   console.log('[coordinator] Starting daemon...');
 
   // Setup log file for daemon output
+  rotateLogIfNeeded();
   const logPath = getLogFilePath();
   const logDir = dirname(logPath);
   if (!existsSync(logDir)) {
@@ -332,7 +466,9 @@ export async function stopDaemon(port?: number): Promise<void> {
     }
   }
 
-  removePidFile();
+  // The supervisor this named has just been killed, so its file is ours to
+  // clear even though we never owned it.
+  removePidFile(true);
   console.log('[coordinator] Stopped');
 }
 
@@ -345,8 +481,19 @@ const RESTART_BACKOFF_MULTIPLIER = 1.5;
  * Run coordinator in foreground with auto-restart on crash
  */
 async function runForeground(port: number): Promise<void> {
-  // Write PID file
-  writePid(process.pid);
+  // One supervisor per machine, claimed atomically. Without the exclusive
+  // create, every concurrent invocation reads an empty PID file, decides it
+  // is first, clobbers the file and idles forever even once a healthy
+  // coordinator is up under a different pid.
+  const holderPid = claimPidFile();
+  if (holderPid !== null) {
+    console.log(
+      `[coordinator] Another coordinator supervisor is already running (PID: ${holderPid}). Exiting.`
+    );
+    return;
+  }
+
+  rotateLogIfNeeded();
 
   let shuttingDown = false;
 
@@ -382,6 +529,25 @@ async function runForeground(port: number): Promise<void> {
       // Start server
       await startServer({ port });
 
+      // startServer resolving is not proof the coordinator is reachable:
+      // startCoordinatorService swallows a failed spawn or health check
+      // into a logged error instead of throwing, so without this check a
+      // silent no-op "success" fell straight into the keep-alive loop below
+      // with no coordinator ever listening on the port.
+      const timeoutMs = parseInt(
+        process.env.HAN_COORDINATOR_TIMEOUT || '60000',
+        10
+      );
+      const healthy = await waitForHealth(port, timeoutMs, 100);
+      if (!healthy) {
+        console.error(
+          `[coordinator] Coordinator on port ${port} never became reachable ` +
+            `within ${timeoutMs / 1000}s. See ${getLogFilePath()} for details.`
+        );
+        removePidFile();
+        process.exit(1);
+      }
+
       console.log('[coordinator] Running. Press Ctrl+C to stop.');
 
       // Reset restart attempts on successful start
@@ -391,7 +557,9 @@ async function runForeground(port: number): Promise<void> {
       // Keep process alive until shutdown signal
       // Use a simple polling approach that properly exits
       while (!shuttingDown) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const { promise, resolve } = Promise.withResolvers<void>();
+        setTimeout(resolve, 1000);
+        await promise;
       }
     } catch (error) {
       if (shuttingDown) break;

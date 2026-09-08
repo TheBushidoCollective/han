@@ -185,9 +185,49 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    // Acquire coordinator lock
+    // Claim the HTTPS port before anything else. `bind` is an atomic,
+    // kernel-enforced singleton, so it is the primary mutual exclusion; the
+    // lock file is the secondary record of which pid and port won.
+    //
+    // Order matters, and reversing these two reintroduces the bug this file
+    // exists to prevent. Acquiring the lock first means a starter that then
+    // loses the bind has already published a lock naming itself, and its
+    // owner-checked release deletes that lock on the way out, leaving the
+    // coordinator that actually owns the port with no record on disk. It
+    // also opens the database and runs migrations before finding out it was
+    // never needed.
+    let server_addr: SocketAddr = ([0, 0, 0, 0], cli.port).into();
+    let tls_listener = match tokio::net::TcpListener::bind(server_addr).await {
+        Ok(listener) => listener,
+        Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
+            tracing::info!(
+                "Another process is already serving on {}; exiting",
+                server_addr
+            );
+            return Ok(());
+        }
+        Err(e) => return Err(e.into()),
+    };
+
+    // Acquire coordinator lock. Another live coordinator already holding it
+    // is not an error: exit cleanly (status 0) so the TypeScript supervisor's
+    // retry logic sees a normal, quiet exit rather than a failure to retry.
+    // Nothing has been published at this point, so an exit here leaves no
+    // trace: the listener drops and releasing a lock we never owned is a
+    // no-op.
     let lock = CoordinatorLock::new()?;
-    lock.acquire(Some(cli.port))?;
+    match lock.acquire(Some(cli.port)) {
+        Ok(()) => {}
+        Err(lock::LockError::AlreadyLocked { pid, port }) => {
+            tracing::info!(
+                "Coordinator already running (pid={}, port={:?}); exiting",
+                pid,
+                port
+            );
+            return Ok(());
+        }
+        Err(e) => return Err(e.into()),
+    }
 
     // Start heartbeat task
     let lock_path = lock.lock_path().to_path_buf();
@@ -195,8 +235,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let heartbeat_lock = lock::CoordinatorLock::with_path(lock_path);
         loop {
             tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-            if let Err(e) = heartbeat_lock.heartbeat() {
-                tracing::warn!("Heartbeat failed: {}", e);
+            match heartbeat_lock.heartbeat() {
+                Ok(true) => {}
+                Ok(false) => {
+                    tracing::warn!("Lock no longer owned by this process; stopping heartbeat");
+                    break;
+                }
+                Err(e) => {
+                    tracing::warn!("Heartbeat failed: {}", e);
+                }
             }
         }
     });
@@ -244,14 +291,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         slots: Arc::new(RwLock::new(HashMap::new())),
     });
 
-    // Start HTTPS server
-    let server_addr: SocketAddr = ([0, 0, 0, 0], cli.port).into();
+    // Serve on the listener claimed at startup, above.
     let router = server::build_router(schema.clone(), coordinator_state.start_time);
 
     let certs = tls::ensure_certificates()?;
     let tls_config = tls::build_tls_config(&certs)?;
     let acceptor = TlsAcceptor::from(Arc::new(tls_config));
-    let tls_listener = tokio::net::TcpListener::bind(server_addr).await?;
 
     tracing::info!("HTTPS server listening on {}", server_addr);
 

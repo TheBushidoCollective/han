@@ -4,20 +4,42 @@
  * Manages the Rust han-coordinator binary lifecycle:
  * 1. Discovery: finds the coordinator binary
  * 2. Auto-start: spawns as daemon process
- * 3. Health check: gRPC health probe with retry
+ * 3. Health check: HTTPS /health probe with retry
  * 4. Shutdown: graceful stop via gRPC
  *
  * The Rust coordinator handles all internal operations:
  * file watching, JSONL indexing, SQLite, FTS, subscriptions.
  */
 
-import { existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
 import {
-  createCoordinatorClients,
-  isCoordinatorHealthy,
-} from '../grpc/client.ts';
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { getHanDataDir } from '../config/claude-settings.ts';
+import { createCoordinatorClients } from '../grpc/client.ts';
+import { checkHealth } from '../commands/coordinator/health.ts';
 import { ensureCertificates } from '../commands/coordinator/tls.ts';
+
+/**
+ * Is a coordinator serving on this port?
+ *
+ * Asks the HTTPS `/health` route, which the Rust coordinator actually
+ * mounts (see han-rs/crates/han-coordinator/src/server.rs: `/health`,
+ * `/graphql`, `/graphiql`). It deliberately does not use the gRPC client's
+ * `isCoordinatorHealthy`: that sends a Connect RPC to
+ * `https://coordinator.local.han.guru:<https-port>/han.coordinator.CoordinatorService/Health`,
+ * which the HTTPS router has no route for and answers 404, while the real
+ * RPC surface is plain h2c gRPC on the separate gRPC port. So that probe
+ * returned false against a perfectly healthy coordinator, every time, and
+ * every han invocation concluded there was none and spawned another one.
+ */
+async function isCoordinatorServing(port: number): Promise<boolean> {
+  return (await checkHealth(port)) !== null;
+}
 
 const DEFAULT_PORT = 41957;
 
@@ -41,8 +63,16 @@ export const COORDINATOR_VERSION = getHanVersion();
 interface CoordinatorState {
   isRunning: boolean;
   version: string;
-  process: ReturnType<typeof Bun.spawn> | null;
+  process: Bun.Subprocess | null;
   port: number;
+  /**
+   * True only when *this* process actually spawned the coordinator (the
+   * Bun.spawn call succeeded and the resulting process is tracked in
+   * `process`). False on the "attach" path, where an already-healthy
+   * coordinator started by someone else was simply found and connected to.
+   * Only an owner may send it a shutdown; see stopCoordinatorService.
+   */
+  ownsProcess: boolean;
 }
 
 const state: CoordinatorState = {
@@ -50,6 +80,7 @@ const state: CoordinatorState = {
   version: COORDINATOR_VERSION,
   process: null,
   port: DEFAULT_PORT,
+  ownsProcess: false,
 };
 
 /**
@@ -131,6 +162,19 @@ function findCoordinatorBinary(): string | null {
 // Health Check with Retry
 // ============================================================================
 
+const DEFAULT_HEALTH_BUDGET_MS = 30_000;
+
+/**
+ * Get the health check budget in milliseconds. Overridable via
+ * HAN_COORDINATOR_HEALTH_BUDGET_MS for tests / fast-fail callers.
+ */
+function getHealthBudgetMs(): number {
+  return (
+    parseInt(process.env.HAN_COORDINATOR_HEALTH_BUDGET_MS || '', 10) ||
+    DEFAULT_HEALTH_BUDGET_MS
+  );
+}
+
 /**
  * Wait for coordinator to become healthy.
  * First start can be slow: TLS cert generation + --scan-on-start over a
@@ -140,19 +184,175 @@ function findCoordinatorBinary(): string | null {
  */
 async function waitForHealthy(
   port: number,
-  budgetMs = parseInt(process.env.HAN_COORDINATOR_HEALTH_BUDGET_MS || '', 10) ||
-    30_000
+  budgetMs = getHealthBudgetMs()
 ): Promise<boolean> {
   const deadline = Date.now() + budgetMs;
   let delay = 100;
   while (Date.now() < deadline) {
-    if (await isCoordinatorHealthy(port, 2000)) {
+    if (await isCoordinatorServing(port)) {
       return true;
     }
     await Bun.sleep(Math.min(delay, deadline - Date.now()));
     delay = Math.min(delay * 2, 2000);
   }
   return false;
+}
+
+// ============================================================================
+// Cross-Process Spawn Guard
+// ============================================================================
+
+/**
+ * How long a claimed spawn guard is honored before it is considered
+ * abandoned. Kept comfortably above the default health budget (30s) so a
+ * guard never goes stale while its owner is still legitimately inside
+ * waitForHealthy.
+ */
+const SPAWN_GUARD_STALE_MS = 60_000;
+
+/** Filename of the cross-process spawn guard, under getHanDataDir(). */
+const SPAWN_GUARD_FILENAME = 'coordinator.spawn.lock';
+
+interface SpawnGuardInfo {
+  pid: number;
+  timestamp: string;
+}
+
+function isPidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function readSpawnGuard(guardPath: string): SpawnGuardInfo | null {
+  try {
+    const parsed = JSON.parse(readFileSync(guardPath, 'utf-8'));
+    if (
+      parsed &&
+      typeof parsed.pid === 'number' &&
+      typeof parsed.timestamp === 'string'
+    ) {
+      return parsed as SpawnGuardInfo;
+    }
+  } catch {
+    // Missing, unreadable, or malformed — treated as "no usable guard".
+  }
+  return null;
+}
+
+function isSpawnGuardStale(info: SpawnGuardInfo): boolean {
+  if (!isPidAlive(info.pid)) return true;
+  const ageMs = Date.now() - Date.parse(info.timestamp);
+  return !(ageMs >= 0 && ageMs < SPAWN_GUARD_STALE_MS);
+}
+
+/** Atomically create the guard file. Returns false if it already exists. */
+function writeSpawnGuard(guardPath: string): boolean {
+  try {
+    writeFileSync(
+      guardPath,
+      JSON.stringify({
+        pid: process.pid,
+        timestamp: new Date().toISOString(),
+      }),
+      { flag: 'wx' }
+    );
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+      return false;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Atomically claim the cross-process spawn guard.
+ *
+ * N simultaneous `han` invocations can each pass the isCoordinatorServing
+ * check in startCoordinatorService and each spawn their own han-coordinator
+ * against the same (potentially multi-GB) database. Only the caller that
+ * claims this guard actually spawns; everyone else falls through to
+ * waitForHealthy instead. Returns true if this call now owns the guard.
+ */
+function claimSpawnGuard(): boolean {
+  const guardPath = join(getHanDataDir(), SPAWN_GUARD_FILENAME);
+  try {
+    mkdirSync(dirname(guardPath), { recursive: true });
+  } catch {
+    // If the directory truly can't be created, the writeFileSync below
+    // will surface the real error instead of a misleading guard failure.
+  }
+
+  if (writeSpawnGuard(guardPath)) return true;
+
+  const existing = readSpawnGuard(guardPath);
+  if (existing && !isSpawnGuardStale(existing)) {
+    return false;
+  }
+
+  // Stale, unreadable, or malformed guard — take it over. A concurrent
+  // claimant may win the race on the write below; that's fine, exactly one
+  // of us proceeds.
+  try {
+    unlinkSync(guardPath);
+  } catch {
+    // Already gone, or another process just removed it first.
+  }
+  return writeSpawnGuard(guardPath);
+}
+
+/**
+ * Release the spawn guard, but only if this process still owns it. A guard
+ * file whose recorded pid isn't ours belongs to whoever took it over (or
+ * claimed it after we went stale) and must never be unlinked out from under
+ * them.
+ */
+function releaseSpawnGuard(): void {
+  const guardPath = join(getHanDataDir(), SPAWN_GUARD_FILENAME);
+  const existing = readSpawnGuard(guardPath);
+  if (existing?.pid === process.pid) {
+    try {
+      unlinkSync(guardPath);
+    } catch {
+      // Nothing to clean up.
+    }
+  }
+}
+
+/**
+ * Read the Rust coordinator's own advisory lock (~/.han/coordinator.lock,
+ * see han-rs/crates/han-coordinator/src/lock.rs) and return its pid if it
+ * names a live process. Best-effort: the lock is owned by the Rust binary,
+ * we only ever read it here to make a health-check failure message
+ * actionable ("is there already a live-but-unresponsive incumbent?").
+ */
+function readIncumbentCoordinatorPid(): number | null {
+  try {
+    const lockPath = join(getHanDataDir(), 'coordinator.lock');
+    const parsed = JSON.parse(readFileSync(lockPath, 'utf-8'));
+    if (typeof parsed?.pid === 'number' && isPidAlive(parsed.pid)) {
+      return parsed.pid;
+    }
+  } catch {
+    // No lock file, unreadable, or malformed — nothing to report.
+  }
+  return null;
+}
+
+/** Build an actionable error message for a failed post-spawn health check. */
+function buildHealthFailureMessage(port: number, budgetMs: number): string {
+  const incumbentPid = readIncumbentCoordinatorPid();
+  const incumbentNote = incumbentPid
+    ? ` coordinator.lock names a live pid ${incumbentPid}; it may be running but unresponsive.`
+    : '';
+  return (
+    `[coordinator] Coordinator on port ${port} failed its health check ` +
+    `after ${budgetMs}ms.${incumbentNote} See ${join(getHanDataDir(), 'coordinator.log')} for details.`
+  );
 }
 
 // ============================================================================
@@ -174,10 +374,11 @@ export async function startCoordinatorService(): Promise<void> {
   const port = getEffectivePort();
 
   // Check if coordinator is already running (from another process)
-  if (await isCoordinatorHealthy(port)) {
+  if (await isCoordinatorServing(port)) {
     console.log('[coordinator] Coordinator already running, connecting...');
     state.isRunning = true;
     state.port = port;
+    state.ownsProcess = false;
     return;
   }
 
@@ -191,59 +392,109 @@ export async function startCoordinatorService(): Promise<void> {
     return;
   }
 
-  console.log(`[coordinator] Starting ${binaryPath} on port ${port}`);
-
-  // Cache real Let's Encrypt certificates before the Rust binary reads them.
-  // han-coordinator only *reads* ~/.claude/han/certs and self-signs when that
-  // cache is empty, and a self-signed cert is one the dashboard's browser
-  // refuses, leaving it stuck on "Connecting to Han Coordinator...". Fetching
-  // is best-effort: on failure the coordinator still starts, just self-signed.
-  const credentials = await ensureCertificates();
-  if (!credentials) {
-    console.error(
-      '[coordinator] No trusted certificate available; the dashboard may not ' +
-        'be able to connect. Falling back to a self-signed certificate.'
+  // Cross-process spawn guard. An unhealthy coordinator doesn't mean no one
+  // else is racing to start one right now: every simultaneous `han`
+  // invocation just passed the same isCoordinatorServing check above and is
+  // about to spawn its own han-coordinator against the same database. Only
+  // the process that claims this guard spawns; everyone else waits on
+  // health instead of piling on more processes.
+  if (!claimSpawnGuard()) {
+    console.log(
+      '[coordinator] Another process is already starting the coordinator, waiting for it to become healthy...'
     );
-  }
-
-  try {
-    // Spawn Rust coordinator binary (daemonizes by default, no --daemon flag)
-    state.process = Bun.spawn(
-      [binaryPath, '--port', String(port), '--scan-on-start'],
-      {
-        stdout: 'ignore',
-        stderr: 'ignore',
-      }
-    );
-    // Don't keep parent alive
-    state.process.unref();
-
-    // Wait for it to become healthy
-    const healthy = await waitForHealthy(port);
+    const budgetMs = getHealthBudgetMs();
+    const healthy = await waitForHealthy(port, budgetMs);
     if (healthy) {
       state.isRunning = true;
       state.port = port;
+      state.ownsProcess = false;
       console.log('[coordinator] Coordinator started and healthy');
     } else {
-      console.error(
-        '[coordinator] Coordinator started but failed health check'
-      );
-      state.process = null;
+      console.error(buildHealthFailureMessage(port, budgetMs));
     }
-  } catch (error) {
-    console.error('[coordinator] Failed to start coordinator:', error);
-    state.process = null;
+    return;
+  }
+
+  try {
+    console.log(`[coordinator] Starting ${binaryPath} on port ${port}`);
+
+    // Cache real Let's Encrypt certificates before the Rust binary reads them.
+    // han-coordinator only *reads* ~/.claude/han/certs and self-signs when that
+    // cache is empty, and a self-signed cert is one the dashboard's browser
+    // refuses, leaving it stuck on "Connecting to Han Coordinator...". Fetching
+    // is best-effort: on failure the coordinator still starts, just self-signed.
+    const credentials = await ensureCertificates();
+    if (!credentials) {
+      console.error(
+        '[coordinator] No trusted certificate available; the dashboard may not ' +
+          'be able to connect. Falling back to a self-signed certificate.'
+      );
+    }
+
+    try {
+      // Spawn Rust coordinator binary (daemonizes by default, no --daemon flag)
+      state.process = Bun.spawn(
+        [binaryPath, '--port', String(port), '--scan-on-start'],
+        {
+          stdout: 'ignore',
+          stderr: 'ignore',
+        }
+      );
+      // Don't keep parent alive
+      state.process.unref();
+      state.ownsProcess = true;
+
+      // Wait for it to become healthy
+      const budgetMs = getHealthBudgetMs();
+      const healthy = await waitForHealthy(port, budgetMs);
+      if (healthy) {
+        state.isRunning = true;
+        state.port = port;
+        console.log('[coordinator] Coordinator started and healthy');
+      } else {
+        // Don't leak an orphaned child running a full --scan-on-start against
+        // a multi-GB database; kill it before dropping the handle.
+        try {
+          state.process?.kill();
+        } catch {
+          // Best-effort — process may have already exited.
+        }
+        console.error(buildHealthFailureMessage(port, budgetMs));
+        state.process = null;
+        state.ownsProcess = false;
+      }
+    } catch (error) {
+      console.error('[coordinator] Failed to start coordinator:', error);
+      state.process = null;
+      state.ownsProcess = false;
+    }
+  } finally {
+    releaseSpawnGuard();
   }
 }
 
 /**
  * Stop the coordinator service.
  * Sends graceful shutdown via gRPC, falls back to process kill.
+ *
+ * Only sends the shutdown when this process actually owns the coordinator
+ * process (i.e. it spawned it). On the attach path — where an
+ * already-healthy coordinator started by someone else was simply connected
+ * to — tearing it down here would kill a coordinator every other attached
+ * `han` invocation is relying on.
  */
 export async function stopCoordinatorService(): Promise<void> {
   if (!state.isRunning) return;
 
   state.isRunning = false;
+
+  if (!state.ownsProcess) {
+    state.process = null;
+    console.log(
+      '[coordinator] Detached (did not own the coordinator process; leaving it running)'
+    );
+    return;
+  }
 
   try {
     const clients = createCoordinatorClients(state.port);
@@ -261,6 +512,7 @@ export async function stopCoordinatorService(): Promise<void> {
   }
 
   state.process = null;
+  state.ownsProcess = false;
   console.log('[coordinator] Service stopped');
 }
 
@@ -348,7 +600,7 @@ export async function indexFile(filePath: string): Promise<void> {
  * Returns true if coordinator is available.
  */
 export async function ensureCoordinator(): Promise<boolean> {
-  if (state.isRunning && (await isCoordinatorHealthy(state.port))) {
+  if (state.isRunning && (await isCoordinatorServing(state.port))) {
     return true;
   }
 
