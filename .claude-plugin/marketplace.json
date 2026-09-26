@@ -757,6 +757,13 @@
       "keywords": ["junit", "testing", "java", "skill"]
     },
     {
+      "name": "kanban",
+      "description": "Kanban task and dependency management for AI coding agents using the YYLO Ledger CLI.",
+      "source": "./plugins/patterns/kanban",
+      "category": "Pattern",
+      "keywords": ["kanban", "task-management", "yylo", "agile", "workflow", "planning"]
+    },
+    {
       "name": "kotlin",
       "description": "Advanced Kotlin programming skills for coroutines and DSL patterns",
       "source": "./plugins/languages/kotlin",
