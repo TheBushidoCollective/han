@@ -1,0 +1,13 @@
+{
+  "name": "kanban",
+  "version": "1.0.0",
+  "description": "Kanban task and dependency management for AI coding agents using the YYLO Ledger CLI.",
+  "author": {
+    "name": "YYLO",
+    "url": "https://github.com/yylo-dev"
+  },
+  "homepage": "https://github.com/yylo-dev/yylo-skills",
+  "repository": "https://github.com/yylo-dev/yylo-skills",
+  "license": "MIT",
+  "keywords": ["kanban", "task-management", "yylo", "agile", "workflow", "planning"]
+}
