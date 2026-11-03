@@ -17,10 +17,15 @@ WORKTREE_BASE="${REPO_ROOT}/.worktrees"
 cat <<EOF
 ## Git Worktree Isolation
 
-You are running as a subagent. To avoid interfering with other agents or the main session,
-you MUST work in an isolated git worktree.
+**OMP:** Use the workspace assigned by the harness. OMP task isolation and its
+handoff are managed by the harness; do not create a second worktree or commit
+solely to satisfy the instructions below. Stop here unless the user explicitly
+requests worktree management.
 
-**Before starting any file modifications:**
+**Other harnesses:** You are running as a subagent. To avoid interfering with
+other agents or the main session, work in an isolated git worktree.
+
+**Before starting any file modifications (other harnesses only):**
 
 1. Create a worktree from the current HEAD:
    \`\`\`bash
