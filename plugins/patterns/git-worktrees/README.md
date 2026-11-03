@@ -2,15 +2,20 @@
 
 Agent isolation via git worktrees. When Claude Code spawns subagents (via the Agent tool), they all operate in the same working directory by default. This means agents can interfere with each other - one agent's file edits or branch switches can corrupt another agent's work. This plugin solves that by instructing each subagent to create and work in its own isolated git worktree.
 
+OMP sessions use their harness-assigned workspace and native task isolation and
+handoff instead of the automatic worktree procedure below. Explicit worktree
+management requested by the user remains available.
+
 ## How It Works
 
 This plugin uses a **PreToolUse** hook on the `Agent` tool (and legacy `Task` tool) to inject worktree isolation instructions into every subagent's prompt. When a subagent is spawned:
 
 1. The hook runs `worktree-context.sh` which generates markdown instructions
 2. These instructions are wrapped in `<subagent-context>` tags via `han hook wrap-subagent-context`
-3. The subagent receives instructions to create an isolated worktree before modifying any files
+3. In OMP, the subagent uses its harness-assigned workspace. In other harnesses,
+   it receives instructions to create an isolated worktree before modifying files.
 
-Each subagent creates its own worktree at `.worktrees/<agent-name>` and performs all file operations there. This prevents:
+In other harnesses, each subagent creates its own worktree at `.worktrees/<agent-name>` and performs all file operations there. This prevents:
 
 - File edit conflicts between parallel agents
 - Branch switch interference
@@ -24,7 +29,7 @@ han plugin install git-worktrees
 
 ## What Gets Injected
 
-Each subagent prompt is prepended with instructions to:
+For harnesses other than OMP, each subagent prompt is prepended with instructions to:
 
 1. Create a worktree: `git worktree add .worktrees/<name> --detach HEAD`
 2. Use the worktree path for all file operations
