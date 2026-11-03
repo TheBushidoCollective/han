@@ -4,7 +4,7 @@
   "description": "Official ClickUp MCP server integration with OAuth authentication. Provides task management, workspace access, and ensures work completeness. Zero configuration - OAuth handles authentication automatically.",
   "author": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",

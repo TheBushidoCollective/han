@@ -4,7 +4,7 @@
   "description": "Validation and quality enforcement for gluestack-ui projects with component patterns, accessibility, and theming skills. Includes MCP server for component discovery and source code retrieval.",
   "author": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",

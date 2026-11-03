@@ -4,7 +4,7 @@
   "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with Gemini CLI by translating Gemini CLI events into Han hook invocations.",
   "author": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
