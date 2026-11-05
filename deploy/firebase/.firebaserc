@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "han-guru"
+  },
+  "targets": {
+    "default": {
+      "hosting": {
+        "dashboard": ["han-guru-dashboard"],
+        "app": ["han-guru-app"],
+        "api": ["han-guru-api"]
+      }
+    }
+  }
+}

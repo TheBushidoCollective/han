@@ -1,0 +1,135 @@
+name: Han Server Smoke
+
+# Builds the han-server image on the runner and runs it against a throwaway
+# Postgres 16 container, reaching the database through a unix socket in the
+# same form Cloud Run uses: host=/cloudsql/<connection name>.
+#
+# The Stripe values below are test fixtures for this container only. They
+# are not production values and are never deployed. The server still requires
+# them, which is the behaviour production relies on.
+
+on:
+  pull_request:
+    paths:
+      - "packages/han-rs/**"
+      - ".github/workflows/han-server-smoke.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/han-rs/**"
+      - ".github/workflows/han-server-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CONN: smoke:us-central1:smoke-pg
+      PG_PASSWORD: smoke-only-not-a-secret
+      WEBHOOK_SECRET: whsec_smoke_fixture
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image on the runner
+        run: docker build -f packages/han-rs/crates/han-server/Dockerfile -t han-server:smoke packages/han-rs
+
+      - name: Shared socket directory
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/cloudsql/$CONN"
+          mkdir -p "$dir"
+          chmod 777 "$dir"
+          echo "SOCK_DIR=$dir" >> "$GITHUB_ENV"
+
+      - name: Start Postgres 16 on the socket
+        run: |
+          set -euo pipefail
+          docker run -d --name smoke-pg \
+            -e POSTGRES_USER=han \
+            -e POSTGRES_PASSWORD="$PG_PASSWORD" \
+            -e POSTGRES_DB=han_team \
+            -v "$SOCK_DIR:/var/run/postgresql" \
+            postgres:16
+          for attempt in $(seq 1 30); do
+            if docker exec smoke-pg pg_isready -U han -d han_team >/dev/null 2>&1; then
+              echo "Postgres ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs smoke-pg
+          exit 1
+
+      - name: Start han-server
+        run: |
+          set -euo pipefail
+          master_kek="$(openssl rand -base64 32)"
+          jwt="$(openssl rand -hex 32)"
+          docker run -d --name smoke-han -p 8080:8080 \
+            -v "$SOCK_DIR:/cloudsql/$CONN" \
+            -e DATABASE_URL="postgres://han:${PG_PASSWORD}@localhost/han_team?host=/cloudsql/${CONN}" \
+            -e JWT_SECRET="$jwt" \
+            -e PUBLIC_URL=https://api.han.guru \
+            -e GITHUB_CLIENT_ID=smoke-client-id \
+            -e GITHUB_CLIENT_SECRET=smoke-client-secret \
+            -e MASTER_KEK="$master_kek" \
+            -e STRIPE_SECRET_KEY=sk_test_smoke_fixture \
+            -e STRIPE_WEBHOOK_SECRET="$WEBHOOK_SECRET" \
+            -e RUST_LOG=info \
+            han-server:smoke
+
+      - name: Health and startup lines
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/health >/tmp/health.json 2>/dev/null; then break; fi
+            sleep 2
+          done
+          cat /tmp/health.json
+          jq -e 'has("service") and has("status") and has("version")' /tmp/health.json >/dev/null
+          logs="$(docker logs smoke-han 2>&1)"
+          for line in "Connected to PostgreSQL" "Migrations complete" "LISTEN/NOTIFY triggers created"; do
+            if ! printf '%s' "$logs" | grep -q "$line"; then
+              echo "::error::missing startup line: $line"
+              printf '%s\n' "$logs"
+              exit 1
+            fi
+          done
+          echo "startup lines present"
+
+      - name: Stripe webhook behaviour
+        run: |
+          set -euo pipefail
+          url=http://127.0.0.1:8080/webhooks/stripe
+          body='{"id":"evt_smoke","type":"smoke.ignored","data":{"object":{}}}'
+
+          # No signature header: rejected before any processing.
+          code="$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' --data "$body" "$url")"
+          [ "$code" = "400" ] || { echo "::error::unsigned webhook returned $code, expected 400"; exit 1; }
+
+          # Wrong signature: rejected.
+          code="$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' \
+            -H 't=1,v1=0000' --data "$body" "$url")"
+          [ "$code" = "400" ] || { echo "::error::bad signature returned $code, expected 400"; exit 1; }
+
+          # Correctly signed: accepted.
+          ts="$(date +%s)"
+          sig="$(printf '%s.%s' "$ts" "$body" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" -hex | awk '{print $NF}')"
+          code="$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' \
+            -H "stripe-signature: t=$ts,v1=$sig" --data "$body" "$url")"
+          [ "$code" = "200" ] || { echo "::error::signed webhook returned $code, expected 200"; exit 1; }
+          echo "webhook checks passed"
+
+      - name: Logs on failure
+        if: failure()
+        run: |
+          docker logs smoke-han || true
+          docker logs smoke-pg || true
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker rm -f smoke-han smoke-pg >/dev/null 2>&1 || true

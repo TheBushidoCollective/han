@@ -1,0 +1,42 @@
+{
+  "hosting": [
+    {
+      "target": "dashboard",
+      "public": "build/dashboard",
+      "cleanUrls": false,
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        }
+      ]
+    },
+    {
+      "target": "app",
+      "public": "build/app",
+      "cleanUrls": false,
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        }
+      ]
+    },
+    {
+      "target": "api",
+      "public": "api-public",
+      "cleanUrls": false,
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [
+        {
+          "source": "**",
+          "run": { "serviceId": "han-server", "region": "us-central1" }
+        }
+      ]
+    }
+  ]
+}

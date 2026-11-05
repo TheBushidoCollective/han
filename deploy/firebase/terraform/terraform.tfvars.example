@@ -1,0 +1,7 @@
+# Copy to terraform.tfvars for a local plan only. CI passes the same values
+# as TF_VAR_* from repo variables; apply runs in CI, never from a workstation.
+project_id        = "han-guru"
+region            = "us-central1"
+github_repository = "TheBushidoCollective/han"
+db_tier           = "db-f1-micro"
+manage_dns        = false

@@ -1,0 +1,156 @@
+name: Deploy Han Hosting
+
+# Builds the dashboard and app bundles from packages/browse-client and deploys
+# them to Firebase Hosting as han-deployer. Pull requests build and check only.
+#
+# - dashboard: built with no GRAPHQL_URL. The bundle carries no API address.
+# - app: built with GRAPHQL_URL=https://api.han.guru/graphql.
+
+on:
+  pull_request:
+    paths:
+      - "packages/browse-client/**"
+      - "deploy/firebase/**"
+      - ".github/workflows/deploy-hosting.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/browse-client/**"
+      - "deploy/firebase/**"
+      - ".github/workflows/deploy-hosting.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-hosting
+  cancel-in-progress: false
+
+env:
+  # Pinned. Same version as deploy-han-server.yml.
+  FIREBASE_TOOLS: firebase-tools@15.24.0
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: packages/browse-client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - uses: biomejs/setup-biome@v2
+        with:
+          version: latest
+
+      - name: Lint
+        run: biome lint --files-ignore-unknown=true .
+
+      - name: Relay compiler check
+        run: bun run relay
+
+      - name: Type check
+        run: bun run typecheck
+
+      - name: Unit tests
+        run: bun run test:unit
+
+      - name: Build dashboard (no API address)
+        run: |
+          unset GRAPHQL_URL
+          bun run build
+          rm -rf "$GITHUB_WORKSPACE/deploy/firebase/build/dashboard"
+          mkdir -p "$GITHUB_WORKSPACE/deploy/firebase/build/dashboard"
+          cp -R out/. "$GITHUB_WORKSPACE/deploy/firebase/build/dashboard/"
+
+      - name: Build app (API address)
+        env:
+          GRAPHQL_URL: https://api.han.guru/graphql
+        run: |
+          bun run build
+          rm -rf "$GITHUB_WORKSPACE/deploy/firebase/build/app"
+          mkdir -p "$GITHUB_WORKSPACE/deploy/firebase/build/app"
+          cp -R out/. "$GITHUB_WORKSPACE/deploy/firebase/build/app/"
+
+      - name: Check bundles carry the right API address
+        run: |
+          set -euo pipefail
+          build="$GITHUB_WORKSPACE/deploy/firebase/build"
+          grep -rq "https://api.han.guru/graphql" "$build/app"
+          if grep -rq "api.han.guru" "$build/dashboard"; then
+            echo "::error::dashboard bundle contains an API address"
+            exit 1
+          fi
+          echo "bundle checks passed"
+
+      - name: Upload builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: han-hosting-build
+          path: deploy/firebase/build
+          retention-days: 7
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: han-production
+      url: https://app.han.guru
+    defaults:
+      run:
+        working-directory: deploy/firebase
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: han-hosting-build
+          path: deploy/firebase/build
+
+      - name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.HAN_GCP_DEPLOYER_SA }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Point the Firebase project at the configured project
+        env:
+          PROJECT_ID: ${{ vars.HAN_GCP_PROJECT_ID }}
+        run: |
+          node -e 'const fs=require("fs");const f=".firebaserc";const j=JSON.parse(fs.readFileSync(f,"utf8"));j.projects.default=process.env.PROJECT_ID;fs.writeFileSync(f,JSON.stringify(j,null,2));'
+
+      - name: Deploy dashboard and app
+        env:
+          PROJECT_ID: ${{ vars.HAN_GCP_PROJECT_ID }}
+        run: npx --yes "$FIREBASE_TOOLS" deploy --only hosting:dashboard,hosting:app --project "$PROJECT_ID" --non-interactive
+
+      - name: Read-only checks on the default sites
+        run: |
+          set -euo pipefail
+          # Site IDs are fixed in deploy/firebase/terraform/main.tf.
+          for site in han-guru-dashboard han-guru-app; do
+            url="https://${site}.web.app"
+            root="$(curl -fsS --retry 5 --retry-delay 5 "$url/")"
+            deep="$(curl -sS -o /dev/null -w '%{http_code}' "$url/some/deep/link")"
+            [ "$deep" = "200" ] || { echo "::error::$url deep link returned $deep"; exit 1; }
+            entry="$(printf '%s' "$root" | grep -o 'src="/[^"]*\.js"' | head -n1 | sed 's/^src="//;s/"$//')"
+            [ -n "$entry" ] || { echo "::error::no entry script in $url"; exit 1; }
+            code="$(curl -sS -o /dev/null -w '%{http_code}' "$url$entry")"
+            [ "$code" = "200" ] || { echo "::error::$url$entry returned $code"; exit 1; }
+          done
+          echo "hosting checks passed"

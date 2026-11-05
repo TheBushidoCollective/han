@@ -1,0 +1,214 @@
+name: Deploy Han Server
+
+# Builds the han-server image, deploys it to Cloud Run by digest, then
+# points api.han.guru's Firebase Hosting rewrite at it. Nothing deploys from a
+# workstation.
+#
+# Pull requests: test and build the image only.
+# Push to main: test, build and push, then deploy as han-deployer inside the
+# han-production environment.
+
+on:
+  pull_request:
+    paths:
+      - "packages/han-rs/**"
+      - "deploy/firebase/**"
+      - ".github/workflows/deploy-han-server.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/han-rs/**"
+      - "deploy/firebase/**"
+      - ".github/workflows/deploy-han-server.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-han-server
+  cancel-in-progress: false
+
+env:
+  PROJECT_ID: ${{ vars.HAN_GCP_PROJECT_ID }}
+  REGION: us-central1
+  SERVICE: han-server
+  IMAGE_REPO: us-central1-docker.pkg.dev/${{ vars.HAN_GCP_PROJECT_ID }}/han/han-server
+  # Pinned. Matches the version used to verify slice J.
+  FIREBASE_TOOLS: firebase-tools@15.24.0
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: packages/han-rs
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends protobuf-compiler
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/han-rs
+      - name: Test han-server
+        run: cargo test --package han-server
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Authenticate to Google Cloud (WIF)
+        if: github.event_name == 'push'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.HAN_GCP_DEPLOYER_SA }}
+
+      - name: Configure Docker for Artifact Registry
+        if: github.event_name == 'push'
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Build (and push on main)
+        id: push
+        env:
+          PUSH: ${{ github.event_name == 'push' }}
+        run: |
+          set -euo pipefail
+          args=(
+            --file packages/han-rs/crates/han-server/Dockerfile
+            --tag "$IMAGE_REPO:${GITHUB_SHA}"
+            --metadata-file meta.json
+          )
+          if [ "$PUSH" = "true" ]; then
+            docker buildx build "${args[@]}" --push packages/han-rs
+            digest="$(jq -r '."containerimage.digest"' meta.json)"
+            echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          else
+            docker buildx build "${args[@]}" packages/han-rs
+          fi
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: han-production
+      url: https://api.han.guru
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Refuse to deploy without required values
+        env:
+          GITHUB_CLIENT_ID: ${{ vars.HAN_GITHUB_CLIENT_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GITHUB_CLIENT_ID}" ]; then
+            echo "::error::HAN_GITHUB_CLIENT_ID is unset. Slice I must create the OAuth app first."
+            exit 1
+          fi
+          if [ -z "${{ needs.build.outputs.digest }}" ]; then
+            echo "::error::No image digest from the build job."
+            exit 1
+          fi
+
+      - name: Authenticate to Google Cloud (WIF)
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.HAN_GCP_DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Refuse to deploy without secret versions
+        env:
+          # Each required secret must already have an enabled version. The
+          # deploy never writes a placeholder.
+          SECRETS: han-server-database-url han-server-jwt-secret han-server-master-kek han-server-github-client-secret han-server-stripe-secret-key han-server-stripe-webhook-secret
+        run: |
+          set -euo pipefail
+          for secret in $SECRETS; do
+            count="$(gcloud secrets versions list "$secret" --project "$PROJECT_ID" \
+              --filter='state=ENABLED' --limit=1 --format='value(name)' | wc -l | tr -d ' ')"
+            if [ "$count" = "0" ]; then
+              echo "::error::$secret has no enabled version. Add its value before deploying."
+              exit 1
+            fi
+          done
+
+      - name: Deploy to Cloud Run by digest
+        run: |
+          set -euo pipefail
+          gcloud run deploy "$SERVICE" \
+            --project "$PROJECT_ID" \
+            --region "$REGION" \
+            --image "$IMAGE_REPO@${{ needs.build.outputs.digest }}" \
+            --service-account "han-server-run@${PROJECT_ID}.iam.gserviceaccount.com" \
+            --no-invoker-iam-check \
+            --port 8080 \
+            --min-instances 0 \
+            --max-instances 1 \
+            --add-cloudsql-instances "${PROJECT_ID}:${REGION}:han-pg" \
+            --set-env-vars "PUBLIC_URL=https://api.han.guru,GITHUB_CLIENT_ID=${{ vars.HAN_GITHUB_CLIENT_ID }},RUST_LOG=info" \
+            --set-secrets "DATABASE_URL=han-server-database-url:latest,JWT_SECRET=han-server-jwt-secret:latest,GITHUB_CLIENT_SECRET=han-server-github-client-secret:latest,STRIPE_SECRET_KEY=han-server-stripe-secret-key:latest,STRIPE_WEBHOOK_SECRET=han-server-stripe-webhook-secret:latest,MASTER_KEK=han-server-master-kek:1" \
+            --quiet
+
+      - name: Confirm the live revision runs the pushed digest
+        run: |
+          set -euo pipefail
+          live="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" \
+            --format='value(status.latestReadyRevisionName)')"
+          image="$(gcloud run revisions describe "$live" --project "$PROJECT_ID" --region "$REGION" \
+            --format='value(spec.containers[0].image)')"
+          case "$image" in
+            *"@${{ needs.build.outputs.digest }}") echo "Live revision $live runs $image" ;;
+            *) echo "::error::Live revision $live runs $image, not the pushed digest"; exit 1 ;;
+          esac
+
+      - name: Confirm the startup lines in the logs
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            logs="$(gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=$SERVICE" \
+              --project "$PROJECT_ID" --limit 200 --freshness 15m --format='value(textPayload)')"
+            if printf '%s' "$logs" | grep -q "Connected to PostgreSQL" &&
+              printf '%s' "$logs" | grep -q "Migrations complete" &&
+              printf '%s' "$logs" | grep -q "LISTEN/NOTIFY triggers created"; then
+              echo "Startup lines present."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::Startup lines not found in logs"
+          exit 1
+
+      - name: Point api.han.guru's Hosting rewrite at the server
+        working-directory: deploy/firebase
+        run: |
+          set -euo pipefail
+          node -e 'const fs=require("fs");const f=".firebaserc";const j=JSON.parse(fs.readFileSync(f,"utf8"));j.projects.default=process.env.PROJECT_ID;fs.writeFileSync(f,JSON.stringify(j,null,2));'
+          npx --yes "$FIREBASE_TOOLS" deploy --only hosting:api --project "$PROJECT_ID" --non-interactive
+
+      - name: Read-only checks on the public API host
+        run: |
+          set -euo pipefail
+          site="https://han-guru-api.web.app"
+          health="$(curl -fsS --retry 5 --retry-delay 5 "$site/health")"
+          printf '%s' "$health" | jq -e 'has("service") and has("status")' >/dev/null
+          location="$(curl -sS -o /dev/null -w '%{redirect_url}' "$site/auth/github")"
+          printf '%s' "$location" | grep -q "client_id=${{ vars.HAN_GITHUB_CLIENT_ID }}"
+          printf '%s' "$location" | grep -q "redirect_uri=https://api.han.guru/auth/github/callback"
+          echo "api host health and /auth/github checks passed"
