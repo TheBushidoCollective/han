@@ -51,3 +51,10 @@ jobs:
             test_bootstrap.WorkflowIsAnInput
       - name: Authenticate auto-fix sources
         run: python3 -B -m unittest discover -s deploy/firebase/test -p test_auto_fix_security.py -v
+      - name: Publish bootstrap plan for review
+        run: python3 -I -B deploy/firebase/bootstrap/bootstrap.py --plan-file bootstrap-plan.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: bootstrap-plan
+          path: bootstrap-plan.txt
+          retention-days: 7
