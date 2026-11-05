@@ -47,19 +47,52 @@ jobs:
     steps:
       - name: Check if auto-fix should run
         id: check
+        env:
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         uses: actions/github-script@v7
         with:
           script: |
-            const branch = '${{ github.event.workflow_run.head_branch }}';
-            const workflowName = '${{ github.event.workflow_run.name }}';
-            const runId = ${{ github.event.workflow_run.id }};
-
-            // Skip if triggered by bot to prevent loops
-            if ('${{ github.event.workflow_run.actor.login }}' === 'github-actions[bot]') {
-              console.log('Skipping: triggered by github-actions[bot]');
+            const branch = process.env.HEAD_BRANCH;
+            const sha = process.env.HEAD_SHA;
+            const run = context.payload.workflow_run;
+            const actor = run.actor?.login;
+            // Authenticate the source before checking out its code or using secrets.
+            // A same-name fork branch must never select a base repository branch.
+            if (!branch || !sha || !actor || actor === 'github-actions[bot]' ||
+                run.head_repository?.id !== context.payload.repository.id ||
+                !['push', 'pull_request'].includes(run.event)) {
               core.setOutput('should_run', 'false');
               core.setOutput('attempt_count', '0');
               return;
+            }
+            const access = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner, repo: context.repo.repo, username: actor
+            });
+            if (!['admin', 'maintain', 'write'].includes(access.data.permission)) {
+              core.setOutput('should_run', 'false');
+              core.setOutput('attempt_count', '0');
+              return;
+            }
+            const current = await github.rest.repos.getBranch({
+              owner: context.repo.owner, repo: context.repo.repo, branch
+            });
+            if (current.data.commit.sha !== sha) {
+              core.setOutput('should_run', 'false');
+              core.setOutput('attempt_count', '0');
+              return;
+            }
+            if (run.event === 'pull_request') {
+              const pulls = await github.paginate(github.rest.pulls.list, {
+                owner: context.repo.owner, repo: context.repo.repo,
+                state: 'open', head: `${context.repo.owner}:${branch}`, per_page: 100
+              });
+              if (!pulls.some(pr => pr.head.repo?.id === context.payload.repository.id &&
+                  pr.head.sha === sha && pr.head.ref === branch)) {
+                core.setOutput('should_run', 'false');
+                core.setOutput('attempt_count', '0');
+                return;
+              }
             }
 
             // Get recent commits to count auto-fix attempts
@@ -100,7 +133,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_branch }}
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -188,9 +221,9 @@ jobs:
           FAILURE_TYPE="${{ fromJSON(steps.failure_details.outputs.result).failureType }}"
           if [ "$FAILURE_TYPE" = "network" ]; then
             echo "Skipping: network failure is not fixable by code changes"
-            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "skip=true" >> "$GITHUB_OUTPUT"
           else
-            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Setup tools for validation
@@ -257,7 +290,6 @@ jobs:
                - Lint: `biome lint --files-ignore-unknown=true <directory>`
             4. If you can't determine the fix, don't make random changes
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          timeout_minutes: 15
 
       - name: Validate fixes
         if: steps.skip_check.outputs.skip != 'true'
@@ -281,13 +313,19 @@ jobs:
               ;;
           esac
 
-          echo "valid=$VALID" >> $GITHUB_OUTPUT
+          echo "valid=$VALID" >> "$GITHUB_OUTPUT"
 
       - name: Commit and push fixes
         if: steps.skip_check.outputs.skip != 'true'
+        env:
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WORKFLOW_NAME: ${{ fromJSON(steps.failure_details.outputs.result).workflowName }}
+          FAILURE_TYPE: ${{ fromJSON(steps.failure_details.outputs.result).failureType }}
+          ATTEMPT: ${{ needs.should-fix.outputs.attempt_count }}
+          RUN_URL: ${{ fromJSON(steps.failure_details.outputs.result).runUrl }}
         run: |
-          # Pull latest changes first to avoid conflicts
-          git pull --rebase origin ${{ github.event.workflow_run.head_branch }} || true
+          # Checkout is pinned to the authenticated run SHA. A non-fast-forward
+          # push fails if the branch moves while this job is running.
 
           # Check if there are any changes to commit
           if git diff --quiet && git diff --cached --quiet; then
@@ -298,10 +336,7 @@ jobs:
           # Stage all changes
           git add -A
 
-          # Get the workflow name for the commit message
-          WORKFLOW_NAME="${{ fromJSON(steps.failure_details.outputs.result).workflowName }}"
-          FAILURE_TYPE="${{ fromJSON(steps.failure_details.outputs.result).failureType }}"
-          ATTEMPT="${{ needs.should-fix.outputs.attempt_count }}"
+          # Get the workflow name for the commit message.
           NEXT_ATTEMPT=$((ATTEMPT + 1))
 
           # Commit with markers for loop detection
@@ -310,12 +345,12 @@ jobs:
           Auto-fixed by Claude Code action (attempt ${NEXT_ATTEMPT}/3).
           Failure type: ${FAILURE_TYPE}
 
-          Original failure: ${{ fromJSON(steps.failure_details.outputs.result).runUrl }}
+          Original failure: ${RUN_URL}
 
           Co-Authored-By: Claude <noreply@anthropic.com>"
 
           # Push the changes
-          git push origin ${{ github.event.workflow_run.head_branch }}
+          git push origin -- "HEAD:refs/heads/${HEAD_BRANCH}"
 
   # Notify when max attempts reached
   notify-max-attempts:
@@ -329,9 +364,9 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const branch = '${{ github.event.workflow_run.head_branch }}';
-            const workflow = '${{ github.event.workflow_run.name }}';
-            const runUrl = '${{ github.event.workflow_run.html_url }}';
+            const branch = context.payload.workflow_run.head_branch;
+            const workflow = context.payload.workflow_run.name;
+            const runUrl = context.payload.workflow_run.html_url;
 
             // Check if issue already exists
             const existingIssues = await github.rest.issues.listForRepo({

@@ -1,0 +1,50 @@
+{
+  "artifact-repo": {
+    "first_line": "ERROR: (gcloud.artifacts.repositories.describe) NOT_FOUND: Requested entity was not found. This command is authenticated as jason@waldrip.net which is the active account specified by the [core/account] property.",
+    "returncode": 1
+  },
+  "logging-bucket": {
+    "first_line": "ERROR: (gcloud.logging.buckets.describe) NOT_FOUND: Bucket `han-probe-does-not-exist-7f3a` in location `us-central1` does not exist. This command is authenticated as jason@waldrip.net which is the active account specified by the [core/account] property",
+    "returncode": 1
+  },
+  "logging-sink": {
+    "first_line": "ERROR: (gcloud.logging.sinks.describe) NOT_FOUND: projects/thebushido-co/sinks/han-probe-does-not-exist-7f3a does not exist. This command is authenticated as jason@waldrip.net which is the active account specified by the [core/account] property",
+    "returncode": 1
+  },
+  "logging-view": {
+    "first_line": "ERROR: (gcloud.logging.views.describe) NOT_FOUND: projects/thebushido-co/locations/us-central1/buckets/han-probe-does-not-exist-7f3a/views/han-probe-does-not-exist-7f3a does not exist. This command is authenticated as jason@waldrip.net which is the active account specified by the [core/account] property",
+    "returncode": 1
+  },
+  "role": {
+    "first_line": "ERROR: (gcloud.iam.roles.describe) NOT_FOUND: The role named projects/thebushido-co/roles/hanProbeMissing7f3a was not found. This command is authenticated as jason@waldrip.net which is the active account specified by the [core/account] property.",
+    "returncode": 1
+  },
+  "run-service": {
+    "first_line": "ERROR: (gcloud.run.services.describe) Cannot find service [han-probe-does-not-exist-7f3a]",
+    "returncode": 1
+  },
+  "secret": {
+    "first_line": "ERROR: (gcloud.secrets.describe) NOT_FOUND: Secret [projects/911514101920/secrets/han-probe-does-not-exist-7f3a] not found. This command is authenticated as jason@waldrip.net which is the active account specified by the [core/account] property.",
+    "returncode": 1
+  },
+  "service-account": {
+    "first_line": "ERROR: (gcloud.iam.service-accounts.describe) NOT_FOUND: Unknown service account. This command is authenticated as jason@waldrip.net which is the active account specified by the [core/account] property",
+    "returncode": 1
+  },
+  "sql-instance": {
+    "first_line": "ERROR: (gcloud.sql.instances.describe) PERMISSION_DENIED: Cloud SQL Admin API has not been used in project thebushido-co before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/sqladmin.googleapis.com/overview?project=thebushido-co then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry. This command is authenticated as jason@waldrip.net which is the active account specified by the [core/account] property.",
+    "returncode": 1
+  },
+  "storage-bucket": {
+    "first_line": "ERROR: (gcloud.storage.buckets.describe) gs://han-probe-does-not-exist-7f3a not found: 404.",
+    "returncode": 1
+  },
+  "wif-pool": {
+    "first_line": "ERROR: (gcloud.iam.workload-identity-pools.describe) NOT_FOUND: Requested entity was not found. This command is authenticated as jason@waldrip.net which is the active account specified by the [core/account] property.",
+    "returncode": 1
+  },
+  "wif-provider": {
+    "first_line": "ERROR: (gcloud.iam.workload-identity-pools.providers.describe) NOT_FOUND: Requested entity was not found. This command is authenticated as jason@waldrip.net which is the active account specified by the [core/account] property.",
+    "returncode": 1
+  }
+}
