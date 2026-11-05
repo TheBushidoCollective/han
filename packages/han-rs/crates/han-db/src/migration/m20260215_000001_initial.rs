@@ -1588,12 +1588,17 @@ impl MigrationTrait for Migration {
             ];
 
             let db = manager.get_connection();
-            for sql in fts_sql {
-                db.execute(Statement::from_string(
-                    sea_orm::DatabaseBackend::Sqlite,
-                    sql.to_string(),
-                ))
-                .await?;
+            // Workspace feature unification can enable `sqlite` in a Postgres build, so
+            // the SQLite-only DDL also checks the live backend. Without this check the
+            // Postgres migration fails on `CREATE TRIGGER IF NOT EXISTS`.
+            if db.get_database_backend() == sea_orm::DatabaseBackend::Sqlite {
+                for sql in fts_sql {
+                    db.execute(Statement::from_string(
+                        sea_orm::DatabaseBackend::Sqlite,
+                        sql.to_string(),
+                    ))
+                    .await?;
+                }
             }
         }
 

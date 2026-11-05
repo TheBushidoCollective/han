@@ -29,12 +29,21 @@ impl MigrationTrait for Migration {
         db.execute_unprepared("UPDATE session_files SET last_indexed_line = 0")
             .await?;
 
-        // Seed indexer_version in han_metadata (used for future reindex triggers)
-        db.execute_unprepared(
-            "INSERT OR REPLACE INTO han_metadata (key, value, updated_at) \
-             VALUES ('indexer_version', '1', datetime('now'))",
-        )
-        .await?;
+        // Seed indexer_version in han_metadata (used for future reindex triggers).
+        // SQLite and Postgres spell the upsert and the UTC timestamp differently.
+        // updated_at is a string column, so both forms store "YYYY-MM-DD HH:MM:SS" UTC.
+        let seed_sql = match db.get_database_backend() {
+            sea_orm::DatabaseBackend::Sqlite => {
+                "INSERT OR REPLACE INTO han_metadata (key, value, updated_at) \
+                 VALUES ('indexer_version', '1', datetime('now'))"
+            }
+            _ => {
+                "INSERT INTO han_metadata (key, value, updated_at) \
+                 VALUES ('indexer_version', '1', to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS')) \
+                 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at"
+            }
+        };
+        db.execute_unprepared(seed_sql).await?;
 
         Ok(())
     }

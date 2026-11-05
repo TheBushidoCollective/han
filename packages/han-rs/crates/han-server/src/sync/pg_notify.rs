@@ -284,11 +284,13 @@ mod tests {
 ///
 /// Run this during server initialization to set up database triggers.
 pub async fn create_notify_triggers(db: &DatabaseConnection) -> Result<(), String> {
-    use sea_orm::ConnectionTrait;
+    use sea_orm::{ConnectionTrait, TransactionTrait};
 
-    let trigger_sql = r#"
-        -- Function to send notifications
-        CREATE OR REPLACE FUNCTION han_notify_change() RETURNS trigger AS $$
+    // Each statement is sent on its own: Postgres rejects several commands in one
+    // prepared statement. The list is written out instead of split on ';' because
+    // the plpgsql body contains its own semicolons.
+    let statements = [
+        r#"CREATE OR REPLACE FUNCTION han_notify_change() RETURNS trigger AS $$
         DECLARE
             payload json;
         BEGIN
@@ -300,33 +302,31 @@ pub async fn create_notify_triggers(db: &DatabaseConnection) -> Result<(), Strin
             PERFORM pg_notify('han_events', payload::text);
             RETURN NEW;
         END;
-        $$ LANGUAGE plpgsql;
+        $$ LANGUAGE plpgsql"#,
+        "DROP TRIGGER IF EXISTS synced_sessions_notify ON synced_sessions",
+        "CREATE TRIGGER synced_sessions_notify AFTER INSERT OR UPDATE ON synced_sessions FOR EACH ROW EXECUTE FUNCTION han_notify_change('session_synced')",
+        "DROP TRIGGER IF EXISTS users_notify ON users",
+        "CREATE TRIGGER users_notify AFTER INSERT OR UPDATE ON users FOR EACH ROW EXECUTE FUNCTION han_notify_change('node_updated')",
+        "DROP TRIGGER IF EXISTS teams_notify ON teams",
+        "CREATE TRIGGER teams_notify AFTER INSERT OR UPDATE ON teams FOR EACH ROW EXECUTE FUNCTION han_notify_change('node_updated')",
+    ];
 
-        -- Trigger on synced_sessions insert/update
-        DROP TRIGGER IF EXISTS synced_sessions_notify ON synced_sessions;
-        CREATE TRIGGER synced_sessions_notify
-            AFTER INSERT OR UPDATE ON synced_sessions
-            FOR EACH ROW EXECUTE FUNCTION han_notify_change('session_synced');
-
-        -- Trigger on users insert/update
-        DROP TRIGGER IF EXISTS users_notify ON users;
-        CREATE TRIGGER users_notify
-            AFTER INSERT OR UPDATE ON users
-            FOR EACH ROW EXECUTE FUNCTION han_notify_change('node_updated');
-
-        -- Trigger on teams insert/update
-        DROP TRIGGER IF EXISTS teams_notify ON teams;
-        CREATE TRIGGER teams_notify
-            AFTER INSERT OR UPDATE ON teams
-            FOR EACH ROW EXECUTE FUNCTION han_notify_change('node_updated');
-    "#;
-
-    db.execute(sea_orm::Statement::from_string(
-        sea_orm::DatabaseBackend::Postgres,
-        trigger_sql.to_string(),
-    ))
-    .await
-    .map_err(|e| format!("Failed to create notify triggers: {e}"))?;
+    // One transaction, so a failure cannot leave the triggers half installed.
+    let txn = db
+        .begin()
+        .await
+        .map_err(|e| format!("Failed to create notify triggers: {e}"))?;
+    for sql in statements {
+        txn.execute(sea_orm::Statement::from_string(
+            sea_orm::DatabaseBackend::Postgres,
+            sql.to_string(),
+        ))
+        .await
+        .map_err(|e| format!("Failed to create notify triggers: {e}"))?;
+    }
+    txn.commit()
+        .await
+        .map_err(|e| format!("Failed to create notify triggers: {e}"))?;
 
     info!("PostgreSQL LISTEN/NOTIFY triggers created");
     Ok(())
