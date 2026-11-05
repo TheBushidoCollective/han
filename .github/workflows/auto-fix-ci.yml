@@ -188,9 +188,9 @@ jobs:
           FAILURE_TYPE="${{ fromJSON(steps.failure_details.outputs.result).failureType }}"
           if [ "$FAILURE_TYPE" = "network" ]; then
             echo "Skipping: network failure is not fixable by code changes"
-            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "skip=true" >> "$GITHUB_OUTPUT"
           else
-            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Setup tools for validation
@@ -257,7 +257,6 @@ jobs:
                - Lint: `biome lint --files-ignore-unknown=true <directory>`
             4. If you can't determine the fix, don't make random changes
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          timeout_minutes: 15
 
       - name: Validate fixes
         if: steps.skip_check.outputs.skip != 'true'
@@ -281,7 +280,7 @@ jobs:
               ;;
           esac
 
-          echo "valid=$VALID" >> $GITHUB_OUTPUT
+          echo "valid=$VALID" >> "$GITHUB_OUTPUT"
 
       - name: Commit and push fixes
         if: steps.skip_check.outputs.skip != 'true'

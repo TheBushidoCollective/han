@@ -90,14 +90,14 @@ jobs:
             LINES_HIT=$(grep -E "^LH:" coverage/lcov.info | cut -d: -f2 | paste -sd+ | bc)
             if [ "$LINES_FOUND" -gt 0 ]; then
               COVERAGE=$(echo "scale=1; $LINES_HIT * 100 / $LINES_FOUND" | bc)
-              echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
+              echo "percentage=$COVERAGE" >> "$GITHUB_OUTPUT"
               echo "Coverage: $COVERAGE%"
             else
-              echo "percentage=0" >> $GITHUB_OUTPUT
+              echo "percentage=0" >> "$GITHUB_OUTPUT"
             fi
           else
             echo "No coverage file found"
-            echo "percentage=0" >> $GITHUB_OUTPUT
+            echo "percentage=0" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Update coverage badge
