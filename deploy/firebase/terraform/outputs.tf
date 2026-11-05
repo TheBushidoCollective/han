@@ -23,11 +23,11 @@ output "artifact_registry_repository" {
 }
 
 output "deployer_service_account" {
-  value = google_service_account.deployer.email
+  value = data.google_service_account.deployer.email
 }
 
 output "server_run_service_account" {
-  value = google_service_account.server_run.email
+  value = data.google_service_account.server_run.email
 }
 
 output "wif_provider" {

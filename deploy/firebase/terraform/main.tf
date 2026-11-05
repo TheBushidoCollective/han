@@ -8,8 +8,8 @@ locals {
   # not stop it from rewriting its own trust. Its controls are the
   # han-infra-apply environment (required reviewer, main-only), a subject that
   # no deploy job uses, and the plan and state guards in CI.
-  wif_pool_name     = data.google_iam_workload_identity_pool.github.name
-  wif_provider_name = "${local.wif_pool_name}/providers/github"
+  wif_pool_name     = data.google_iam_workload_identity_pool.han.name
+  wif_provider_name = "${local.wif_pool_name}/providers/han-github"
   tf_apply_sa_email = "han-tf-apply@${var.project_id}.iam.gserviceaccount.com"
   tf_plan_sa_email  = "han-tf-plan@${var.project_id}.iam.gserviceaccount.com"
 
@@ -38,9 +38,9 @@ locals {
   }
 }
 
-data "google_iam_workload_identity_pool" "github" {
+data "google_iam_workload_identity_pool" "han" {
   project                   = var.project_id
-  workload_identity_pool_id = "github"
+  workload_identity_pool_id = var.wif_pool_id
 }
 
 resource "google_project_service" "apis" {

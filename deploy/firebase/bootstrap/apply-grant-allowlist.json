@@ -1,0 +1,13 @@
+{
+  "description": "Project roles the Han apply identity (han-tf-apply) may grant. Enforced by an IAM condition on its roles/resourcemanager.projectIamAdmin binding (see apply_condition.py and RUNBOOK.md step 7). Every project-level google_project_iam_member role in deploy/firebase/terraform must appear here, and no role that can administer IAM may appear here.",
+  "roles": [
+    "roles/cloudsql.client",
+    "roles/cloudsql.viewer",
+    "roles/firebase.viewer",
+    "roles/firebasehosting.admin",
+    "roles/logging.logWriter",
+    "roles/logging.viewer",
+    "roles/run.admin",
+    "roles/serviceusage.serviceUsageConsumer"
+  ]
+}

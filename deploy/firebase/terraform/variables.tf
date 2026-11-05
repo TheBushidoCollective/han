@@ -59,3 +59,9 @@ variable "db_credential_version" {
   type        = number
   default     = 1
 }
+
+variable "wif_pool_id" {
+  description = "Han's own Workload Identity pool. Created once by a human. Never the shared github pool used by other TheBushidoCollective repositories."
+  type        = string
+  default     = "han-github"
+}
