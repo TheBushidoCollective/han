@@ -1,6 +1,0 @@
-title: Han Terraform create
-description: Create the Han secrets and the Han Cloud SQL instance. Granted unconditioned on the project, because the resources do not exist yet and cannot be named by condition. Cannot read a secret payload, change IAM, or touch another instance.
-stage: GA
-includedPermissions:
-- secretmanager.secrets.create
-- cloudsql.instances.create

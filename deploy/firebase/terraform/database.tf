@@ -1,9 +1,13 @@
-# Cloud SQL instance han-pg. A human creates the instance once (PATH.md section 8),
-# or the apply identity creates it under its unconditioned create role. Either
-# way, Terraform then owns its settings and the han_team database and user.
-#
+# Cloud SQL instance han-pg. The bootstrap creates it once with the same settings
+# (PATH.md section 8). This import brings it under Terraform, which then owns its
+# settings and the han_team database and user.
+import {
+  to = google_sql_database_instance.han
+  id = "projects/${var.project_id}/instances/han-pg"
+}
+
 # Postgres 16 defaults to ENTERPRISE_PLUS, which rejects db-f1-micro, so the
-# edition is set explicitly.
+# edition is set explicitly. The bootstrap passes the same edition to gcloud.
 resource "google_sql_database_instance" "han" {
   name                = "han-pg"
   database_version    = "POSTGRES_16"

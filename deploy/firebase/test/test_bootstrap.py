@@ -1,281 +1,558 @@
 """Behaviour tests for bootstrap/bootstrap.py, against a fake cloud.
 
-The fake records every command and tracks which objects exist, so these tests
-check what the bootstrap decides and does, not its text. Nothing reaches Google.
-
-Run: python3 -B -m unittest discover -s deploy/firebase/test -v
+The fake returns the exact not-found text captured from the installed gcloud
+(bootstrap/not-found-markers.json), so a missing object is recognised by the
+same words the real CLI prints. Every flag the bootstrap passes is checked
+against the flags the installed gcloud accepts (bootstrap/gcloud-flags.json).
+Nothing here calls a cloud API.
 """
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import json
+import re
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 BOOT_DIR = Path(__file__).resolve().parents[1] / "bootstrap"
+ROOT = Path(__file__).resolve().parents[3]
 spec = importlib.util.spec_from_file_location("bootstrap_py", BOOT_DIR / "bootstrap.py")
 bootstrap = importlib.util.module_from_spec(spec)
 sys.modules["bootstrap_py"] = bootstrap
 spec.loader.exec_module(bootstrap)
 
+CAPTURED_FLAGS = json.loads((BOOT_DIR / "gcloud-flags.json").read_text(encoding="utf-8"))["commands"]
+NOT_FOUND = json.loads((BOOT_DIR / "not-found-markers.json").read_text(encoding="utf-8"))
+SCHEMA = json.loads((BOOT_DIR / "tf-schema.json").read_text(encoding="utf-8"))
+
+VERBS = {"describe", "create", "create-oidc", "deploy"}
+# Command family -> the captured not-found text for a missing object in it.
+FAMILY_FIXTURE = {
+    "run": "run-service",
+    "storage buckets": "storage-bucket",
+    "iam roles": "role",
+    "iam service-accounts": "service-account",
+    "iam workload-identity-pools": "wif-pool",
+    "iam workload-identity-pools providers": "wif-provider",
+    "secrets": "secret",
+    "logging buckets": "logging-bucket",
+    "logging sinks": "logging-sink",
+    "logging views": "logging-view",
+    "artifacts repositories": "artifact-repo",
+}
+
+
+def object_key(argv: list[str]) -> tuple[str, str] | None:
+    """(family, name) for a describe or create. Family is the command group."""
+    args = argv[1:]
+    for i, token in enumerate(args):
+        if token in VERBS:
+            group = " ".join(args[:i])
+            family = "run" if group.startswith("run") else group
+            name = next((t for t in args[i + 1:] if not t.startswith("--")), "")
+            return family, name.split("@")[0].replace("gs://", "").rstrip("/")
+    return None
+
 
 class FakeCloud:
-    """Tracks existing objects and records every write.
+    """Holds the objects that exist, the bootstrap account's policy, and every call."""
 
-    A key in `existing` means the object exists. Reads of unknown keys fail, like
-    a describe on a missing resource. `bindings` holds IAM subjects that exist.
-    """
+    def __init__(self, *, sign_in_member: bool = True) -> None:
+        self.objects: set[tuple[str, str]] = set()
+        self.reads: list[list[str]] = []
+        self.writes: list[list[str]] = []
+        self.account = bootstrap.BOOTSTRAP_SA
+        self.keys_for: dict[str, str] = {}
+        self.fail_write: str | None = None
+        self.fail_read: str | None = None
+        self.policy = {
+            "version": 3,
+            "etag": "BwYfake",
+            "bindings": [
+                {"role": "roles/iam.serviceAccountUser", "members": ["user:someone@example.com"]},
+            ],
+        }
+        if sign_in_member:
+            self.policy["bindings"].append({
+                "role": "roles/iam.workloadIdentityUser",
+                "members": [bootstrap.BOOTSTRAP_PRINCIPAL],
+                "condition": {"title": "time-boxed",
+                              "expression": "request.time < timestamp('2026-11-05T00:00:00Z')"},
+            })
 
-    def __init__(self, existing=None, active=bootstrap.BOOTSTRAP_SA, user_keys=None):
-        self.existing = set(existing or set())
-        self.active = active
-        self.user_keys = set(user_keys or set())
-        self.writes: list[tuple[str | None, list[str]]] = []
-        self.reads: list[tuple[str, list[str]]] = []
-
-    def __call__(self, kind, key, argv):
+    def __call__(self, kind: str, argv: list[str]) -> tuple[int, str, str]:
         if kind == "read":
-            self.reads.append((key, argv))
-            if key == "active-account":
-                return 0, self.active + "\n"
-            if key and key.startswith("keys:"):
-                name = key.split(":", 1)[1]
-                return 0, ("key-123\n" if name in self.user_keys else "")
-            if key == "bootstrap-binding":
-                present = "bootstrap-binding" in self.existing
-                payload = {"bindings": [{"role": "roles/iam.workloadIdentityUser",
-                                         "members": [bootstrap.BOOTSTRAP_PRINCIPAL] if present else []}]}
-                return 0, json.dumps(payload)
-            return (0 if key in self.existing else 1), ""
-        self.writes.append((key, argv))
-        if key:
-            self.existing.add(key)
-        if "remove-iam-policy-binding" in argv and bootstrap.BOOTSTRAP_SA in argv:
-            self.existing.discard("bootstrap-binding")
-        if "add-iam-policy-binding" in argv and bootstrap.BOOTSTRAP_SA in argv:
-            pass
-        return 0, ""
+            self.reads.append(argv)
+            return self._read(argv)
+        self.writes.append(argv)
+        return self._write(argv)
 
-    def argv_texts(self):
-        return [" ".join(argv) for _, argv in self.writes]
+    def members(self) -> list[str]:
+        return [m for b in self.policy.get("bindings", []) for m in b.get("members", [])]
+
+    def _read(self, argv: list[str]) -> tuple[int, str, str]:
+        joined = " ".join(argv)
+        if self.fail_read and self.fail_read in joined:
+            return 1, "", "ERROR: (gcloud) PERMISSION_DENIED: forbidden for this identity."
+        if argv[1:3] == ["auth", "list"]:
+            return 0, json.dumps([{"account": self.account, "status": "ACTIVE"}]), ""
+        if "get-iam-policy" in argv:
+            return 0, json.dumps(self.policy), ""
+        if "keys" in argv and "list" in argv:
+            sa_arg = next(a.split("=", 1)[1] for a in argv if a.startswith("--iam-account="))
+            return 0, self.keys_for.get(sa_arg.split("@")[0], ""), ""
+        if argv[1:3] == ["storage", "buckets"] and "list" in argv:
+            return 0, json.dumps([{"name": n} for (fam, n) in self.objects if fam == "storage buckets"]), ""
+        if argv[1:3] == ["sql", "instances"] and "list" in argv:
+            return 0, json.dumps([{"name": n} for (fam, n) in self.objects if fam == "sql instances"]), ""
+        key = object_key(argv)
+        if key is None:
+            raise AssertionError(f"unexpected read: {joined}")
+        if key in self.objects:
+            if key[0] == "storage buckets":
+                return 0, json.dumps({"uniform_bucket_level_access": True,
+                                      "public_access_prevention": "enforced",
+                                      "versioning_enabled": True}), ""
+            return 0, "{}", ""
+        fixture = FAMILY_FIXTURE.get(key[0])
+        if fixture is None:
+            raise AssertionError(f"no captured not-found text for {key[0]}")
+        return 1, "", NOT_FOUND[fixture]["first_line"]
+
+    def _write(self, argv: list[str]) -> tuple[int, str, str]:
+        joined = " ".join(argv)
+        if self.fail_write and self.fail_write in joined:
+            return 1, "", "ERROR: (gcloud) simulated failure"
+        if "set-iam-policy" in argv:
+            path = argv[argv.index("set-iam-policy") + 2]
+            self.policy = json.loads(Path(path).read_text(encoding="utf-8"))
+            return 0, "", ""
+        key = object_key(argv)
+        if key and any(v in argv for v in ("create", "create-oidc", "deploy")):
+            self.objects.add(key)
+        return 0, "", ""
 
 
-def first_run_state() -> set[str]:
-    # The one grant a human makes before the run: the bootstrap sign-in binding.
-    return {"bootstrap-binding"}
+def run(fake, *args: str) -> tuple[int, str, str]:
+    """Run main with a backend (a FakeCloud, or any callable) and capture its output."""
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        rc = bootstrap.main(list(args), backend=fake)
+    return rc, out.getvalue(), err.getvalue()
 
 
-def run(fake: FakeCloud, execute=True) -> tuple[int, Path]:
-    import contextlib
-    import io
+def execute(fake: FakeCloud) -> tuple[int, str, str]:
+    return run(fake, "--execute", "--expect-sha256", bootstrap.plan_sha256(bootstrap.build_plan()))
 
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-        rc = bootstrap.main(["--execute"] if execute else [], backend=fake)
-    return rc, buf
+
+def has(argv: list[str], text: str) -> bool:
+    """True when some argument contains text, as in --member=serviceAccount:..."""
+    return any(text in arg for arg in argv)
+
+
+class PlanMode(unittest.TestCase):
+    def test_plan_reads_nothing_and_writes_nothing(self):
+        def refuse(kind, argv):
+            raise AssertionError(f"plan mode called the backend: {kind} {argv}")
+
+        rc, out, _ = run(refuse)
+        self.assertEqual(rc, 0)
+        self.assertIn("plan-sha256:", out)
+
+    def test_plan_is_deterministic(self):
+        self.assertEqual(bootstrap.plan_sha256(bootstrap.build_plan()),
+                         bootstrap.plan_sha256(bootstrap.build_plan()))
+
+    def test_a_different_hash_refuses_before_any_call(self):
+        fake = FakeCloud()
+        rc, _, err = run(fake, "--execute", "--expect-sha256", "0" * 64)
+        self.assertEqual(rc, 2)
+        self.assertIn("nothing ran", err)
+        self.assertEqual(fake.reads + fake.writes, [])
+
+    def test_execute_without_a_pinned_hash_refuses(self):
+        fake = FakeCloud()
+        rc, _, err = run(fake, "--execute")
+        self.assertEqual(rc, 2)
+        self.assertIn("--expect-sha256", err)
+        self.assertEqual(fake.reads + fake.writes, [])
+
+    def test_plan_file_carries_the_printed_hash(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "plan.txt"
+            run(None, "--plan-file", str(path))
+            text = path.read_text(encoding="utf-8")
+        self.assertIn(f"plan-sha256: {bootstrap.plan_sha256(bootstrap.build_plan())}", text)
 
 
 class FirstRun(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.fake = FakeCloud(existing=first_run_state())
-        cls.rc, _ = run(cls.fake)
-        cls.texts = cls.fake.argv_texts()
+    def setUp(self):
+        self.fake = FakeCloud()
+        self.rc, _, self.err = execute(self.fake)
 
     def test_run_succeeds(self):
-        self.assertEqual(self.rc, 0)
+        self.assertEqual(self.rc, 0, self.err)
 
-    def test_creates_every_object_the_plan_names(self):
-        for key in (
-            "pool:han-github", "provider:han-github", "bucket:thebushido-co-han-tfstate",
-            "sa:han-tf-plan", "sa:han-tf-apply", "sa:han-deployer",
-            "sa:han-hosting-deployer", "sa:han-server-run",
-            "run:han-server", "repo:han", "logbucket:han-server-logs",
-            "logsink:han-server-logs", "logview:startup",
-            "site:han-guru-dashboard", "site:han-guru-app", "site:han-guru-api",
-        ) + tuple(f"role:{r}" for r in bootstrap.CUSTOM_ROLES):
-            self.assertIn(key, self.fake.existing, key)
+    def test_creates_every_object(self):
+        expected = {
+            *(("iam roles", r) for r in bootstrap.CUSTOM_ROLES),
+            *(("iam service-accounts", n) for n in bootstrap.SERVICE_ACCOUNTS),
+            ("storage buckets", bootstrap.STATE_BUCKET),
+            ("iam workload-identity-pools", bootstrap.POOL),
+            ("iam workload-identity-pools providers", bootstrap.PROVIDER),
+            ("sql instances", bootstrap.SQL_INSTANCE),
+            *(("secrets", bootstrap.secret_id(s)) for s in bootstrap.SECRETS),
+            ("run", bootstrap.SERVICE),
+            ("artifacts repositories", bootstrap.ARTIFACT_REPO),
+            ("logging buckets", bootstrap.LOG_BUCKET),
+            ("logging sinks", bootstrap.LOG_SINK),
+            ("logging views", bootstrap.LOG_VIEW),
+        }
+        self.assertTrue(expected <= self.fake.objects, expected - self.fake.objects)
 
-    def test_exactly_five_service_accounts_are_created(self):
-        created = [t for t in self.texts if " service-accounts create " in t]
-        self.assertEqual(len(created), 5)
+    def test_the_sign_in_member_is_gone(self):
+        self.assertFalse(any(bootstrap.is_bootstrap_member(m) for m in self.fake.members()))
 
-    def test_no_key_is_created_and_no_project_is_created(self):
-        for text in self.texts:
-            self.assertNotIn("keys create", text)
-            self.assertNotIn("projects create", text)
+    def test_other_members_of_the_bootstrap_policy_are_kept(self):
+        self.assertIn("user:someone@example.com", self.fake.members())
 
-    def test_no_identity_is_granted_owner_editor_or_iam_admin(self):
-        for text in self.texts:
-            for forbidden in ("roles/owner", "roles/editor", "projectIamAdmin",
-                              "serviceAccountTokenCreator", "roles/viewer"):
-                self.assertNotIn(forbidden, text, text)
+    def test_no_key_or_project_is_created(self):
+        for argv in self.fake.writes:
+            self.assertNotIn("keys", argv)
+            self.assertFalse(argv[1:3] == ["projects", "create"], argv)
 
-    def test_no_public_binding_is_created(self):
-        for text in self.texts:
-            self.assertNotIn("allUsers", text)
-            self.assertNotIn("allAuthenticatedUsers", text)
+    def test_the_logging_view_filter_uses_only_allowed_fields(self):
+        self.assertEqual(bootstrap.LOG_VIEW_FILTER, 'resource.type="cloud_run_revision"')
+        views = [a for a in self.fake.writes if a[1:3] == ["logging", "views"] and "create" in a]
+        self.assertEqual(len(views), 1)
+        self.assertIn(f"--log-filter={bootstrap.LOG_VIEW_FILTER}", views[0])
 
-    def test_cloud_run_shell_is_private(self):
-        deploy = [t for t in self.texts if " run deploy han-server" in t]
-        self.assertEqual(len(deploy), 1)
-        self.assertIn("--no-allow-unauthenticated", deploy[0])
+    def test_the_log_bucket_uses_retention_days(self):
+        bucket = [a for a in self.fake.writes if a[1:3] == ["logging", "buckets"] and "create" in a][0]
+        self.assertIn("--retention-days=30", bucket)
 
-    def test_log_access_is_granted_on_the_view_only(self):
-        view_grants = [t for t in self.texts if " views add-iam-policy-binding startup" in t]
-        self.assertEqual(len(view_grants), 1)
-        self.assertIn("roles/logging.viewAccessor", view_grants[0])
-        self.assertIn(f"serviceAccount:han-deployer@{bootstrap.PROJECT}.iam.gserviceaccount.com", view_grants[0])
-        for text in self.texts:
-            if "projects add-iam-policy-binding" in text:
-                self.assertNotIn("viewAccessor", text, "a project-level viewer would reach every log view")
+    def test_the_sink_writes_to_the_custom_bucket_only(self):
+        sink = [a for a in self.fake.writes if a[1:3] == ["logging", "sinks"] and "create" in a][0]
+        self.assertIn(bootstrap.LOG_DESTINATION, sink)
 
-    def test_sink_and_view_use_the_same_scoped_filter(self):
-        sink = [t for t in self.texts if " sinks create han-server-logs" in t][0]
-        view = [t for t in self.texts if " views create startup" in t][0]
-        self.assertIn(bootstrap.LOG_FILTER, sink)
-        self.assertIn(bootstrap.LOG_FILTER, view)
-
-    def test_sink_destination_is_the_custom_bucket_only(self):
-        sink = [t for t in self.texts if " sinks create han-server-logs" in t][0]
-        self.assertIn(f"buckets/{bootstrap.LOG_BUCKET}", sink)
-        self.assertNotIn("_Default", sink)
-
-    def test_sites_are_created_through_the_firebase_cli(self):
-        sites = [t for t in self.texts if "hosting:sites:create" in t]
-        self.assertEqual(len(sites), 3)
-        self.assertFalse(any("curl" in t for t in self.texts))
-
-    def test_provider_admits_only_the_named_workflows(self):
-        provider = [t for t in self.texts if "providers create-oidc han-github" in t][0]
+    def test_the_provider_admits_only_the_named_workflows(self):
+        text = " ".join(next(a for a in self.fake.writes if "create-oidc" in a))
         for wf in ("han-infra.yml", "deploy-han-server.yml", "deploy-hosting.yml"):
-            self.assertIn(f"{bootstrap.REPO}/.github/workflows/{wf}@", provider)
-        self.assertNotIn("validate-deploy", provider)
-        self.assertIn(f"repository_id == '{bootstrap.REPO_ID}'", provider)
+            self.assertIn(f"workflows/{wf}@", text)
+        self.assertNotIn("attribute.environment", text)
 
-    def test_each_identity_is_bound_from_exactly_its_environment(self):
-        bindings = [t for t in self.texts if "service-accounts add-iam-policy-binding" in t]
-        self.assertIn(f"subject/repo:{bootstrap.REPO}:environment:han-infra-apply", " ".join(bindings))
-        self.assertIn(f"subject/repo:{bootstrap.REPO}:environment:han-production", " ".join(bindings))
-        self.assertIn(f"subject/repo:{bootstrap.REPO}:environment:han-hosting", " ".join(bindings))
+    def test_the_cloud_run_shell_is_private(self):
+        deploy = next(a for a in self.fake.writes if a[1:3] == ["run", "deploy"])
+        self.assertIn("--no-allow-unauthenticated", deploy)
+        self.assertNotIn("--allow-unauthenticated", deploy)
 
-    def test_revoke_is_the_last_mutation(self):
-        self.assertIn("remove-iam-policy-binding", self.texts[-1])
-        self.assertIn(bootstrap.BOOTSTRAP_SA, self.texts[-1])
-        self.assertNotIn("bootstrap-binding", self.fake.existing)
+    def test_the_sql_instance_matches_the_terraform_settings(self):
+        create = next(a for a in self.fake.writes if a[1:3] == ["sql", "instances"] and "create" in a)
+        self.assertIn(f"--edition={bootstrap.SQL_EDITION}", create)
+        self.assertIn(f"--database-version={bootstrap.SQL_VERSION}", create)
+        self.assertIn(f"--ssl-mode={bootstrap.SQL_SSL_MODE}", create)
+        self.assertIn("--deletion-protection", create)
+
+    def test_secret_grants_are_per_secret_and_carry_no_condition(self):
+        grants = [a for a in self.fake.writes if a[1:3] == ["secrets", "add-iam-policy-binding"]]
+        self.assertTrue(grants)
+        for argv in grants:
+            self.assertTrue(argv[3].startswith(bootstrap.SECRET_PREFIX), argv)
+            self.assertFalse(has(argv, "--condition"), argv)
+
+    def test_only_the_three_terraform_secrets_get_the_custom_roles(self):
+        role_grants = [a for a in self.fake.writes if a[1:3] == ["secrets", "add-iam-policy-binding"]
+                       and has(a, "hanTf")]
+        self.assertEqual({a[3] for a in role_grants},
+                         {bootstrap.secret_id(s) for s in bootstrap.TF_MANAGED_SECRETS})
+
+    def test_the_apply_identity_can_read_identity_metadata(self):
+        apply_member = f"serviceAccount:{bootstrap.sa('han-tf-apply')}"
+        grants = [a for a in self.fake.writes
+                  if a[1:3] == ["projects", "add-iam-policy-binding"] and has(a, apply_member)]
+        self.assertTrue(any(has(a, f"--role=projects/{bootstrap.PROJECT}/roles/hanTfPlanGlobal") for a in grants))
+
+    def test_the_plan_identity_can_read_each_resource_terraform_refreshes(self):
+        plan_member = f"serviceAccount:{bootstrap.sa('han-tf-plan')}"
+        run_grants = [a for a in self.fake.writes if a[1:3] == ["run", "services"] and has(a, plan_member)]
+        repo_grants = [a for a in self.fake.writes
+                       if a[1:3] == ["artifacts", "repositories"] and has(a, plan_member)]
+        self.assertTrue(any("--role=roles/run.viewer" in a for a in run_grants))
+        self.assertTrue(any("--role=roles/artifactregistry.reader" in a for a in repo_grants))
+
+    def test_no_owner_editor_or_viewer_role_is_granted(self):
+        text = " ".join(" ".join(a) for a in self.fake.writes)
+        for role in ("roles/owner", "roles/editor", "roles/viewer", "roles/resourcemanager.projectIamAdmin"):
+            self.assertNotIn(role, text)
+
+    def test_the_bootstrap_never_runs_the_firebase_cli(self):
+        text = (BOOT_DIR / "bootstrap.py").read_text(encoding="utf-8")
+        self.assertNotIn("npx", text)
+        self.assertNotIn('"firebase"', text)
+        self.assertNotIn("firebase-tools", text)
 
 
-class Conditions(unittest.TestCase):
-    """Conditions come from reviewed files, and each file matches the spec in the script."""
-
-    def load(self, name):
-        import yaml
-
-        return yaml.safe_load((BOOT_DIR / "conditions" / name).read_text(encoding="utf-8"))
-
-    def test_secret_condition_file_matches_the_spec(self):
-        self.assertEqual(self.load("han_secrets.yaml")["expression"], bootstrap.SECRET_COND)
-
-    def test_sql_condition_file_matches_the_spec(self):
-        self.assertEqual(self.load("han_pg.yaml")["expression"], bootstrap.SQL_COND)
-
-    def test_secret_condition_is_limited_to_han_server_secrets(self):
-        expr = self.load("han_secrets.yaml")["expression"]
-        self.assertIn("/secrets/han-server-", expr)
-        self.assertNotIn("anthropic", expr)
-
-    def test_no_inline_condition_expression_is_passed(self):
-        fake = FakeCloud(existing=first_run_state())
-        run(fake)
-        for text in fake.argv_texts():
-            self.assertNotIn("--condition=expression", text)
-
-    def test_each_conditioned_role_gets_its_condition_file(self):
-        fake = FakeCloud(existing=first_run_state())
-        run(fake)
-        cond = [t for t in fake.argv_texts() if "--condition-from-file=" in t]
-        self.assertEqual(len(cond), 4)
-        for text in cond:
-            self.assertTrue(
-                "han_secrets.yaml" in text or "han_pg.yaml" in text, text
-            )
-
-
-class Idempotence(unittest.TestCase):
+class IdempotentSecondRun(unittest.TestCase):
     def test_second_run_creates_nothing(self):
-        first = FakeCloud(existing=first_run_state())
-        run(first)
-        # The bootstrap binding is gone after revoke. Put the state back as a
-        # later run would find it: every object present, sign-in still revoked.
-        second = FakeCloud(existing=set(first.existing))
-        rc, _ = run(second)
+        fake = FakeCloud()
+        execute(fake)
+        before = len(fake.writes)
+        fake.policy = {"version": 3, "etag": "BwYsecond", "bindings": []}
+        rc, _, err = execute(fake)
+        self.assertEqual(rc, 0, err)
+        again = fake.writes[before:]
+        self.assertFalse(any(has_exact(a, v) for a in again for v in ("create", "create-oidc", "deploy")), again)
+
+
+def has_exact(argv: list[str], token: str) -> bool:
+    return token in argv
+
+
+class NotFoundClassification(unittest.TestCase):
+    def test_every_captured_missing_text_is_recognised(self):
+        for name, entry in NOT_FOUND.items():
+            if name == "sql-instance":
+                continue  # a permission error, covered below
+            with self.subTest(name=name):
+                self.assertTrue(bootstrap.is_not_found(entry["first_line"]), entry["first_line"])
+
+    def test_a_permission_error_is_never_a_missing_object(self):
+        self.assertFalse(bootstrap.is_not_found(NOT_FOUND["sql-instance"]["first_line"]))
+
+    def test_an_unexpected_describe_error_stops_and_creates_nothing(self):
+        fake = FakeCloud()
+        fake.fail_read = "service-accounts describe"
+        rc, _, err = execute(fake)
+        self.assertEqual(rc, 1)
+        self.assertIn("unexpected reason", err)
+        self.assertFalse(any(a[1:4] == ["iam", "service-accounts", "create"] for a in fake.writes))
+
+
+class Revoke(unittest.TestCase):
+    def test_the_sign_in_is_removed_when_a_later_step_fails(self):
+        fake = FakeCloud()
+        fake.fail_write = "buckets add-iam-policy-binding"
+        rc, _, _ = execute(fake)
+        self.assertEqual(rc, 1)
+        self.assertFalse(any(bootstrap.is_bootstrap_member(m) for m in fake.members()))
+
+    def test_the_sign_in_is_removed_when_verification_fails(self):
+        fake = FakeCloud()
+        fake.account = "someone-else@example.com"
+        rc, _, err = execute(fake)
+        self.assertEqual(rc, 1)
+        self.assertIn("refusing", err)
+        self.assertFalse(any(bootstrap.is_bootstrap_member(m) for m in fake.members()))
+
+    def test_the_sign_in_is_removed_when_a_han_account_has_a_user_key(self):
+        fake = FakeCloud()
+        fake.keys_for["han-deployer"] = "abcd1234\n"
+        rc, _, err = execute(fake)
+        self.assertEqual(rc, 1)
+        self.assertIn("user-managed key", err)
+        self.assertFalse(any(bootstrap.is_bootstrap_member(m) for m in fake.members()))
+
+    def test_revoke_only_removes_the_sign_in_and_keeps_other_members(self):
+        fake = FakeCloud()
+        rc, _, _ = run(fake, "--revoke-only")
         self.assertEqual(rc, 0)
-        creates = [t for t in second.argv_texts() if " create" in t and "describe" not in t]
-        self.assertEqual(creates, [], "a re-run must not create anything it finds present")
+        self.assertFalse(any(bootstrap.is_bootstrap_member(m) for m in fake.members()))
+        self.assertIn("user:someone@example.com", fake.members())
+        self.assertEqual(fake.policy["etag"], "BwYfake")
 
-    def test_second_run_is_safe_to_repeat(self):
-        first = FakeCloud(existing=first_run_state())
-        run(first)
-        second = FakeCloud(existing=set(first.existing))
-        run(second)
-        self.assertNotIn("bootstrap-binding", second.existing)
-
-
-class Refusals(unittest.TestCase):
-    def test_refuses_to_run_as_another_identity(self):
-        fake = FakeCloud(existing=first_run_state(), active="jason@withbushido.ai")
-        rc, buf = run(fake)
+    def test_revoke_fails_when_the_policy_cannot_be_read(self):
+        fake = FakeCloud()
+        fake.fail_read = "get-iam-policy"
+        rc, _, err = run(fake, "--revoke-only")
         self.assertEqual(rc, 1)
-        self.assertIn("refusing to run as", buf.getvalue())
-        self.assertEqual(fake.writes, [], "nothing may change under a wrong identity")
+        self.assertIn("cannot prove the sign-in is revoked", err)
 
-    def test_refuses_when_a_han_account_has_a_user_key(self):
-        fake = FakeCloud(existing=first_run_state(), user_keys={"han-tf-apply"})
-        rc, buf = run(fake)
+    def test_revoke_fails_when_the_member_survives_the_write(self):
+        fake = FakeCloud()
+        original = fake._write
+
+        def stubborn(argv):
+            if "set-iam-policy" in argv:
+                return 0, "", ""  # claims success and changes nothing
+            return original(argv)
+
+        fake._write = stubborn
+        rc, _, err = run(fake, "--revoke-only")
         self.assertEqual(rc, 1)
-        self.assertIn("user-managed key", buf.getvalue())
+        self.assertIn("still present after revoke", err)
 
-    def test_fails_when_the_sign_in_binding_survives_revoke(self):
-        class Stubborn(FakeCloud):
-            def __call__(self, kind, key, argv):
-                if kind == "write" and "remove-iam-policy-binding" in argv:
-                    self.writes.append((key, argv))
-                    return 0, ""
-                return super().__call__(kind, key, argv)
+    def test_revoke_only_refuses_to_combine_with_execute(self):
+        rc, _, _ = run(FakeCloud(), "--revoke-only", "--execute")
+        self.assertEqual(rc, 2)
 
-        fake = Stubborn(existing=first_run_state())
-        rc, buf = run(fake)
+    def test_a_failed_reread_after_the_revoke_fails_the_run(self):
+        fake = FakeCloud()
+        backend = fake
+        reads = {"policy": 0}
+
+        def first_read_ok_then_fail(kind, argv):
+            if kind == "read" and "get-iam-policy" in argv:
+                reads["policy"] += 1
+                if reads["policy"] >= 2:
+                    return 1, "", "ERROR: (gcloud) transient failure"
+            return backend(kind, argv)
+
+        rc, _, err = run(first_read_ok_then_fail, "--revoke-only")
         self.assertEqual(rc, 1)
-        self.assertIn("still present", buf.getvalue())
+        self.assertIn("cannot re-read the bootstrap policy after revoke", err)
+
+    def test_remove_member_keeps_other_members_of_a_conditional_binding(self):
+        policy = {"bindings": [{"role": "r", "members": [bootstrap.BOOTSTRAP_PRINCIPAL, "user:x@y.z"],
+                                "condition": {"title": "t", "expression": "e"}}]}
+        self.assertTrue(bootstrap.remove_bootstrap_member(policy))
+        self.assertEqual(policy["bindings"][0]["members"], ["user:x@y.z"])
+        self.assertIn("condition", policy["bindings"][0])
 
 
-class PrintMode(unittest.TestCase):
-    def test_print_mode_performs_no_writes(self):
-        fake = FakeCloud(existing=first_run_state())
-        rc, buf = run(fake, execute=False)
-        self.assertEqual(rc, 0)
-        self.assertEqual(fake.writes, [], "print mode must not change anything")
-        self.assertIn("gcloud projects add-iam-policy-binding", buf.getvalue())
+class FlagsAreCaptured(unittest.TestCase):
+    """Every gcloud flag the bootstrap passes is one the installed gcloud accepts."""
 
-    def test_print_mode_still_reads_live_state(self):
-        fake = FakeCloud(existing=first_run_state())
-        run(fake, execute=False)
-        self.assertTrue(any(key == "pool:han-github" for key, _ in fake.reads))
+    def captured_key(self, argv: list[str]) -> str:
+        words = argv[1:]
+        matches = [k for k in CAPTURED_FLAGS if words[: len(k.split())] == k.split()]
+        self.assertTrue(matches, f"no captured help for: {' '.join(argv)}")
+        return max(matches, key=lambda k: len(k.split()))
+
+    def test_every_command_the_bootstrap_runs_has_captured_help_and_flags(self):
+        fake = FakeCloud()
+        execute(fake)
+        for argv in fake.writes + fake.reads:
+            self.assertEqual(argv[0], "gcloud", argv)
+            accepted = set(CAPTURED_FLAGS[self.captured_key(argv)]) | {"quiet"}
+            for token in argv:
+                if token.startswith("--"):
+                    flag = token[2:].split("=", 1)[0]
+                    self.assertIn(flag, accepted, f"{' '.join(argv[:4])} does not accept --{flag}")
 
 
-class Inputs(unittest.TestCase):
-    def test_every_custom_role_file_exists(self):
-        for filename in bootstrap.CUSTOM_ROLES.values():
-            self.assertTrue((BOOT_DIR / "roles" / filename).is_file(), filename)
+class StateBucketIsOneName(unittest.TestCase):
+    def test_the_infra_workflow_names_the_bootstrap_bucket(self):
+        infra = (ROOT / ".github" / "workflows" / "han-infra.yml").read_text(encoding="utf-8")
+        self.assertEqual(infra.count(f'-backend-config="bucket={bootstrap.STATE_BUCKET}"'), 2)
+        self.assertNotIn("HAN_GCP_PROJECT_ID }}-tfstate", infra)
 
-    def test_service_account_names_are_han_prefixed(self):
-        for name in bootstrap.SERVICE_ACCOUNTS:
-            self.assertTrue(name.startswith("han-"), name)
 
-    def test_bootstrap_identity_is_the_existing_owner_account(self):
-        self.assertEqual(bootstrap.BOOTSTRAP_SA, "terraform-bootstrap@thebushido-co.iam.gserviceaccount.com")
+class TerraformAgreesWithTheBootstrap(unittest.TestCase):
+    def tf(self, name: str) -> str:
+        return (ROOT / "deploy" / "firebase" / "terraform" / name).read_text(encoding="utf-8")
+
+    def test_database_settings_match(self):
+        self.assertIn(f'default     = "{bootstrap.SQL_TIER}"', self.tf("variables.tf"))
+        self.assertIn('database_version    = "POSTGRES_16"', self.tf("database.tf"))
+        self.assertIn(f'ssl_mode     = "{bootstrap.SQL_SSL_MODE}"', self.tf("database.tf"))
+        self.assertEqual(bootstrap.SQL_EDITION.upper(), "ENTERPRISE")
+
+    def test_the_secret_prefix_matches(self):
+        self.assertIn(f'secret_prefix = "{bootstrap.SECRET_PREFIX}"', self.tf("main.tf"))
+
+    def test_terraform_creates_no_secret_and_no_secret_iam(self):
+        text = "".join(p.read_text(encoding="utf-8") for p in (ROOT / "deploy/firebase/terraform").glob("*.tf"))
+        self.assertNotRegex(text, r'resource\s+"google_secret_manager_secret"\s')
+        self.assertNotRegex(text, r'resource\s+"google_secret_manager_secret_iam')
+
+    def test_terraform_reads_only_the_three_secrets_it_writes(self):
+        text = self.tf("secrets.tf")
+        for name in bootstrap.TF_MANAGED_SECRETS:
+            self.assertIn(f'"${{local.secret_prefix}}{name}"', text)
+        self.assertEqual(len(re.findall(r'data\s+"google_secret_manager_secret"', text)),
+                         len(bootstrap.TF_MANAGED_SECRETS))
+
+    def test_the_provider_schema_has_every_attribute_terraform_uses(self):
+        resources = SCHEMA["resources"]
+        self.assertIn("invoker_iam_disabled", resources["google_cloud_run_v2_service"])
+        self.assertIn("secret_data_wo_version", resources["google_secret_manager_secret_version"])
+        self.assertIn("password_wo_version", resources["google_sql_user"])
+        self.assertIn("settings.edition", resources["google_sql_database_instance"])
+        self.assertIn("settings.ip_configuration.ssl_mode", resources["google_sql_database_instance"])
+        self.assertIn("deletion_protection", resources["google_sql_database_instance"])
+
+    def test_terraform_imports_the_instance_and_service_by_provider_id(self):
+        self.assertIn('id = "projects/${var.project_id}/instances/han-pg"', self.tf("database.tf"))
+        self.assertIn('id = "projects/${var.project_id}/locations/${var.region}/services/han-server"',
+                      self.tf("cloudrun.tf"))
+
+
+class RoleFiles(unittest.TestCase):
+    def permissions(self, name: str) -> set[str]:
+        body = (BOOT_DIR / "roles" / name).read_text(encoding="utf-8").split("includedPermissions:", 1)[1]
+        return {line[2:].strip() for line in body.splitlines() if line.startswith("- ")}
+
+    def test_the_role_files_are_exactly_the_ones_the_bootstrap_creates(self):
+        on_disk = {p.name for p in (BOOT_DIR / "roles").glob("*.yaml")}
+        self.assertEqual(on_disk, set(bootstrap.CUSTOM_ROLES.values()))
+
+    def test_the_apply_secret_role_cannot_change_iam_or_read_payloads(self):
+        perms = self.permissions("han_tf_apply_secrets.yaml")
+        for forbidden in ("secretmanager.secrets.setIamPolicy", "secretmanager.secrets.getIamPolicy",
+                          "secretmanager.secrets.create", "secretmanager.secrets.delete",
+                          "secretmanager.versions.access"):
+            self.assertNotIn(forbidden, perms)
+
+    def test_the_plan_secret_role_is_read_only_without_iam(self):
+        for perm in self.permissions("han_tf_plan_secrets.yaml"):
+            self.assertTrue(perm.rsplit(".", 1)[-1].startswith(("get", "list")), perm)
+
+    def test_the_apply_sql_role_cannot_create_instances(self):
+        self.assertNotIn("cloudsql.instances.create", self.permissions("han_tf_apply_sql.yaml"))
+
+
+class HostingSiteCreation(unittest.TestCase):
+    """The Hosting deploy job creates only missing sites, from the CLI's JSON list."""
+
+    def load(self):
+        spec2 = importlib.util.spec_from_file_location(
+            "ensure_hosting_sites", ROOT / "deploy" / "firebase" / "scripts" / "ensure_hosting_sites.py")
+        mod = importlib.util.module_from_spec(spec2)
+        spec2.loader.exec_module(mod)
+        return mod
+
+    def fake(self, existing: set[str], list_rc: int = 0, create_rc: int = 0):
+        calls: list[list[str]] = []
+
+        class Proc:
+            def __init__(self, rc, out="", err=""):
+                self.returncode, self.stdout, self.stderr = rc, out, err
+
+        def run_firebase(args):
+            calls.append(args)
+            if args[0] == "hosting:sites:list":
+                sites = [{"name": f"projects/911514101920/sites/{s}"} for s in existing]
+                return Proc(list_rc, json.dumps({"status": "success", "result": {"sites": sites}}), "list failed")
+            return Proc(create_rc, "", "create failed")
+
+        return run_firebase, calls
+
+    def test_creates_only_the_missing_sites(self):
+        mod = self.load()
+        run_fb, calls = self.fake({"han-guru-app"})
+        created = mod.ensure("thebushido-co", run_fb)
+        self.assertEqual(set(created), {"han-guru-dashboard", "han-guru-api"})
+        creates = [c for c in calls if c[0] == "hosting:sites:create"]
+        self.assertEqual(sorted(c[1] for c in creates), ["han-guru-api", "han-guru-dashboard"])
+        self.assertTrue(all("--project" in c and "thebushido-co" in c for c in creates))
+
+    def test_a_failed_list_stops_before_any_create(self):
+        mod = self.load()
+        run_fb, calls = self.fake(set(), list_rc=1)
+        with self.assertRaises(RuntimeError):
+            mod.ensure("thebushido-co", run_fb)
+        self.assertFalse(any(c[0] == "hosting:sites:create" for c in calls))
+
+    def test_a_failed_create_is_an_error(self):
+        mod = self.load()
+        run_fb, _ = self.fake(set(), create_rc=1)
+        with self.assertRaises(RuntimeError):
+            mod.ensure("thebushido-co", run_fb)
 
 
 if __name__ == "__main__":

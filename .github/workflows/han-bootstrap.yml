@@ -1,20 +1,26 @@
 name: Han Bootstrap
 
 # The one-shot bootstrap for Han inside thebushido-co. It runs from CI only, and
-# nothing else calls it.
+# nothing else calls it. Two jobs, in order:
 #
-# - Manual trigger only, from main.
-# - Runs in the han-bootstrap environment, which needs a required reviewer.
-# - Signs in through the existing github pool, as terraform-bootstrap, and only
-#   for the subject repo:TheBushidoCollective/han:environment:han-bootstrap.
-#   Jason's grant of that subject is a prerequisite (PATH.md section 8).
-# - Prints the plan first, then executes it. Idempotent. The last step removes
-#   the sign-in binding, so the bootstrap cannot run again without a new grant.
+# - plan: no environment, no sign-in, no owner token. Prints the plan and its
+#   sha256, checks it against the hash typed into the dispatch, and uploads the
+#   plan text. The reviewer reads it here, before anything can be approved.
+# - apply: waits for approval in the han-bootstrap environment (required
+#   reviewer, deployment from main only). Signs in as terraform-bootstrap, and
+#   runs only the plan whose hash was approved. Its last step always removes the
+#   sign-in member, even if the run failed.
 #
-# It uses no secret, creates no key and creates no project.
+# The sign-in grant is a human prerequisite (PATH.md section 8). It must be
+# time-boxed, and the environment protections must exist before it is made.
 
 on:
   workflow_dispatch:
+    inputs:
+      expected_sha256:
+        description: "plan-sha256 printed by this workflow's plan job. Execution refuses any other plan."
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -24,7 +30,30 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  bootstrap:
+  plan:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Print the plan and check it matches the dispatched hash
+        run: |
+          python3 -B deploy/firebase/bootstrap/bootstrap.py \
+            --expect-sha256 "$EXPECTED_SHA256" \
+            --plan-file bootstrap-plan.txt
+
+      - name: Upload the plan for review
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: han-bootstrap-plan
+          path: bootstrap-plan.txt
+          retention-days: 7
+
+  apply:
+    needs: plan
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -33,14 +62,13 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    env:
+      EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 22
-
       - name: Authenticate to Google Cloud (WIF, existing github pool, bootstrap identity)
+        id: auth
         uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           workload_identity_provider: projects/911514101920/locations/global/workloadIdentityPools/github/providers/github
@@ -48,12 +76,11 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
 
-      - name: Install the pinned Firebase CLI (for the Hosting sites step)
-        working-directory: deploy/firebase
-        run: npm ci --ignore-scripts
+      - name: Execute the approved plan
+        run: |
+          python3 -B deploy/firebase/bootstrap/bootstrap.py \
+            --execute --expect-sha256 "$EXPECTED_SHA256"
 
-      - name: Plan (read-only checks, mutations printed)
-        run: python3 -B deploy/firebase/bootstrap/bootstrap.py
-
-      - name: Execute
-        run: python3 -B deploy/firebase/bootstrap/bootstrap.py --execute
+      - name: Revoke the sign-in (always runs, even after a failure)
+        if: always() && steps.auth.outcome == 'success'
+        run: python3 -B deploy/firebase/bootstrap/bootstrap.py --revoke-only

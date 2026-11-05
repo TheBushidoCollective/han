@@ -445,5 +445,75 @@ class ValidateWorkflow(unittest.TestCase):
         self.assertIn("pull_request", triggers(load(VALIDATE)))
 
 
+class BootstrapShape(unittest.TestCase):
+    """The plan job holds no sign-in. Only the approved hash runs. Revoke always runs."""
+
+    def setUp(self):
+        self.wf = load(BOOTSTRAP)
+        self.jobs = self.wf["jobs"]
+
+    def test_dispatch_requires_the_plan_hash(self):
+        inputs = triggers(self.wf)["workflow_dispatch"]["inputs"]
+        self.assertTrue(inputs["expected_sha256"]["required"])
+
+    def test_the_plan_job_has_no_environment_no_sign_in_and_no_id_token(self):
+        plan = self.jobs["plan"]
+        self.assertIsNone(environment_name(plan))
+        self.assertFalse(uses_wif(plan))
+        self.assertFalse(declares_id_token(self.wf, plan))
+
+    def test_the_plan_job_only_plans(self):
+        text = steps_text(self.jobs["plan"])
+        self.assertIn("--expect-sha256", text)
+        self.assertNotIn("--execute", text)
+
+    def test_the_apply_job_waits_for_the_plan_and_the_environment(self):
+        apply = self.jobs["apply"]
+        self.assertEqual(apply.get("needs"), "plan")
+        self.assertEqual(environment_name(apply), "han-bootstrap")
+        self.assertTrue(declares_id_token(self.wf, apply))
+
+    def test_the_apply_job_signs_in_only_as_the_bootstrap_account(self):
+        apply = self.jobs["apply"]
+        self.assertTrue(signs_in_as(apply, "terraform-bootstrap@thebushido-co.iam.gserviceaccount.com"))
+        self.assertFalse(signs_in_as(apply, "HAN_GCP_"))
+
+    def test_execution_is_pinned_to_the_approved_hash(self):
+        self.assertIn("--execute --expect-sha256", steps_text(self.jobs["apply"]))
+
+    def test_revoke_runs_even_after_a_failure_once_signed_in(self):
+        steps = self.jobs["apply"]["steps"]
+        revoke = [s for s in steps if "--revoke-only" in str(s.get("run", ""))]
+        self.assertEqual(len(revoke), 1)
+        self.assertIn("always()", str(revoke[0].get("if")))
+        self.assertIn("steps.auth.outcome == 'success'", str(revoke[0].get("if")))
+        self.assertGreater(steps.index(revoke[0]), steps.index(
+            next(s for s in steps if "--execute" in str(s.get("run", "")))))
+
+    def test_the_bootstrap_uses_no_npm_or_firebase_cli(self):
+        text = (WORKFLOWS / BOOTSTRAP).read_text(encoding="utf-8")
+        self.assertNotIn("npm ", text)
+        self.assertNotIn("npx", text)
+
+
+class HostingSiteStep(unittest.TestCase):
+    """Hosting sites are created by the Hosting deploy job, before it deploys."""
+
+    def test_sites_are_ensured_before_the_deploy(self):
+        steps = load(DEPLOY_WORKFLOWS[1])["jobs"]["deploy"]["steps"]
+        names = [str(s.get("name", "")) for s in steps]
+        ensure = next(i for i, n in enumerate(names) if "Ensure the Hosting sites" in n)
+        deploy = next(i for i, n in enumerate(names) if "Deploy dashboard" in n)
+        self.assertLess(ensure, deploy)
+        self.assertIn("ensure_hosting_sites.py", steps_text({"steps": [steps[ensure]]}))
+
+
+class StateBucketIsPinned(unittest.TestCase):
+    def test_both_infra_init_steps_name_the_bootstrap_bucket(self):
+        text = (WORKFLOWS / INFRA).read_text(encoding="utf-8")
+        self.assertNotIn("${{ vars.HAN_GCP_PROJECT_ID }}-tfstate", text)
+        self.assertEqual(text.count("bucket=thebushido-co-han-tfstate"), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -14,11 +14,3 @@ resource "google_artifact_registry_repository_iam_member" "deployer_push" {
   role       = "roles/artifactregistry.writer"
   member     = "serviceAccount:${data.google_service_account.deployer.email}"
 }
-
-resource "google_artifact_registry_repository_iam_member" "plan_read" {
-  project    = var.project_id
-  location   = var.region
-  repository = data.google_artifact_registry_repository.han.repository_id
-  role       = "roles/artifactregistry.reader"
-  member     = "serviceAccount:${local.tf_plan_sa_email}"
-}

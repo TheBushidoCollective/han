@@ -49,6 +49,7 @@ FORBIDDEN_PERMISSIONS = {
     "iam.serviceAccounts.getAccessToken",
     "iam.serviceAccounts.create",
     "iam.serviceAccounts.createKey",
+    "secretmanager.secrets.setIamPolicy",
 }
 
 # Project-wide admin grants that IAM cannot scope to Han's resources. Each is a
@@ -127,7 +128,7 @@ class CustomRoles(unittest.TestCase):
         self.assertEqual(
             names,
             {
-                "han_tf_create",
+                "han_tf_plan_global",
                 "han_tf_apply_secrets",
                 "han_tf_plan_secrets",
                 "han_tf_apply_sql",
@@ -160,9 +161,12 @@ class CustomRoles(unittest.TestCase):
         perms = custom_role_permissions(ROLES / "han_tf_apply_secrets.yaml")
         self.assertNotIn("secretmanager.versions.access", perms)
 
-    def test_create_role_cannot_read_or_change_anything(self):
-        perms = custom_role_permissions(ROLES / "han_tf_create.yaml")
-        self.assertEqual(perms, {"secretmanager.secrets.create", "cloudsql.instances.create"})
+    def test_no_role_can_set_secret_iam_or_create_secrets(self):
+        # Terraform writes secret versions only. Secret IAM and creation belong to the bootstrap.
+        for path in self.roles():
+            perms = custom_role_permissions(path)
+            self.assertEqual(perms & {"secretmanager.secrets.setIamPolicy", "secretmanager.secrets.create",
+                                      "secretmanager.secrets.delete"}, set(), path.name)
 
 
 if __name__ == "__main__":

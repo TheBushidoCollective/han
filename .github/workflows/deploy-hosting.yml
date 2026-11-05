@@ -139,6 +139,11 @@ jobs:
         # Lockfile-pinned, and no install scripts run.
         run: npm ci --ignore-scripts
 
+      - name: Ensure the Hosting sites exist (create missing only)
+        env:
+          PROJECT_ID: ${{ vars.HAN_GCP_PROJECT_ID }}
+        run: python3 scripts/ensure_hosting_sites.py "$PROJECT_ID"
+
       - name: Deploy dashboard, app and the api rewrite
         # All three targets. The api rewrite is static, so this is idempotent,
         # and this is the only workflow that deploys Hosting. The server deploy

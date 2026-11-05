@@ -57,12 +57,3 @@ resource "google_cloud_run_v2_service_iam_member" "hosting_deployer" {
   role     = "roles/run.viewer"
   member   = "serviceAccount:${data.google_service_account.hosting_deployer.email}"
 }
-
-# Plan: read the service for refresh.
-resource "google_cloud_run_v2_service_iam_member" "plan_read" {
-  project  = var.project_id
-  location = var.region
-  name     = google_cloud_run_v2_service.server.name
-  role     = "roles/run.viewer"
-  member   = "serviceAccount:${local.tf_plan_sa_email}"
-}
