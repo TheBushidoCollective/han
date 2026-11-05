@@ -1,7 +1,7 @@
 name: Deploy Han Hosting
 
 # Builds the dashboard and app bundles from packages/browse-client and deploys
-# them to Firebase Hosting. Same trigger model as deploy-han-server.yml.
+# them to Firebase Hosting. Same trigger model, and the same verify-source gate, as deploy-han-server.yml.
 #
 # - dashboard: built with no GRAPHQL_URL. The bundle carries no API address.
 # - app: built with GRAPHQL_URL=https://api.han.guru/graphql.
@@ -25,8 +25,71 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  verify-source:
+    # The trigger gate. Every job that builds or deploys waits for it.
+    # It refuses unless the infra run that triggered this is the Han Infrastructure
+    # workflow file, a push to main, from this repository, and its commit is an
+    # ancestor of origin/main. A tag or branch named main, a fork, or another
+    # workflow with the same name is refused. Git failures fail closed.
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # Full history and every branch, so origin/main exists for the ancestry check.
+          # Credentials stay persisted so the fetch below uses this repository's token.
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Verify the trigger and the commit
+        shell: bash
+        env:
+          WR_PATH: ${{ github.event.workflow_run.path }}
+          WR_EVENT: ${{ github.event.workflow_run.event }}
+          WR_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          WR_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WR_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          WR_HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          if [ "$WR_PATH" != ".github/workflows/han-infra.yml" ]; then
+            fail "Trigger is '$WR_PATH', not .github/workflows/han-infra.yml"
+          fi
+          if [ "$WR_EVENT" != "push" ]; then fail "Trigger event is '$WR_EVENT', not push"; fi
+          if [ "$WR_CONCLUSION" != "success" ]; then fail "Infra run concluded '$WR_CONCLUSION'"; fi
+          if [ "$WR_BRANCH" != "main" ]; then fail "Trigger branch is '$WR_BRANCH', not main"; fi
+          if [ -z "$REPO" ] || [ "$WR_HEAD_REPO" != "$REPO" ]; then
+            fail "Trigger repository '$WR_HEAD_REPO' is not '$REPO'"
+          fi
+          if ! [[ "$WR_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            fail "Trigger head '$WR_HEAD_SHA' is not a full commit SHA"
+          fi
+          if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+            # A shallow checkout has no origin/main history to test against.
+            git fetch --no-tags --unshallow origin '+refs/heads/main:refs/remotes/origin/main'
+          else
+            git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          fi
+          main_sha="$(git rev-parse --verify --quiet 'refs/remotes/origin/main^{commit}')" \
+            || fail "origin/main did not resolve after the fetch"
+          git cat-file -e "$WR_HEAD_SHA^{commit}" 2>/dev/null \
+            || fail "Trigger commit $WR_HEAD_SHA is not in this repository"
+          rc=0
+          git merge-base --is-ancestor "$WR_HEAD_SHA" "$main_sha" || rc=$?
+          case "$rc" in
+            0) echo "Trigger commit $WR_HEAD_SHA is an ancestor of origin/main $main_sha" ;;
+            1) fail "Trigger commit $WR_HEAD_SHA is not an ancestor of origin/main $main_sha" ;;
+            *) fail "git could not compare $WR_HEAD_SHA with origin/main (exit $rc)" ;;
+          esac
+
   build:
-    if: github.event_name == 'pull_request' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    needs: verify-source
+    if: always() && (github.event_name == 'pull_request' || (needs.verify-source.result == 'success' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -40,6 +103,8 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: "1.2"
+          # The Bun executable is not cached. A shared cache could supply the binary that builds production.
+          no-cache: true
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -97,8 +162,9 @@ jobs:
           retention-days: 7
 
   deploy:
-    needs: build
-    if: github.event_name == 'workflow_run'
+    needs: [build, verify-source]
+    # success() is written out. GitHub would apply it by default, but naming it keeps the gate dependence visible here.
+    if: success() && github.event_name == 'workflow_run'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:

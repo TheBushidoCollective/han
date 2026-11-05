@@ -7,11 +7,11 @@
 # - Terraform creates no service account, no secret, no WIF pool, no project
 #   IAM, no project API, no Firebase project and no Hosting site. The bootstrap
 #   creates the secrets, service accounts, pool, Cloud Run shell, repository,
-#   logging and Hosting sites, once. Terraform imports the Cloud Run service and
-#   the Cloud SQL instance, and reads the rest as data.
-# - Every grant Terraform makes is on a single Han resource: the han-pg instance,
-#   the han Artifact Registry repository, the han-server Cloud Run service, or
-#   the database and user inside han-pg. Terraform makes no secret IAM grant.
+#   database, user and logging resources. The Hosting deploy workflow creates
+#   the Hosting sites. Terraform imports the Cloud Run service and Cloud SQL
+#   instance, and reads the other resources it needs as data.
+# - Terraform's resource-level IAM grants are on the han-server Cloud Run
+#   service. It makes no secret IAM grant and manages no database or user.
 #
 # Known residual: whatever can change project IAM can change these identities.
 # That is the project owners, and every identity in the website repo that holds

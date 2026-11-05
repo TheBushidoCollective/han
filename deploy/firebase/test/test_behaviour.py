@@ -87,9 +87,12 @@ class TerraformPlanStepBehaviour(unittest.TestCase):
 
 
 def copy_deploy(into: Path) -> Path:
-    """Copy the deploy tree to another root and return the copy's bootstrap.py."""
+    """Copy the deploy tree and the workflow the plan hashes to another root; return the copy's bootstrap.py."""
     shutil.copytree(ROOT / "deploy", into / "deploy",
                     ignore=shutil.ignore_patterns("__pycache__", ".terraform", "node_modules"))
+    workflows = into / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    shutil.copy2(ROOT / ".github" / "workflows" / "han-bootstrap.yml", workflows / "han-bootstrap.yml")
     return into / "deploy" / "firebase" / "bootstrap" / "bootstrap.py"
 
 
@@ -154,18 +157,22 @@ class CommitIsChecked(unittest.TestCase):
 
     @contextlib.contextmanager
     def github_sha(self, value: str | None):
-        old = os.environ.get("GITHUB_SHA")
-        if value is None:
-            os.environ.pop("GITHUB_SHA", None)
-        else:
-            os.environ["GITHUB_SHA"] = value
+        """The reviewed CI environment, with GITHUB_SHA set to value."""
+        values = {**bootstrap.CI_ENVIRONMENT, "GITHUB_SHA": value}
+        old = {key: os.environ.get(key) for key in values}
         try:
+            for key, new in values.items():
+                if new is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = new
             yield
         finally:
-            if old is None:
-                os.environ.pop("GITHUB_SHA", None)
-            else:
-                os.environ["GITHUB_SHA"] = old
+            for key, prior in old.items():
+                if prior is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = prior
 
     def test_a_run_from_another_commit_refuses_before_any_call(self):
         recorder = self.Recorder()

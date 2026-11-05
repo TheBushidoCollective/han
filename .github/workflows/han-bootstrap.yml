@@ -11,8 +11,8 @@ name: Han Bootstrap
 #   runs only the plan whose hash and commit were dispatched. If the run's own
 #   execute step did not succeed, a last step removes the sign-in member.
 #
-# The sign-in grant is a human prerequisite (PATH.md section 8). It must be
-# time-boxed, and the environment protections must exist before it is made.
+# The sign-in grant must be created through the separately reviewed CI rail
+# (PATH.md section 8), with an expiry and environment protections in place.
 
 on:
   workflow_dispatch:
@@ -55,7 +55,7 @@ jobs:
         run: |
           rotate=()
           if [ -n "$ROTATE_FLAG" ]; then rotate=("$ROTATE_FLAG"); fi
-          python3 -B deploy/firebase/bootstrap/bootstrap.py \
+          python3 -I -B deploy/firebase/bootstrap/bootstrap.py \
             --expect-sha256 "$EXPECTED_SHA256" \
             --expect-commit "$EXPECTED_COMMIT" \
             "${rotate[@]}" \
@@ -92,15 +92,19 @@ jobs:
           service_account: terraform-bootstrap@thebushido-co.iam.gserviceaccount.com
 
       - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
+        with:
+          version: "580.0.0"
 
       - id: execute
         name: Execute the approved plan
+        # Reserve job time for the fallback revoke if execution times out.
+        timeout-minutes: 35
         env:
           ROTATE_FLAG: ${{ inputs.rotate_db_password && '--rotate-db-password' || '' }}
         run: |
           rotate=()
           if [ -n "$ROTATE_FLAG" ]; then rotate=("$ROTATE_FLAG"); fi
-          python3 -B deploy/firebase/bootstrap/bootstrap.py \
+          python3 -I -B deploy/firebase/bootstrap/bootstrap.py \
             --execute \
             --expect-sha256 "$EXPECTED_SHA256" \
             --expect-commit "$EXPECTED_COMMIT" \
@@ -111,4 +115,11 @@ jobs:
         # its token is already spent. This step covers a run that died before it could,
         # and it is skipped after a clean execute, so a finished run cannot turn red here.
         if: always() && steps.auth.outcome == 'success' && steps.execute.outcome != 'success'
-        run: python3 -B deploy/firebase/bootstrap/bootstrap.py --revoke-only
+        env:
+          ROTATE_FLAG: ${{ inputs.rotate_db_password && '--rotate-db-password' || '' }}
+        run: |
+          rotate=()
+          if [ -n "$ROTATE_FLAG" ]; then rotate=("$ROTATE_FLAG"); fi
+          python3 -I -B deploy/firebase/bootstrap/bootstrap.py --revoke-only \
+            --expect-sha256 "$EXPECTED_SHA256" --expect-commit "$EXPECTED_COMMIT" \
+            "${rotate[@]}"

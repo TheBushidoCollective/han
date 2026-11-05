@@ -7,13 +7,17 @@ environment, which needs a reviewer and runs from main. Nothing else calls it.
 Modes:
   (default)                      print the plan and its sha256. Reads nothing and
                                  touches no cloud API. The same code path prints
-                                 the plan in every mode, so the hash is a function
-                                 of this file alone.
-  --execute --expect-sha256 H    run the plan, but only if its hash is exactly H.
-                                 Any other hash refuses before a single call.
-  --revoke-only                  remove the bootstrap sign-in member from the
-                                 bootstrap account's policy. Runs in its own
-                                 always-run workflow step.
+                                 the plan in every mode. The hash covers this file and
+                                 the roles, the condition and the workflow file it names.
+  --execute --expect-sha256 H --expect-commit C
+                                 run the plan, but only if its hash is exactly H and C is
+                                 GITHUB_SHA. Any other value refuses before a single call.
+  --revoke-only --expect-sha256 H --expect-commit C
+                                 remove the principal from the approved grant (the binding
+                                 whose description names C and H) and nothing else. C must be
+                                 GITHUB_SHA and H must be this checkout's plan hash; otherwise
+                                 it refuses before any call. The website's reviewed han-signin-retire job removes a
+                                 grant this run refuses. Runs in its own always-run workflow step.
   --rotate-db-password           with --execute: generate a new database password and seed
                                  database-url with it. It changes the plan, so the hash
                                  covers the rotation. Never run on a normal rerun.
@@ -35,13 +39,16 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import shutil
 import string
 import tempfile
+import time
 from secrets import choice
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable
 
@@ -62,12 +69,40 @@ PROVIDER = "han-github"
 ISSUER = "https://token.actions.githubusercontent.com"
 WORKFLOWS_ALLOWED_TO_SIGN_IN = ("han-infra.yml", "deploy-han-server.yml", "deploy-hosting.yml")
 
-# The existing identity this job signs in as. A human grants the subject below,
-# time-boxed, before the run (PATH.md section 8). This run removes it again.
+# The sign-in identity this job uses. The website's reviewed grant (contract C1) time-boxes it before the run
+# (PATH.md section 8). This run removes the principal from that grant again.
 BOOTSTRAP_SA = f"terraform-bootstrap@{PROJECT}.iam.gserviceaccount.com"
 BOOTSTRAP_ENV_SUBJECT = f"repo:{REPO}:environment:han-bootstrap"
 SHARED_POOL = f"projects/{PROJECT_NUMBER}/locations/global/workloadIdentityPools/github"
 BOOTSTRAP_PRINCIPAL = f"principal://iam.googleapis.com/{SHARED_POOL}/subject/{BOOTSTRAP_ENV_SUBJECT}"
+
+# The sign-in grant the website side creates, time-boxed (contract C1). Preflight matches all of it exactly. Revoke
+# matches the role, the title, the approved description and the principal, and passes the stored condition verbatim.
+# A binding with any other role, title or description is never touched.
+SIGNIN_ROLE = "roles/iam.workloadIdentityUser"
+SIGNIN_TITLE = "han-bootstrap-sign-in"
+SIGNIN_DESCRIPTION = "han-bootstrap commit={commit} plan={plan}"
+SIGNIN_EXPRESSION = re.compile(r"request\.time < timestamp\('([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)'\)")
+MIN_REMAINING = timedelta(minutes=45)
+MAX_LEAD = timedelta(minutes=120)
+REVOKE_ATTEMPTS = 5
+# Policy reads retry with bounded exponential backoff: 1, then 2, then 4 seconds between four attempts.
+POLICY_READ_ATTEMPTS = 4
+POLICY_READ_BASE = 1.0
+POLICY_READ_MAX_BACKOFF = 8.0
+# The description contract C1 requires: a 40-hex commit and a 64-hex plan hash.
+CONTRACT_DESCRIPTION = re.compile(r"han-bootstrap commit=[0-9a-f]{40} plan=[0-9a-f]{64}")
+CONTRACT_CONDITION_KEYS = frozenset({"title", "description", "expression"})
+WORKFLOW_REF = f"{REPO}/.github/workflows/han-bootstrap.yml@refs/heads/main"
+# --execute and --revoke-only run only from that workflow, on main, by dispatch, on a github-hosted runner.
+CI_ENVIRONMENT = {
+    "GITHUB_ACTIONS": "true",
+    "RUNNER_ENVIRONMENT": "github-hosted",
+    "GITHUB_REPOSITORY": REPO,
+    "GITHUB_REF": "refs/heads/main",
+    "GITHUB_EVENT_NAME": "workflow_dispatch",
+    "GITHUB_WORKFLOW_REF": WORKFLOW_REF,
+}
 
 # The Terraform state bucket. han-infra.yml must name this same bucket.
 STATE_BUCKET = f"{PROJECT}-han-tfstate"
@@ -182,8 +217,28 @@ def is_not_found(stderr: str, stdout: str = "") -> bool:
     return any(marker in text for marker in NOT_FOUND_MARKERS)
 
 
-def is_bootstrap_member(member: str) -> bool:
-    return member.endswith(f"/subject/{BOOTSTRAP_ENV_SUBJECT}")
+def is_contract_grant(binding: dict) -> bool:
+    """True only for the exact reviewed grant: this role, the principal as the sole member, and a condition
+    with exactly the contract's keys, the title, a well-formed description and the full expression.
+    A binding that merely looks alike is never the grant."""
+    cond = binding.get("condition")
+    if binding.get("role") != SIGNIN_ROLE or binding.get("members") != [BOOTSTRAP_PRINCIPAL]:
+        return False
+    if not isinstance(cond, dict) or set(cond) != CONTRACT_CONDITION_KEYS or cond.get("title") != SIGNIN_TITLE:
+        return False
+    description, expression = cond.get("description"), cond.get("expression")
+    if not isinstance(description, str) or CONTRACT_DESCRIPTION.fullmatch(description) is None:
+        return False
+    return isinstance(expression, str) and SIGNIN_EXPRESSION.fullmatch(expression) is not None
+
+
+def holders(policy: dict) -> list[dict]:
+    """Every binding that names the Han principal. Exact string equality, never a suffix."""
+    return [b for b in policy.get("bindings", []) if BOOTSTRAP_PRINCIPAL in b.get("members", [])]
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 # A backend answers (returncode, stdout, stderr). Reads and writes are kept apart,
@@ -256,6 +311,53 @@ class Runner:
             raise StepError(f"describe role {role_id} failed for an unexpected reason\n{err}")
 
 
+def state_bucket_guard(r: Runner, when: str, must_exist: bool) -> bool | None:
+    """Refuse any change to the state bucket unless it is exactly ours. Runs before every bucket
+    create, update and grant. Returns True when the bucket is in this project, False when it is
+    absent and may be created, and None in plan mode. Ambiguity or any error stops the run."""
+    r.plan.append(f"guard {STATE_BUCKET} {when}: one bucket of that name in {PROJECT}, "
+                  "uniform access and public access prevention enforced")
+    if not r.execute:
+        return None
+    rc, out, err = r._read(["gcloud", "storage", "buckets", "list", f"--project={PROJECT}", "--format=json"])
+    if rc != 0:
+        raise StepError(f"cannot list buckets in {PROJECT}, so {STATE_BUCKET} is not touched: {err}")
+    try:
+        items = json.loads(out or "[]")
+    except ValueError as exc:
+        raise StepError(f"bucket list is not JSON, so {STATE_BUCKET} is not touched: {exc}") from exc
+    if not isinstance(items, list) or not all(isinstance(i, dict) and isinstance(i.get("name"), str) for i in items):
+        raise StepError(f"bucket list has an unexpected shape, so {STATE_BUCKET} is not touched")
+    count = [i["name"] for i in items].count(STATE_BUCKET)
+    if count > 1:
+        raise StepError(f"{count} buckets named {STATE_BUCKET} in {PROJECT}; ambiguous, so not touched")
+    describe = ["gcloud", "storage", "buckets", "describe", f"gs://{STATE_BUCKET}", f"--project={PROJECT}",
+                "--format=json"]
+    if count == 0:
+        if must_exist:
+            raise StepError(f"{STATE_BUCKET} is not in {PROJECT} {when}; not touched")
+        rc, out, err = r._read(describe)
+        if rc == 0:
+            raise StepError(f"{STATE_BUCKET} exists outside {PROJECT}; not created, updated or granted")
+        if not is_not_found(err, out):
+            raise StepError(f"cannot tell whether {STATE_BUCKET} exists, so not touched: {err}")
+        return False
+    rc, out, err = r._read(describe)
+    if rc != 0:
+        raise StepError(f"cannot describe {STATE_BUCKET}, so not touched: {err}")
+    try:
+        described = json.loads(out)
+    except ValueError as exc:
+        raise StepError(f"describe of {STATE_BUCKET} is not JSON, so not touched: {exc}") from exc
+    if described.get("name") != STATE_BUCKET:
+        raise StepError(f"describe names {described.get('name')!r}, not {STATE_BUCKET}; not touched")
+    if described.get("uniform_bucket_level_access") is not True:
+        raise StepError(f"{STATE_BUCKET} does not use uniform bucket-level access; not touched")
+    if described.get("public_access_prevention") != "enforced":
+        raise StepError(f"{STATE_BUCKET} does not enforce public access prevention; not touched")
+    return True
+
+
 def steps(r: Runner, rotate: bool = False) -> None:
     """Every mutation, in dependency order. Plan and execute both walk this list."""
 
@@ -267,13 +369,14 @@ def steps(r: Runner, rotate: bool = False) -> None:
     for role_id, filename in CUSTOM_ROLES.items():
         r.upsert_role(role_id, rel(HERE / "roles" / filename))
 
-    # 3. Terraform state bucket: uniform access, public access blocked, versioned.
+    # 3. Terraform state bucket. Nothing is created, updated or granted unless the guard proves
+    #    the bucket is exactly ours: one bucket of that name in this project.
     bucket = f"gs://{STATE_BUCKET}"
-    r.ensure(
-        ["gcloud", "storage", "buckets", "describe", bucket, f"--project={PROJECT}", "--format=json"],
-        ["gcloud", "storage", "buckets", "create", bucket, f"--project={PROJECT}", f"--location={REGION}",
-         "--uniform-bucket-level-access", "--public-access-prevention", "--quiet"],
-    )
+    exists = state_bucket_guard(r, "before any change", must_exist=False)
+    if exists is not True:
+        r.write(["gcloud", "storage", "buckets", "create", bucket, f"--project={PROJECT}", f"--location={REGION}",
+                 "--uniform-bucket-level-access", "--public-access-prevention", "--quiet"])
+    state_bucket_guard(r, "after create", must_exist=True)
     r.write(["gcloud", "storage", "buckets", "update", bucket, "--versioning", "--quiet"])
 
     # 4. Han's pool and provider. The condition admits this repository only, and only
@@ -446,6 +549,7 @@ def steps(r: Runner, rotate: bool = False) -> None:
                    "--role=roles/artifactregistry.writer"))
     r.write(gcloud("artifacts", "repositories", "add-iam-policy-binding", ARTIFACT_REPO, f"--location={REGION}",
                    f"--project={PROJECT}", f"--member={plan_member}", "--role=roles/artifactregistry.reader"))
+    state_bucket_guard(r, "before the grants", must_exist=True)
     r.write(["gcloud", "storage", "buckets", "add-iam-policy-binding", f"gs://{STATE_BUCKET}",
              f"--member={apply_member}", "--role=roles/storage.objectAdmin", "--quiet"])
     r.write(["gcloud", "storage", "buckets", "add-iam-policy-binding", f"gs://{STATE_BUCKET}",
@@ -453,11 +557,14 @@ def steps(r: Runner, rotate: bool = False) -> None:
 
 
 def revoke_plan(r: Runner) -> None:
-    r.plan.append(f"revoke: remove every member ending /subject/{BOOTSTRAP_ENV_SUBJECT} from {BOOTSTRAP_SA}")
+    r.plan.append(f"revoke: remove the reviewed sign-in binding for {BOOTSTRAP_PRINCIPAL} from {BOOTSTRAP_SA}, "
+                  "then prove the principal is in no binding")
 
 
-def preflight(r: Runner) -> None:
-    """Read-only, before any mutation. Refuses to run as any identity but the bootstrap account."""
+def preflight(r: Runner, plan_sha: str, commit: str) -> None:
+    """Read-only, before any mutation. Checks the bootstrap account's own IAM policy only: not inherited, project or
+    organisation bindings, and not delegation (reviewer scope note A). The identity, the one exact reviewed grant,
+    its window and its provenance must all hold, and no member may match the principal besides that grant."""
     # The run must be signed in as the bootstrap account. A wrong identity stops it.
     rc, out, err = r._read(["gcloud", "auth", "list", "--format=json"])
     if rc != 0:
@@ -465,6 +572,27 @@ def preflight(r: Runner) -> None:
     active = [a.get("account") for a in json.loads(out) if a.get("status") == "ACTIVE"]
     if active != [BOOTSTRAP_SA]:
         raise StepError(f"refusing to continue as {active!r}; expected {BOOTSTRAP_SA}")
+    policy = read_policy(r, "cannot read the bootstrap policy before the run")
+    found = holders(policy)
+    if len(found) != 1:
+        raise StepError(f"expected exactly one binding for the bootstrap principal, found {len(found)}; nothing ran")
+    binding = found[0]
+    if not is_contract_grant(binding):
+        raise StepError("the bootstrap principal is not in the exact reviewed sign-in grant; nothing ran")
+    capable = capable_members(policy)
+    if capable:
+        raise StepError(f"a member could match the bootstrap principal: {capable[0]!r}; nothing ran")
+    match = SIGNIN_EXPRESSION.fullmatch(binding["condition"]["expression"])
+    try:
+        expiry = datetime.strptime(match.group(1), "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except ValueError as exc:
+        raise StepError(f"the sign-in expiry is not a real time: {exc}; nothing ran") from exc
+    remaining = expiry - utc_now()
+    if not MIN_REMAINING <= remaining <= MAX_LEAD:
+        raise StepError(f"the sign-in expires {remaining} from now; the window is 45 to 120 minutes; nothing ran")
+    expected = SIGNIN_DESCRIPTION.format(commit=commit, plan=plan_sha)
+    if binding["condition"]["description"] != expected:
+        raise StepError("the sign-in does not name this commit and this plan; nothing ran")
 
 
 
@@ -602,43 +730,153 @@ def _strings(value) -> set[str]:
     return set()
 
 
-def remove_bootstrap_member(policy: dict) -> bool:
-    """Drop the sign-in member from every binding, keeping its etag and other members."""
-    changed = False
+def read_policy(r: Runner, message: str) -> dict:
+    """The bootstrap account's policy. A failed or unparseable read is retried with bounded exponential
+    backoff, and the run fails after the last attempt. A conditional role the reader does not model stops it."""
+    argv = ["gcloud", "iam", "service-accounts", "get-iam-policy", BOOTSTRAP_SA, f"--project={PROJECT}",
+            "--format=json"]
+    last = "no attempt was made"
+    for attempt in range(POLICY_READ_ATTEMPTS):
+        if attempt:
+            time.sleep(min(POLICY_READ_MAX_BACKOFF, POLICY_READ_BASE * 2 ** (attempt - 1)))
+        rc, out, err = r._read(argv)
+        if rc != 0:
+            last = err
+            continue
+        try:
+            policy = json.loads(out)
+        except ValueError as exc:
+            last = f"policy is not JSON: {exc}"
+            continue
+        for binding in policy.get("bindings", []):
+            if "_withcond_" in str(binding.get("role", "")):
+                raise StepError(f"the policy has conditional role {binding['role']}; refusing to act on it")
+        return policy
+    raise StepError(f"{message}: {last}")
+
+
+def policy_tuples(policy: dict) -> set[tuple]:
+    """Every grant as (role, title, description, expression, member), to prove nothing else moved."""
+    found = set()
     for binding in policy.get("bindings", []):
-        members = binding.get("members", [])
-        kept = [m for m in members if not is_bootstrap_member(m)]
-        if len(kept) != len(members):
-            changed = True
-            binding["members"] = kept
-    policy["bindings"] = [b for b in policy.get("bindings", []) if b.get("members")]
-    return changed
+        cond = binding.get("condition") or {}
+        key = (binding.get("role"), cond.get("title"), cond.get("description"), cond.get("expression"))
+        found.update((*key, member) for member in binding.get("members", []))
+    return found
 
 
-def revoke(r: Runner) -> None:
-    """Remove the sign-in member, then prove it is gone. Fails if it cannot prove that."""
+def capable_members(policy: dict) -> list[str]:
+    """Members that could match the Han principal without naming it: every user, every authenticated
+    identity, and any principal set over the shared pool or a wildcard pool. They are never deleted;
+    a run that finds one stops and reports it."""
+    found = []
+    for binding in policy.get("bindings", []):
+        for member in binding.get("members", []):
+            if member in ("allUsers", "allAuthenticatedUsers") or shared_pool_set(member):
+                found.append(member)
+    return found
+
+
+def shared_pool_set(member: str) -> bool:
+    """A principal set whose pool is the shared github pool, or any pool wildcard."""
+    prefix = "principalSet://"
+    if not member.startswith(prefix):
+        return False
+    target = member[len(prefix):]
+    return (target.startswith(f"iam.googleapis.com/{SHARED_POOL}")
+            or "projects/-" in target or "/workloadIdentityPools/*" in target)
+
+
+def is_approved_grant(binding: dict, approved: str) -> bool:
+    """A binding revoke may clean up: this sign-in role and title, the approved description, and the principal as
+    a member. Its expression and other members are not checked. Cleanup removes only the principal, with the stored
+    condition passed verbatim, so a tampered expression still matches and other members stay. A binding with any
+    other description or role is never touched."""
+    cond = binding.get("condition")
+    return (binding.get("role") == SIGNIN_ROLE and isinstance(cond, dict)
+            and cond.get("title") == SIGNIN_TITLE and cond.get("description") == approved
+            and BOOTSTRAP_PRINCIPAL in binding.get("members", []))
+
+
+def remove_sign_in(r: Runner, binding: dict) -> None:
+    """Remove the bootstrap principal from one approved grant. The stored condition goes to gcloud verbatim, so
+    gcloud matches exactly this binding. The file is private and removed after the call."""
+    cond = binding["condition"]
+    fd, path = tempfile.mkstemp(suffix=".json")  # created with mode 0600
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(cond, fh, ensure_ascii=False)
+        r.write(gcloud("iam", "service-accounts", "remove-iam-policy-binding", BOOTSTRAP_SA, f"--project={PROJECT}",
+                       f"--member={BOOTSTRAP_PRINCIPAL}", f"--role={SIGNIN_ROLE}", f"--condition-from-file={path}"))
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def pinned_identity_error(commit: str, plan_sha: str) -> str | None:
+    """The approved commit and plan that name the one grant revoke may remove. Both are well formed or
+    nothing runs. A grant naming any other commit or plan is never removed."""
+    if re.fullmatch(r"[0-9a-f]{40}", commit or "") is None:
+        return f"the approved commit {commit!r} is not a 40-character lowercase commit; nothing ran"
+    if re.fullmatch(r"[0-9a-f]{64}", plan_sha or "") is None:
+        return f"the approved plan {plan_sha!r} is not a 64-character lowercase sha256; nothing ran"
+    return None
+
+
+def revoke(r: Runner, commit: str, plan_sha: str) -> None:
+    """Remove the bootstrap principal from the approved grant, the binding whose description names this commit
+    and plan, then prove the principal has no coverage left and that no other grant moved. Only the bootstrap
+    account's own policy is read: project and organisation bindings and delegation are not checked (scope note A).
+    Other descriptions and roles are never touched. Never set-iam-policy: each removal is gcloud's own
+    etag-guarded read-modify-write."""
     if not r.execute:
         revoke_plan(r)
         return
-    rc, out, err = r._read(["gcloud", "iam", "service-accounts", "get-iam-policy", BOOTSTRAP_SA,
-                            f"--project={PROJECT}", "--format=json"])
-    if rc != 0:
-        raise StepError(f"cannot read the bootstrap policy, so cannot prove the sign-in is revoked: {err}")
-    policy = json.loads(out)
-    if remove_bootstrap_member(policy):
-        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as fh:
-            json.dump(policy, fh)
-            path = fh.name
-        try:
-            r.write(gcloud("iam", "service-accounts", "set-iam-policy", BOOTSTRAP_SA, path, f"--project={PROJECT}"))
-        finally:
-            Path(path).unlink(missing_ok=True)
-    rc, out, err = r._read(["gcloud", "iam", "service-accounts", "get-iam-policy", BOOTSTRAP_SA,
-                            f"--project={PROJECT}", "--format=json"])
-    if rc != 0:
-        raise StepError(f"cannot re-read the bootstrap policy after revoke: {err}")
-    if any(is_bootstrap_member(m) for b in json.loads(out).get("bindings", []) for m in b.get("members", [])):
-        raise StepError("bootstrap sign-in member is still present after revoke")
+    approved = SIGNIN_DESCRIPTION.format(commit=commit, plan=plan_sha)
+    policy = read_policy(r, "cannot read the bootstrap policy, so cannot prove the sign-in is revoked")
+    before = policy_tuples(policy)
+    last_error = "none"
+    for _ in range(REVOKE_ATTEMPTS):
+        grants = [b for b in holders(policy) if is_approved_grant(b, approved)]
+        if not grants:
+            break
+        for binding in grants:
+            try:
+                remove_sign_in(r, binding)
+            except StepError as err:
+                last_error = str(err)  # a failed call leads to a re-read, never a give-up
+        policy = read_policy(r, "cannot re-read the bootstrap policy after revoke")
+    verify_revoked(policy, before, last_error, approved)
+
+
+def verify_revoked(policy: dict, before: set[tuple], last_error: str, approved: str) -> None:
+    """Fail unless the principal has no binding, no capable member remains, the approved grant binds no other
+    member, every other grant is still there, and no grant was added between revoke's first read and its final
+    read. The first read is taken after preflight and the steps, so earlier changes are not detected here. Named,
+    never deleted."""
+    left = holders(policy)
+    if left:
+        named = ", ".join(f"role {b.get('role')!r} (title {(b.get('condition') or {}).get('title')!r})" for b in left)
+        raise StepError(f"bootstrap sign-in member is still present after revoke: {named}; left in place; "
+                        f"last error: {last_error}")
+    others = sorted({m for b in policy.get("bindings", [])
+                     if b.get("role") == SIGNIN_ROLE and (b.get("condition") or {}).get("title") == SIGNIN_TITLE
+                     and (b.get("condition") or {}).get("description") == approved
+                     for m in b.get("members", [])})
+    if others:
+        raise StepError(f"the approved sign-in grant still binds other members after the principal was removed: "
+                        f"{', '.join(others)}; left in place")
+    capable = capable_members(policy)
+    if capable:
+        raise StepError(f"a member could still match the bootstrap principal: {capable[0]!r}; left in place")
+    lost = {t for t in before if t[-1] != BOOTSTRAP_PRINCIPAL} - policy_tuples(policy)
+    if lost:
+        raise StepError(f"revoke changed a binding it should not have; missing {sorted(lost)[0]}")
+    # The baseline is revoke's first read, not preflight. Only changes made between the two reads are detected.
+    added = policy_tuples(policy) - before
+    if added:
+        named = ", ".join(f"{member} on {role}" for role, _title, _desc, _expr, member in sorted(added, key=str))
+        raise StepError(f"the bootstrap account's policy gained grants during the revoke window, between its first "
+                        f"read and its final read: {named}; left in place")
 
 
 def rel(path: Path) -> str:
@@ -649,7 +887,8 @@ def rel(path: Path) -> str:
 def referenced_files() -> list[Path]:
     """Every file whose contents the plan depends on: this code, the roles and the condition."""
     roles = [HERE / "roles" / name for name in sorted(CUSTOM_ROLES.values())]
-    return [Path(__file__).resolve(), SQL_CONDITION, *roles]
+    workflow = ROOT / ".github" / "workflows" / "han-bootstrap.yml"
+    return [Path(__file__).resolve(), SQL_CONDITION, *roles, workflow]
 
 
 def build_plan(rotate: bool = False) -> list[str]:
@@ -666,10 +905,10 @@ def plan_sha256(lines: list[str]) -> str:
     return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
 
 
-def run_execute(backend: Backend, rotate: bool = False) -> None:
+def run_execute(backend: Backend, plan_sha: str, commit: str, rotate: bool = False) -> None:
     r = Runner(execute=True, backend=backend)
     try:
-        preflight(r)
+        preflight(r, plan_sha, commit)
         steps(r, rotate)
         postcheck(r)
         database_postcheck(r)
@@ -677,11 +916,11 @@ def run_execute(backend: Backend, rotate: bool = False) -> None:
         # The sign-in must not outlive a failed run. A failure to revoke is reported
         # alongside the original error, which is kept as the cause.
         try:
-            revoke(r)
+            revoke(r, commit, plan_sha)
         except StepError as err:
             print(f"::error::revoke also failed: {err}", file=sys.stderr)
         raise
-    revoke(r)
+    revoke(r, commit, plan_sha)
 
 
 def real_backend(kind: str, argv: list[str], stdin: str | None = None) -> tuple[int, str, str]:
@@ -705,6 +944,16 @@ def commit_check(expected: str | None) -> str | None:
     return None
 
 
+def ci_guard() -> str | None:
+    """Return an error text unless this is the reviewed workflow on main, or None when it is."""
+    for key, want in CI_ENVIRONMENT.items():
+        if os.environ.get(key) != want:
+            return f"{key} is {os.environ.get(key)!r}, not {want!r}; this command runs only from {WORKFLOW_REF}"
+    if re.fullmatch(r"[0-9a-f]{40}", os.environ.get("GITHUB_SHA", "")) is None:
+        return "GITHUB_SHA is not a commit; nothing ran"
+    return None
+
+
 def main(argv: list[str], backend: Backend | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else "")
     parser.add_argument("--execute", action="store_true", help="run the plan (CI only)")
@@ -715,17 +964,42 @@ def main(argv: list[str], backend: Backend | None = None) -> int:
     parser.add_argument("--revoke-only", action="store_true", help="remove the sign-in member and nothing else")
     parser.add_argument("--plan-file", help="write the plan text here")
     args = parser.parse_args(argv)
+    if args.execute or args.revoke_only:
+        error = ci_guard()
+        if error:
+            print(f"::error::{error}", file=sys.stderr)
+            return 2
 
     if args.revoke_only:
         if args.execute:
             print("::error::--revoke-only cannot be combined with --execute", file=sys.stderr)
             return 2
+        if args.expect_sha256 is None or args.expect_commit is None:
+            print("::error::--revoke-only needs --expect-sha256 and --expect-commit, so only the approved grant "
+                  "is removed; nothing ran", file=sys.stderr)
+            return 2
+        error = pinned_identity_error(args.expect_commit, args.expect_sha256)
+        if error:
+            print(f"::error::{error}", file=sys.stderr)
+            return 2
+        error = commit_check(args.expect_commit)  # the run must be the approved commit itself
+        if error:
+            print(f"::error::{error}", file=sys.stderr)
+            return 2
+        # The grant names one plan. This checkout must compute that plan or nothing runs. A grant this run refuses
+        # is removed by the website's reviewed han-signin-retire job (contract C4), not by this run.
+        sha = plan_sha256(build_plan(args.rotate_db_password))
+        if sha != args.expect_sha256:
+            print(f"::error::this checkout computes plan hash {sha}, not the approved {args.expect_sha256}; "
+                  "nothing ran. Recovery: the website's reviewed han-signin-retire job removes the grant.",
+                  file=sys.stderr)
+            return 2
         try:
-            revoke(Runner(execute=True, backend=backend or real_backend))
+            revoke(Runner(execute=True, backend=backend or real_backend), args.expect_commit, args.expect_sha256)
         except StepError as err:
             print(f"::error::{err}", file=sys.stderr)
             return 1
-        print("revoked: the bootstrap sign-in member is absent")
+        print("revoked: the approved bootstrap sign-in grant is absent")
         return 0
 
     lines = build_plan(args.rotate_db_password)
@@ -749,8 +1023,12 @@ def main(argv: list[str], backend: Backend | None = None) -> int:
         print("::error::--execute needs --expect-sha256 and --expect-commit, so the approval names the exact plan and commit",
               file=sys.stderr)
         return 2
+    error = pinned_identity_error(args.expect_commit, args.expect_sha256)
+    if error:
+        print(f"::error::{error}", file=sys.stderr)
+        return 2
     try:
-        run_execute(backend or real_backend, args.rotate_db_password)
+        run_execute(backend or real_backend, sha, args.expect_commit, args.rotate_db_password)
     except StepError as err:
         print(f"::error::{err}", file=sys.stderr)
         return 1
