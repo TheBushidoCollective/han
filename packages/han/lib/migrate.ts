@@ -138,32 +138,35 @@ function writeSettingsFile(path: string, settings: ClaudeSettings): void {
 function migrateEnabledPlugins(enabledPlugins: Record<string, boolean>): {
   migrated: Record<string, boolean>;
   changes: Array<{ oldName: string; newName: string }>;
+  conflicts: string[];
 } {
   const migrated: Record<string, boolean> = {};
   const changes: Array<{ oldName: string; newName: string }> = [];
-
+  const conflicts: string[] = [];
+  const targets = new Map<string, Array<[string, boolean]>>();
   for (const [key, enabled] of Object.entries(enabledPlugins)) {
-    // Check if this is a @han plugin
-    if (!key.endsWith('@han')) {
-      migrated[key] = enabled;
-      continue;
-    }
-
-    const pluginName = key.slice(0, -4); // Remove "@han" suffix
-    const canonicalName = getCanonicalName(pluginName);
-
-    if (canonicalName && canonicalName !== pluginName) {
-      // This is an old name - migrate it
-      const newKey = `${canonicalName}@han`;
-      migrated[newKey] = enabled;
-      changes.push({ oldName: key, newName: newKey });
-    } else {
-      // Keep as-is (either already migrated or not a known alias)
-      migrated[key] = enabled;
-    }
+    const name = key.endsWith('@han') ? key.slice(0, -4) : '';
+    const canonical = getCanonicalName(name);
+    const target = canonical ? `${canonical}@han` : key;
+    const entries = targets.get(target) ?? [];
+    entries.push([key, enabled]);
+    targets.set(target, entries);
   }
 
-  return { migrated, changes };
+  for (const [target, entries] of targets) {
+    if (entries.some(([, value]) => value !== entries[0][1])) {
+      conflicts.push(
+        `Conflicting settings for ${target}: ${entries.map(([key]) => key).join(', ')}`
+      );
+      for (const [key, enabled] of entries) migrated[key] = enabled;
+      continue;
+    }
+    migrated[target] = entries[0][1];
+    for (const [key] of entries) {
+      if (key !== target) changes.push({ oldName: key, newName: target });
+    }
+  }
+  return { migrated, changes, conflicts };
 }
 
 /**
@@ -220,9 +223,10 @@ export function migrateSettingsFile(path: string): MigrationResult {
 
   // Migrate enabledPlugins
   if (settings.enabledPlugins) {
-    const { migrated, changes } = migrateEnabledPlugins(
+    const { migrated, changes, conflicts } = migrateEnabledPlugins(
       settings.enabledPlugins
     );
+    if (conflicts.length > 0) result.error = conflicts.join('; ');
     if (changes.length > 0) {
       settings.enabledPlugins = migrated;
       result.migratedPlugins.push(...changes);
@@ -379,6 +383,15 @@ function migrateYamlMapKeys(node: unknown, result: MigrationResult): boolean {
   }
 
   const mapNode = node as { items: Array<{ key: unknown; value: unknown }> };
+  const targetCounts = new Map<string, number>();
+  for (const pair of mapNode.items) {
+    const key = pair.key;
+    if (!key || typeof key !== 'object' || !('value' in key)) continue;
+    const value = key.value;
+    if (typeof value !== 'string') continue;
+    const target = getCanonicalName(value) ?? value;
+    targetCounts.set(target, (targetCounts.get(target) ?? 0) + 1);
+  }
   let modified = false;
 
   for (const pair of mapNode.items) {
@@ -393,6 +406,11 @@ function migrateYamlMapKeys(node: unknown, result: MigrationResult): boolean {
 
     const canonical = getCanonicalName(keyValue);
     if (canonical && canonical !== keyValue) {
+      if ((targetCounts.get(canonical) ?? 0) > 1) {
+        const conflict = `Conflicting YAML keys for ${canonical}; resolve before migrating`;
+        result.error = result.error ? `${result.error}; ${conflict}` : conflict;
+        continue;
+      }
       keyObj.value = canonical;
       result.migratedPlugins.push({ oldName: keyValue, newName: canonical });
       modified = true;
@@ -496,10 +514,13 @@ export function logMigrationResults(
   results: MigrationResult[],
   verbose = false
 ): void {
+  for (const result of results) {
+    if (result.error) console.error(`${result.path}: ${result.error}`);
+  }
   const modifiedResults = results.filter((r) => r.modified);
 
   if (modifiedResults.length === 0) {
-    if (verbose) {
+    if (verbose && !results.some((result) => result.error)) {
       console.log('No plugin names needed migration.');
     }
     return;
@@ -521,18 +542,18 @@ export function logMigrationResults(
 export function runMigration(
   options: { projectPath?: string; verbose?: boolean; silent?: boolean } = {}
 ): boolean {
-  const {
-    projectPath = process.cwd(),
-    verbose = false,
-    silent = false,
-  } = options;
+  const { projectPath = process.cwd(), silent = false } = options;
 
   const jsonResults = migratePluginNames(projectPath);
   const yamlResults = migrateYamlConfigFiles(projectPath);
   const results = [...jsonResults, ...yamlResults];
 
-  if (!silent) {
-    logMigrationResults(results, verbose);
+  if (silent) {
+    for (const result of results) {
+      if (result.error) console.error(`${result.path}: ${result.error}`);
+    }
+  } else {
+    logMigrationResults(results, true);
   }
 
   return results.some((r) => r.modified);

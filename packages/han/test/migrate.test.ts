@@ -10,6 +10,7 @@ import {
   isOldPluginName,
   migratePluginNames,
   migrateSettingsFile,
+  migrateYamlConfigFile,
 } from '../lib/migrate.ts';
 
 // Use a temp directory for tests
@@ -145,6 +146,91 @@ describe('migrateSettingsFile', () => {
     ).toBeUndefined();
   });
 
+  test('preserves conflicting enabled states regardless of key order', () => {
+    const settingsPath = join(TEST_HOME, '.claude', 'settings.json');
+    for (const entries of [
+      [
+        ['claude-agent-sdk@han', false],
+        ['agent-sdk@han', true],
+      ],
+      [
+        ['agent-sdk@han', true],
+        ['claude-agent-sdk@han', false],
+      ],
+      [
+        ['CLAUDE-AGENT-SDK@han', false],
+        ['jutsu-claude-agent-sdk@han', true],
+      ],
+    ] as Array<Array<[string, boolean]>>) {
+      const enabledPlugins = Object.fromEntries(entries);
+      writeFileSync(settingsPath, JSON.stringify({ enabledPlugins }));
+      const result = migrateSettingsFile(settingsPath);
+      expect(result.modified).toBe(false);
+      expect(result.error).toContain('Conflicting settings for agent-sdk@han');
+      expect(
+        JSON.parse(readFileSync(settingsPath, 'utf-8')).enabledPlugins
+      ).toEqual(enabledPlugins);
+      expect(migrateSettingsFile(settingsPath).modified).toBe(false);
+    }
+  });
+
+  test('migrates matching disabled aliases and leaves canonical disabled', () => {
+    const settingsPath = join(TEST_HOME, '.claude', 'settings.json');
+    writeFileSync(
+      settingsPath,
+      JSON.stringify({
+        enabledPlugins: {
+          'CLAUDE-AGENT-SDK@han': false,
+          'jutsu-claude-agent-sdk@han': false,
+          'agent-sdk@han': false,
+        },
+      })
+    );
+    expect(migrateSettingsFile(settingsPath).modified).toBe(true);
+    expect(
+      JSON.parse(readFileSync(settingsPath, 'utf-8')).enabledPlugins
+    ).toEqual({
+      'agent-sdk@han': false,
+    });
+    expect(migrateSettingsFile(settingsPath).modified).toBe(false);
+  });
+
+  test('migrates reserved names in all settings scopes and permissions', () => {
+    const paths = [
+      join(TEST_HOME, '.claude', 'settings.json'),
+      join(TEST_PROJECT, '.claude', 'settings.json'),
+      join(TEST_PROJECT, '.claude', 'settings.local.json'),
+    ];
+    for (const path of paths) {
+      writeFileSync(
+        path,
+        JSON.stringify({
+          enabledPlugins: { 'claude-plugin-development@han': false },
+          permissions: {
+            allow: ['claude-agent-sdk@han'],
+            deny: ['do-claude-plugin-development@han'],
+          },
+        })
+      );
+    }
+    expect(
+      migratePluginNames(TEST_PROJECT).filter((result) => result.modified)
+    ).toHaveLength(3);
+    for (const path of paths) {
+      const settings = JSON.parse(readFileSync(path, 'utf-8'));
+      expect(settings.enabledPlugins).toEqual({
+        'plugin-authoring@han': false,
+      });
+      expect(settings.permissions).toEqual({
+        allow: ['agent-sdk@han'],
+        deny: ['plugin-authoring@han'],
+      });
+    }
+    expect(
+      migratePluginNames(TEST_PROJECT).every((result) => !result.modified)
+    ).toBe(true);
+  });
+
   test('should migrate old plugin names in permissions.allow', () => {
     const settingsPath = join(TEST_HOME, '.claude', 'settings.json');
     const settings = {
@@ -208,6 +294,39 @@ describe('migrateSettingsFile', () => {
 
     expect(result.modified).toBe(false);
     expect(result.migratedPlugins).toHaveLength(0);
+  });
+
+  test('preserves colliding YAML mappings and migrates non-colliding keys', () => {
+    for (const [filename, prefix] of [
+      ['han.yml', 'plugins:\n'],
+      ['han-config.yml', ''],
+    ]) {
+      const path = join(TEST_PROJECT, filename);
+      const indent = prefix ? '  ' : '';
+      const content = `${prefix}${indent}claude-agent-sdk:\n${indent}  enabled: false\n${indent}agent-sdk:\n${indent}  enabled: true\n${indent}claude-plugin-development:\n${indent}  enabled: false\n`;
+      writeFileSync(path, content);
+      const result = migrateYamlConfigFile(path);
+      expect(result.modified).toBe(true);
+      expect(result.error).toContain('Conflicting YAML keys for agent-sdk');
+      const migrated = readFileSync(path, 'utf-8');
+      expect(migrated).toContain('claude-agent-sdk:');
+      expect(migrated).toContain('agent-sdk:');
+      expect(migrated).toContain('plugin-authoring:');
+      expect(migrated).toContain('enabled: false');
+      expect(migrateYamlConfigFile(path).modified).toBe(false);
+      expect(readFileSync(path, 'utf-8')).toBe(migrated);
+    }
+  });
+
+  test('preserves two YAML aliases targeting the same plugin', () => {
+    const path = join(TEST_PROJECT, 'han.yml');
+    const content =
+      'plugins:\n  CLAUDE-AGENT-SDK:\n    enabled: false\n  jutsu-claude-agent-sdk:\n    enabled: true\n';
+    writeFileSync(path, content);
+    const result = migrateYamlConfigFile(path);
+    expect(result.modified).toBe(false);
+    expect(result.error).toContain('Conflicting YAML keys for agent-sdk');
+    expect(readFileSync(path, 'utf-8')).toBe(content);
   });
 
   test('should return empty result for non-existent file', () => {

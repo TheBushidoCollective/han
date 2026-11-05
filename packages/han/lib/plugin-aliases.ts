@@ -56,6 +56,7 @@ export const PLUGIN_ALIASES: Record<string, string> = {
   'do-blockchain': 'disciplines/blockchain-development',
   'do-blockchain-development': 'disciplines/blockchain-development',
   'do-claude-plugin-development': 'disciplines/plugin-authoring',
+  'do-plugin-authoring': 'disciplines/plugin-authoring',
   'do-compiler-development': 'disciplines/compiler-engineering',
   'do-compilers': 'disciplines/compiler-engineering',
   'do-content': 'disciplines/content-creation',
@@ -181,6 +182,7 @@ export const PLUGIN_ALIASES: Record<string, string> = {
   // specialized
   'jutsu-android': 'specialized/android',
   'jutsu-claude-agent-sdk': 'specialized/agent-sdk',
+  'jutsu-agent-sdk': 'specialized/agent-sdk',
   'jutsu-fnox': 'specialized/fnox',
   'jutsu-han-plugins': 'specialized/han-plugins',
   'jutsu-ios': 'specialized/ios',

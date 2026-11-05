@@ -186,7 +186,9 @@ han plugin generate-hooks --all
 
 ## `han plugin migrate`
 
-Rewrite old prefixed plugin names to their short names in your settings files. The legacy `jutsu-`, `do-`, and `hashi-` prefixes remain valid marketplace aliases, so migrating is a tidiness step rather than a fix for a broken install.
+Rewrite old plugin names to their canonical names in user, project and local Claude settings, permissions, and Han YAML configuration. Most legacy prefixed names remain marketplace aliases. Claude Code rejects the old `claude-agent-sdk`, `claude-plugin-development`, `jutsu-claude-agent-sdk`, and `do-claude-plugin-development` names, so those installs need migration.
+
+If settings for aliases of the same plugin disagree, migration leaves those keys unchanged and reports the conflict. YAML keys that would collide are also left unchanged to avoid losing configuration. Resolve the reported keys manually, then rerun the command. Disabled settings remain disabled.
 
 ```bash
 han plugin migrate

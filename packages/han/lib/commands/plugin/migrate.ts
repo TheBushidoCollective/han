@@ -16,21 +16,17 @@ export function registerPluginMigrate(parent: Command): void {
       'Migrate old plugin names to new short names in settings files'
     )
     .option('-v, --verbose', 'Show detailed output even when no changes made')
-    .option('-s, --silent', 'Suppress all output')
+    .option('-s, --silent', 'Suppress normal output, but report errors')
     .option(
       '-p, --project <path>',
       'Project path for project/local settings',
       process.cwd()
     )
     .action((options) => {
-      const modified = runMigration({
+      runMigration({
         projectPath: options.project,
         verbose: options.verbose,
         silent: options.silent,
       });
-
-      if (!options.silent && !modified && !options.verbose) {
-        console.log('No plugin names needed migration.');
-      }
     });
 }
