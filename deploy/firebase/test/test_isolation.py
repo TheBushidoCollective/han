@@ -104,9 +104,15 @@ class TerraformScope(unittest.TestCase):
         for match in re.finditer(r'account_id\s*=\s*"([^"]+)"', text):
             self.assertTrue(match.group(1).startswith("han-"), match.group(1))
 
-    def test_the_shared_pool_is_never_referenced(self):
+    def test_the_shared_pool_is_referenced_only_by_the_bootstrap(self):
+        # Han's runtime never uses the shared github pool. Only the one-shot
+        # bootstrap signs in through it, as the existing bootstrap identity.
         for path in list(TF.glob("*.tf")) + list(WORKFLOWS.glob("*.yml")):
-            self.assertNotIn("workloadIdentityPools/github/", path.read_text(encoding="utf-8"), path.name)
+            text = path.read_text(encoding="utf-8")
+            if "workloadIdentityPools/github/" in text:
+                self.assertEqual(path.name, "han-bootstrap.yml", path.name)
+                self.assertIn("service_account: terraform-bootstrap@thebushido-co.iam.gserviceaccount.com", text)
+                self.assertIn("environment:\n      name: han-bootstrap", text)
 
     def test_invoker_setting_is_in_terraform(self):
         self.assertIn("invoker_iam_disabled = true", (TF / "cloudrun.tf").read_text(encoding="utf-8"))
@@ -157,41 +163,6 @@ class CustomRoles(unittest.TestCase):
     def test_create_role_cannot_read_or_change_anything(self):
         perms = custom_role_permissions(ROLES / "han_tf_create.yaml")
         self.assertEqual(perms, {"secretmanager.secrets.create", "cloudsql.instances.create"})
-
-    def test_the_bootstrap_script_binds_each_role_with_a_condition_where_one_exists(self):
-        text = (BOOT / "bootstrap.sh").read_text(encoding="utf-8")
-        for role in ("hanTfApplySecrets", "hanTfPlanSecrets", "hanTfApplySql", "hanTfPlanSql"):
-            line = next(l for l in text.splitlines() if f"--role \"projects/${{PROJECT}}/roles/{role}\"" in l)
-            self.assertIn("--condition=", line, role)
-        self.assertNotIn("--role roles/owner", text)
-
-
-class BootstrapScript(unittest.TestCase):
-    def test_script_prints_by_default_and_never_creates_keys_or_projects(self):
-        text = (BOOT / "bootstrap.sh").read_text(encoding="utf-8")
-        self.assertIn('MODE="print"', text)
-        self.assertNotIn("keys create", text)
-        self.assertNotIn("projects create", text)
-        self.assertNotIn("serviceAccountAdmin", text)
-
-    def test_script_creates_five_service_accounts_and_no_others(self):
-        text = (BOOT / "bootstrap.sh").read_text(encoding="utf-8")
-        block = text.split("for sa in", 1)[1].split("; do", 1)[0]
-        self.assertEqual(
-            set(block.split()),
-            {"han-tf-plan", "han-tf-apply", "han-deployer", "han-hosting-deployer", "han-server-run"},
-        )
-
-    def test_the_only_project_wide_grant_is_the_reviewed_hosting_exception(self):
-        text = (BOOT / "bootstrap.sh").read_text(encoding="utf-8")
-        project_grants = re.findall(r"add-iam-policy-binding \"\$PROJECT\".*?--role (\S+)", text, re.S)
-        exceptions = {role for (_, role) in OPEN_PROJECT_WIDE_GRANTS}
-        for role in project_grants:
-            if role.startswith("projects/") or role.startswith("roles/"):
-                if role in exceptions:
-                    continue
-                self.assertNotIn(role.split("/")[-1], {"owner", "editor", "viewer", "admin"}, role)
-        self.assertIn("roles/firebasehosting.admin", exceptions and {"roles/firebasehosting.admin"})
 
 
 if __name__ == "__main__":

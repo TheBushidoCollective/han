@@ -1,0 +1,59 @@
+name: Han Bootstrap
+
+# The one-shot bootstrap for Han inside thebushido-co. It runs from CI only, and
+# nothing else calls it.
+#
+# - Manual trigger only, from main.
+# - Runs in the han-bootstrap environment, which needs a required reviewer.
+# - Signs in through the existing github pool, as terraform-bootstrap, and only
+#   for the subject repo:TheBushidoCollective/han:environment:han-bootstrap.
+#   Jason's grant of that subject is a prerequisite (PATH.md section 8).
+# - Prints the plan first, then executes it. Idempotent. The last step removes
+#   the sign-in binding, so the bootstrap cannot run again without a new grant.
+#
+# It uses no secret, creates no key and creates no project.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: han-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: han-bootstrap
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Authenticate to Google Cloud (WIF, existing github pool, bootstrap identity)
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        with:
+          workload_identity_provider: projects/911514101920/locations/global/workloadIdentityPools/github/providers/github
+          service_account: terraform-bootstrap@thebushido-co.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
+
+      - name: Install the pinned Firebase CLI (for the Hosting sites step)
+        working-directory: deploy/firebase
+        run: npm ci --ignore-scripts
+
+      - name: Plan (read-only checks, mutations printed)
+        run: python3 -B deploy/firebase/bootstrap/bootstrap.py
+
+      - name: Execute
+        run: python3 -B deploy/firebase/bootstrap/bootstrap.py --execute

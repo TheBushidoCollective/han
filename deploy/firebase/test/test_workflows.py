@@ -32,7 +32,9 @@ INFRA = "han-infra.yml"
 DEPLOY_WORKFLOWS = ("deploy-han-server.yml", "deploy-hosting.yml")
 SMOKE = "han-server-smoke.yml"
 VALIDATE = "validate-deploy.yml"
-ALL_WORKFLOWS = (INFRA, *DEPLOY_WORKFLOWS, SMOKE, VALIDATE)
+BOOTSTRAP = "han-bootstrap.yml"
+ALL_WORKFLOWS = (INFRA, *DEPLOY_WORKFLOWS, SMOKE, VALIDATE, BOOTSTRAP)
+EVENT_SPLIT_WORKFLOWS = tuple(w for w in ALL_WORKFLOWS if w != BOOTSTRAP)
 PINNED_WORKFLOWS = ALL_WORKFLOWS
 
 DEPLOYER_SA = "HAN_GCP_DEPLOYER_SA"
@@ -90,7 +92,7 @@ def main_gated(jobs: dict, job_name: str, seen=None) -> bool:
     seen = seen | {job_name}
     job = jobs[job_name]
     cond = str(job.get("if", ""))
-    if "workflow_run" in cond or "event_name == 'push'" in cond:
+    if "workflow_run" in cond or "event_name == 'push'" in cond or "github.ref == 'refs/heads/main'" in cond:
         return True
     needs = job.get("needs", [])
     if isinstance(needs, str):
@@ -259,12 +261,12 @@ class Concurrency(unittest.TestCase):
     """H6: PR and main runs use different groups. Only PR runs cancel."""
 
     def test_pr_and_main_runs_use_different_groups(self):
-        for name in ALL_WORKFLOWS:
+        for name in EVENT_SPLIT_WORKFLOWS:
             group = str(load(name)["concurrency"]["group"])
             self.assertIn("github.event_name", group, name)
 
     def test_only_pull_requests_cancel_in_progress(self):
-        for name in ALL_WORKFLOWS:
+        for name in EVENT_SPLIT_WORKFLOWS:
             cancel = str(load(name)["concurrency"]["cancel-in-progress"])
             self.assertIn("pull_request", cancel, name)
             self.assertNotEqual(cancel, "true", name)
@@ -352,6 +354,18 @@ class ServerChecks(unittest.TestCase):
         self.assertIn("/health", hosting)
         server = steps_text(load("deploy-han-server.yml")["jobs"]["deploy"])
         self.assertNotIn("check_redirect.py", server)
+
+    def test_startup_logs_are_read_only_through_the_constrained_view(self):
+        # The deployer has no project log role. It reads one view, nothing else.
+        text = steps_text(load("deploy-han-server.yml")["jobs"]["deploy"])
+        self.assertIn("--bucket=han-server-logs", text)
+        self.assertIn("--view=startup", text)
+        calls = text.split("gcloud logging read")[1:]
+        self.assertTrue(calls, "the startup check must read logs")
+        for call in calls:
+            window = call[:400]
+            self.assertIn("--bucket=han-server-logs", window)
+            self.assertIn("--view=startup", window)
 
     def test_secret_precheck_does_not_need_payload_access(self):
         text = steps_text(load("deploy-han-server.yml")["jobs"]["deploy"])

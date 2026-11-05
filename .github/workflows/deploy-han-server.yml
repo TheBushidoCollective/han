@@ -217,8 +217,11 @@ jobs:
         run: |
           set -euo pipefail
           for _ in $(seq 1 18); do
+            # Reads only the constrained view (bootstrap.py step 9): a bucket that
+            # receives han-server logs only, through a view the deployer can view.
             gcloud logging read \
               "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"$SERVICE\" AND resource.labels.revision_name=\"$LIVE_REVISION\"" \
+              --bucket=han-server-logs --location=us-central1 --view=startup \
               --project "$PROJECT_ID" --limit 300 --freshness 2h --format=json > logs.json
             if python3 deploy/firebase/scripts/check_startup.py logs.json "$LIVE_REVISION"; then
               exit 0

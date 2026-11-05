@@ -95,117 +95,141 @@ dig +short A coordinator.local.han.guru # 127.0.0.1
 - **Bootstrap (missing prerequisite, no CI path yet).** See section 8.
 - **Browse path.** Unchanged. See "What this path does not prove".
 
-## 8. Shared project, identities and residual risk
+## 8. Shared project: decisions, bootstrap and residual risk
 
-Status: not deployed. Nothing here is created yet. Han runs in the existing
-project `thebushido-co` (project number 911514101920, organisation
-949208237676). Jason's direction: Han-named resources and service accounts, CI-only
-apply, and no Han permission over existing services or secrets.
+Status: bootstrap built and tested. Not run. Han runs in the existing project
+`thebushido-co` (project number 911514101920, organisation 949208237676).
+
+### Decisions taken by Jason
+
+- **Dedicated Han deployer in the shared project, accepting Firebase Hosting's
+  project-wide reach** (risk 1), with a dedicated review-gated CI identity
+  (`han-hosting-deployer`, environment `han-hosting`).
+- **Constrained log access.** Log views exist only on custom log buckets, not on
+  `_Default` (Google's logs-views documentation). Han uses a custom bucket
+  `han-server-logs` that receives only `han-server` logs, a view `startup` on
+  it, and `roles/logging.viewAccessor` granted on that view alone. No project
+  logging viewer is granted.
+- **Bootstrap through existing trusted CI only.** `han-bootstrap.yml` runs
+  `bootstrap/bootstrap.py`, in environment `han-bootstrap`. Nothing runs from a
+  workstation.
+- **Conservative PR plan identity.** The plan identity admits pull requests from
+  this repository only, through the repository-ID condition. It is read-only.
+- **Existing environment review conventions.** Required reviewer: GitHub user
+  `jwaldrip` (ID 43164, verified). Deployment from `main` only.
 
 ### What is built
 
-- **No Han identity is owner.** The apply identity `han-tf-apply` holds no
-  owner, editor or project-IAM-admin role. Its project grants are two custom
-  roles that create resources, and two conditioned custom roles that reach only
-  `han-server-*` secrets and the `han-pg` instance. Everything else is a grant
-  on one Han resource.
-- **Own pool.** Han uses the WIF pool `han-github`, not the shared `github` pool.
-  The provider admits only repository ID `1100192477`, and only the workflows
-  `han-infra.yml`, `deploy-han-server.yml` and `deploy-hosting.yml`.
-- **Separate identities per job.** Five service accounts, each used from one
-  environment only:
+| Identity | Environment | Project grants |
+|---|---|---|
+| `han-tf-plan` | none (PRs) | read-only custom roles, `storage.objectViewer` on the state bucket |
+| `han-tf-apply` | `han-infra-apply` | `hanTfCreate`, and conditioned `hanTfApplySecrets` and `hanTfApplySql`. No owner or project-IAM role |
+| `han-deployer` | `han-production` | none. Per-resource only: `run.developer` on `han-server`, `artifactregistry.writer` on `han`, `secretmanager.viewer` per secret, `logging.viewAccessor` on the `startup` view |
+| `han-hosting-deployer` | `han-hosting` | `firebasehosting.admin`, `firebase.viewer`, `serviceusage.serviceUsageConsumer` (accepted risk 1). `run.viewer` on `han-server` |
+| `han-server-run` | none | `cloudsql.client`, `logging.logWriter` |
 
-  | Account | Used by | Environment | Project grants |
-  |---|---|---|---|
-  | `han-tf-plan` | han-infra plan, PRs | none | read-only custom roles |
-  | `han-tf-apply` | han-infra apply | `han-infra-apply` (reviewer, main) | create roles and two conditioned roles |
-  | `han-deployer` | server publish and deploy | `han-production` | none |
-  | `han-hosting-deployer` | hosting deploy | `han-hosting` | `firebasehosting.admin` (see risk 1) |
-  | `han-server-run` | Cloud Run runtime | none | `cloudsql.client`, `logging.logWriter` |
+- **Created by the bootstrap, not by Terraform:** the five identities, the `han-github`
+  pool and provider, the state bucket, the Cloud Run service shell (private),
+  the `han` Artifact Registry repo, the log bucket, sink and view, and the three
+  Hosting sites.
+- **Terraform** (`deploy/firebase/terraform`) manages the six secrets, their
+  per-secret IAM, the `han-pg` instance and user, the `han-server` service's
+  invoker setting and IAM, and the `han` repo's IAM. It creates no identity, no
+  project IAM, no project API, no Firebase project and no logging resource.
+- **The bootstrap** (`bootstrap/bootstrap.py`) is idempotent. Every step first
+  describes the object and creates it only if missing. Print mode runs the
+  read-only checks and prints the mutations. `--execute` runs them. It refuses to
+  run as any identity other than `terraform-bootstrap`, refuses if a Han identity
+  has a user-managed key, and fails if its own sign-in binding survives the final
+  revoke.
 
-- **Created by a human, not Terraform.** Service accounts, the pool, the state
-  bucket, the Cloud Run service shell and the Artifact Registry repo. Terraform
-  imports or reads them (`cloudrun.tf`, `artifact.tf`, `main.tf`).
-- **No project-level IAM from Terraform, no project APIs, no Firebase or DNS
-  resources.** `test_isolation.py` fails if any of these appears.
-- **Invoker check set in Terraform** (`invoker_iam_disabled = true` in
-  `cloudrun.tf`). The deploy never passes a flag that changes it, and
-  `check_invoker.py` runs after every deploy.
-- **Hosting split out.** The server deploy has no Firebase CLI and does not touch
-  Hosting. `deploy-hosting.yml` owns all three Hosting targets, including the
-  static `api` rewrite, and the API host checks. Nothing in the server path can
-  change a Hosting site.
-- **Custom roles are reviewed files** in `bootstrap/roles/`, created by a human
-  from `bootstrap.sh`. Every permission name was checked against the 14,091
-  testable permissions for `thebushido-co` (read-only, 2026-11-05). Role creation
-  itself has not run.
+### Prerequisites a human must do (two, once, and nothing else)
 
-### Unavoidable risks, with the test that covers each
+These need an owner or a GitHub admin. Neither can be done from CI, because the
+CI identity that would need them does not exist yet.
 
-1. **Hosting is project-wide.** `roles/firebasehosting.admin` reaches every
-   Hosting site in `thebushido-co`: `withbushido-ai`, `thebushido-web`,
-   `thebushido-co`, `bitwits-demo-tbc`, `para-demo-tbc`, `iocore-demo-tbc`,
-   `endmetaltheft-demo-tbc`. Firebase says custom roles cannot control Hosting,
-   and Hosting has no site-level IAM. The only way to remove this is to take
-   Han's Hosting elsewhere. Covered by `test_isolation.py`
-   (`OPEN_PROJECT_WIDE_GRANTS`) and by the bootstrap's single hosting exception.
-   **Decision: Jason.**
-2. **terraform-ci can become owner, outside Han.** It holds `roles/owner` on
-   `thebushido-co`, and can be impersonated by any ref of the website repo
-   (`deploy/terraform/workload_identity.tf:57-61`). `astro-deployer` can deploy
-   code that runs as it (`astro/service_accounts.tf:69-86`). Han's identities are
-   reachable through owner, so no Han control caps this. Not covered by any test
-   here. **Needs a website-repo change: Jason and the website owners.**
-3. **Create permissions are unconditioned.** `secretmanager.secrets.create` and
-   `cloudsql.instances.create` cannot be narrowed by name before the resource
-   exists. They can create junk or cost money. They cannot read or change
-   anyone else's resources. Covered by `test_create_role_cannot_read_or_change_anything`.
-4. **The apply identity can set IAM on Han's own secrets.** That is required to
-   manage them. A compromised apply could grant a principal access to a
-   `han-server-*` secret. Covered by `test_no_role_holds_a_forbidden_permission`
-   (no `versions.access`, no project IAM setter).
-5. **The plan identity can read secret and SQL metadata** (`get`/`list` only, no
-   payloads). Covered by `test_plan_roles_are_read_only`.
-6. **Pull requests can use the plan identity.** It admits any pull request from
-   the repository. It is read-only, but reads state and metadata. Open: Jason
-   decides whether to accept it.
+1. **Grant the bootstrap sign-in** (Jason, owner session):
 
-### Unverified: each needs a real check before relying on it
+   ```sh
+   gcloud iam service-accounts add-iam-policy-binding terraform-bootstrap@thebushido-co.iam.gserviceaccount.com \
+     --project=thebushido-co --role=roles/iam.workloadIdentityUser \
+     --member="principal://iam.googleapis.com/projects/911514101920/locations/global/workloadIdentityPools/github/subject/repo:TheBushidoCollective/han:environment:han-bootstrap" \
+     --account=jason@withbushido.ai
+   ```
 
-- **IAM Conditions on `resource.name`** for Secret Manager and Cloud SQL. Google
-  documents Secret Manager and Cloud SQL as supporting resource attributes. The
-  condition text in `bootstrap.sh` is not yet tested. Test: grant, then confirm
-  the apply identity cannot read an unrelated secret (`anthropic-api-key`) and
-  can manage `han-server-*`.
-- **`projects/<number>` versus `projects/<id>` in secret conditions.** The
-  bootstrap uses the number for secrets and the ID for Cloud SQL. Confirm with
-  the first grant.
-- **Whether the provider reads a write-only payload on refresh.** Not verified
-  against provider source in this session. The state guard (`state_guard.py`)
-  and the first plan are the check.
+   The bootstrap removes this binding itself at the end. It can then run again
+   only after a new grant.
+
+2. **Create the GitHub environments and variables** (Jason, repo admin). Four
+   environments, each with reviewer `43164` and deployment from `main` only:
+   `han-bootstrap`, `han-infra-apply`, `han-production`, `han-hosting`. Then the
+   repo variables: `HAN_GCP_PROJECT_ID=thebushido-co`,
+   `HAN_GCP_WIF_PROVIDER=projects/911514101920/locations/global/workloadIdentityPools/han-github/providers/han-github`,
+   `HAN_GCP_TF_PLAN_SA`, `HAN_GCP_TF_APPLY_SA`, `HAN_GCP_DEPLOYER_SA`,
+   `HAN_GCP_HOSTING_DEPLOYER_SA`. Set `HAN_GITHUB_CLIENT_ID` at slice I.
+
+   The bootstrap cannot do this. `GITHUB_TOKEN` cannot manage environments or
+   variables, and Han has no GitHub App.
+
+### How it runs after the prerequisites
+
+1. Merge this PR. Run **Han Bootstrap** from `main`, read the printed plan, approve
+   `han-bootstrap`. It creates everything above and revokes its sign-in.
+2. Open a PR. `han-infra` plans as `han-tf-plan`. Merge to `main`, approve
+   `han-infra-apply`, and it applies as `han-tf-apply`.
+3. The deploy workflows run after `han-infra` succeeds on the same commit.
+
+### Tests, and what they prove
+
+- `test_bootstrap.py` (24): against a fake cloud, the first run creates every
+  object, a second run creates nothing, no key or project is created, no owner,
+  editor, viewer or IAM-admin role is granted, the Cloud Run shell is private, log
+  access is granted on the view only, the sink and view share one filter, the
+  revoke is the last write, and print mode writes nothing. A planted public
+  binding and a planted project-level viewer were each caught.
+- `test_isolation.py`: Terraform's grants are the reviewed set, no identity-admin
+  role appears, and the shared pool is referenced only by the bootstrap workflow,
+  as the bootstrap identity.
+- `test_workflows.py`: each identity is used only from its environment, the server
+  deployer never runs the Firebase CLI, the startup check reads only the constrained
+  view, and every third-party action is pinned.
+
+### Unverified: each needs a real check, and the first run is that check
+
+- **IAM Conditions on `resource.name`** for Secret Manager and Cloud SQL. The
+  condition text in `bootstrap.py` is untested. Check: the apply identity cannot
+  read `anthropic-api-key`, and can manage `han-server-*`.
+- **The sink writes into a log bucket without an extra grant.** Google's docs
+  suggest it does. Check: the `startup` view shows a new `han-server` revision's
+  lines.
+- **`gcloud auth list` names the bootstrap account under WIF.** The bootstrap
+  refuses to run otherwise, so a mismatch fails closed. Check on the first run.
 - **The invoker setting's JSON field** in `gcloud run services describe`.
   `check_invoker.py` accepts `invokerIamDisabled` and the legacy annotation.
-- **Whether `run.developer` covers `gcloud run revisions describe`.**
-- **Logging for the startup check. OPEN DECISION.** The deployer has no log
-  role, so the startup check cannot run. Option (a), project `logging.viewer`,
-  reads every service's logs. Option (b), a log view scoped to `han-server`, is
-  unverified: the `_Default` bucket may not accept views. Until chosen, no deploy
-  may pass. See `bootstrap.sh` step 9.
-- **Whether `invoker_iam_disabled` in Terraform survives a plain
-  `gcloud run deploy`.** The deploy checks it afterwards, but this is not proven.
+- **`run.developer` covers `gcloud run revisions describe`.**
+- **Whether `invoker_iam_disabled` survives a plain `gcloud run deploy`.** The
+  deploy checks it afterwards.
+- **The `terraform-bootstrap` user-managed key** (see residual 2).
 
-### Required before merge and deploy
+### Residual risk, accepted or open
 
-1. Create the custom roles and run each conditioned grant; prove the conditions
-   with the tests above.
-2. Decide the logging option (see above).
-3. Decide risk 1 (Hosting) and risk 6 (pull-request plan), and whether
-   `prevent_self_review` is set on the environments.
-4. Security review of this section and of `bootstrap/roles/`. Named reviewer: to
-   be assigned by Jason.
-5. The website-repo change for risk 2 is a separate PR owned by the website
-   team. Han does not depend on it being merged first, but it caps Han's
-   protection, so it should be decided before production.
+1. **Hosting is project-wide (accepted by Jason).** `han-hosting-deployer` can
+   deploy or delete every Hosting site in the project: `withbushido-ai`,
+   `thebushido-web`, `thebushido-co` and the client demos. Covered by
+   `test_isolation.py` (`OPEN_PROJECT_WIDE_GRANTS`) and by the single hosting grant
+   in `bootstrap.py`.
+2. **`terraform-bootstrap` is owner and has a user-managed key.**
+   `gcloud iam service-accounts keys list` shows key `871c68f6…`. Anyone holding
+   that key is owner of `thebushido-co`. The bootstrap uses the identity only
+   through WIF, so it does not need the key. Han does not revoke it. **Decision:
+   Jason, whether to delete it.** Deleting it is a live change outside this task.
+3. **`terraform-ci` is owner and reachable from website-repo branches**
+   (`deploy/terraform/workload_identity.tf:57-61`). It outranks anything Han builds.
+   No test here covers it. **Owner: the website team.**
+4. **Create permissions are unconditioned** (`secretmanager.secrets.create`,
+   `cloudsql.instances.create`). They cannot read or change other resources.
+5. **The apply identity can set IAM on `han-server-*` secrets** (needed to manage them).
+   It cannot read payloads.
 
 ### Left undisturbed
 
