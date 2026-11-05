@@ -7,6 +7,7 @@ import importlib.util
 import json
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -47,9 +48,24 @@ class ExecutionContract(unittest.TestCase):
                            ('A', '2'), ('version', True), ('rotate_db_password', 'false')]:
             changed = dict(m); changed[key] = value
             with self.subTest(key=key), self.assertRaises(e.Refuse): e.validate_manifest(changed)
+        for key in ('C', 'H', 'W', 'R', 'T'):
+            changed = dict(m); changed[key] = 7
+            with self.subTest(key=key), self.assertRaises(e.Refuse): e.validate_manifest(changed)
         with self.assertRaises(e.Refuse): e.validate_manifest({**m, 'extra': 'x'})
         for run in ('0', '-1', '1' * 21, '12/3'):
             with self.assertRaises(e.Refuse): e.make_manifest(C, H, W, run, '1', T, False)
+
+    def test_manifest_bytes_must_be_canonical_and_not_duplicate_keys(self):
+        m = manifest()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'registration.json'
+            path.write_text(json.dumps(m, sort_keys=True, separators=(',', ':')) + '\n')
+            self.assertEqual(e.load_manifest(str(path)), m)
+            path.write_text(json.dumps(m) + '\n')
+            with self.assertRaises(e.Refuse): e.load_manifest(str(path))
+            raw = json.dumps(m, sort_keys=True, separators=(',', ':'))
+            path.write_text(raw[:-1] + ',\"version\":1}\n')
+            with self.assertRaises(e.Refuse): e.load_manifest(str(path))
 
     def test_every_signed_claim_and_expiration_is_required(self):
         m = manifest(); good = claims(m)
@@ -70,6 +86,46 @@ class ExecutionContract(unittest.TestCase):
             with self.subTest(key=key), self.assertRaises(e.Refuse): e.verify_provider(m, bad)
         bad = copy.deepcopy(good); bad['oidc']['allowedAudiences'].append('other')
         with self.assertRaises(e.Refuse): e.verify_provider(m, bad)
+        bad = copy.deepcopy(good); bad['oidc']['jwksJson'] = '{"keys":[{"kid":"attacker"}]}'
+        with self.assertRaises(e.Refuse): e.verify_provider(m, bad)
+        bad = copy.deepcopy(good); bad['oidc']['futureSecurityOption'] = True
+        with self.assertRaises(e.Refuse): e.verify_provider(m, bad)
+        bad = copy.deepcopy(good); bad['aws'] = {'accountId': 'other'}
+        with self.assertRaises(e.Refuse): e.verify_provider(m, bad)
+
+    def test_pool_is_exact_active_and_has_no_sibling_provider(self):
+        m = manifest()
+        good = {'name': m['provider_resource'].rsplit('/providers/', 1)[0], 'state': 'ACTIVE'}
+        providers = [{'name': m['provider_resource']}]
+        e.verify_pool(m, good, providers)
+        for key, value in [('name', 'other'), ('state', 'DELETED'), ('disabled', True),
+                           ('mode', 'TRUST_DOMAIN'), ('inlineTrustConfig', {})]:
+            bad = dict(good, **{key: value})
+            with self.subTest(key=key), self.assertRaises(e.Refuse): e.verify_pool(m, bad, providers)
+        with self.assertRaises(e.Refuse): e.verify_pool(m, good, [])
+        with self.assertRaises(e.Refuse): e.verify_pool(m, good, providers + [{'name': good['name'] + '/providers/attacker'}])
+        with self.assertRaises(e.Refuse): e.verify_pool(m, good, [{'name': 'other'}])
+
+    def test_provider_condition_pins_every_reviewed_predicate(self):
+        m = manifest()
+        expected = [
+            "assertion.repository_owner_id == '233175215'",
+            "assertion.repository_id == '1100192477'",
+            "assertion.repository == 'TheBushidoCollective/han'",
+            "assertion.ref == 'refs/heads/main'",
+            "assertion.event_name == 'workflow_dispatch'",
+            "assertion.workflow_ref == 'TheBushidoCollective/han/.github/workflows/han-bootstrap.yml@refs/heads/main'",
+            f"assertion.sha == '{C}'", f"assertion.workflow_sha == '{C}'",
+            f"assertion.run_id == '{R}'", "assertion.run_attempt == '1'",
+            "assertion.runner_environment == 'github-hosted'", "assertion.environment == 'han-bootstrap'",
+            f"assertion.aud == '{m['audience']}'", f"int(assertion.exp) <= {e.deadline_timestamp(T)}",
+        ]
+        self.assertEqual(e.provider_condition(m), " && ".join(expected))
+        for clause in expected:
+            altered = provider(m)
+            altered['attributeCondition'] = altered['attributeCondition'].replace(clause, 'true')
+            with self.subTest(clause=clause), self.assertRaises(e.Refuse):
+                e.verify_provider(m, altered)
 
     def test_exact_ci_context_and_attempt_are_required(self):
         m = manifest()
@@ -96,6 +152,24 @@ class ExecutionContract(unittest.TestCase):
             token, metadata = e.get_assertion(m)
             self.assertEqual(token, assertion)
             self.assertEqual(metadata['run_id'], R)
+
+    def test_claim_artifact_omits_jwt_and_unlisted_claims(self):
+        m = manifest()
+        with tempfile.TemporaryDirectory() as tmp:
+            registration = Path(tmp) / 'registration.json'
+            artifact = Path(tmp) / 'claims.json'
+            registration.write_text(json.dumps(m, sort_keys=True, separators=(',', ':')) + '\n')
+            metadata = dict(claims(m), arbitrary_secret='extra-secret')
+            argv = ['execution.py', 'inspect', '--manifest', str(registration), '--claims-file', str(artifact)]
+            out = io.StringIO()
+            with mock.patch.object(sys, 'argv', argv), mock.patch.object(e, 'check_ci'), \
+                 mock.patch.object(e, 'get_assertion', return_value=('jwt-secret', metadata)), \
+                 contextlib.redirect_stdout(out):
+                self.assertEqual(e.main(), 0)
+            text = artifact.read_text()
+            self.assertNotIn('jwt-secret', text + out.getvalue())
+            self.assertNotIn('extra-secret', text + out.getvalue())
+            self.assertEqual(json.loads(text)['run_id'], R)
 
     def test_readiness_retries_impersonation_without_logging_credentials(self):
         m = manifest()

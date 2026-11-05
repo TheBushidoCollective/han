@@ -42,11 +42,12 @@ def deadline_timestamp(value: str) -> int:
 
 def make_manifest(commit: str, plan: str, website: str, run: str, attempt: str,
                   deadline: str, rotate: bool) -> dict:
-    if not re.fullmatch(r"[0-9a-f]{40}", commit or "") or not re.fullmatch(r"[0-9a-f]{64}", plan or ""):
+    if (not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{40}", commit) or
+            not isinstance(plan, str) or not re.fullmatch(r"[0-9a-f]{64}", plan)):
         raise Refuse("invalid Han commit or manifest digest")
-    if not re.fullmatch(r"[0-9a-f]{40}", website or ""):
+    if not isinstance(website, str) or not re.fullmatch(r"[0-9a-f]{40}", website):
         raise Refuse("invalid website commit")
-    if not re.fullmatch(r"[1-9][0-9]{0,19}", run or "") or attempt != "1" or type(rotate) is not bool:
+    if not isinstance(run, str) or not re.fullmatch(r"[1-9][0-9]{0,19}", run) or attempt != "1" or type(rotate) is not bool:
         raise Refuse("invalid execution ID, attempt or rotation choice")
     deadline_timestamp(deadline)
     pool = f"han-bs-{run}-1"
@@ -66,6 +67,13 @@ def validate_manifest(doc: dict) -> dict:
         raise Refuse("execution manifest does not match derived identities")
     return expected
 
+def load_manifest(path: str) -> dict:
+    raw = Path(path).read_text(encoding="utf-8")
+    manifest = validate_manifest(json.loads(raw))
+    if raw != json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n":
+        raise Refuse("execution manifest is not canonical JSON")
+    return manifest
+
 
 def provider_condition(m: dict) -> str:
     pairs = [("repository_owner_id", OWNER_ID), ("repository_id", REPOSITORY_ID),
@@ -75,10 +83,29 @@ def provider_condition(m: dict) -> str:
              ("environment", "han-bootstrap"), ("aud", m["audience"])]
     return " && ".join(f"assertion.{name} == '{value}'" for name, value in pairs) + f" && int(assertion.exp) <= {deadline_timestamp(m['T'])}"
 
+def verify_pool(m: dict, pool: dict, providers: list) -> None:
+    expected_name = f"projects/{PROJECT_NUMBER}/locations/global/workloadIdentityPools/{m['pool_id']}"
+    allowed = {"name", "displayName", "description", "state", "disabled", "mode", "expireTime"}
+    if (not isinstance(pool, dict) or set(pool) - allowed or pool.get("name") != expected_name or
+            pool.get("state") != "ACTIVE" or pool.get("disabled", False) is not False or
+            pool.get("mode", "FEDERATION_ONLY") not in ("FEDERATION_ONLY", "MODE_UNSPECIFIED") or
+            pool.get("expireTime") not in (None, "") or not isinstance(providers, list) or
+            len(providers) != 1 or not isinstance(providers[0], dict) or
+            providers[0].get("name") != m["provider_resource"]):
+        raise Refuse("execution pool is not the exact active single-provider pool")
+
+
 def verify_provider(m: dict, provider: dict) -> None:
-    oidc = provider.get("oidc") or {}
+    if not isinstance(provider, dict):
+        raise Refuse("invalid execution provider")
+    oidc = provider.get("oidc")
+    allowed_provider = {"name", "displayName", "description", "state", "disabled",
+                        "attributeMapping", "attributeCondition", "expireTime", "oidc"}
+    allowed_oidc = {"issuerUri", "allowedAudiences", "jwksJson"}
     mapping = {"google.subject": "assertion.repository_id + ':' + assertion.run_id + ':' + assertion.run_attempt"}
-    if (provider.get("name") != m["provider_resource"] or provider.get("state") != "ACTIVE" or
+    if (set(provider) - allowed_provider or not isinstance(oidc, dict) or set(oidc) - allowed_oidc or
+            oidc.get("jwksJson") not in (None, "") or provider.get("expireTime") not in (None, "") or
+            provider.get("name") != m["provider_resource"] or provider.get("state") != "ACTIVE" or
             provider.get("disabled", False) is not False or provider.get("attributeMapping") != mapping or
             provider.get("attributeCondition") != provider_condition(m) or
             oidc.get("issuerUri") != ISSUER or oidc.get("allowedAudiences") != [m["audience"]]):
@@ -200,7 +227,7 @@ def main() -> int:
             Path(args.manifest).write_text(json.dumps(m, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
             print("Registered execution", m["R"], "attempt", m["A"])
         elif args.mode == "inspect":
-            m = validate_manifest(json.loads(Path(args.manifest).read_text(encoding="utf-8")))
+            m = load_manifest(args.manifest)
             check_ci(m)
             if not args.claims_file:
                 raise Refuse("claims metadata output path is required")
@@ -211,7 +238,7 @@ def main() -> int:
                                                         separators=(",", ":")) + "\n", encoding="utf-8")
             print("Captured allowlisted execution claim metadata")
         else:
-            m = validate_manifest(json.loads(Path(args.manifest).read_text(encoding="utf-8")))
+            m = load_manifest(args.manifest)
             wait_for_federation(m)
         return 0
     except (Refuse, OSError, ValueError) as exc:

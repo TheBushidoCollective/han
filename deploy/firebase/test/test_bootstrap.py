@@ -178,6 +178,13 @@ class FakeCloud:
             return 1, "", "ERROR: (gcloud) PERMISSION_DENIED: forbidden for this identity."
         if argv[1:3] == ["auth", "list"]:
             return 0, json.dumps([{"account": self.account, "status": "ACTIVE"}]), ""
+        if bootstrap.ACTIVE_EXECUTION:
+            m = bootstrap.ACTIVE_EXECUTION
+            if argv[1:5] == ["iam", "workload-identity-pools", "describe", m["pool_id"]]:
+                return 0, json.dumps({"name": bootstrap.SHARED_POOL, "state": "ACTIVE", "disabled": False}), ""
+            if (argv[1:5] == ["iam", "workload-identity-pools", "providers", "list"] and
+                    f"--workload-identity-pool={m['pool_id']}" in argv):
+                return 0, json.dumps([{"name": m["provider_resource"]}]), ""
         if (argv[1:6] == ["iam", "workload-identity-pools", "providers", "describe", "github"]
                 and bootstrap.ACTIVE_EXECUTION):
             m = bootstrap.ACTIVE_EXECUTION
@@ -309,7 +316,7 @@ def run(fake, *args: str, now: datetime = NOW) -> tuple[int, str, str]:
         if re.fullmatch(r"[0-9a-f]{64}", digest or "") is None: digest = DEFAULT_PLAN_SHA
         manifest = bootstrap.execution.make_manifest(commit, digest, "a" * 40, TEST_RUN, "1", EXPIRY, "--rotate-db-password" in argv)
         tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".json")
-        json.dump(manifest, tmp); tmp.flush()
+        json.dump(manifest, tmp, sort_keys=True, separators=(",", ":")); tmp.write("\n"); tmp.flush()
         argv.extend(["--execution-manifest", tmp.name])
     else:
         tmp = None
@@ -454,6 +461,18 @@ class FirstRun(unittest.TestCase):
         for argv in self.fake.writes:
             self.assertNotIn("keys", argv)
             self.assertFalse(argv[1:3] == ["projects", "create"], argv)
+
+    def test_bootstrap_never_recreates_its_temporary_identity(self):
+        temporary_pool = TEST_EXECUTION["pool_id"]
+        for argv in self.fake.writes:
+            self.assertFalse(
+                temporary_pool in " ".join(argv) and
+                any(verb in argv for verb in ("create", "create-oidc", "add-iam-policy-binding")),
+                argv,
+            )
+        lists = [a for a in self.fake.reads if a[1:5] == ["iam", "workload-identity-pools", "providers", "list"]]
+        self.assertEqual(len(lists), 1)
+        self.assertIn("--show-deleted", lists[0])
 
     def test_the_logging_view_filter_uses_only_allowed_fields(self):
         self.assertEqual(bootstrap.LOG_VIEW_FILTER, 'resource.type="cloud_run_revision"')
@@ -1480,6 +1499,28 @@ class ExecutionBoundary(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("provider", err)
         self.assertTrue(all("remove-iam-policy-binding" in a for a in fake.writes))
+
+    def test_uploaded_keys_and_sibling_provider_refuse_before_resource_mutation(self):
+        for threat in ("uploaded_keys", "sibling_provider"):
+            with self.subTest(threat=threat):
+                fake = FakeCloud()
+                original_read = fake._read
+                def changed(argv):
+                    rc, out, err = original_read(argv)
+                    if threat == "uploaded_keys" and argv[1:6] == ["iam", "workload-identity-pools", "providers", "describe", "github"]:
+                        body = json.loads(out)
+                        body["oidc"]["jwksJson"] = '{"keys":[{"kid":"attacker"}]}'
+                        return 0, json.dumps(body), ""
+                    if threat == "sibling_provider" and argv[1:5] == ["iam", "workload-identity-pools", "providers", "list"]:
+                        body = json.loads(out)
+                        body.append({"name": bootstrap.ACTIVE_EXECUTION["provider_resource"] + "-attacker"})
+                        return 0, json.dumps(body), ""
+                    return rc, out, err
+                fake._read = changed
+                rc, _, err = execute(fake)
+                self.assertEqual(rc, 1)
+                self.assertIn("provider", err)
+                self.assertTrue(all("remove-iam-policy-binding" in a for a in fake.writes))
 
     def test_attempt_two_refuses_without_cloud_calls(self):
         fake = FakeCloud()

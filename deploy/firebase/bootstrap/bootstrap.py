@@ -579,6 +579,20 @@ def preflight(r: Runner, plan_sha: str, commit: str) -> set[tuple]:
         raise StepError(f"refusing to continue as {active!r}; expected {BOOTSTRAP_SA}")
     if ACTIVE_EXECUTION is None:
         raise StepError("execution manifest missing; nothing ran")
+    pool = ACTIVE_EXECUTION["pool_id"]
+    rc, pool_out, _ = r._read(["gcloud", "iam", "workload-identity-pools", "describe", pool,
+                               "--location=global", f"--project={PROJECT}", "--format=json"])
+    if rc != 0:
+        raise StepError("cannot read the execution-specific pool; nothing ran")
+    rc, providers_out, _ = r._read(["gcloud", "iam", "workload-identity-pools", "providers", "list",
+                                    f"--workload-identity-pool={pool}", "--location=global",
+                                    f"--project={PROJECT}", "--show-deleted", "--format=json"])
+    if rc != 0:
+        raise StepError("cannot enumerate execution pool providers; nothing ran")
+    try:
+        execution.verify_pool(ACTIVE_EXECUTION, json.loads(pool_out), json.loads(providers_out))
+    except (ValueError, execution.Refuse) as exc:
+        raise StepError("execution pool is not the exact single-provider pool; nothing ran") from exc
     rc, out, _ = r._read(["gcloud", "iam", "workload-identity-pools", "providers", "describe",
                           ACTIVE_EXECUTION["provider_id"], f"--workload-identity-pool={ACTIVE_EXECUTION['pool_id']}",
                           "--location=global", f"--project={PROJECT}", "--format=json"])
@@ -997,7 +1011,7 @@ def main(argv: list[str], backend: Backend | None = None) -> int:
             print("::error::execution manifest is required; nothing ran", file=sys.stderr)
             return 2
         try:
-            manifest = execution.validate_manifest(json.loads(Path(args.execution_manifest).read_text(encoding="utf-8")))
+            manifest = execution.load_manifest(args.execution_manifest)
             execution.check_ci(manifest, enforce_window=not args.revoke_only)
             if (manifest["C"] != args.expect_commit or manifest["H"] != args.expect_sha256 or
                     manifest["rotate_db_password"] != args.rotate_db_password):

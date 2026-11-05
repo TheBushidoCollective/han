@@ -62,3 +62,11 @@ jobs:
           name: bootstrap-plan
           path: bootstrap-plan.txt
           retention-days: 7
+      - name: Publish rotation plan for review
+        run: python3 -I -B deploy/firebase/bootstrap/bootstrap.py --rotate-db-password --plan-file bootstrap-rotation-plan.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: bootstrap-rotation-plan
+          path: bootstrap-rotation-plan.txt
+          retention-days: 7
+          if-no-files-found: error
