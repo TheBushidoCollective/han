@@ -1,5 +1,5 @@
 variable "project_id" {
-  description = "Han GCP project ID. Set by seed.sh (han-guru, or han-guru-prod if taken)."
+  description = "Han GCP project ID. Chosen by the bootstrap prerequisite in PATH.md section 7 (han-guru, or han-guru-prod if taken)."
   type        = string
 
   validation {

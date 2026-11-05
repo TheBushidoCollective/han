@@ -24,6 +24,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('smoke-pr-{0}', github.event.number) || 'smoke-main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   smoke:
     runs-on: ubuntu-latest
@@ -57,8 +61,12 @@ jobs:
             -e POSTGRES_PASSWORD="$PG_PASSWORD" \
             -e POSTGRES_DB=han_team \
             postgres:16
-          for _ in $(seq 1 30); do
-            if docker exec smoke-pg pg_isready -U han -d han_team >/dev/null 2>&1; then
+          # The image starts a temporary init server, logs "ready", stops it,
+          # then starts the real one. pg_isready alone can pass during init, so
+          # wait for the second "ready" line as well.
+          for _ in $(seq 1 60); do
+            ready_lines="$(docker logs smoke-pg 2>&1 | grep -c 'database system is ready to accept connections' || true)"
+            if [ "$ready_lines" -ge 2 ] && docker exec smoke-pg pg_isready -U han -d han_team >/dev/null 2>&1; then
               echo "Postgres ready"
               exit 0
             fi

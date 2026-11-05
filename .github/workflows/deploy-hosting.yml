@@ -24,10 +24,6 @@ concurrency:
   group: ${{ github.event_name == 'pull_request' && format('deploy-hosting-pr-{0}', github.event.number) || 'deploy-hosting-main' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-env:
-  # Pinned. Same version as deploy-han-server.yml.
-  FIREBASE_TOOLS: firebase-tools@15.24.0
-
 jobs:
   build:
     if: github.event_name == 'pull_request' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
@@ -50,7 +46,8 @@ jobs:
 
       - uses: biomejs/setup-biome@4c91541eaada48f67d7dbd7833600ce162b68f51 # v2
         with:
-          version: latest
+          # Same version as packages/browse-client/package.json.
+          version: 2.3.7
 
       - name: Lint
         run: biome lint --files-ignore-unknown=true .
@@ -138,10 +135,14 @@ jobs:
           PROJECT_ID: ${{ vars.HAN_GCP_PROJECT_ID }}
         run: python3 scripts/firebaserc.py "$PROJECT_ID"
 
+      - name: Install the pinned Firebase CLI
+        # Lockfile-pinned, and no install scripts run.
+        run: npm ci --ignore-scripts
+
       - name: Deploy dashboard and app
         env:
           PROJECT_ID: ${{ vars.HAN_GCP_PROJECT_ID }}
-        run: npx --yes "$FIREBASE_TOOLS" deploy --only hosting:dashboard,hosting:app --project "$PROJECT_ID" --non-interactive
+        run: npx --no-install firebase deploy --only hosting:dashboard,hosting:app --project "$PROJECT_ID" --non-interactive
 
       - name: Read-only checks on the default sites
         run: |

@@ -24,8 +24,11 @@ on:
 permissions:
   contents: read
 
-# PR runs cancel earlier PR runs. Main runs share one queue and never cancel
-# each other, so a pending deploy is not replaced by a later pull request.
+# PR runs cancel earlier PR runs. Main runs share one group. GitHub replaces a
+# pending run in a group when a newer one queues, whatever cancel-in-progress
+# says, so a pending main deploy can be superseded by a newer main push. That is
+# safe here: each run deploys the digest of its own commit, and the newest
+# commit is the one that should be live.
 concurrency:
   group: ${{ github.event_name == 'pull_request' && format('deploy-han-server-pr-{0}', github.event.number) || 'deploy-han-server-main' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -34,8 +37,6 @@ env:
   PROJECT_ID: ${{ vars.HAN_GCP_PROJECT_ID }}
   REGION: us-central1
   SERVICE: han-server
-  # Pinned. Same version as deploy-hosting.yml.
-  FIREBASE_TOOLS: firebase-tools@15.24.0
 
 jobs:
   test:
@@ -216,12 +217,21 @@ jobs:
           echo "::error::Startup check did not pass for $LIVE_REVISION"
           exit 1
 
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Install the pinned Firebase CLI
+        working-directory: deploy/firebase
+        # Lockfile-pinned, and no install scripts run.
+        run: npm ci --ignore-scripts
+
       - name: Point api.han.guru's Hosting rewrite at the server
         working-directory: deploy/firebase
         run: |
           set -euo pipefail
           python3 scripts/firebaserc.py "$PROJECT_ID"
-          npx --yes "$FIREBASE_TOOLS" deploy --only hosting:api --project "$PROJECT_ID" --non-interactive
+          npx --no-install firebase deploy --only hosting:api --project "$PROJECT_ID" --non-interactive
 
       - name: Read-only checks on the public API host
         run: |

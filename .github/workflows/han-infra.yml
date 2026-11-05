@@ -1,16 +1,23 @@
 name: Han Infrastructure
 
-# Plans and applies deploy/firebase/terraform through CI only. Nobody applies
-# it from a workstation.
+# Plans and applies deploy/firebase/terraform through CI only.
 #
-# - Pull request (terraform paths): plan as han-tf-plan. No state lock, no
-#   environment, so a pull request can never reach the apply identity.
-# - Push to main: plan as han-tf-plan when Terraform changed. Apply the saved
-#   plan as han-tf-apply inside the han-production environment.
+# - Pull request: plan as han-tf-plan. No state lock and no environment, so a
+#   pull request cannot reach the apply identity.
+# - Push to main: plan as han-tf-plan on every push. The plan is compared with
+#   the state, so a change from an earlier push cannot be lost. If the plan has
+#   changes, apply the saved plan as han-tf-apply inside the han-infra-apply
+#   environment, which needs a reviewer.
 #
-# This workflow runs on every push to main, without a path filter, so that the
-# deploy workflows can wait for it with workflow_run. The plan and apply jobs
-# are skipped when Terraform did not change, and a skipped job is not a failure.
+# Why every push plans, with no "did Terraform change" gate: GitHub replaces a
+# pending run in the same concurrency group when a newer one queues, even with
+# cancel-in-progress false. A gate on the push's own diff would then skip a
+# Terraform change whose run was replaced. Planning against the state does not
+# depend on which earlier runs survived.
+#
+# The han-infra-apply environment is the only path to the owner-level identity.
+# The deploy workflows use han-production, a different subject, so their jobs
+# cannot exchange a token for the owner identity.
 #
 # Deletes and replacements fail unless their address is in the allowlist below.
 # The list is empty until slice L.
@@ -29,6 +36,8 @@ permissions:
 
 concurrency:
   group: ${{ github.event_name == 'pull_request' && format('han-infra-pr-{0}', github.event.number) || 'han-infra-main' }}
+  # Main runs are never cancelled by a later push. A replaced pending main run
+  # is harmless because the next run plans against the state.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -42,46 +51,17 @@ env:
   DESTROY_ALLOWLIST: ""
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      terraform: ${{ steps.diff.outputs.terraform }}
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          fetch-depth: 0
-      - id: diff
-        env:
-          EVENT: ${{ github.event_name }}
-          BEFORE: ${{ github.event.before }}
-          SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          if [ "$EVENT" = "pull_request" ]; then
-            # The paths filter already limited this run to Terraform changes.
-            echo "terraform=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # First push, or a force push with no usable base: treat as changed.
-          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] ||
-             ! git cat-file -e "$BEFORE" 2>/dev/null; then
-            echo "terraform=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if git diff --name-only "$BEFORE" "$SHA" | grep -q '^deploy/firebase/\(terraform\|scripts\)/'; then
-            echo "terraform=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "terraform=false" >> "$GITHUB_OUTPUT"
-          fi
-
   plan:
-    needs: changes
-    if: needs.changes.outputs.terraform == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
     defaults:
       run:
         working-directory: deploy/firebase/terraform
+    outputs:
+      has_changes: ${{ steps.plan.outputs.has_changes }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -89,7 +69,7 @@ jobs:
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      - id: auth
+      - name: Authenticate to Google Cloud (WIF, plan identity)
         uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
@@ -106,8 +86,17 @@ jobs:
           terraform fmt -check -recursive
           terraform validate
 
-      - name: Plan
-        run: terraform plan -input=false -lock=false -no-color -out=tfplan
+      - id: plan
+        name: Plan
+        run: |
+          set -uo pipefail
+          terraform plan -input=false -lock=false -no-color -detailed-exitcode -out=tfplan
+          rc=$?
+          case "$rc" in
+            0) echo "has_changes=false" >> "$GITHUB_OUTPUT" ;;
+            2) echo "has_changes=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "::error::terraform plan failed with exit $rc"; exit "$rc" ;;
+          esac
 
       - name: Refuse unexpected deletes
         run: |
@@ -117,7 +106,7 @@ jobs:
           python3 ../scripts/plan_guard.py plan.json $DESTROY_ALLOWLIST
 
       - name: Upload plan
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && steps.plan.outputs.has_changes == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: han-tfplan
@@ -125,12 +114,15 @@ jobs:
           retention-days: 7
 
   apply:
-    needs: [changes, plan]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.terraform == 'true'
+    needs: plan
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.plan.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
-      name: han-production
+      name: han-infra-apply
+    permissions:
+      contents: read
+      id-token: write
     defaults:
       run:
         working-directory: deploy/firebase/terraform
@@ -141,7 +133,7 @@ jobs:
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      - id: auth
+      - name: Authenticate to Google Cloud (WIF, apply identity)
         uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
@@ -166,6 +158,7 @@ jobs:
           python3 ../scripts/plan_guard.py plan.json $DESTROY_ALLOWLIST
 
       - name: Apply saved plan
+        # Terraform refuses a saved plan whose state has moved since it was made.
         run: terraform apply -input=false -no-color tfplan
 
       - name: No secret values in state

@@ -101,8 +101,9 @@ resource "google_artifact_registry_repository_iam_member" "deployer_push" {
 }
 
 # Keyless sign-in. The deployer can be impersonated only by a job whose subject
-# is the han-production environment. Also set in seed.sh; kept here so the
-# binding is reviewable next to the account it protects.
+# is the han-production environment. This binding is a Terraform-managed
+# resource, so an owner-level principal could change it. The review gate is the
+# han-production reviewer, not this binding alone.
 resource "google_service_account_iam_member" "deployer_wif" {
   service_account_id = google_service_account.deployer.name
   role               = "roles/iam.workloadIdentityUser"
