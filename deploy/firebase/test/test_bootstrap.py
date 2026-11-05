@@ -12,6 +12,7 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import io
+import os
 import json
 import re
 import sys
@@ -146,8 +147,21 @@ def run(fake, *args: str) -> tuple[int, str, str]:
     return rc, out.getvalue(), err.getvalue()
 
 
+TEST_COMMIT = "0123456789abcdef0123456789abcdef01234567"
+
+
 def execute(fake: FakeCloud) -> tuple[int, str, str]:
-    return run(fake, "--execute", "--expect-sha256", bootstrap.plan_sha256(bootstrap.build_plan()))
+    """Execute the current plan as the run of TEST_COMMIT, the only commit it will accept."""
+    previous = os.environ.get("GITHUB_SHA")
+    os.environ["GITHUB_SHA"] = TEST_COMMIT
+    try:
+        return run(fake, "--execute", "--expect-sha256", bootstrap.plan_sha256(bootstrap.build_plan()),
+                   "--expect-commit", TEST_COMMIT)
+    finally:
+        if previous is None:
+            os.environ.pop("GITHUB_SHA", None)
+        else:
+            os.environ["GITHUB_SHA"] = previous
 
 
 def has(argv: list[str], text: str) -> bool:

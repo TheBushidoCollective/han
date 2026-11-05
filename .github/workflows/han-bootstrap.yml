@@ -4,12 +4,12 @@ name: Han Bootstrap
 # nothing else calls it. Two jobs, in order:
 #
 # - plan: no environment, no sign-in, no owner token. Prints the plan and its
-#   sha256, checks it against the hash typed into the dispatch, and uploads the
-#   plan text. The reviewer reads it here, before anything can be approved.
+#   sha256, checks both the hash and the commit against the dispatch inputs, and
+#   uploads the plan text. The reviewer reads it here, before anything can be approved.
 # - apply: waits for approval in the han-bootstrap environment (required
 #   reviewer, deployment from main only). Signs in as terraform-bootstrap, and
-#   runs only the plan whose hash was approved. Its last step always removes the
-#   sign-in member, even if the run failed.
+#   runs only the plan whose hash and commit were dispatched. If the run's own
+#   execute step did not succeed, a last step removes the sign-in member.
 #
 # The sign-in grant is a human prerequisite (PATH.md section 8). It must be
 # time-boxed, and the environment protections must exist before it is made.
@@ -18,7 +18,11 @@ on:
   workflow_dispatch:
     inputs:
       expected_sha256:
-        description: "plan-sha256 printed by this workflow's plan job. Execution refuses any other plan."
+        description: "plan-sha256 printed by the plan job of a run of this commit. Execution refuses any other plan."
+        required: true
+        type: string
+      expected_commit:
+        description: "The commit this plan was computed from. Execution refuses any other commit."
         required: true
         type: string
 
@@ -36,13 +40,15 @@ jobs:
     timeout-minutes: 10
     env:
       EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
+      EXPECTED_COMMIT: ${{ inputs.expected_commit }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Print the plan and check it matches the dispatched hash
+      - name: Print the plan and check the hash and commit
         run: |
           python3 -B deploy/firebase/bootstrap/bootstrap.py \
             --expect-sha256 "$EXPECTED_SHA256" \
+            --expect-commit "$EXPECTED_COMMIT" \
             --plan-file bootstrap-plan.txt
 
       - name: Upload the plan for review
@@ -64,6 +70,7 @@ jobs:
       id-token: write
     env:
       EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
+      EXPECTED_COMMIT: ${{ inputs.expected_commit }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -76,11 +83,17 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
 
-      - name: Execute the approved plan
+      - id: execute
+        name: Execute the approved plan
         run: |
           python3 -B deploy/firebase/bootstrap/bootstrap.py \
-            --execute --expect-sha256 "$EXPECTED_SHA256"
+            --execute \
+            --expect-sha256 "$EXPECTED_SHA256" \
+            --expect-commit "$EXPECTED_COMMIT"
 
-      - name: Revoke the sign-in (always runs, even after a failure)
-        if: always() && steps.auth.outcome == 'success'
+      - name: Revoke the sign-in (only when the execute step did not succeed)
+        # The execute step revokes in its own process on success and on failure, and
+        # its token is already spent. This step covers a run that died before it could,
+        # and it is skipped after a clean execute, so a finished run cannot turn red here.
+        if: always() && steps.auth.outcome == 'success' && steps.execute.outcome != 'success'
         run: python3 -B deploy/firebase/bootstrap/bootstrap.py --revoke-only

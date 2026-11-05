@@ -479,7 +479,10 @@ class BootstrapShape(unittest.TestCase):
         self.assertFalse(signs_in_as(apply, "HAN_GCP_"))
 
     def test_execution_is_pinned_to_the_approved_hash(self):
-        self.assertIn("--execute --expect-sha256", steps_text(self.jobs["apply"]))
+        text = steps_text(self.jobs["apply"])
+        self.assertIn("--execute", text)
+        self.assertIn("--expect-sha256", text)
+        self.assertIn("--expect-commit", text)
 
     def test_revoke_runs_even_after_a_failure_once_signed_in(self):
         steps = self.jobs["apply"]["steps"]
@@ -487,6 +490,10 @@ class BootstrapShape(unittest.TestCase):
         self.assertEqual(len(revoke), 1)
         self.assertIn("always()", str(revoke[0].get("if")))
         self.assertIn("steps.auth.outcome == 'success'", str(revoke[0].get("if")))
+        # A clean execute already revoked. This step must not run again and fail the run.
+        self.assertIn("steps.execute.outcome != 'success'", str(revoke[0].get("if")))
+        execute_step = next(s for s in steps if s.get("id") == "execute")
+        self.assertIn("--execute", str(execute_step.get("run", "")))
         self.assertGreater(steps.index(revoke[0]), steps.index(
             next(s for s in steps if "--execute" in str(s.get("run", "")))))
 

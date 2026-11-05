@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -39,6 +40,9 @@ from pathlib import Path
 from typing import Callable
 
 HERE = Path(__file__).resolve().parent
+# The repository root. Plan lines name files relative to it, so the plan and its hash are
+# the same on any checkout, and every command runs from it.
+ROOT = HERE.parents[2]
 
 PROJECT = "thebushido-co"
 PROJECT_NUMBER = "911514101920"
@@ -74,6 +78,7 @@ SECRETS = (
     "stripe-webhook-secret",
 )
 TF_MANAGED_SECRETS = ("database-url", "jwt-secret", "master-kek")
+KEK_SECRET = "master-kek"
 
 SQL_INSTANCE = "han-pg"
 SQL_VERSION = "POSTGRES_16"
@@ -123,6 +128,7 @@ CUSTOM_ROLES = {
     "hanTfApplySql": "han_tf_apply_sql.yaml",
     "hanTfPlanSecrets": "han_tf_plan_secrets.yaml",
     "hanTfApplySecrets": "han_tf_apply_secrets.yaml",
+    "hanTfApplyKekVersions": "han_tf_apply_kek.yaml",
 }
 
 # Words that mean "the object does not exist", per describe command. Each is the
@@ -236,7 +242,7 @@ def steps(r: Runner) -> None:
 
     # 2. Custom roles, from the reviewed files.
     for role_id, filename in CUSTOM_ROLES.items():
-        r.upsert_role(role_id, str(HERE / "roles" / filename))
+        r.upsert_role(role_id, rel(HERE / "roles" / filename))
 
     # 3. Terraform state bucket: uniform access, public access blocked, versioned.
     bucket = f"gs://{STATE_BUCKET}"
@@ -342,7 +348,7 @@ def steps(r: Runner) -> None:
         # Conditions come from reviewed files. An inline --condition would be split
         # on commas, and the expression contains commas.
         argv = gcloud("projects", "add-iam-policy-binding", PROJECT, f"--member={member}", f"--role={role_name}")
-        argv += [f"--condition-from-file={condition_file}"] if condition_file else ["--condition=None"]
+        argv += [f"--condition-from-file={rel(condition_file)}"] if condition_file else ["--condition=None"]
         r.write(argv)
 
     plan_member = f"serviceAccount:{sa('han-tf-plan')}"
@@ -361,7 +367,6 @@ def steps(r: Runner) -> None:
     project_bind(run_member, "roles/logging.logWriter")
     # Hosting deployer: the accepted project-wide exception (PATH.md section 8, risk 1).
     project_bind(hosting_member, "roles/firebasehosting.admin")
-    project_bind(hosting_member, "roles/firebase.viewer")
     project_bind(hosting_member, "roles/serviceusage.serviceUsageConsumer")
 
     # 12. Secret-level grants. Each secret the identity needs, and nothing else.
@@ -373,8 +378,10 @@ def steps(r: Runner) -> None:
                        f"--member={run_member}", "--role=roles/secretmanager.secretAccessor"))
     for name in TF_MANAGED_SECRETS:
         sid = secret_id(name)
+        # The KEK role has no versions.destroy, so this identity cannot destroy the KEK version.
+        apply_role = "hanTfApplyKekVersions" if name == KEK_SECRET else "hanTfApplySecrets"
         r.write(gcloud("secrets", "add-iam-policy-binding", sid, f"--project={PROJECT}",
-                       f"--member={apply_member}", f"--role={role('hanTfApplySecrets')}"))
+                       f"--member={apply_member}", f"--role={role(apply_role)}"))
         r.write(gcloud("secrets", "add-iam-policy-binding", sid, f"--project={PROJECT}",
                        f"--member={plan_member}", f"--role={role('hanTfPlanSecrets')}"))
 
@@ -401,7 +408,7 @@ def steps(r: Runner) -> None:
     r.write(gcloud("run", "services", "add-iam-policy-binding", SERVICE, f"--region={REGION}",
                    f"--project={PROJECT}", f"--member={plan_member}", "--role=roles/run.viewer"))
     r.write(gcloud("artifacts", "repositories", "add-iam-policy-binding", ARTIFACT_REPO, f"--location={REGION}",
-                   f"--project={PROJECT}", f"--member={apply_member}", "--role=roles/artifactregistry.repoAdmin"))
+                   f"--project={PROJECT}", f"--member={apply_member}", "--role=roles/artifactregistry.reader"))
     r.write(gcloud("artifacts", "repositories", "add-iam-policy-binding", ARTIFACT_REPO, f"--location={REGION}",
                    f"--project={PROJECT}", f"--member=serviceAccount:{sa('han-deployer')}",
                    "--role=roles/artifactregistry.writer"))
@@ -509,10 +516,24 @@ def revoke(r: Runner) -> None:
         raise StepError("bootstrap sign-in member is still present after revoke")
 
 
+def rel(path: Path) -> str:
+    """Repository-relative and POSIX. The plan names files this way, never by absolute path."""
+    return path.resolve().relative_to(ROOT).as_posix()
+
+
+def referenced_files() -> list[Path]:
+    """Every file whose contents the plan depends on: this code, the roles and the condition."""
+    roles = [HERE / "roles" / name for name in sorted(CUSTOM_ROLES.values())]
+    return [Path(__file__).resolve(), SQL_CONDITION, *roles]
+
+
 def build_plan() -> list[str]:
     r = Runner(execute=False, backend=None)
     steps(r)
     revoke_plan(r)
+    # Contents, not only names: a changed permission, condition or line of code changes the hash.
+    for path in referenced_files():
+        r.plan.append(f"input {rel(path)} sha256 {hashlib.sha256(path.read_bytes()).hexdigest()}")
     return r.plan
 
 
@@ -538,14 +559,26 @@ def run_execute(backend: Backend) -> None:
 
 
 def real_backend(kind: str, argv: list[str]) -> tuple[int, str, str]:
-    proc = subprocess.run(argv, capture_output=True, text=True, timeout=900)
+    # Run from the repository root, so the repository-relative paths in the plan resolve.
+    proc = subprocess.run(argv, capture_output=True, text=True, timeout=900, cwd=ROOT)
     return proc.returncode, proc.stdout, proc.stderr
+
+
+def commit_check(expected: str | None) -> str | None:
+    """Return an error text unless this run is the reviewed commit, or None when it is."""
+    if expected is None:
+        return None
+    actual = os.environ.get("GITHUB_SHA", "")
+    if actual != expected:
+        return f"run commit {actual!r} is not the reviewed commit {expected!r}; nothing ran"
+    return None
 
 
 def main(argv: list[str], backend: Backend | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else "")
     parser.add_argument("--execute", action="store_true", help="run the plan (CI only)")
     parser.add_argument("--expect-sha256", help="refuse unless the plan hashes to this value")
+    parser.add_argument("--expect-commit", help="refuse unless GITHUB_SHA is this commit")
     parser.add_argument("--revoke-only", action="store_true", help="remove the sign-in member and nothing else")
     parser.add_argument("--plan-file", help="write the plan text here")
     args = parser.parse_args(argv)
@@ -573,10 +606,15 @@ def main(argv: list[str], backend: Backend | None = None) -> int:
     if args.expect_sha256 is not None and args.expect_sha256 != sha:
         print(f"::error::plan hash {sha} does not match the approved {args.expect_sha256}; nothing ran", file=sys.stderr)
         return 2
+    error = commit_check(args.expect_commit)
+    if error:
+        print(f"::error::{error}", file=sys.stderr)
+        return 2
     if not args.execute:
         return 0
-    if args.expect_sha256 is None:
-        print("::error::--execute needs --expect-sha256 so the approval names the exact plan", file=sys.stderr)
+    if args.expect_sha256 is None or args.expect_commit is None:
+        print("::error::--execute needs --expect-sha256 and --expect-commit, so the approval names the exact plan and commit",
+              file=sys.stderr)
         return 2
     try:
         run_execute(backend or real_backend)

@@ -1,3 +1,3 @@
 title: han-pg-only
-description: Limits a Han apply or plan role to the han-pg Cloud SQL instance.
-expression: "resource.name.startsWith('projects/thebushido-co/instances/han-pg')"
+description: Limits a Han apply or plan role to exactly the han-pg Cloud SQL instance. An exact match, not a prefix, so a future instance named han-pg-something is not covered. Passed to gcloud with --condition-from-file.
+expression: "resource.name == 'projects/thebushido-co/instances/han-pg'"

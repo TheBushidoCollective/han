@@ -143,9 +143,9 @@ organisation 949208237676). This PR stays a draft until the blockers in
 | Identity | Environment | Project grants | Resource grants |
 |---|---|---|---|
 | `han-tf-plan` | none (PRs) | `hanTfPlanGlobal`, `hanTfPlanSql` (instance condition) | `hanTfPlanSecrets` on the three Terraform secrets, `run.viewer` on `han-server`, `artifactregistry.reader` on `han`, `storage.objectViewer` on the state bucket |
-| `han-tf-apply` | `han-infra-apply` | `hanTfPlanGlobal`, `hanTfApplySql` (instance condition) | `hanTfApplySecrets` on the three Terraform secrets, `run.admin` on `han-server`, `artifactregistry.repoAdmin` on `han`, `storage.objectAdmin` on the state bucket |
+| `han-tf-apply` | `han-infra-apply` | `hanTfPlanGlobal`, `hanTfApplySql` (instance condition) | `hanTfApplySecrets` on `database-url` and `jwt-secret`, `hanTfApplyKekVersions` on `master-kek` (no destroy), `run.admin` on `han-server`, `artifactregistry.reader` on `han` (read only, for the data source), `storage.objectAdmin` on the state bucket |
 | `han-deployer` | `han-production` | none | `run.developer` on `han-server` (Terraform), `artifactregistry.writer` on `han`, `secretmanager.viewer` on all six secrets, `logging.viewAccessor` on the `startup` view, `iam.serviceAccountUser` on `han-server-run` |
-| `han-hosting-deployer` | `han-hosting` | `firebasehosting.admin`, `firebase.viewer`, `serviceusage.serviceUsageConsumer` (accepted risk 1) | `run.viewer` on `han-server` (Terraform) |
+| `han-hosting-deployer` | `han-hosting` | `firebasehosting.admin`, `serviceusage.serviceUsageConsumer` (accepted risk 1). `firebase.viewer` is not granted (artifact 15) | `run.viewer` on `han-server` (Terraform) |
 | `han-server-run` | none | `cloudsql.client`, `logging.logWriter` (both unconditioned, see artifact 6) | `secretmanager.secretAccessor` on all six secrets |
 
 - **Created by the bootstrap, not by Terraform:** the five identities, the `han-github`
@@ -162,9 +162,10 @@ organisation 949208237676). This PR stays a draft until the blockers in
   no project IAM, no project API, no Firebase project and no Hosting site.
 - **The bootstrap** (`bootstrap/bootstrap.py`) has three modes:
   - Default: print the plan and its `plan-sha256`. It reads nothing and calls no
-    cloud API, so the hash depends only on the code.
-  - `--execute --expect-sha256 H`: run the plan, but refuse before any call unless
-    the plan hashes to `H`. It first checks the run is signed in as
+    cloud API. The hash covers repository-relative paths, the code, and the role and condition
+    files, so it is the same on any checkout of one commit.
+  - `--execute --expect-sha256 H --expect-commit C`: run the plan, but refuse before any call
+    unless it hashes to `H` and `GITHUB_SHA` is `C`. It first checks the run is signed in as
     `terraform-bootstrap` and no Han identity has a user-managed key, then runs the
     plan, then checks the state bucket is private, versioned and in the project.
   - `--revoke-only`: remove every member ending `/subject/repo:TheBushidoCollective/han:environment:han-bootstrap`
@@ -185,15 +186,18 @@ the identity that would need them is not yet able to sign in.
 
 1. **Environments first (GitHub admin).** Create `han-bootstrap`, `han-infra-apply`,
    `han-production` and `han-hosting`. Each gets required reviewer `43164` and
-   deployment from `main` only. Check each environment page shows both before step 2.
-   **Artifact 1:** the page shows these settings only the first time someone looks.
-   Whether repository admins can bypass an environment protection is unverified.
+   deployment from `main` only. On `han-bootstrap` and `han-infra-apply`, turn off
+   "Allow administrators to bypass configured protection rules". Leave "Prevent
+   self-review" off, because Jason both dispatches and approves. Check each page shows
+   these before step 3.
+   **Artifact 1:** the bypass setting is read from each environment page. No test here
+   verifies it.
 2. **Repository variables (GitHub admin).** `HAN_GCP_PROJECT_ID=thebushido-co`,
    `HAN_GCP_WIF_PROVIDER=projects/911514101920/locations/global/workloadIdentityPools/han-github/providers/han-github`,
    `HAN_GCP_TF_PLAN_SA`, `HAN_GCP_TF_APPLY_SA`, `HAN_GCP_DEPLOYER_SA`,
    `HAN_GCP_HOSTING_DEPLOYER_SA`. Set `HAN_GITHUB_CLIENT_ID` at slice I.
 3. **Time-boxed sign-in grant (Jason, owner session).** Write a condition file that
-   expires shortly after the planned run, with the time chosen by Jason:
+   expires after the approval wait and the apply job's 45-minute limit have passed, with the time chosen by Jason:
 
    ```yaml
    title: bootstrap-sign-in-once
@@ -214,13 +218,19 @@ the identity that would need them is not yet able to sign in.
    The run removes this binding itself. If it expires unused, it does nothing.
    **Artifact 2:** whether a WIF token exchange honours a `request.time` condition
    on this grant is unverified. A refused exchange fails the run before any change.
-4. **Get the plan hash.** Run `python3 deploy/firebase/bootstrap/bootstrap.py` on any
-   machine. It reads nothing and calls no cloud API, and prints `plan-sha256`.
-5. **Dispatch and read the plan.** Run **Han Bootstrap** from `main`, entering that
-   hash as `expected_sha256`. The `plan` job checks the hash and uploads the plan text
-   as the `han-bootstrap-plan` artifact. Read it.
-6. **Approve.** Approve `han-bootstrap` only if the approved plan matches the
-   artifact. The `apply` job signs in, runs exactly that plan, and revokes.
+4. **Compute the plan hash from the reviewed commit.** Check out the commit to review and
+   run `python3 deploy/firebase/bootstrap/bootstrap.py` from its root. It reads nothing and
+   calls no cloud API. It prints `plan-sha256`, which is the same on any checkout of that
+   commit: the plan names repository-relative paths and hashes the code and the role and
+   condition files.
+5. **Dispatch and read the plan.** Run **Han Bootstrap** from `main`, entering that hash
+   as `expected_sha256` and the head commit of `main` as `expected_commit`. The `plan` job
+   checks both and uploads the plan text as `han-bootstrap-plan`. Read it.
+6. **Approve.** Approve `han-bootstrap` only if the artifact matches the plan you computed
+   in step 4, and the run's commit is the commit you reviewed. The `apply` job refuses any
+   other hash or commit before a single cloud call. A successful execute revokes the
+   sign-in in its own process. The workflow's last step runs only when the execute step
+   did not succeed.
 7. Then `han-infra` and the deploy workflows run in the order in "How it runs after
    the prerequisites".
 
@@ -233,7 +243,7 @@ the identity that would need them is not yet able to sign in.
 
 ### Tests, and what they prove
 
-Run with `python3 -m unittest discover -s deploy/firebase/test -p 'test_*.py'`. 146 tests, all passing:
+Run with `python3 -m unittest discover -s deploy/firebase/test -p 'test_*.py'`. 164 tests, all passing:
 
 - `test_bootstrap.py` (50): plan mode reads and writes nothing, and is deterministic. A
   different hash, or execute without a hash, refuses before any call. A first run creates
@@ -249,17 +259,42 @@ Run with `python3 -m unittest discover -s deploy/firebase/test -p 'test_*.py'`. 
   the bootstrap passes is one the installed gcloud 580.0.0 accepts (`gcloud-flags.json`).
   The Terraform schema has every attribute used (`tf-schema.json`). The infra workflow's
   bucket name matches the bootstrap's.
-- `test_isolation.py` (12): Terraform grants are the reviewed set, no owner, editor or
+- `test_isolation.py` (18): Terraform grants are the reviewed set, no owner, editor or
   viewer role is used, no Han role can set or create secret IAM, and the shared pool is
-  referenced only by the bootstrap workflow.
+  referenced only by the bootstrap workflow. The least-privilege checks: no `firebase.viewer`,
+  the apply identity reads the registry and holds no `repoAdmin`, Terraform manages no
+  Artifact Registry IAM, the KEK version cannot be destroyed by the apply identity, the apply
+  SQL role cannot delete the instance, and the SQL condition is an exact match.
 - `test_workflows.py` (55): the bootstrap plan job has no environment, no sign-in and no
   owner token, and only the apply job holds the environment. Execution is pinned to the
-  approved hash, and revoke always runs after a sign-in. The Hosting sites are ensured
-  before the deploy. Each identity is used only from its environment, and every
-  third-party action is pinned.
+  approved hash and commit, and the revoke step runs only when the execute step did not
+  succeed. The Hosting sites are ensured before the deploy. Each identity is used only from
+  its environment, and every third-party action is pinned. These are source-text checks.
 - `test_scripts.py` (29): helper scripts, and the Hosting site creation is tested in
   `test_bootstrap.py` (creates only missing sites, stops on a failed list, and reports a
   failed create).
+
+- `test_behaviour.py` (12): these run code, not text. The infra plan step runs as a script
+  under `bash -eo pipefail` with a stub `terraform` that exits 0, 2 or 1: 2 completes and
+  records `has_changes=true`, 1 fails. The bootstrap plan from a second checkout path hashes
+  the same, a changed role or condition changes the hash, no plan line names an absolute
+  path, and a run from another commit is refused before any cloud call.
+
+The fault-injection proof, run once against the pre-fix workflow and script: a plan that
+exits 2 ended its step with exit 2 and wrote no `has_changes`, so the apply job could not
+run. The same plan hashed differently from two checkouts of one commit. Both are fixed,
+and `test_behaviour.py` now fails on either.
+PUT 323.=324.
+14. **`terraform-bootstrap` user key `871c68f6…`.** Anyone holding it is owner of
+    `thebushido-co`. Supplier: Jason, whether to delete it. Deleting it is outside this task.
+15. **Hosting deployer without `firebase.viewer`.** It was removed as beyond the accepted
+    Hosting exception. Supplier: the first Hosting deploy. If it fails on a Firebase
+    permission, add the one permission it names by a reviewed PR, and do not restore the role.
+16. **Apply reads the registry with `artifactregistry.reader`.** The repository data source
+    needs `repositories.get`, which the reader role has. Supplier: the first plan.
+17. **Exact-match SQL condition.** `resource.name == 'projects/thebushido-co/instances/han-pg'`
+    replaces the prefix match. Whether Cloud SQL evaluates that name in an IAM condition is
+    unverified (artifacts 5 and 6). Supplier: the first plan and the first apply.
 
 Not run here: `terraform plan`, any gcloud mutation, and the workflows themselves.
 `actionlint` and `terraform validate` pass on the changed files.
@@ -336,6 +371,23 @@ Every item here is a fact the repository cannot establish. Each names who suppli
    Jason. Its grants are read-only, and it reads state.
 5. **Secret values are never in Terraform state.** The three Terraform secrets take
    write-only values. The other three take values by an operator, out of band.
+
+### Decision needed from Jason: the merge order
+
+The bootstrap runs only from `main`, and `han-infra` runs on pushes to `main`. Once this
+PR merges, the plan job of `han-infra` will fail red on each push until the bootstrap has
+created the identities it plans as. Two options:
+
+- **A. Merge this PR and accept red `han-infra` runs on `main` until the bootstrap
+  completes.** No deploy runs, because deploys wait for a successful infra run. Nothing
+  applies early. Cost: a red check on `main` for the interval.
+- **B. Split out a bootstrap-only PR first.** It would carry `bootstrap/`, the roles and
+  conditions, `han-bootstrap.yml`, and the bootstrap tests. Merge it, run the bootstrap,
+  then merge the infrastructure PR. Cost: the split and its re-test. Not built in this
+  revision.
+
+Recommendation: A, because the bootstrap cannot run from anywhere except `main`, so the
+split buys nothing that the red interval does not already show. This is Jason's call.
 
 ### Left undisturbed
 

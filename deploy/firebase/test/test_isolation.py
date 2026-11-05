@@ -129,6 +129,7 @@ class CustomRoles(unittest.TestCase):
             names,
             {
                 "han_tf_plan_global",
+                "han_tf_apply_kek",
                 "han_tf_apply_secrets",
                 "han_tf_plan_secrets",
                 "han_tf_apply_sql",
@@ -167,6 +168,40 @@ class CustomRoles(unittest.TestCase):
             perms = custom_role_permissions(path)
             self.assertEqual(perms & {"secretmanager.secrets.setIamPolicy", "secretmanager.secrets.create",
                                       "secretmanager.secrets.delete"}, set(), path.name)
+
+
+class LeastPrivilege(unittest.TestCase):
+    """Each grant is the narrowest the reviewed path needs. Each test names the defect it covers."""
+
+    def test_the_hosting_deployer_gets_no_firebase_viewer(self):
+        # firebase.viewer reads Firebase project data beyond Hosting. The Hosting exception
+        # Jason accepted is firebasehosting.admin only (PATH.md section 8, risk 1).
+        text = (BOOT / "bootstrap.py").read_text(encoding="utf-8")
+        self.assertNotIn("roles/firebase.viewer", text)
+
+    def test_the_apply_identity_reads_the_registry_and_writes_none(self):
+        # The apply identity reads the repository through a data source. It must not
+        # hold repoAdmin, which can change repository IAM.
+        text = (BOOT / "bootstrap.py").read_text(encoding="utf-8")
+        self.assertNotIn("artifactregistry.repoAdmin", text)
+        self.assertIn('--role=roles/artifactregistry.reader"))', text)
+
+    def test_terraform_manages_no_artifact_registry_iam(self):
+        text = "".join(p.read_text(encoding="utf-8") for p in TF.glob("*.tf"))
+        self.assertNotRegex(text, r'resource\s+"google_artifact_registry_repository_iam')
+
+    def test_the_kek_version_cannot_be_destroyed_by_the_apply_identity(self):
+        self.assertNotIn("secretmanager.versions.destroy", custom_role_permissions(ROLES / "han_tf_apply_kek.yaml"))
+        text = (BOOT / "bootstrap.py").read_text(encoding="utf-8")
+        self.assertIn('"hanTfApplyKekVersions" if name == KEK_SECRET', text)
+
+    def test_the_sql_apply_role_cannot_delete_the_instance(self):
+        self.assertNotIn("cloudsql.instances.delete", custom_role_permissions(ROLES / "han_tf_apply_sql.yaml"))
+
+    def test_the_sql_condition_is_an_exact_match_not_a_prefix(self):
+        text = (BOOT / "conditions" / "han_pg.yaml").read_text(encoding="utf-8")
+        self.assertIn("resource.name == 'projects/thebushido-co/instances/han-pg'", text)
+        self.assertNotIn("startsWith", text)
 
 
 if __name__ == "__main__":

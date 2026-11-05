@@ -69,6 +69,7 @@ jobs:
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
 
       - name: Authenticate to Google Cloud (WIF, plan identity)
         uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
@@ -91,8 +92,10 @@ jobs:
         name: Plan
         run: |
           set -uo pipefail
-          terraform plan -input=false -lock=false -no-color -detailed-exitcode -out=tfplan
-          rc=$?
+          # The runner runs this with bash -e. A bare command that exits 2 would end the step
+          # before its status is read. "|| rc=$?" records the status and keeps the step running.
+          rc=0
+          terraform plan -input=false -lock=false -no-color -detailed-exitcode -out=tfplan || rc=$?
           case "$rc" in
             0) echo "has_changes=false" >> "$GITHUB_OUTPUT" ;;
             2) echo "has_changes=true" >> "$GITHUB_OUTPUT" ;;
@@ -133,6 +136,8 @@ jobs:
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
+          # The wrapper rewrites stdout and can change what -detailed-exitcode reports.
+          terraform_wrapper: false
 
       - name: Authenticate to Google Cloud (WIF, apply identity)
         uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2

@@ -1,16 +1,9 @@
-# Artifact Registry repository `han`. A human creates it once (PATH.md section 8).
-# Terraform reads it and manages only its repository-level IAM. Repository-level
-# IAM is supported, so these grants do not reach the website or Relic images.
+# Artifact Registry repository `han`. The bootstrap creates it and grants every
+# repository-level IAM binding (PATH.md section 8), including the deployer's push
+# role. Terraform reads it only, so the apply identity needs no repository IAM
+# write permission and this file manages none.
 data "google_artifact_registry_repository" "han" {
   project       = var.project_id
   location      = var.region
   repository_id = "han"
-}
-
-resource "google_artifact_registry_repository_iam_member" "deployer_push" {
-  project    = var.project_id
-  location   = var.region
-  repository = data.google_artifact_registry_repository.han.repository_id
-  role       = "roles/artifactregistry.writer"
-  member     = "serviceAccount:${data.google_service_account.deployer.email}"
 }
