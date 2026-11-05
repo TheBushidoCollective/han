@@ -243,7 +243,7 @@ the identity that would need them is not yet able to sign in.
 
 ### Tests, and what they prove
 
-Run with `python3 -m unittest discover -s deploy/firebase/test -p 'test_*.py'`. 164 tests, all passing:
+Run with `python3 -m unittest discover -s deploy/firebase/test -p 'test_*.py'`. 168 tests, all passing:
 
 - `test_bootstrap.py` (50): plan mode reads and writes nothing, and is deterministic. A
   different hash, or execute without a hash, refuses before any call. A first run creates
@@ -274,27 +274,19 @@ Run with `python3 -m unittest discover -s deploy/firebase/test -p 'test_*.py'`. 
   `test_bootstrap.py` (creates only missing sites, stops on a failed list, and reports a
   failed create).
 
-- `test_behaviour.py` (12): these run code, not text. The infra plan step runs as a script
+- `test_behaviour.py` (16): these run code, not text. The infra plan step runs as a script
   under `bash -eo pipefail` with a stub `terraform` that exits 0, 2 or 1: 2 completes and
   records `has_changes=true`, 1 fails. The bootstrap plan from a second checkout path hashes
   the same, a changed role or condition changes the hash, no plan line names an absolute
   path, and a run from another commit is refused before any cloud call.
+  Terraform's own dependency graph puts the secret version after the SQL user, which is
+  checked offline. The instance sets Cloud SQL's own deletion protection, and the provider
+  schema has that attribute under `settings`.
 
 The fault-injection proof, run once against the pre-fix workflow and script: a plan that
 exits 2 ended its step with exit 2 and wrote no `has_changes`, so the apply job could not
 run. The same plan hashed differently from two checkouts of one commit. Both are fixed,
 and `test_behaviour.py` now fails on either.
-PUT 323.=324.
-14. **`terraform-bootstrap` user key `871c68f6…`.** Anyone holding it is owner of
-    `thebushido-co`. Supplier: Jason, whether to delete it. Deleting it is outside this task.
-15. **Hosting deployer without `firebase.viewer`.** It was removed as beyond the accepted
-    Hosting exception. Supplier: the first Hosting deploy. If it fails on a Firebase
-    permission, add the one permission it names by a reviewed PR, and do not restore the role.
-16. **Apply reads the registry with `artifactregistry.reader`.** The repository data source
-    needs `repositories.get`, which the reader role has. Supplier: the first plan.
-17. **Exact-match SQL condition.** `resource.name == 'projects/thebushido-co/instances/han-pg'`
-    replaces the prefix match. Whether Cloud SQL evaluates that name in an IAM condition is
-    unverified (artifacts 5 and 6). Supplier: the first plan and the first apply.
 
 Not run here: `terraform plan`, any gcloud mutation, and the workflows themselves.
 `actionlint` and `terraform validate` pass on the changed files.
@@ -357,6 +349,25 @@ Every item here is a fact the repository cannot establish. Each names who suppli
     team. Han cannot isolate itself in this project until this changes.
 14. **`terraform-bootstrap` user key `871c68f6…`.** Anyone holding it is owner of
     `thebushido-co`. Supplier: Jason, whether to delete it. Deleting it is outside this task.
+15. **Hosting deployer without `firebase.viewer`.** It was removed as beyond the accepted
+    Hosting exception. Supplier: the first Hosting deploy. If it fails on a Firebase
+    permission, add the one permission it names by a reviewed PR, and do not restore the role.
+16. **Apply reads the registry with `artifactregistry.reader`.** The repository data source
+    needs `repositories.get`, which the reader role has. Supplier: the first plan.
+17. **Exact-match SQL condition.** `resource.name == 'projects/thebushido-co/instances/han-pg'`
+    replaces the prefix match. Whether Cloud SQL evaluates that name in an IAM condition is
+    unverified (artifacts 5 and 6). Supplier: the first plan and the first apply.
+18. **First apply and the database password.** The secret version is written only after the
+    SQL user is created, in the same apply and from the same ephemeral value. A graph test
+    checks that order. So a failed user create (artifact 5) writes no secret, and the first
+    apply cannot leave a secret the database lacks. One window remains. If the user is created
+    and the secret write then fails, the next apply writes a new password to the secret while
+    the user keeps the old one. Recovery is section 5: bump `db_credential_version`, which
+    rewrites both in one apply. Supplier: the first plan, which shows whether that rewrite is
+    an update or a replacement (artifact 7).
+19. **Cloud SQL deletion protection.** `settings.deletion_protection_enabled = true` is set in
+    Terraform, matching the bootstrap's `--deletion-protection`. Supplier: the first plan after
+    import must show no change to it.
 
 ### Residual risk, accepted or open
 
@@ -372,22 +383,12 @@ Every item here is a fact the repository cannot establish. Each names who suppli
 5. **Secret values are never in Terraform state.** The three Terraform secrets take
    write-only values. The other three take values by an operator, out of band.
 
-### Decision needed from Jason: the merge order
+### Merge order (recorded, not a blocker)
 
-The bootstrap runs only from `main`, and `han-infra` runs on pushes to `main`. Once this
-PR merges, the plan job of `han-infra` will fail red on each push until the bootstrap has
-created the identities it plans as. Two options:
-
-- **A. Merge this PR and accept red `han-infra` runs on `main` until the bootstrap
-  completes.** No deploy runs, because deploys wait for a successful infra run. Nothing
-  applies early. Cost: a red check on `main` for the interval.
-- **B. Split out a bootstrap-only PR first.** It would carry `bootstrap/`, the roles and
-  conditions, `han-bootstrap.yml`, and the bootstrap tests. Merge it, run the bootstrap,
-  then merge the infrastructure PR. Cost: the split and its re-test. Not built in this
-  revision.
-
-Recommendation: A, because the bootstrap cannot run from anywhere except `main`, so the
-split buys nothing that the red interval does not already show. This is Jason's call.
+The bootstrap runs only from `main`, and `han-infra` runs on pushes to `main`. Once this PR
+merges, the plan job of `han-infra` fails red on each push until the bootstrap has created the
+identities it plans as. No apply and no deploy runs in that window, because both wait for a
+green plan. This is the cost of the order the bootstrap requires, and it is recorded here.
 
 ### Left undisturbed
 

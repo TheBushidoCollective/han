@@ -44,6 +44,11 @@ resource "google_secret_manager_secret_version" "database_url" {
   ])
   # Same version as the SQL user. See database.tf.
   secret_data_wo_version = var.db_credential_version
+  # Written only after the SQL user exists, so a failed user creation (the apply
+  # identity's database permissions are not scopable, PATH.md section 8) leaves no
+  # secret holding a password the database does not have. The user is created with
+  # the same ephemeral value, in the same apply.
+  depends_on = [google_sql_user.han]
 }
 
 resource "google_secret_manager_secret_version" "jwt_secret" {

@@ -22,6 +22,11 @@ resource "google_sql_database_instance" "han" {
       enabled = true
     }
 
+    # Cloud SQL's own deletion protection, separate from Terraform's prevent_destroy
+    # above. The bootstrap also creates the instance with --deletion-protection. Without
+    # this, the first plan after import would set it to false (PATH.md section 8).
+    deletion_protection_enabled = true
+
     ip_configuration {
       # Cloud Run reaches the database over the Cloud SQL unix socket, which
       # needs no authorized networks. ENCRYPTED_ONLY rejects plaintext clients.
@@ -55,7 +60,4 @@ resource "google_sql_user" "han" {
   password_wo         = ephemeral.random_password.db.result
   password_wo_version = var.db_credential_version
 
-  # Written after the secret version, so the password never changes in the
-  # database before the secret that holds it exists.
-  depends_on = [google_secret_manager_secret_version.database_url]
 }
