@@ -1,0 +1,5 @@
+title: Han Terraform plan, Cloud SQL instance
+description: Read the han-pg instance for refresh and import. Read-only, bound with the same instance condition as han_tf_apply_sql. No database or user read: Terraform no longer manages either.
+stage: GA
+includedPermissions:
+- cloudsql.instances.get

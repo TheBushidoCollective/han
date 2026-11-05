@@ -1,0 +1,3 @@
+title: han-pg-only
+description: Limits a grant to exactly the han-pg Cloud SQL instance. Google's documented Cloud SQL IAM condition form, which names both the resource type and the exact name. An exact match, so a future instance such as han-pg-something is not covered. Passed to gcloud with --condition-from-file.
+expression: "resource.type == 'sqladmin.googleapis.com/Instance' && resource.name == 'projects/thebushido-co/instances/han-pg'"

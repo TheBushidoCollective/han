@@ -1,0 +1,6 @@
+title: Han Terraform apply, Cloud SQL instance
+description: Refresh and update the han-pg instance settings only. Bound with a condition limiting it to exactly the instance projects/thebushido-co/instances/han-pg. It holds no database or user permission: the bootstrap creates the database and the user, and Terraform manages neither. It cannot create or delete an instance.
+stage: GA
+includedPermissions:
+- cloudsql.instances.get
+- cloudsql.instances.update
