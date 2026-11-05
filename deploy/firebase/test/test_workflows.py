@@ -36,9 +36,11 @@ ALL_WORKFLOWS = (INFRA, *DEPLOY_WORKFLOWS, SMOKE, VALIDATE)
 PINNED_WORKFLOWS = ALL_WORKFLOWS
 
 DEPLOYER_SA = "HAN_GCP_DEPLOYER_SA"
+HOSTING_SA = "HAN_GCP_HOSTING_DEPLOYER_SA"
 APPLY_SA = "HAN_GCP_TF_APPLY_SA"
 PLAN_SA = "HAN_GCP_TF_PLAN_SA"
 DEPLOY_ENV = "han-production"
+HOSTING_ENV = "han-hosting"
 APPLY_ENV = "han-infra-apply"
 
 
@@ -130,6 +132,19 @@ class SignInScope(unittest.TestCase):
             for job_name, job in jobs.items():
                 if signs_in_as(job, DEPLOYER_SA):
                     self.assertEqual(environment_name(job), DEPLOY_ENV, f"{name}:{job_name}")
+
+    def test_hosting_identity_is_used_only_from_the_hosting_environment(self):
+        for name in ALL_WORKFLOWS:
+            for job_name, job in load(name)["jobs"].items():
+                if signs_in_as(job, HOSTING_SA):
+                    self.assertEqual(environment_name(job), HOSTING_ENV, f"{name}:{job_name}")
+                if environment_name(job) == HOSTING_ENV:
+                    self.assertTrue(signs_in_as(job, HOSTING_SA), f"{name}:{job_name} uses han-hosting for another identity")
+
+    def test_the_server_deployer_is_not_the_hosting_identity(self):
+        server = load("deploy-han-server.yml")["jobs"]
+        for job_name, job in server.items():
+            self.assertFalse(signs_in_as(job, HOSTING_SA), job_name)
 
     def test_no_deploy_job_can_reach_the_apply_environment(self):
         # Regression (review N2): publish and deploy shared the subject that
@@ -258,12 +273,17 @@ class Concurrency(unittest.TestCase):
 class FirebaseCli(unittest.TestCase):
     """N2 (third-party code) and H2 (targets resolve)."""
 
-    def test_deploys_use_the_locked_cli_and_run_no_install_scripts(self):
-        for name in DEPLOY_WORKFLOWS:
-            text = (WORKFLOWS / name).read_text(encoding="utf-8")
-            self.assertNotIn("npx --yes", text, f"{name} resolves the CLI at run time")
-            self.assertIn("npm ci --ignore-scripts", text, name)
-            self.assertIn("npx --no-install firebase deploy", text, name)
+    def test_only_the_hosting_workflow_runs_the_firebase_cli(self):
+        # The server deployer never runs third-party npm code or touches Hosting.
+        server_runs = "\n".join(
+            str(s.get("run", "")) for j in load("deploy-han-server.yml")["jobs"].values() for s in j.get("steps", [])
+        )
+        for banned in ("firebase deploy", "firebase-tools", "npx ", "npm ci", "hosting:"):
+            self.assertNotIn(banned, server_runs, banned)
+        hosting = (WORKFLOWS / "deploy-hosting.yml").read_text(encoding="utf-8")
+        self.assertNotIn("npx --yes", hosting, "the CLI must not resolve at run time")
+        self.assertIn("npm ci --ignore-scripts", hosting)
+        self.assertIn("npx --no-install firebase deploy", hosting)
 
     def test_lockfile_pins_firebase_tools(self):
         lock = json.loads((FIREBASE / "package-lock.json").read_text(encoding="utf-8"))
@@ -272,8 +292,8 @@ class FirebaseCli(unittest.TestCase):
         self.assertEqual(manifest["devDependencies"]["firebase-tools"], "15.24.0")
 
     def test_every_deployed_target_resolves_for_the_project(self):
-        config = firebaserc.build("han-guru")
-        hosting = config["targets"]["han-guru"]["hosting"]
+        config = firebaserc.build("thebushido-co")
+        hosting = config["targets"]["thebushido-co"]["hosting"]
         deployed = set()
         for name in DEPLOY_WORKFLOWS:
             text = (WORKFLOWS / name).read_text(encoding="utf-8")
@@ -287,21 +307,21 @@ class FirebaseCli(unittest.TestCase):
 
     def test_deploy_writes_firebaserc_before_it_deploys(self):
         # H2: the target map is written for the real project before any deploy
-        # step in the same job.
-        for name in DEPLOY_WORKFLOWS:
-            runs = [str(s.get("run", "")) for s in load(name)["jobs"]["deploy"]["steps"]]
-            writer = [i for i, r in enumerate(runs) if "firebaserc.py" in r]
-            deployer = [i for i, r in enumerate(runs) if "--only hosting" in r]
-            self.assertTrue(writer and deployer, name)
-            if min(writer) == min(deployer):
-                run = runs[min(writer)]
-                self.assertLess(run.index("firebaserc.py"), run.index("--only hosting"), name)
-            else:
-                self.assertLess(min(writer), min(deployer), name)
+        # step in the same job. Only the hosting job deploys Hosting.
+        name = "deploy-hosting.yml"
+        runs = [str(s.get("run", "")) for s in load(name)["jobs"]["deploy"]["steps"]]
+        writer = [i for i, r in enumerate(runs) if "firebaserc.py" in r]
+        deployer = [i for i, r in enumerate(runs) if "--only hosting" in r]
+        self.assertTrue(writer and deployer, name)
+        if min(writer) == min(deployer):
+            run = runs[min(writer)]
+            self.assertLess(run.index("firebaserc.py"), run.index("--only hosting"), name)
+        else:
+            self.assertLess(min(writer), min(deployer), name)
 
     def test_committed_firebaserc_matches_the_generator(self):
         committed = (FIREBASE / ".firebaserc").read_text(encoding="utf-8")
-        self.assertEqual(committed, json.dumps(firebaserc.build("han-guru"), indent=2) + "\n")
+        self.assertEqual(committed, json.dumps(firebaserc.build("thebushido-co"), indent=2) + "\n")
 
 
 class ServerChecks(unittest.TestCase):
@@ -314,8 +334,24 @@ class ServerChecks(unittest.TestCase):
         self.assertNotIn("textPayload", text)
 
     def test_redirect_check_decodes_the_location(self):
-        text = steps_text(load("deploy-han-server.yml")["jobs"]["deploy"])
+        text = steps_text(load("deploy-hosting.yml")["jobs"]["deploy"])
         self.assertIn("check_redirect.py", text)
+
+    def test_invoker_setting_is_checked_after_every_deploy(self):
+        # The service's invoker setting is owned by Terraform. The deploy must
+        # check it, not pass a flag that could change it.
+        text = steps_text(load("deploy-han-server.yml")["jobs"]["deploy"])
+        self.assertIn("check_invoker.py", text)
+        self.assertNotIn("--no-invoker-iam-check", text)
+        self.assertNotIn("--allow-unauthenticated", text)
+
+    def test_hosting_workflow_checks_the_api_host_not_the_server_workflow(self):
+        hosting = steps_text(load("deploy-hosting.yml")["jobs"]["deploy"])
+        self.assertIn("check_redirect.py", hosting)
+        self.assertIn("han-guru-api.web.app", hosting)
+        self.assertIn("/health", hosting)
+        server = steps_text(load("deploy-han-server.yml")["jobs"]["deploy"])
+        self.assertNotIn("check_redirect.py", server)
 
     def test_secret_precheck_does_not_need_payload_access(self):
         text = steps_text(load("deploy-han-server.yml")["jobs"]["deploy"])

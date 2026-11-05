@@ -1,0 +1,17 @@
+title: Han Terraform apply, Cloud SQL
+description: Manage the han-pg instance, its database and its users. Bound with a condition limiting it to the instance projects/thebushido-co/instances/han-pg. Creating the instance is in han_tf_create. This role cannot create instances and cannot touch any other.
+stage: GA
+includedPermissions:
+- cloudsql.instances.get
+- cloudsql.instances.update
+- cloudsql.instances.delete
+- cloudsql.databases.get
+- cloudsql.databases.create
+- cloudsql.databases.update
+- cloudsql.databases.delete
+- cloudsql.databases.list
+- cloudsql.users.get
+- cloudsql.users.create
+- cloudsql.users.update
+- cloudsql.users.delete
+- cloudsql.users.list

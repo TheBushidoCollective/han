@@ -1,5 +1,5 @@
 variable "project_id" {
-  description = "Han GCP project ID. Chosen by the bootstrap prerequisite in PATH.md section 7 (han-guru, or han-guru-prod if taken)."
+  description = "Shared GCP project that hosts Han: thebushido-co (project number 911514101920). Han resources are named han-* and every grant is resource-scoped. See PATH.md section 8."
   type        = string
 
   validation {
@@ -15,43 +15,21 @@ variable "region" {
 }
 
 variable "github_repository" {
-  description = "GitHub repository allowed to use the deploy identities."
+  description = "GitHub repository allowed to use the Han identities."
   type        = string
   default     = "TheBushidoCollective/han"
 }
 
+variable "wif_pool_id" {
+  description = "Han's own Workload Identity pool, created once by a human. Never the shared github pool, which admits every TheBushidoCollective repo."
+  type        = string
+  default     = "han-github"
+}
+
 variable "db_tier" {
-  description = "Cloud SQL machine tier. db-f1-micro needs edition ENTERPRISE, which main.tf sets."
+  description = "Cloud SQL machine tier. db-f1-micro needs edition ENTERPRISE, which database.tf sets."
   type        = string
   default     = "db-f1-micro"
-}
-
-variable "manage_dns" {
-  description = "Create the dashboard.local, app and api CNAMEs and ACME TXT records in the waldrip-net zone. Off until slice K."
-  type        = bool
-  default     = false
-}
-
-variable "dns_project_id" {
-  description = "Project that hosts the han-guru managed zone."
-  type        = string
-  default     = "waldrip-net"
-}
-
-variable "dns_zone_name" {
-  description = "Cloud DNS managed zone for han.guru."
-  type        = string
-  default     = "han-guru"
-}
-
-variable "dns_targets" {
-  description = "CNAME target per host, used when manage_dns is true. Slice K changes these one host at a time."
-  type        = map(string)
-  default = {
-    dashboard = "han-guru-dashboard.web.app."
-    app       = "han-guru-app.web.app."
-    api       = "han-guru-api.web.app."
-  }
 }
 
 variable "db_credential_version" {
@@ -60,8 +38,8 @@ variable "db_credential_version" {
   default     = 1
 }
 
-variable "wif_pool_id" {
-  description = "Han's own Workload Identity pool. Created once by a human. Never the shared github pool used by other TheBushidoCollective repositories."
+variable "placeholder_image" {
+  description = "Image the Cloud Run service shell was created with. The deploy workflow replaces it by digest, and Terraform ignores template changes."
   type        = string
-  default     = "han-github"
+  default     = "us-docker.pkg.dev/cloudrun/container/hello"
 }

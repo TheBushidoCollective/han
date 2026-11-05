@@ -102,7 +102,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
-      name: han-production
+      name: han-hosting
       url: https://app.han.guru
     permissions:
       contents: read
@@ -120,11 +120,11 @@ jobs:
           name: han-hosting-build
           path: deploy/firebase/build
 
-      - name: Authenticate to Google Cloud (WIF)
+      - name: Authenticate to Google Cloud (WIF, hosting deployer)
         uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
-          service_account: ${{ vars.HAN_GCP_DEPLOYER_SA }}
+          service_account: ${{ vars.HAN_GCP_HOSTING_DEPLOYER_SA }}
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -139,10 +139,13 @@ jobs:
         # Lockfile-pinned, and no install scripts run.
         run: npm ci --ignore-scripts
 
-      - name: Deploy dashboard and app
+      - name: Deploy dashboard, app and the api rewrite
+        # All three targets. The api rewrite is static, so this is idempotent,
+        # and this is the only workflow that deploys Hosting. The server deploy
+        # does not touch it.
         env:
           PROJECT_ID: ${{ vars.HAN_GCP_PROJECT_ID }}
-        run: npx --no-install firebase deploy --only hosting:dashboard,hosting:app --project "$PROJECT_ID" --non-interactive
+        run: npx --no-install firebase deploy --only hosting:api,hosting:dashboard,hosting:app --project "$PROJECT_ID" --non-interactive
 
       - name: Read-only checks on the default sites
         run: |
@@ -159,3 +162,15 @@ jobs:
             [ "$code" = "200" ] || { echo "::error::$url$entry returned $code"; exit 1; }
           done
           echo "hosting checks passed"
+
+      - name: Read-only checks on the api host
+        run: |
+          set -euo pipefail
+          site="https://han-guru-api.web.app"
+          health="$(curl -fsS --retry 5 --retry-delay 5 "$site/health")"
+          printf '%s' "$health" | jq -e 'has("service") and has("status")' >/dev/null
+          location="$(curl -sS -o /dev/null -w '%{redirect_url}' "$site/auth/github")"
+          python3 scripts/check_redirect.py "$location" "$GITHUB_CLIENT_ID" \
+            "https://api.han.guru/auth/github/callback"
+        env:
+          GITHUB_CLIENT_ID: ${{ vars.HAN_GITHUB_CLIENT_ID }}

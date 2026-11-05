@@ -1,12 +1,14 @@
-# Postgres 16. The edition must be ENTERPRISE: Postgres 16 defaults to
-# ENTERPRISE_PLUS, which rejects db-f1-micro.
+# Cloud SQL instance han-pg. A human creates the instance once (PATH.md section 8),
+# or the apply identity creates it under its unconditioned create role. Either
+# way, Terraform then owns its settings and the han_team database and user.
+#
+# Postgres 16 defaults to ENTERPRISE_PLUS, which rejects db-f1-micro, so the
+# edition is set explicitly.
 resource "google_sql_database_instance" "han" {
   name                = "han-pg"
   database_version    = "POSTGRES_16"
   region              = var.region
   deletion_protection = true
-
-  depends_on = [google_project_service.apis]
 
   settings {
     tier    = var.db_tier
@@ -30,9 +32,8 @@ resource "google_sql_database_instance" "han" {
 }
 
 resource "google_sql_database" "han_team" {
-  name       = "han_team"
-  instance   = google_sql_database_instance.han.name
-  depends_on = [google_project_service.apis]
+  name     = "han_team"
+  instance = google_sql_database_instance.han.name
 }
 
 # The database password is one ephemeral value per apply. It reaches two

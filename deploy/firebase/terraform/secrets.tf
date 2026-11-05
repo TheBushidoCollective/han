@@ -1,10 +1,14 @@
-# Six secrets. Generated values are set from ephemeral generators (write-only),
-# so no secret value appears in state. Versions are bumped only together with
-# the password or key they protect.
+# Six Han secrets, every name prefixed han-server-. Values are set from ephemeral
+# generators or written by an operator out of band, and never appear in state.
 #
-# The GitHub client secret and both Stripe secrets are created empty. Their
-# values are added by the operator, out of band, never through Terraform.
-# Stripe stays required by the server, so no dummy value is ever written.
+# The apply identity creates and writes these under a custom role with no
+# secretmanager.versions.access, so it cannot read a payload (permission list in
+# deploy/firebase/bootstrap/roles/han_tf_apply_secrets.yaml).
+#
+# Not verified: that the provider never reads a write-only payload back during
+# refresh. The reading is that it does not, but nothing here proves it. The
+# first plan and the state guard in han-infra.yml are the check. See PATH.md
+# section 8, not verified.
 
 ephemeral "random_password" "jwt" {
   length  = 64
@@ -16,8 +20,7 @@ ephemeral "random_bytes" "kek" {
 }
 
 resource "google_secret_manager_secret" "database_url" {
-  secret_id  = "han-server-database-url"
-  depends_on = [google_project_service.apis]
+  secret_id = "${local.secret_prefix}database-url"
 
   replication {
     auto {}
@@ -37,8 +40,7 @@ resource "google_secret_manager_secret_version" "database_url" {
 }
 
 resource "google_secret_manager_secret" "jwt_secret" {
-  secret_id  = "han-server-jwt-secret"
-  depends_on = [google_project_service.apis]
+  secret_id = "${local.secret_prefix}jwt-secret"
 
   replication {
     auto {}
@@ -55,8 +57,7 @@ resource "google_secret_manager_secret_version" "jwt_secret" {
 # unreadable, so the secret and its only version are protected from destroy,
 # and Cloud Run pins version 1 (deploy-han-server.yml).
 resource "google_secret_manager_secret" "master_kek" {
-  secret_id  = "han-server-master-kek"
-  depends_on = [google_project_service.apis]
+  secret_id = "${local.secret_prefix}master-kek"
 
   replication {
     auto {}
@@ -77,9 +78,11 @@ resource "google_secret_manager_secret_version" "master_kek" {
   }
 }
 
+# Created empty. An operator adds the value out of band (slice I and the Stripe
+# step). Terraform never writes a placeholder, so the deploy refuses to run
+# until a version exists.
 resource "google_secret_manager_secret" "github_client_secret" {
-  secret_id  = "han-server-github-client-secret"
-  depends_on = [google_project_service.apis]
+  secret_id = "${local.secret_prefix}github-client-secret"
 
   replication {
     auto {}
@@ -87,8 +90,7 @@ resource "google_secret_manager_secret" "github_client_secret" {
 }
 
 resource "google_secret_manager_secret" "stripe_secret_key" {
-  secret_id  = "han-server-stripe-secret-key"
-  depends_on = [google_project_service.apis]
+  secret_id = "${local.secret_prefix}stripe-secret-key"
 
   replication {
     auto {}
@@ -96,8 +98,7 @@ resource "google_secret_manager_secret" "stripe_secret_key" {
 }
 
 resource "google_secret_manager_secret" "stripe_webhook_secret" {
-  secret_id  = "han-server-stripe-webhook-secret"
-  depends_on = [google_project_service.apis]
+  secret_id = "${local.secret_prefix}stripe-webhook-secret"
 
   replication {
     auto {}

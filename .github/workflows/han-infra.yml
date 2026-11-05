@@ -15,9 +15,10 @@ name: Han Infrastructure
 # Terraform change whose run was replaced. Planning against the state does not
 # depend on which earlier runs survived.
 #
-# The han-infra-apply environment is the only path to the owner-level identity.
+# The han-infra-apply environment is the only path to the apply identity, which
+# holds no owner or project-level IAM role (PATH.md section 8).
 # The deploy workflows use han-production, a different subject, so their jobs
-# cannot exchange a token for the owner identity.
+# cannot exchange a token for the apply identity.
 #
 # Deletes and replacements fail unless their address is in the allowlist below.
 # The list is empty until slice L.

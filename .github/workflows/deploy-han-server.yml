@@ -1,14 +1,17 @@
 name: Deploy Han Server
 
-# Builds the han-server image, deploys it to Cloud Run by digest, then points
-# api.han.guru's Firebase Hosting rewrite at it. Nothing deploys from a
-# workstation.
+# Builds the han-server image and deploys it to the existing Cloud Run service
+# han-server in thebushido-co. Nothing deploys from a workstation.
+#
+# This workflow deploys the server only. It does not touch Firebase Hosting:
+# the api rewrite is static and belongs to deploy-hosting.yml. It has no
+# Firebase CLI and no npm install.
 #
 # - Pull request: test, and build the image without pushing. No cloud identity.
 # - Push to main: runs after Han Infrastructure finishes for the same commit
 #   (workflow_run). Test, then publish and deploy inside the han-production
-#   environment. The deployer identity trusts only that environment, so the
-#   publish and deploy jobs must be in it.
+#   environment. That environment reaches the deployer only, and the deployer
+#   has no project-level role (PATH.md section 8).
 
 on:
   pull_request:
@@ -93,7 +96,7 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
-      - id: auth
+      - name: Authenticate to Google Cloud (WIF, deployer)
         uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
@@ -142,7 +145,7 @@ jobs:
             exit 1
           fi
 
-      - id: auth
+      - name: Authenticate to Google Cloud (WIF, deployer)
         uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
@@ -167,7 +170,10 @@ jobs:
             fi
           done
 
-      - name: Deploy to Cloud Run by digest
+      - name: Deploy a new revision of han-server by digest
+        # The service and its invoker setting exist already (cloudrun.tf). This
+        # updates the revision only. It does not pass an invoker flag, so the
+        # setting is checked below, not assumed.
         run: |
           set -euo pipefail
           gcloud run deploy "$SERVICE" \
@@ -175,7 +181,6 @@ jobs:
             --region "$REGION" \
             --image "$IMAGE_REPO@$DIGEST" \
             --service-account "han-server-run@${PROJECT_ID}.iam.gserviceaccount.com" \
-            --no-invoker-iam-check \
             --port 8080 \
             --cpu 1 \
             --memory 1Gi \
@@ -186,6 +191,12 @@ jobs:
             --set-env-vars "PUBLIC_URL=https://api.han.guru,GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID},RUST_LOG=info,DB_MAX_CONNECTIONS=5" \
             --set-secrets "DATABASE_URL=han-server-database-url:latest,JWT_SECRET=han-server-jwt-secret:latest,GITHUB_CLIENT_SECRET=han-server-github-client-secret:latest,STRIPE_SECRET_KEY=han-server-stripe-secret-key:latest,STRIPE_WEBHOOK_SECRET=han-server-stripe-webhook-secret:latest,MASTER_KEK=han-server-master-kek:1" \
             --quiet
+
+      - name: Confirm the invoker setting survived the deploy
+        run: |
+          set -euo pipefail
+          gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format=json > service.json
+          python3 deploy/firebase/scripts/check_invoker.py service.json
 
       - name: Confirm the live revision runs the pushed digest
         run: |
@@ -216,29 +227,3 @@ jobs:
           done
           echo "::error::Startup check did not pass for $LIVE_REVISION"
           exit 1
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 22
-
-      - name: Install the pinned Firebase CLI
-        working-directory: deploy/firebase
-        # Lockfile-pinned, and no install scripts run.
-        run: npm ci --ignore-scripts
-
-      - name: Point api.han.guru's Hosting rewrite at the server
-        working-directory: deploy/firebase
-        run: |
-          set -euo pipefail
-          python3 scripts/firebaserc.py "$PROJECT_ID"
-          npx --no-install firebase deploy --only hosting:api --project "$PROJECT_ID" --non-interactive
-
-      - name: Read-only checks on the public API host
-        run: |
-          set -euo pipefail
-          site="https://han-guru-api.web.app"
-          health="$(curl -fsS --retry 5 --retry-delay 5 "$site/health")"
-          printf '%s' "$health" | jq -e 'has("service") and has("status")' >/dev/null
-          location="$(curl -sS -o /dev/null -w '%{redirect_url}' "$site/auth/github")"
-          python3 deploy/firebase/scripts/check_redirect.py "$location" "$GITHUB_CLIENT_ID" \
-            "https://api.han.guru/auth/github/callback"

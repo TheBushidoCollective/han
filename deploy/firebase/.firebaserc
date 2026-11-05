@@ -1,9 +1,9 @@
 {
   "projects": {
-    "default": "han-guru"
+    "default": "thebushido-co"
   },
   "targets": {
-    "han-guru": {
+    "thebushido-co": {
       "hosting": {
         "dashboard": [
           "han-guru-dashboard"
