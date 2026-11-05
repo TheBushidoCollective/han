@@ -1,0 +1,7 @@
+title: Han Terraform plan, read identities
+description: Read the Han service accounts and the Han WIF pool, which Terraform reads as data sources. Read-only and unconditioned, because these identities are named han-* and expose no secret or payload.
+stage: GA
+includedPermissions:
+- iam.serviceAccounts.get
+- iam.workloadIdentityPools.get
+- iam.workloadIdentityPoolProviders.get

@@ -1,0 +1,10 @@
+title: Han Terraform apply, KEK versions
+description: Write and read versions of the master KEK secret only (han-server-master-kek), bound per secret. No versions.destroy, so this identity cannot destroy the KEK version. It cannot read a payload, change IAM, or create or delete the secret.
+stage: GA
+includedPermissions:
+- secretmanager.secrets.get
+- secretmanager.versions.add
+- secretmanager.versions.get
+- secretmanager.versions.list
+- secretmanager.versions.enable
+- secretmanager.versions.disable
