@@ -1,0 +1,99 @@
+name: Han DNS State Import
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: han-dns-state-import
+  cancel-in-progress: false
+
+jobs:
+  dns-import-plan:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: han-infra-apply
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: deploy/firebase/dns-import
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: "1.15.8"
+          terraform_wrapper: false
+      - name: Verify legacy workspace is frozen
+        env:
+          TFC_READ_TOKEN: ${{ secrets.TFC_READ_TOKEN }}
+        run: python3 ../scripts/dns_import_guard.py cloud
+      - uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        with:
+          workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.HAN_GCP_TF_PLAN_SA }}
+      - name: Create and verify saved import plan
+        run: |
+          set -euo pipefail
+          terraform init -input=false -backend-config="bucket=thebushido-co-han-tfstate" -backend-config="prefix=terraform/han-dns"
+          terraform plan -input=false -no-color -out=dns.tfplan
+          terraform show -json dns.tfplan > dns-plan.json
+          python3 ../scripts/dns_import_guard.py plan dns-plan.json
+          sha256sum dns.tfplan
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: han-dns-import-plan
+          path: deploy/firebase/dns-import/dns.tfplan
+          retention-days: 7
+
+  dns-import-apply:
+    needs: dns-import-plan
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: han-infra-apply
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: deploy/firebase/dns-import
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: "1.15.8"
+          terraform_wrapper: false
+      - name: Verify legacy workspace remains frozen
+        env:
+          TFC_READ_TOKEN: ${{ secrets.TFC_READ_TOKEN }}
+        run: python3 ../scripts/dns_import_guard.py cloud
+      - uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        with:
+          workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.HAN_GCP_TF_APPLY_SA }}
+      - name: Init isolated DNS state
+        run: terraform init -input=false -backend-config="bucket=thebushido-co-han-tfstate" -backend-config="prefix=terraform/han-dns"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: han-dns-import-plan
+          path: deploy/firebase/dns-import
+      - name: Verify exact saved plan and frozen workspace
+        env:
+          TFC_READ_TOKEN: ${{ secrets.TFC_READ_TOKEN }}
+        run: |
+          set -euo pipefail
+          terraform show -json dns.tfplan > dns-plan.json
+          python3 ../scripts/dns_import_guard.py plan dns-plan.json
+          python3 ../scripts/dns_import_guard.py cloud
+          sha256sum dns.tfplan
+      - name: Import state only
+        run: terraform apply -input=false -no-color dns.tfplan
+      - name: Verify imported state
+        run: |
+          set -euo pipefail
+          terraform plan -input=false -no-color -detailed-exitcode

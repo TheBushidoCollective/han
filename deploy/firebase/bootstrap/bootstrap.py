@@ -67,7 +67,7 @@ REPO_ID = "1100192477"
 POOL = "han-github"
 PROVIDER = "han-github"
 ISSUER = "https://token.actions.githubusercontent.com"
-WORKFLOWS_ALLOWED_TO_SIGN_IN = ("han-infra.yml", "deploy-han-server.yml", "deploy-hosting.yml")
+WORKFLOWS_ALLOWED_TO_SIGN_IN = ("han-infra.yml", "deploy-han-server.yml", "deploy-hosting.yml", "han-dns-import.yml")
 
 # The sign-in identity this job uses. The website's reviewed grant (contract C1) time-boxes it before the run
 # (PATH.md section 8). This run removes the principal from that grant again.

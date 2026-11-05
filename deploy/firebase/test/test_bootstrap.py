@@ -444,7 +444,7 @@ class FirstRun(unittest.TestCase):
         mapping = next(a for a in args if a.startswith("--attribute-mapping="))
         expected = " || ".join(
             f"assertion.workflow_ref.startsWith('{bootstrap.REPO}/.github/workflows/{wf}@')"
-            for wf in ("han-infra.yml", "deploy-han-server.yml", "deploy-hosting.yml")
+            for wf in ("han-infra.yml", "deploy-han-server.yml", "deploy-hosting.yml", "han-dns-import.yml")
         )
         self.assertEqual(condition, f"--attribute-condition=assertion.repository_id == '{bootstrap.REPO_ID}' && ({expected})")
         self.assertIn("attribute.workflow_ref=assertion.workflow_ref", mapping)

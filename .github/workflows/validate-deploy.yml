@@ -60,6 +60,22 @@ jobs:
           terraform init -backend=false -input=false
           terraform validate
 
+  dns-import-terraform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: deploy/firebase/dns-import
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: 1.15.8
+      - run: terraform fmt -check -recursive
+      - run: |
+          terraform init -backend=false -input=false
+          terraform validate
+
   actionlint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
