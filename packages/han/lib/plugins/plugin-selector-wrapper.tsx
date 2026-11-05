@@ -1,5 +1,4 @@
 import { render } from 'ink';
-import type React from 'react';
 import type { MarketplacePlugin } from '../shared/index.ts';
 import { PluginSelector } from './plugin-selector.tsx';
 
@@ -12,7 +11,7 @@ export async function showPluginSelector(
   allPlugins: MarketplacePlugin[]
 ): Promise<string[]> {
   return new Promise((resolve) => {
-    const PluginSelectorApp: React.FC = () => (
+    const { unmount } = render(
       <PluginSelector
         detectedPlugins={searchResults.map((p) => p.name)}
         installedPlugins={installedPlugins}
@@ -27,7 +26,5 @@ export async function showPluginSelector(
         }}
       />
     );
-
-    const { unmount } = render(<PluginSelectorApp />);
   });
 }
