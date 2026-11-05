@@ -4,6 +4,8 @@ import importlib.util
 import unittest
 from unittest import mock
 import yaml
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 path = Path(__file__).resolve().parents[1] / 'scripts' / 'dns_import_guard.py'
@@ -49,6 +51,50 @@ class GuardTests(unittest.TestCase):
         with self.assertRaises(g.Refuse): g.check_cloud('')
         with self.assertRaises(g.Refuse): g.check_runs([{'data': [{'attributes': {'status': 'applying'}}]}])
         g.check_runs([{'data': [{'attributes': {'status': 'errored'}}]}])
+
+    def test_cloud_checks_every_page(self):
+        first = {'data': [{'attributes': {'status': 'errored'}}],
+                 'meta': {'pagination': {'total-pages': 2}}}
+        second = {'data': [{'attributes': {'status': 'applied'}}],
+                  'meta': {'pagination': {'total-pages': 2}}}
+        with mock.patch.object(g, 'api', side_effect=[workspace(), first, second]) as api:
+            g.check_cloud('test-token')
+            self.assertEqual(api.call_count, 3)
+            self.assertIn('page%5Bnumber%5D=2', api.call_args.args[0])
+        second['data'][0]['attributes']['status'] = 'pending'
+        with mock.patch.object(g, 'api', side_effect=[workspace(), first, second]):
+            with self.assertRaises(g.Refuse):
+                g.check_cloud('test-token')
+
+    def test_cloud_rejects_malformed_pagination(self):
+        for value in (None, 0, 101, '2'):
+            page = {'data': [], 'meta': {'pagination': {'total-pages': value}}}
+            with self.subTest(value=value), mock.patch.object(g, 'api', side_effect=[workspace(), page]):
+                with self.assertRaises(g.Refuse):
+                    g.check_cloud('test-token')
+
+    def test_api_never_follows_redirects_with_authorization(self):
+        hits = []
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                hits.append(self.path)
+                self.send_response(302)
+                self.send_header('Location', f'http://127.0.0.1:{self.server.server_port}/redirected')
+                self.end_headers()
+            def log_message(self, *args):
+                pass
+        server = HTTPServer(('127.0.0.1', 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with mock.patch.object(g, 'BASE', f'http://127.0.0.1:{server.server_port}'):
+                with self.assertRaises(g.Refuse):
+                    g.api('/initial', 'test-token')
+            self.assertEqual(hits, ['/initial'])
+        finally:
+            server.shutdown()
+            thread.join()
+            server.server_close()
 
     def test_plan_accepts_only_four_exact_noop_imports(self):
         g.check_plan(plan())
