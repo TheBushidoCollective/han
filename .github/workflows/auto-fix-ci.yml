@@ -24,23 +24,32 @@ on:
     types:
       - completed
 
-permissions:
-  contents: write
-  pull-requests: write
-  actions: read
-  issues: write
-  id-token: write
+# No token scope by default. Each job declares only what it needs below.
+permissions: {}
 
-# Use concurrency to prevent multiple auto-fix runs on the same branch
+# Keyed on the repository as well as the branch: a run triggered from a fork
+# whose branch name matches a branch here must not cancel this repository's run.
 concurrency:
-  group: auto-fix-${{ github.event.workflow_run.head_branch }}
+  group: auto-fix-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: true
 
 jobs:
-  # Check if we should attempt auto-fix
+  # Gate. A run is eligible only when all of these hold:
+  #   - it failed;
+  #   - its head repository is this repository (a fork chooses its branch name);
+  #   - it came from a push or pull_request event. A comment-driven run, such as
+  #     an outsider's @claude on an issue, runs on the default branch with
+  #     event issue_comment and is refused here;
+  #   - its branch is not the default branch.
   should-fix:
-    if: github.event.workflow_run.conclusion == 'failure'
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'pull_request') &&
+      github.event.workflow_run.head_branch != github.event.repository.default_branch
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       should_run: ${{ steps.check.outputs.should_run }}
       attempt_count: ${{ steps.check.outputs.attempt_count }}
@@ -48,18 +57,52 @@ jobs:
       - name: Check if auto-fix should run
         id: check
         uses: actions/github-script@v7
+        env:
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          ACTOR_LOGIN: ${{ github.event.workflow_run.actor.login }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RUN_EVENT: ${{ github.event.workflow_run.event }}
         with:
           script: |
-            const branch = '${{ github.event.workflow_run.head_branch }}';
-            const workflowName = '${{ github.event.workflow_run.name }}';
-            const runId = ${{ github.event.workflow_run.id }};
+            const branch = process.env.HEAD_BRANCH || '';
+            const actor = process.env.ACTOR_LOGIN || '';
+            const defaultBranch = process.env.DEFAULT_BRANCH || '';
+            const event = process.env.RUN_EVENT || '';
+
+            const isSafeBranch = (name) =>
+              /^[A-Za-z0-9][A-Za-z0-9._\/-]*$/.test(name) &&
+              !name.includes('..') &&
+              !name.includes('//') &&
+              !name.endsWith('/') &&
+              !name.endsWith('.lock');
+
+            const skip = (reason, count = '0') => {
+              console.log(`Skipping: ${reason}`);
+              core.setOutput('should_run', 'false');
+              core.setOutput('attempt_count', count);
+            };
+
+            // Fail closed: without a known default branch, nothing is eligible.
+            if (!defaultBranch) {
+              return skip('default branch is unknown');
+            }
+
+            // Never write to the default branch, whatever triggered the run.
+            if (branch === defaultBranch) {
+              return skip('never auto-fix the default branch');
+            }
+
+            if (event !== 'push' && event !== 'pull_request') {
+              return skip(`event "${event}" is not a push or pull_request run`);
+            }
+
+            if (!isSafeBranch(branch)) {
+              return skip('branch name is outside the allowed set');
+            }
 
             // Skip if triggered by bot to prevent loops
-            if ('${{ github.event.workflow_run.actor.login }}' === 'github-actions[bot]') {
-              console.log('Skipping: triggered by github-actions[bot]');
-              core.setOutput('should_run', 'false');
-              core.setOutput('attempt_count', '0');
-              return;
+            if (actor === 'github-actions[bot]') {
+              return skip('triggered by github-actions[bot]');
             }
 
             // Get recent commits to count auto-fix attempts
@@ -82,48 +125,57 @@ jobs:
 
             // Max 3 auto-fix attempts per failure chain
             if (attemptCount >= 3) {
-              console.log(`Skipping: already ${attemptCount} auto-fix attempts`);
-              core.setOutput('should_run', 'false');
-              core.setOutput('attempt_count', attemptCount.toString());
-              return;
+              return skip(`already ${attemptCount} auto-fix attempts`, attemptCount.toString());
             }
 
             console.log(`Proceeding with auto-fix attempt ${attemptCount + 1}`);
             core.setOutput('should_run', 'true');
             core.setOutput('attempt_count', attemptCount.toString());
 
+  # Read-only agent. It runs Claude over attacker-influenced logs and code, so
+  # it holds no write scope and no push credentials. Its only output is a patch
+  # file, which push-fix validates and applies.
   auto-fix:
     needs: should-fix
     if: needs.should-fix.outputs.should_run == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read       # download the failed run's job logs
+    outputs:
+      has_fix: ${{ steps.collect.outputs.has_fix }}
+    env:
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout reviewed commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.workflow_run.head_branch }}
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup git identity
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+          persist-credentials: false
 
       - name: Get CI failure details
         id: failure_details
         uses: actions/github-script@v7
+        env:
+          RUN_ID: ${{ github.event.workflow_run.id }}
         with:
           script: |
+            const path = require('path');
+            const fs = require('fs');
+            const runId = Number(process.env.RUN_ID);
+
             const run = await github.rest.actions.getWorkflowRun({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              run_id: ${{ github.event.workflow_run.id }}
+              run_id: runId
             });
 
             const jobs = await github.rest.actions.listJobsForWorkflowRun({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              run_id: ${{ github.event.workflow_run.id }}
+              run_id: runId
             });
 
             const failedJobs = jobs.data.jobs.filter(job => job.conclusion === 'failure');
@@ -174,7 +226,7 @@ jobs:
               }
             }
 
-            return {
+            const result = {
               runUrl: run.data.html_url,
               failedJobs: failedJobs.map(j => j.name),
               errorLogs: errorLogs,
@@ -182,15 +234,20 @@ jobs:
               failureType: failureType
             };
 
+            // Shell steps read this file rather than interpolating the result,
+            // because the logs inside it are untrusted text.
+            fs.writeFileSync(path.join(process.env.RUNNER_TEMP, 'failure-details.json'), JSON.stringify(result));
+            return result;
+
       - name: Skip unfixable failures
         id: skip_check
         run: |
-          FAILURE_TYPE="${{ fromJSON(steps.failure_details.outputs.result).failureType }}"
+          FAILURE_TYPE=$(jq -r '.failureType' "$RUNNER_TEMP/failure-details.json")
           if [ "$FAILURE_TYPE" = "network" ]; then
             echo "Skipping: network failure is not fixable by code changes"
-            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "skip=true" >> "$GITHUB_OUTPUT"
           else
-            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Setup tools for validation
@@ -203,6 +260,7 @@ jobs:
         if: steps.skip_check.outputs.skip != 'true'
         id: claude
         uses: anthropics/claude-code-action@v1
+        timeout-minutes: 15
         with:
           prompt: |
             A CI workflow has failed. Please analyze the error and fix it.
@@ -252,18 +310,21 @@ jobs:
             ## Critical Rules
             1. Make MINIMAL changes to fix the issue
             2. Do NOT commit or push - the workflow handles that
-            3. After making changes, validate by running the relevant command:
+            3. Do NOT edit anything under .github/ - CI configuration is not part of an auto-fix
+            4. After making changes, validate by running the relevant command:
                - Formatting: `biome format --files-ignore-unknown=true <directory>`
                - Lint: `biome lint --files-ignore-unknown=true <directory>`
-            4. If you can't determine the fix, don't make random changes
+            5. If you can't determine the fix, don't make random changes
+          github_token: ${{ github.token }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          timeout_minutes: 15
+          claude_args: |
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(biome:*),Bash(git diff:*),Bash(git status:*)"
 
       - name: Validate fixes
         if: steps.skip_check.outputs.skip != 'true'
         id: validate
         run: |
-          FAILURE_TYPE="${{ fromJSON(steps.failure_details.outputs.result).failureType }}"
+          FAILURE_TYPE=$(jq -r '.failureType' "$RUNNER_TEMP/failure-details.json")
           VALID="true"
 
           # Run validation based on failure type
@@ -281,41 +342,256 @@ jobs:
               ;;
           esac
 
-          echo "valid=$VALID" >> $GITHUB_OUTPUT
+          echo "valid=$VALID" >> "$GITHUB_OUTPUT"
 
-      - name: Commit and push fixes
+      - name: Collect fix patch
+        id: collect
         if: steps.skip_check.outputs.skip != 'true'
+        env:
+          VALID: ${{ steps.validate.outputs.valid }}
         run: |
-          # Pull latest changes first to avoid conflicts
-          git pull --rebase origin ${{ github.event.workflow_run.head_branch }} || true
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/fix"
+          # Start from an empty directory: the agent could have planted files in it.
+          rm -rf "$OUT"
+          mkdir -p "$OUT"
 
-          # Check if there are any changes to commit
-          if git diff --quiet && git diff --cached --quiet; then
-            echo "No changes to commit"
+          # CI configuration is never part of an auto-fix. Drop any edit under
+          # .github, tracked or new, before the patch is made.
+          git checkout HEAD -- .github 2>/dev/null || true
+          git clean -fdq -- .github
+
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to fix"
+            echo "has_fix=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # Stage all changes
+          git diff --cached --binary --full-index --no-color --no-ext-diff --no-renames --no-copies HEAD > "$OUT/fix.patch"
+          jq -n \
+            --arg headSha "$HEAD_SHA" \
+            --arg branch "$HEAD_BRANCH" \
+            --arg valid "$VALID" \
+            --slurpfile failure "$RUNNER_TEMP/failure-details.json" \
+            '{headSha: $headSha, branch: $branch, valid: $valid,
+              failureType: $failure[0].failureType,
+              workflowName: $failure[0].workflowName,
+              runUrl: $failure[0].runUrl}' > "$OUT/meta.json"
+          echo "has_fix=true" >> "$GITHUB_OUTPUT"
+
+      - name: Scan fix bundle for the Claude token
+        if: steps.collect.outputs.has_fix == 'true'
+        env:
+          CLAUDE_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          FIX_DIR: ${{ runner.temp }}/fix
+        run: |
+          set -euo pipefail
+          # Nothing here prints the token or a form of it. Matches are tested with
+          # grep -q, and failure messages name only the file.
+          if [ "${#CLAUDE_TOKEN}" -lt 16 ]; then
+            echo "::error::Claude token is missing or too short to check the bundle against"
+            exit 1
+          fi
+
+          # Needles: the token as-is, and its base64 at each byte alignment, since
+          # base64 of a substring depends on where the substring starts.
+          needles=("$CLAUDE_TOKEN")
+          for k in 0 1 2; do
+            pad=""
+            for ((i = 0; i < k; i++)); do pad+="x"; done
+            enc=$(printf '%s%s' "$pad" "$CLAUDE_TOKEN" | base64 | tr -d '\n')
+            # Keep only groups fully inside the token: drop the first group when
+            # padded (it mixes padding with the token) and the last 4 characters.
+            if [ "$k" -gt 0 ]; then enc=${enc:4}; fi
+            enc=${enc:0:$(( ${#enc} - 4 ))}
+            needles+=("$enc")
+          done
+
+          # The upload sends the whole directory, so the scan must see all of it.
+          # Only the two files this job writes may be present, as regular files.
+          # find lists hidden entries and symlinks, which a shell glob would miss.
+          [ -f "$FIX_DIR/fix.patch" ] && [ -f "$FIX_DIR/meta.json" ] \
+            || { echo "::error::fix bundle is incomplete; upload refused"; exit 1; }
+          while IFS= read -r -d '' f; do
+            case "$(basename "$f")" in
+              fix.patch|meta.json) ;;
+              *) echo "::error::unexpected entry in the fix bundle; upload refused"; exit 1 ;;
+            esac
+            if [ -L "$f" ] || [ ! -f "$f" ]; then
+              echo "::error::fix bundle entry is not a regular file; upload refused"
+              exit 1
+            fi
+          done < <(find "$FIX_DIR" -mindepth 1 -maxdepth 1 -print0)
+          for f in "$FIX_DIR/fix.patch" "$FIX_DIR/meta.json"; do
+            for n in "${needles[@]}"; do
+              if grep -Fq -e "$n" "$f"; then
+                echo "::error::$(basename "$f") contains the Claude token in some encoding; upload refused"
+                exit 1
+              fi
+            done
+          done
+          echo "Fix bundle is free of the Claude token"
+
+      - name: Upload fix patch
+        if: steps.collect.outputs.has_fix == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: auto-fix-patch
+          path: ${{ runner.temp }}/fix
+          retention-days: 1
+          if-no-files-found: error
+
+  # Push job. The only job with write scope. It runs no Claude, installs
+  # nothing and executes nothing from the agent. The fix arrives as text and is
+  # checked before it is applied to a checkout of the reviewed commit.
+  push-fix:
+    needs: [should-fix, auto-fix]
+    if: needs.auto-fix.outputs.has_fix == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write     # push the fix commit to the same-repository branch
+    env:
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      ATTEMPT: ${{ needs.should-fix.outputs.attempt_count }}
+    steps:
+      - name: Download fix patch
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: auto-fix-patch
+          path: ${{ runner.temp }}/fix
+
+      - name: Checkout reviewed commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Scan fix bundle for credential patterns
+        env:
+          FIX_DIR: ${{ runner.temp }}/fix
+        run: |
+          set -euo pipefail
+          # Checks added lines and the file headers, which carry the paths. Removing a
+          # leaked value is a fix, so removed lines are not checked.
+          # Messages name the file, never the matching text.
+          pattern='(sk-ant-|ghp_|gho_|ghs_|github_pat_|AKIA[0-9A-Z]{16}|xox[abp]-|-----BEGIN [A-Z ]*PRIVATE KEY-----)'
+          added=$(grep -E '^(\+([^+]|$)|\+\+\+ |diff --git )' "$FIX_DIR/fix.patch" || true)
+          if grep -Eq -e "$pattern" <<< "$added"; then
+            echo "::error::fix.patch adds a credential-like string; push refused"
+            exit 1
+          fi
+          if grep -Eq -e "$pattern" "$FIX_DIR/meta.json"; then
+            echo "::error::meta.json contains a credential-like string; push refused"
+            exit 1
+          fi
+          echo "No credential-like strings in added lines or metadata"
+
+      - name: Validate fix bundle
+        env:
+          FIX_DIR: ${{ runner.temp }}/fix
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+
+          META="$FIX_DIR/meta.json"
+          PATCH="$FIX_DIR/fix.patch"
+          [ -f "$META" ] && [ -f "$PATCH" ] || fail "fix bundle is incomplete"
+
+          # Branch: same-repository, never the default branch, safe name.
+          [ -n "$DEFAULT_BRANCH" ] || fail "default branch is unknown"
+          [ "$HEAD_BRANCH" != "$DEFAULT_BRANCH" ] || fail "refusing to push the default branch"
+          [[ "$HEAD_BRANCH" =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ ]] || fail "branch name outside the allowed set"
+          git check-ref-format --branch "$HEAD_BRANCH" > /dev/null || fail "invalid branch name"
+          [[ "$ATTEMPT" =~ ^[0-9]+$ ]] || fail "attempt count is not numeric"
+
+          # Metadata is data. Every field is checked against a fixed pattern
+          # before it reaches a commit message.
+          jq -e --arg sha "$HEAD_SHA" --arg branch "$HEAD_BRANCH" '
+            .headSha == $sha and .branch == $branch and
+            (.failureType as $ft |
+              ["formatting","linting","typescript","test","markdown","plugin-validation","build","unknown"]
+              | any(. == $ft)) and
+            ((.workflowName | type) == "string") and
+            (.workflowName | test("^[A-Za-z0-9 ._()/-]{1,100}$")) and
+            ((.runUrl | type) == "string") and
+            (.runUrl | test("^https://github[.]com/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+/actions/runs/[0-9]+$"))
+          ' "$META" > /dev/null || fail "fix metadata failed validation"
+
+          # Patch text: no CI configuration, no binaries, no symlinks, submodules,
+          # executables or mode changes, and a bounded number of files.
+          stats=$(git apply --numstat "$PATCH") || fail "patch does not parse"
+          files=$(printf '%s\n' "$stats" | grep -c . || true)
+          [ "$files" -ge 1 ] || fail "patch changes no files"
+          [ "$files" -le 50 ] || fail "patch changes too many files ($files)"
+          while IFS=$'\t' read -r added deleted path; do
+            case "$path" in
+              ""|/*|../*|*/../*|*..|\"*) fail "unsafe or quoted path: $path" ;;
+              .github|.github/*|*/.github|*/.github/*) fail "patch touches CI configuration: $path" ;;
+            esac
+            if [ "$added" = "-" ] || [ "$deleted" = "-" ]; then
+              fail "binary change: $path"
+            fi
+          done <<< "$stats"
+
+          # numstat lists only the destination of a rename, so a file moved out
+          # of .github would pass the loop above. Reject renames and copies, and
+          # any file header that names .github on either side of a change.
+          if grep -Eq '^(rename|copy) (from|to) ' "$PATCH"; then
+            fail "patch renames or copies files"
+          fi
+          headers=$(grep -E '^(diff --git |--- |\+\+\+ )' "$PATCH" || true)
+          if grep -Fq '.github' <<< "$headers"; then
+            fail "patch header names CI configuration"
+          fi
+
+          summary=$(git apply --summary "$PATCH")
+          if grep -Eq 'mode change|mode 120000|mode 160000|mode 100755' <<< "$summary"; then
+            fail "patch changes file modes, symlinks, submodules or executables"
+          fi
+
+          git apply --check "$PATCH" || fail "patch does not apply to the reviewed commit"
+          echo "Fix bundle validated: $files file(s)"
+
+      - name: Apply, commit and push
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          FIX_DIR: ${{ runner.temp }}/fix
+        run: |
+          set -euo pipefail
+          META="$FIX_DIR/meta.json"
+          PATCH="$FIX_DIR/fix.patch"
+
+          # Never leave the token in the remote URL once this step ends.
+          trap 'git remote set-url origin "https://github.com/${REPO}.git"' EXIT
+
+          git apply "$PATCH"
+
+          SUBJECT=$(jq -r '"fix(ci): auto-fix \(.workflowName) \(.failureType) failures [auto-fix]"' "$META")
+          NEXT_ATTEMPT=$((ATTEMPT + 1))
+          BODY=$(jq -r --arg next "$NEXT_ATTEMPT" '"Auto-fixed by Claude Code action (attempt \($next)/3).\nFailure type: \(.failureType)\n\nOriginal failure: \(.runUrl)\n\nCo-Authored-By: Claude <noreply@anthropic.com>"' "$META")
+
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
           git add -A
 
-          # Get the workflow name for the commit message
-          WORKFLOW_NAME="${{ fromJSON(steps.failure_details.outputs.result).workflowName }}"
-          FAILURE_TYPE="${{ fromJSON(steps.failure_details.outputs.result).failureType }}"
-          ATTEMPT="${{ needs.should-fix.outputs.attempt_count }}"
-          NEXT_ATTEMPT=$((ATTEMPT + 1))
+          # Check what would be committed, with renames expanded, so a path under
+          # .github on either side of any change stops the push.
+          staged=$(git diff --cached --name-only --no-renames)
+          if grep -Eq '(^|/)[.]github(/|$)' <<< "$staged"; then
+            echo "::error::staged change touches CI configuration"
+            exit 1
+          fi
+          git commit -m "$SUBJECT" -m "$BODY"
 
-          # Commit with markers for loop detection
-          git commit -m "fix(ci): auto-fix ${WORKFLOW_NAME} ${FAILURE_TYPE} failures [auto-fix]
-
-          Auto-fixed by Claude Code action (attempt ${NEXT_ATTEMPT}/3).
-          Failure type: ${FAILURE_TYPE}
-
-          Original failure: ${{ fromJSON(steps.failure_details.outputs.result).runUrl }}
-
-          Co-Authored-By: Claude <noreply@anthropic.com>"
-
-          # Push the changes
-          git push origin ${{ github.event.workflow_run.head_branch }}
+          # Plain push: it succeeds only if the branch is still at the reviewed
+          # commit, so a branch that moved in the meantime is never overwritten.
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          git push origin "HEAD:refs/heads/${HEAD_BRANCH}"
 
   # Notify when max attempts reached
   notify-max-attempts:
@@ -324,14 +600,20 @@ jobs:
       needs.should-fix.outputs.should_run == 'false' &&
       needs.should-fix.outputs.attempt_count >= '3'
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    env:
+      BRANCH: ${{ github.event.workflow_run.head_branch }}
+      WORKFLOW: ${{ github.event.workflow_run.name }}
+      RUN_URL: ${{ github.event.workflow_run.html_url }}
     steps:
       - name: Create issue for manual intervention
         uses: actions/github-script@v7
         with:
           script: |
-            const branch = '${{ github.event.workflow_run.head_branch }}';
-            const workflow = '${{ github.event.workflow_run.name }}';
-            const runUrl = '${{ github.event.workflow_run.html_url }}';
+            const branch = process.env.BRANCH || '';
+            const workflow = process.env.WORKFLOW || '';
+            const runUrl = process.env.RUN_URL || '';
 
             // Check if issue already exists
             const existingIssues = await github.rest.issues.listForRepo({
