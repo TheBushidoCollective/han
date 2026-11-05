@@ -439,10 +439,17 @@ class FirstRun(unittest.TestCase):
         self.assertIn(bootstrap.LOG_DESTINATION, sink)
 
     def test_the_provider_admits_only_the_named_workflows(self):
-        text = " ".join(next(a for a in self.fake.writes if "create-oidc" in a))
-        for wf in ("han-infra.yml", "deploy-han-server.yml", "deploy-hosting.yml"):
-            self.assertIn(f"workflows/{wf}@", text)
-        self.assertNotIn("attribute.environment", text)
+        args = next(a for a in self.fake.writes if "create-oidc" in a)
+        condition = next(a for a in args if a.startswith("--attribute-condition="))
+        mapping = next(a for a in args if a.startswith("--attribute-mapping="))
+        expected = " || ".join(
+            f"assertion.workflow_ref.startsWith('{bootstrap.REPO}/.github/workflows/{wf}@')"
+            for wf in ("han-infra.yml", "deploy-han-server.yml", "deploy-hosting.yml")
+        )
+        self.assertEqual(condition, f"--attribute-condition=assertion.repository_id == '{bootstrap.REPO_ID}' && ({expected})")
+        self.assertIn("attribute.workflow_ref=assertion.workflow_ref", mapping)
+        self.assertNotIn("job_workflow_ref", mapping + condition)
+        self.assertNotIn("attribute.environment", mapping)
 
     def test_the_cloud_run_shell_is_private(self):
         deploy = next(a for a in self.fake.writes if a[1:3] == ["run", "deploy"])

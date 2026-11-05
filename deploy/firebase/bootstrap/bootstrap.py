@@ -388,7 +388,7 @@ def steps(r: Runner, rotate: bool = False) -> None:
     )
     condition = (
         f"assertion.repository_id == '{REPO_ID}' && ("
-        + " || ".join(f"assertion.job_workflow_ref.startsWith('{REPO}/.github/workflows/{wf}@')"
+        + " || ".join(f"assertion.workflow_ref.startsWith('{REPO}/.github/workflows/{wf}@')"
                       for wf in WORKFLOWS_ALLOWED_TO_SIGN_IN)
         + ")"
     )
@@ -396,7 +396,7 @@ def steps(r: Runner, rotate: bool = False) -> None:
     # from a job without an environment may break the token exchange.
     mapping = (
         "google.subject=assertion.sub,attribute.repository=assertion.repository,"
-        "attribute.repository_id=assertion.repository_id,attribute.job_workflow_ref=assertion.job_workflow_ref"
+        "attribute.repository_id=assertion.repository_id,attribute.workflow_ref=assertion.workflow_ref"
     )
     r.ensure(
         gcloud("iam", "workload-identity-pools", "providers", "describe", PROVIDER,
