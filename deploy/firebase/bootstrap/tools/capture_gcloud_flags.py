@@ -33,6 +33,7 @@ COMMANDS = [
     "iam workload-identity-pools describe",
     "iam workload-identity-pools providers create-oidc",
     "iam workload-identity-pools providers describe",
+    "iam workload-identity-pools providers list",
     "iam service-accounts create",
     "iam service-accounts describe",
     "iam service-accounts add-iam-policy-binding",

@@ -406,6 +406,26 @@
       "verbosity",
       "workload-identity-pool"
     ],
+    "iam workload-identity-pools providers list": [
+      "access-token-file",
+      "account",
+      "billing-project",
+      "configuration",
+      "flags-file",
+      "flatten",
+      "format",
+      "help",
+      "impersonate-service-account",
+      "location",
+      "log-http",
+      "project",
+      "quiet",
+      "show-deleted",
+      "trace-token",
+      "user-output-enabled",
+      "verbosity",
+      "workload-identity-pool"
+    ],
     "logging buckets create": [
       "access-token-file",
       "account",
