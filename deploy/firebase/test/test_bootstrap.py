@@ -178,6 +178,15 @@ class FakeCloud:
             return 1, "", "ERROR: (gcloud) PERMISSION_DENIED: forbidden for this identity."
         if argv[1:3] == ["auth", "list"]:
             return 0, json.dumps([{"account": self.account, "status": "ACTIVE"}]), ""
+        if (argv[1:6] == ["iam", "workload-identity-pools", "providers", "describe", "github"]
+                and bootstrap.ACTIVE_EXECUTION):
+            m = bootstrap.ACTIVE_EXECUTION
+            return 0, json.dumps({
+                "name": m["provider_resource"], "state": "ACTIVE", "disabled": False,
+                "attributeMapping": {"google.subject": "assertion.repository_id + ':' + assertion.run_id + ':' + assertion.run_attempt"},
+                "attributeCondition": bootstrap.execution.provider_condition(m),
+                "oidc": {"issuerUri": bootstrap.execution.ISSUER, "allowedAudiences": [m["audience"]]},
+            }), ""
         if "get-iam-policy" in argv:
             return 0, json.dumps(self.policy), ""
         if "keys" in argv and "list" in argv:
@@ -271,10 +280,15 @@ NOW = datetime(2026, 11, 5, 10, 0, tzinfo=timezone.utc)
 EXPIRY = "2026-11-05T11:30:00Z"  # 90 minutes after NOW, inside the 45 to 120 minute window
 EXPIRY_AT = datetime(2026, 11, 5, 11, 30, tzinfo=timezone.utc)
 DEFAULT_PLAN_SHA = bootstrap.plan_sha256(bootstrap.build_plan())
+TEST_RUN = "123456789"
+TEST_EXECUTION = bootstrap.execution.make_manifest(TEST_COMMIT, DEFAULT_PLAN_SHA, "a" * 40, TEST_RUN, "1", EXPIRY, False)
+bootstrap.ACTIVE_EXECUTION = TEST_EXECUTION
+bootstrap.BOOTSTRAP_PRINCIPAL = TEST_EXECUTION["member"]
+bootstrap.SHARED_POOL = f"projects/{bootstrap.PROJECT_NUMBER}/locations/global/workloadIdentityPools/{TEST_EXECUTION['pool_id']}"
 HAN_POOL_MEMBER = (f"principal://iam.googleapis.com/projects/{bootstrap.PROJECT_NUMBER}/locations/global/"
-                   f"workloadIdentityPools/{bootstrap.POOL}/subject/{bootstrap.BOOTSTRAP_ENV_SUBJECT}")
+                   f"workloadIdentityPools/{bootstrap.POOL}/subject/repo:{bootstrap.REPO}:environment:han-bootstrap")
 NOT_FOUND_REMOVE = "ERROR: (gcloud) Policy binding with the specified principal, role, and condition not found!"
-CI_ENV = {**bootstrap.CI_ENVIRONMENT, "GITHUB_SHA": TEST_COMMIT}
+CI_ENV = {**bootstrap.CI_ENVIRONMENT, "GITHUB_SHA": TEST_COMMIT, "GITHUB_RUN_ID": TEST_RUN, "GITHUB_RUN_ATTEMPT": "1"}
 
 
 REVOKE_ARGS = ["--revoke-only", "--expect-sha256", DEFAULT_PLAN_SHA, "--expect-commit", TEST_COMMIT]
@@ -283,13 +297,30 @@ SLEEPS: list[float] = []  # backoff waits, recorded instead of waited for
 
 
 def run(fake, *args: str, now: datetime = NOW) -> tuple[int, str, str]:
-    """Run main with a backend (a FakeCloud, or any callable) at a fixed clock; capture its output."""
+    """Run against a fake backend and a private execution-registration fixture."""
     out, err = io.StringIO(), io.StringIO()
     SLEEPS.clear()
-    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), \
-            mock.patch.object(bootstrap, "utc_now", return_value=now), \
-            mock.patch.object(bootstrap.time, "sleep", side_effect=SLEEPS.append):
-        rc = bootstrap.main(list(args), backend=fake)
+    argv = list(args)
+    if "--execute" in argv or "--revoke-only" in argv:
+        commit = argv[argv.index("--expect-commit") + 1] if "--expect-commit" in argv else TEST_COMMIT
+        digest = argv[argv.index("--expect-sha256") + 1] if "--expect-sha256" in argv else DEFAULT_PLAN_SHA
+        # Invalid pins are exercised by bootstrap itself; use valid fixture fields.
+        if re.fullmatch(r"[0-9a-f]{40}", commit or "") is None: commit = TEST_COMMIT
+        if re.fullmatch(r"[0-9a-f]{64}", digest or "") is None: digest = DEFAULT_PLAN_SHA
+        manifest = bootstrap.execution.make_manifest(commit, digest, "a" * 40, TEST_RUN, "1", EXPIRY, "--rotate-db-password" in argv)
+        tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".json")
+        json.dump(manifest, tmp); tmp.flush()
+        argv.extend(["--execution-manifest", tmp.name])
+    else:
+        tmp = None
+    try:
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), \
+                mock.patch.object(bootstrap, "utc_now", return_value=now), \
+                mock.patch.object(bootstrap.time, "time", return_value=now.timestamp()), \
+                mock.patch.object(bootstrap.time, "sleep", side_effect=SLEEPS.append):
+            rc = bootstrap.main(argv, backend=fake)
+    finally:
+        if tmp: tmp.close()
     return rc, out.getvalue(), err.getvalue()
 
 
@@ -304,7 +335,7 @@ def sign_in_binding(plan_sha: str, *, description: str | None = None, expression
         "condition": {
             "title": title or bootstrap.SIGNIN_TITLE,
             "description": description if description is not None
-            else bootstrap.SIGNIN_DESCRIPTION.format(commit=TEST_COMMIT, plan=plan_sha),
+            else bootstrap.SIGNIN_DESCRIPTION.format(commit=TEST_COMMIT, plan=plan_sha, run=TEST_RUN),
             "expression": expression if expression is not None else f"request.time < timestamp('{EXPIRY}')",
         },
     }
@@ -656,7 +687,7 @@ class Revoke(unittest.TestCase):
     def test_lookalikes_are_never_touched(self):
         fake = FakeCloud()
         same_subject_other_project = (f"principal://iam.googleapis.com/projects/999999999999/locations/global/"
-                                      f"workloadIdentityPools/github/subject/{bootstrap.BOOTSTRAP_ENV_SUBJECT}")
+                                      f"workloadIdentityPools/github/subject/repo:{bootstrap.REPO}:environment:han-bootstrap")
         principal_set = (f"principalSet://iam.googleapis.com/projects/999999999999/locations/global/"
                          f"workloadIdentityPools/github/attribute.repository/{bootstrap.REPO}")
         lookalikes = [HAN_POOL_MEMBER, same_subject_other_project, principal_set]
@@ -1252,7 +1283,7 @@ class SignInProvenance(unittest.TestCase):
         self.assertTrue(all("remove-iam-policy-binding" in a for a in fake.writes), fake.writes)
         # F: the authorised grant (this role, this title, the approved description, the principal) is removed
         # on refusal. A holder that differs in role or title is not that grant and is not asserted absent here.
-        approved = bootstrap.SIGNIN_DESCRIPTION.format(commit=TEST_COMMIT, plan=DEFAULT_PLAN_SHA)
+        approved = bootstrap.SIGNIN_DESCRIPTION.format(commit=TEST_COMMIT, plan=DEFAULT_PLAN_SHA, run=TEST_RUN)
         self.assertFalse(any(b.get("role") == bootstrap.SIGNIN_ROLE
                              and (b.get("condition") or {}).get("title") == bootstrap.SIGNIN_TITLE
                              and (b.get("condition") or {}).get("description") == approved
@@ -1271,11 +1302,19 @@ class SignInProvenance(unittest.TestCase):
                     EXPIRY_AT - timedelta(minutes=120, seconds=1),
                     EXPIRY_AT + timedelta(minutes=1)):
             with self.subTest(now=now):
-                self.refused(FakeCloud(), now=now, expect="window")
+                fake = FakeCloud()
+                rc, _, err = ci_run(fake, *execute_args(), now=now)
+                self.assertEqual(rc, 2)
+                self.assertIn("window", err)
+                self.assertEqual(fake.reads + fake.writes, [])
+                # The separate preflight independently enforces its own window.
+                with mock.patch.object(bootstrap, "utc_now", return_value=now):
+                    with self.assertRaises(bootstrap.StepError):
+                        bootstrap.preflight(bootstrap.Runner(execute=True, backend=FakeCloud()), DEFAULT_PLAN_SHA, TEST_COMMIT)
 
     def test_a_grant_that_names_another_commit_or_plan_is_refused(self):
-        for description in (f"han-bootstrap commit={'a' * 40} plan={DEFAULT_PLAN_SHA}",
-                            f"han-bootstrap commit={TEST_COMMIT} plan={'b' * 64}"):
+        for description in (f"han-bootstrap commit={'a' * 40} plan={DEFAULT_PLAN_SHA} run={TEST_RUN} attempt=1",
+                            f"han-bootstrap commit={TEST_COMMIT} plan={'b' * 64} run={TEST_RUN} attempt=1"):
             with self.subTest(description=description):
                 fake = FakeCloud()
                 fake.set_sign_in(sign_in_binding(DEFAULT_PLAN_SHA, description=description))
@@ -1423,6 +1462,47 @@ class StateBucketIsOurs(unittest.TestCase):
         rc, _, err = execute(fake)
         self.assertEqual(rc, 0, err)
         self.assertFalse(any(a[1:3] == ["storage", "buckets"] and "create" in a for a in fake.writes))
+
+
+class ExecutionBoundary(unittest.TestCase):
+    def test_wrong_provider_refuses_before_resource_mutation(self):
+        fake = FakeCloud()
+        original_read = fake._read
+        def changed(argv):
+            rc, out, err = original_read(argv)
+            if argv[1:6] == ["iam", "workload-identity-pools", "providers", "describe", "github"]:
+                provider = json.loads(out)
+                provider["attributeCondition"] = "true"
+                return 0, json.dumps(provider), ""
+            return rc, out, err
+        fake._read = changed
+        rc, _, err = execute(fake)
+        self.assertEqual(rc, 1)
+        self.assertIn("provider", err)
+        self.assertTrue(all("remove-iam-policy-binding" in a for a in fake.writes))
+
+    def test_attempt_two_refuses_without_cloud_calls(self):
+        fake = FakeCloud()
+        with ci_env(GITHUB_RUN_ATTEMPT="2"):
+            rc, _, err = run(fake, *execute_args())
+        self.assertEqual(rc, 2)
+        self.assertIn("GITHUB_RUN_ATTEMPT", err)
+        self.assertEqual(fake.reads + fake.writes, [])
+
+    def test_unrelated_policy_addition_during_execution_is_detected(self):
+        fake = FakeCloud()
+        args = execute_args()
+        fake.set_sign_in(sign_in_binding(DEFAULT_PLAN_SHA))
+        original_steps = bootstrap.steps
+        def change_policy(r, rotate):
+            if r.execute:
+                fake.policy["bindings"].append({"role": "roles/viewer", "members": ["user:unexpected@example.com"]})
+            return original_steps(r, rotate)
+        with ci_env(), mock.patch.object(bootstrap, "steps", side_effect=change_policy):
+            rc, _, err = run(fake, *args)
+        self.assertEqual(rc, 1)
+        self.assertIn("policy gained grants", err)
+        self.assertIn("user:unexpected@example.com", fake.members())
 
 
 class WorkflowIsAnInput(unittest.TestCase):

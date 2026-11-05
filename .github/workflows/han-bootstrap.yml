@@ -1,18 +1,9 @@
 name: Han Bootstrap
 
-# The one-shot bootstrap for Han inside thebushido-co. It runs from CI only, and
-# nothing else calls it. Two jobs, in order:
-#
-# - plan: no environment, no sign-in, no owner token. Prints the plan and its
-#   sha256, checks both the hash and the commit against the dispatch inputs, and
-#   uploads the plan text. The reviewer reads it here, before anything can be approved.
-# - apply: waits for approval in the han-bootstrap environment (required
-#   reviewer, deployment from main only). Signs in as terraform-bootstrap, and
-#   runs only the plan whose hash and commit were dispatched. If the run's own
-#   execute step did not succeed, a last step removes the sign-in member.
-#
-# The sign-in grant must be created through the separately reviewed CI rail
-# (PATH.md section 8), with an expiry and environment protections in place.
+# Register one exact execution before a dedicated, time-limited WIF route is
+# provisioned by the reviewed website rail. No shared-pool bootstrap grant.
+# The plan is validated before registration; apply waits for the dedicated
+# route without requesting human approval, then revalidates before mutations.
 
 on:
   workflow_dispatch:
@@ -23,6 +14,14 @@ on:
         type: string
       expected_commit:
         description: "The commit this plan was computed from. Execution refuses any other commit."
+        required: true
+        type: string
+      website_commit:
+        description: "Reviewed website main commit used by the provisioning rail."
+        required: true
+        type: string
+      deadline:
+        description: "Approved execution deadline in UTC, YYYY-MM-DDTHH:MM:SSZ."
         required: true
         type: string
       rotate_db_password:
@@ -46,6 +45,8 @@ jobs:
     env:
       EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
       EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+      WEBSITE_COMMIT: ${{ inputs.website_commit }}
+      EXECUTION_DEADLINE: ${{ inputs.deadline }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -68,11 +69,27 @@ jobs:
           path: bootstrap-plan.txt
           retention-days: 7
 
+      - name: Register exact execution
+        env:
+          ROTATE_FLAG: ${{ inputs.rotate_db_password && '--rotate' || '' }}
+        run: |
+          rotate=()
+          if [ -n "$ROTATE_FLAG" ]; then rotate=("$ROTATE_FLAG"); fi
+          python3 -I -B deploy/firebase/bootstrap/execution.py register \
+            --manifest registration.json --commit "$EXPECTED_COMMIT" --plan "$EXPECTED_SHA256" \
+            --website "$WEBSITE_COMMIT" --deadline "$EXECUTION_DEADLINE" "${rotate[@]}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: han-bootstrap-registration-${{ github.run_id }}-${{ github.run_attempt }}
+          path: registration.json
+          retention-days: 7
+          if-no-files-found: error
+
   apply:
     needs: plan
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 65
     environment:
       name: han-bootstrap
     permissions:
@@ -84,11 +101,29 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Authenticate to Google Cloud (WIF, existing github pool, bootstrap identity)
+      - name: Download execution registration
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: han-bootstrap-registration-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Capture allowlisted assertion metadata
+        run: python3 -I -B deploy/firebase/bootstrap/execution.py inspect --manifest registration.json --claims-file claims.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: han-bootstrap-claims-${{ github.run_id }}-${{ github.run_attempt }}
+          path: claims.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: Wait for exact execution federation
+        id: ready
+        run: |
+          python3 -I -B deploy/firebase/bootstrap/execution.py ready --manifest registration.json
+          python3 -c 'import json; m=json.load(open("registration.json")); print("provider="+m["provider_resource"]); print("audience="+m["audience"])' >> "$GITHUB_OUTPUT"
+      - name: Authenticate using the registered execution provider
         id: auth
         uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
-          workload_identity_provider: projects/911514101920/locations/global/workloadIdentityPools/github/providers/github
+          workload_identity_provider: ${{ steps.ready.outputs.provider }}
+          audience: ${{ steps.ready.outputs.audience }}
           service_account: terraform-bootstrap@thebushido-co.iam.gserviceaccount.com
 
       - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
@@ -108,6 +143,7 @@ jobs:
             --execute \
             --expect-sha256 "$EXPECTED_SHA256" \
             --expect-commit "$EXPECTED_COMMIT" \
+            --execution-manifest registration.json \
             "${rotate[@]}"
 
       - name: Revoke the sign-in (only when the execute step did not succeed)
@@ -121,5 +157,5 @@ jobs:
           rotate=()
           if [ -n "$ROTATE_FLAG" ]; then rotate=("$ROTATE_FLAG"); fi
           python3 -I -B deploy/firebase/bootstrap/bootstrap.py --revoke-only \
-            --expect-sha256 "$EXPECTED_SHA256" --expect-commit "$EXPECTED_COMMIT" \
+            --expect-sha256 "$EXPECTED_SHA256" --expect-commit "$EXPECTED_COMMIT" --execution-manifest registration.json \
             "${rotate[@]}"

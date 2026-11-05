@@ -5,6 +5,7 @@ on:
     paths:
       - 'deploy/firebase/bootstrap/**'
       - 'deploy/firebase/test/test_bootstrap.py'
+      - 'deploy/firebase/test/test_bootstrap_execution.py'
       - 'deploy/firebase/test/test_auto_fix_security.py'
       - '.github/workflows/auto-fix-ci.yml'
       - '.github/workflows/han-bootstrap.yml'
@@ -14,6 +15,7 @@ on:
     paths:
       - 'deploy/firebase/bootstrap/**'
       - 'deploy/firebase/test/test_bootstrap.py'
+      - 'deploy/firebase/test/test_bootstrap_execution.py'
       - 'deploy/firebase/test/test_auto_fix_security.py'
       - '.github/workflows/auto-fix-ci.yml'
       - '.github/workflows/han-bootstrap.yml'
@@ -48,7 +50,9 @@ jobs:
             test_bootstrap.PolicyReadRetry test_bootstrap.FlagsAreCaptured test_bootstrap.RoleFiles \
             test_bootstrap.DatabasePasswordSequence test_bootstrap.CloudSdkFileLoggingIsOff \
             test_bootstrap.CiOnly test_bootstrap.SignInProvenance test_bootstrap.StateBucketIsOurs \
-            test_bootstrap.WorkflowIsAnInput
+            test_bootstrap.WorkflowIsAnInput test_bootstrap.ExecutionBoundary
+      - name: Per-execution identity negative controls
+        run: python3 -B -m unittest discover -s deploy/firebase/test -p test_bootstrap_execution.py -v
       - name: Authenticate auto-fix sources
         run: python3 -B -m unittest discover -s deploy/firebase/test -p test_auto_fix_security.py -v
       - name: Publish bootstrap plan for review
