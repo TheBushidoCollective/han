@@ -40,7 +40,9 @@ jobs:
         run: |
           set -euo pipefail
           terraform init -input=false -backend-config="bucket=thebushido-co-han-tfstate" -backend-config="prefix=terraform/han-dns"
-          terraform plan -input=false -no-color -out=dns.tfplan
+          # The plan identity has read-only access to the state bucket. The
+          # saved plan's state serial is checked again by Terraform at apply.
+          terraform plan -input=false -lock=false -no-color -out=dns.tfplan
           terraform show -json dns.tfplan > dns-plan.json
           python3 ../scripts/dns_import_guard.py plan dns-plan.json
           sha256sum dns.tfplan
