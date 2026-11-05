@@ -76,10 +76,17 @@ impl MigrationTrait for Migration {
         // three change-tracking columns the entity declares and every activity
         // query sums, so add them when absent. Historical rows stay NULL, which
         // reads as 0; the indexer populates them going forward.
+        let column_sql = match manager.get_database_backend() {
+            sea_orm::DatabaseBackend::Sqlite => "SELECT name FROM pragma_table_info('messages')",
+            _ => {
+                "SELECT column_name::text FROM information_schema.columns \
+                 WHERE table_schema = current_schema() AND table_name = 'messages'"
+            }
+        };
         let existing: Vec<String> = db
             .query_all(Statement::from_string(
                 manager.get_database_backend(),
-                "SELECT name FROM pragma_table_info('messages')".to_string(),
+                column_sql.to_string(),
             ))
             .await?
             .into_iter()

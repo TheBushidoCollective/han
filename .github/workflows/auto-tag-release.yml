@@ -42,21 +42,21 @@ jobs:
 
           # Check what changed
           if echo "$CHANGED" | grep -qE "^packages/han(-rs)?/"; then
-            echo "packages=true" >> $GITHUB_OUTPUT
+            echo "packages=true" >> "$GITHUB_OUTPUT"
           else
-            echo "packages=false" >> $GITHUB_OUTPUT
+            echo "packages=false" >> "$GITHUB_OUTPUT"
           fi
 
           if echo "$CHANGED" | grep -qE "^plugins/"; then
-            echo "plugins=true" >> $GITHUB_OUTPUT
+            echo "plugins=true" >> "$GITHUB_OUTPUT"
           else
-            echo "plugins=false" >> $GITHUB_OUTPUT
+            echo "plugins=false" >> "$GITHUB_OUTPUT"
           fi
 
           if echo "$CHANGED" | grep -q "^website/"; then
-            echo "website=true" >> $GITHUB_OUTPUT
+            echo "website=true" >> "$GITHUB_OUTPUT"
           else
-            echo "website=false" >> $GITHUB_OUTPUT
+            echo "website=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Generate plugin changelogs
@@ -154,15 +154,15 @@ jobs:
         run: |
           # Check for breaking changes (major bump)
           if echo "$COMMIT_MSG" | grep -qE '^[a-z]+(\(.+\))?!:|BREAKING CHANGE:'; then
-            echo "type=major" >> $GITHUB_OUTPUT
+            echo "type=major" >> "$GITHUB_OUTPUT"
             echo "Detected: MAJOR (breaking change)"
           # Check for features (minor bump)
           elif echo "$COMMIT_MSG" | grep -qE '^feat(\(.+\))?:'; then
-            echo "type=minor" >> $GITHUB_OUTPUT
+            echo "type=minor" >> "$GITHUB_OUTPUT"
             echo "Detected: MINOR (new feature)"
           # Everything else (patch bump) - fix, chore, docs, refactor, etc.
           else
-            echo "type=patch" >> $GITHUB_OUTPUT
+            echo "type=patch" >> "$GITHUB_OUTPUT"
             echo "Detected: PATCH (fix/chore/other)"
           fi
 
@@ -190,7 +190,7 @@ jobs:
           esac
 
           echo "New version: $NEW_VERSION"
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
           # Update package.json
           node -e "
@@ -228,10 +228,10 @@ jobs:
         run: |
           TAG="v${{ steps.bump-version.outputs.new_version }}"
           if git ls-remote --tags origin | grep -q "refs/tags/$TAG"; then
-            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "Tag $TAG already exists, skipping release"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Generate CLI changelog
@@ -255,7 +255,7 @@ jobs:
           TAG="v${{ steps.bump-version.outputs.new_version }}"
           git tag -a "$TAG" -m "Release $TAG"
           git push origin "$TAG"
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Created tag: $TAG"
 
       - name: Trigger release binaries workflow

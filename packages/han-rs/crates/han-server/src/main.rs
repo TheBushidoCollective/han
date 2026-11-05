@@ -43,10 +43,20 @@ async fn main() {
 
     info!(port = config.port, "Starting han-server");
 
-    // Connect to PostgreSQL
+    // Connect to PostgreSQL. The pool ceiling comes from DB_MAX_CONNECTIONS so
+    // Cloud Run can keep old and new revisions under the database's limit.
+    let max_connections = match config::parse_db_max_connections(
+        std::env::var("DB_MAX_CONNECTIONS").ok().as_deref(),
+    ) {
+        Ok(n) => n,
+        Err(e) => {
+            error!("Configuration error: {e}");
+            std::process::exit(1);
+        }
+    };
     let db_config = DbConfig::Postgres {
         url: config.database_url.clone(),
-        max_connections: Some(20),
+        max_connections: Some(max_connections),
         min_connections: Some(2),
     };
 

@@ -42,15 +42,15 @@ jobs:
         run: |
           # Check for breaking changes (major bump)
           if echo "$COMMIT_MSG" | grep -qE '^[a-z]+(\(.+\))?!:|BREAKING CHANGE:'; then
-            echo "type=major" >> $GITHUB_OUTPUT
+            echo "type=major" >> "$GITHUB_OUTPUT"
             echo "Detected: MAJOR (breaking change)"
           # Check for features (minor bump)
           elif echo "$COMMIT_MSG" | grep -qE '^feat(\(.+\))?:'; then
-            echo "type=minor" >> $GITHUB_OUTPUT
+            echo "type=minor" >> "$GITHUB_OUTPUT"
             echo "Detected: MINOR (new feature)"
           # Everything else (patch bump) - fix, chore, docs, refactor, etc.
           else
-            echo "type=patch" >> $GITHUB_OUTPUT
+            echo "type=patch" >> "$GITHUB_OUTPUT"
             echo "Detected: PATCH (fix/chore/other)"
           fi
 
@@ -75,8 +75,8 @@ jobs:
           CHANGED_PLUGINS=""
 
           # Check each plugin type directory
-          for plugin_type in jutsu do hashi; do
-            for plugin_dir in $plugin_type/*/; do
+          for plugin_type in jutsu hashi; do
+            for plugin_dir in "$plugin_type"/*/; do
               # Remove trailing slash
               plugin_dir="${plugin_dir%/}"
 
@@ -104,12 +104,12 @@ jobs:
           # Trim leading whitespace and output
           CHANGED_PLUGINS=$(echo "$CHANGED_PLUGINS" | xargs)
           echo "Changed plugins: $CHANGED_PLUGINS"
-          echo "plugins=$CHANGED_PLUGINS" >> $GITHUB_OUTPUT
+          echo "plugins=$CHANGED_PLUGINS" >> "$GITHUB_OUTPUT"
 
           if [ -z "$CHANGED_PLUGINS" ]; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
           else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Bump plugin versions
@@ -166,9 +166,11 @@ jobs:
           done
 
           echo -e "Bumped plugins:$BUMPED_PLUGINS"
-          echo "bumped_plugins<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$BUMPED_PLUGINS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo "bumped_plugins<<EOF"
+            echo -e "$BUMPED_PLUGINS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Commit version bumps
         if: steps.changed-plugins.outputs.has_changes == 'true'
