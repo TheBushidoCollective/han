@@ -1,6 +1,14 @@
 locals {
-  # Identities seed.sh creates. Terraform reads them but never manages them,
-  # so the apply identity cannot rewrite its own trust policy.
+  # Identities seed.sh creates. Terraform reads the pool but does not manage
+  # the identities or their bindings.
+  #
+  # Trust, stated plainly: han-tf-apply is project owner (seed.sh grants it).
+  # Owner can change the workload identity provider and its own bindings, so
+  # Terraform scoping does not stop it from rewriting its own trust. The
+  # controls on that identity are the han-production environment (required
+  # reviewer, main-only deployment branch), the provider's attribute condition
+  # (only this repository's named workflows can exchange a token), and the
+  # plan and state guards in CI. Those are the things to review.
   wif_pool_name     = data.google_iam_workload_identity_pool.github.name
   wif_provider_name = "${local.wif_pool_name}/providers/github"
   tf_apply_sa_email = "han-tf-apply@${var.project_id}.iam.gserviceaccount.com"
@@ -14,6 +22,7 @@ locals {
     "firebasehosting.googleapis.com",
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
+    "logging.googleapis.com",
     "run.googleapis.com",
     "secretmanager.googleapis.com",
     "serviceusage.googleapis.com",

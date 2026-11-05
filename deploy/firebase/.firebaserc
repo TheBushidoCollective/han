@@ -3,11 +3,17 @@
     "default": "han-guru"
   },
   "targets": {
-    "default": {
+    "han-guru": {
       "hosting": {
-        "dashboard": ["han-guru-dashboard"],
-        "app": ["han-guru-app"],
-        "api": ["han-guru-api"]
+        "dashboard": [
+          "han-guru-dashboard"
+        ],
+        "app": [
+          "han-guru-app"
+        ],
+        "api": [
+          "han-guru-api"
+        ]
       }
     }
   }

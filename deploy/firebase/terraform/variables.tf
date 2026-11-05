@@ -53,3 +53,9 @@ variable "dns_targets" {
     api       = "han-guru-api.web.app."
   }
 }
+
+variable "db_credential_version" {
+  description = "Bump together to regenerate the database password in both the SQL user and the database-url secret. See PATH.md section 5."
+  type        = number
+  default     = 1
+}

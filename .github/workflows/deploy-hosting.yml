@@ -1,7 +1,7 @@
 name: Deploy Han Hosting
 
 # Builds the dashboard and app bundles from packages/browse-client and deploys
-# them to Firebase Hosting as han-deployer. Pull requests build and check only.
+# them to Firebase Hosting. Same trigger model as deploy-han-server.yml.
 #
 # - dashboard: built with no GRAPHQL_URL. The bundle carries no API address.
 # - app: built with GRAPHQL_URL=https://api.han.guru/graphql.
@@ -12,20 +12,17 @@ on:
       - "packages/browse-client/**"
       - "deploy/firebase/**"
       - ".github/workflows/deploy-hosting.yml"
-  push:
+  workflow_run:
+    workflows: ["Han Infrastructure"]
+    types: [completed]
     branches: [main]
-    paths:
-      - "packages/browse-client/**"
-      - "deploy/firebase/**"
-      - ".github/workflows/deploy-hosting.yml"
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
-  group: deploy-hosting
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('deploy-hosting-pr-{0}', github.event.number) || 'deploy-hosting-main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   # Pinned. Same version as deploy-han-server.yml.
@@ -33,22 +30,25 @@ env:
 
 jobs:
   build:
+    if: github.event_name == 'pull_request' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
       run:
         working-directory: packages/browse-client
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: "1.2"
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - uses: biomejs/setup-biome@v2
+      - uses: biomejs/setup-biome@4c91541eaada48f67d7dbd7833600ce162b68f51 # v2
         with:
           version: latest
 
@@ -93,7 +93,7 @@ jobs:
           echo "bundle checks passed"
 
       - name: Upload builds
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: han-hosting-build
           path: deploy/firebase/build
@@ -101,38 +101,42 @@ jobs:
 
   deploy:
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_run'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
       name: han-production
       url: https://app.han.guru
+    permissions:
+      contents: read
+      id-token: write
     defaults:
       run:
         working-directory: deploy/firebase
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: han-hosting-build
           path: deploy/firebase/build
 
       - name: Authenticate to Google Cloud (WIF)
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
           service_account: ${{ vars.HAN_GCP_DEPLOYER_SA }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
 
-      - name: Point the Firebase project at the configured project
+      - name: Write .firebaserc for the configured project
         env:
           PROJECT_ID: ${{ vars.HAN_GCP_PROJECT_ID }}
-        run: |
-          node -e 'const fs=require("fs");const f=".firebaserc";const j=JSON.parse(fs.readFileSync(f,"utf8"));j.projects.default=process.env.PROJECT_ID;fs.writeFileSync(f,JSON.stringify(j,null,2));'
+        run: python3 scripts/firebaserc.py "$PROJECT_ID"
 
       - name: Deploy dashboard and app
         env:

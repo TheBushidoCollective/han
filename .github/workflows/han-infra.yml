@@ -3,75 +3,94 @@ name: Han Infrastructure
 # Plans and applies deploy/firebase/terraform through CI only. Nobody applies
 # it from a workstation.
 #
-# - Pull request: plan as han-tf-plan (read-only, no state lock, no environment).
-# - Push to main: plan as han-tf-plan, then apply the saved plan as han-tf-apply
-#   inside the han-production environment.
+# - Pull request (terraform paths): plan as han-tf-plan. No state lock, no
+#   environment, so a pull request can never reach the apply identity.
+# - Push to main: plan as han-tf-plan when Terraform changed. Apply the saved
+#   plan as han-tf-apply inside the han-production environment.
 #
-# Any delete or replace that is not in DESTROY_ALLOWLIST fails the run. The
-# allowlist starts empty and only slice L adds entries.
+# This workflow runs on every push to main, without a path filter, so that the
+# deploy workflows can wait for it with workflow_run. The plan and apply jobs
+# are skipped when Terraform did not change, and a skipped job is not a failure.
+#
+# Deletes and replacements fail unless their address is in the allowlist below.
+# The list is empty until slice L.
 
 on:
   pull_request:
     paths:
       - "deploy/firebase/terraform/**"
+      - "deploy/firebase/scripts/**"
       - ".github/workflows/han-infra.yml"
   push:
     branches: [main]
-    paths:
-      - "deploy/firebase/terraform/**"
-      - ".github/workflows/han-infra.yml"
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
-  group: han-infra
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('han-infra-pr-{0}', github.event.number) || 'han-infra-main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   TF_IN_AUTOMATION: "1"
   TF_INPUT: "0"
   TF_VAR_project_id: ${{ vars.HAN_GCP_PROJECT_ID }}
   TF_VAR_github_repository: ${{ github.repository }}
+  TERRAFORM_VERSION: 1.15.8
+  # Reviewed destroy/replace exceptions, one resource address per entry. Empty
+  # until slice L.
+  DESTROY_ALLOWLIST: ""
 
 jobs:
-  check-variables:
+  changes:
     runs-on: ubuntu-latest
+    outputs:
+      terraform: ${{ steps.diff.outputs.terraform }}
     steps:
-      - name: Require repo variables
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - id: diff
         env:
-          PROJECT: ${{ vars.HAN_GCP_PROJECT_ID }}
-          WIF: ${{ vars.HAN_GCP_WIF_PROVIDER }}
-          PLAN_SA: ${{ vars.HAN_GCP_TF_PLAN_SA }}
-          APPLY_SA: ${{ vars.HAN_GCP_TF_APPLY_SA }}
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
         run: |
-          missing=0
-          for name in PROJECT WIF PLAN_SA APPLY_SA; do
-            if [ -z "${!name}" ]; then
-              echo "::error::Repo variable for $name is missing. Run deploy/firebase/seed.sh first."
-              missing=1
-            fi
-          done
-          exit $missing
+          set -euo pipefail
+          if [ "$EVENT" = "pull_request" ]; then
+            # The paths filter already limited this run to Terraform changes.
+            echo "terraform=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # First push, or a force push with no usable base: treat as changed.
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] ||
+             ! git cat-file -e "$BEFORE" 2>/dev/null; then
+            echo "terraform=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git diff --name-only "$BEFORE" "$SHA" | grep -q '^deploy/firebase/\(terraform\|scripts\)/'; then
+            echo "terraform=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "terraform=false" >> "$GITHUB_OUTPUT"
+          fi
 
   plan:
-    needs: check-variables
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    needs: changes
+    if: needs.changes.outputs.terraform == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
       run:
         working-directory: deploy/firebase/terraform
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
-          terraform_version: 1.15.8
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
 
       - id: auth
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
           service_account: ${{ vars.HAN_GCP_TF_PLAN_SA }}
@@ -88,39 +107,26 @@ jobs:
           terraform validate
 
       - name: Plan
-        run: |
-          set -o pipefail
-          terraform plan -input=false -lock=false -no-color -out=tfplan | tee plan.txt
-          terraform show -json tfplan > tfplan.json
+        run: terraform plan -input=false -lock=false -no-color -out=tfplan
 
       - name: Refuse unexpected deletes
-        env:
-          # Empty until slice L. Each entry is a resource address whose delete
-          # or replace has been reviewed and approved by Jason.
-          DESTROY_ALLOWLIST: ""
         run: |
-          deletes="$(jq -r '.resource_changes[]? | select(.change.actions | index("delete")) | .address' tfplan.json)"
-          failed=0
-          while IFS= read -r address; do
-            [ -z "$address" ] && continue
-            if ! printf '%s\n' $DESTROY_ALLOWLIST | grep -Fxq "$address"; then
-              echo "::error::Plan deletes or replaces $address, which is not on the allowlist."
-              failed=1
-            fi
-          done <<< "$deletes"
-          exit $failed
+          set -euo pipefail
+          terraform show -json tfplan > plan.json
+          # shellcheck disable=SC2086
+          python3 ../scripts/plan_guard.py plan.json $DESTROY_ALLOWLIST
 
       - name: Upload plan
         if: github.event_name == 'push'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: han-tfplan
           path: deploy/firebase/terraform/tfplan
           retention-days: 7
 
   apply:
-    needs: plan
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [changes, plan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.terraform == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
@@ -129,14 +135,14 @@ jobs:
       run:
         working-directory: deploy/firebase/terraform
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
-          terraform_version: 1.15.8
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
 
       - id: auth
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
           service_account: ${{ vars.HAN_GCP_TF_APPLY_SA }}
@@ -147,30 +153,26 @@ jobs:
             -backend-config="bucket=${{ vars.HAN_GCP_PROJECT_ID }}-tfstate" \
             -backend-config="prefix=terraform/han"
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: han-tfplan
           path: deploy/firebase/terraform
 
       - name: Refuse unexpected deletes in the saved plan
-        env:
-          DESTROY_ALLOWLIST: ""
         run: |
-          terraform show -json tfplan > tfplan.json
-          deletes="$(jq -r '.resource_changes[]? | select(.change.actions | index("delete")) | .address' tfplan.json)"
-          failed=0
-          while IFS= read -r address; do
-            [ -z "$address" ] && continue
-            if ! printf '%s\n' $DESTROY_ALLOWLIST | grep -Fxq "$address"; then
-              echo "::error::Saved plan deletes or replaces $address, which is not on the allowlist."
-              failed=1
-            fi
-          done <<< "$deletes"
-          exit $failed
+          set -euo pipefail
+          terraform show -json tfplan > plan.json
+          # shellcheck disable=SC2086
+          python3 ../scripts/plan_guard.py plan.json $DESTROY_ALLOWLIST
 
       - name: Apply saved plan
         run: terraform apply -input=false -no-color tfplan
 
-      - name: Confirm no drift after apply
+      - name: No secret values in state
         run: |
-          terraform plan -input=false -no-color -detailed-exitcode
+          set -euo pipefail
+          terraform show -json > state.json
+          python3 ../scripts/state_guard.py state.json
+
+      - name: No drift after apply
+        run: terraform plan -input=false -no-color -detailed-exitcode

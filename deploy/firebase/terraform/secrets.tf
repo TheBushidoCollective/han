@@ -1,6 +1,6 @@
 # Six secrets. Generated values are set from ephemeral generators (write-only),
-# so no secret value appears in state. Bump *_wo_version only together with the
-# password or key it protects.
+# so no secret value appears in state. Versions are bumped only together with
+# the password or key they protect.
 #
 # The GitHub client secret and both Stripe secrets are created empty. Their
 # values are added by the operator, out of band, never through Terraform.
@@ -16,7 +16,8 @@ ephemeral "random_bytes" "kek" {
 }
 
 resource "google_secret_manager_secret" "database_url" {
-  secret_id = "han-server-database-url"
+  secret_id  = "han-server-database-url"
+  depends_on = [google_project_service.apis]
 
   replication {
     auto {}
@@ -31,11 +32,13 @@ resource "google_secret_manager_secret_version" "database_url" {
     "@localhost/han_team?host=/cloudsql/",
     google_sql_database_instance.han.connection_name,
   ])
-  secret_data_wo_version = 1
+  # Same version as the SQL user. See database.tf.
+  secret_data_wo_version = var.db_credential_version
 }
 
 resource "google_secret_manager_secret" "jwt_secret" {
-  secret_id = "han-server-jwt-secret"
+  secret_id  = "han-server-jwt-secret"
+  depends_on = [google_project_service.apis]
 
   replication {
     auto {}
@@ -52,7 +55,8 @@ resource "google_secret_manager_secret_version" "jwt_secret" {
 # unreadable, so the secret and its only version are protected from destroy,
 # and Cloud Run pins version 1 (deploy-han-server.yml).
 resource "google_secret_manager_secret" "master_kek" {
-  secret_id = "han-server-master-kek"
+  secret_id  = "han-server-master-kek"
+  depends_on = [google_project_service.apis]
 
   replication {
     auto {}
@@ -74,7 +78,8 @@ resource "google_secret_manager_secret_version" "master_kek" {
 }
 
 resource "google_secret_manager_secret" "github_client_secret" {
-  secret_id = "han-server-github-client-secret"
+  secret_id  = "han-server-github-client-secret"
+  depends_on = [google_project_service.apis]
 
   replication {
     auto {}
@@ -82,7 +87,8 @@ resource "google_secret_manager_secret" "github_client_secret" {
 }
 
 resource "google_secret_manager_secret" "stripe_secret_key" {
-  secret_id = "han-server-stripe-secret-key"
+  secret_id  = "han-server-stripe-secret-key"
+  depends_on = [google_project_service.apis]
 
   replication {
     auto {}
@@ -90,7 +96,8 @@ resource "google_secret_manager_secret" "stripe_secret_key" {
 }
 
 resource "google_secret_manager_secret" "stripe_webhook_secret" {
-  secret_id = "han-server-stripe-webhook-secret"
+  secret_id  = "han-server-stripe-webhook-secret"
+  depends_on = [google_project_service.apis]
 
   replication {
     auto {}

@@ -1,12 +1,14 @@
 name: Deploy Han Server
 
-# Builds the han-server image, deploys it to Cloud Run by digest, then
-# points api.han.guru's Firebase Hosting rewrite at it. Nothing deploys from a
+# Builds the han-server image, deploys it to Cloud Run by digest, then points
+# api.han.guru's Firebase Hosting rewrite at it. Nothing deploys from a
 # workstation.
 #
-# Pull requests: test and build the image only.
-# Push to main: test, build and push, then deploy as han-deployer inside the
-# han-production environment.
+# - Pull request: test, and build the image without pushing. No cloud identity.
+# - Push to main: runs after Han Infrastructure finishes for the same commit
+#   (workflow_run). Test, then publish and deploy inside the han-production
+#   environment. The deployer identity trusts only that environment, so the
+#   publish and deploy jobs must be in it.
 
 on:
   pull_request:
@@ -14,129 +16,144 @@ on:
       - "packages/han-rs/**"
       - "deploy/firebase/**"
       - ".github/workflows/deploy-han-server.yml"
-  push:
+  workflow_run:
+    workflows: ["Han Infrastructure"]
+    types: [completed]
     branches: [main]
-    paths:
-      - "packages/han-rs/**"
-      - "deploy/firebase/**"
-      - ".github/workflows/deploy-han-server.yml"
 
 permissions:
   contents: read
-  id-token: write
 
+# PR runs cancel earlier PR runs. Main runs share one queue and never cancel
+# each other, so a pending deploy is not replaced by a later pull request.
 concurrency:
-  group: deploy-han-server
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('deploy-han-server-pr-{0}', github.event.number) || 'deploy-han-server-main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   PROJECT_ID: ${{ vars.HAN_GCP_PROJECT_ID }}
   REGION: us-central1
   SERVICE: han-server
-  IMAGE_REPO: us-central1-docker.pkg.dev/${{ vars.HAN_GCP_PROJECT_ID }}/han/han-server
-  # Pinned. Matches the version used to verify slice J.
+  # Pinned. Same version as deploy-hosting.yml.
   FIREBASE_TOOLS: firebase-tools@15.24.0
 
 jobs:
   test:
+    if: github.event_name == 'pull_request' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     defaults:
       run:
         working-directory: packages/han-rs
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - name: Install protobuf compiler
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends protobuf-compiler
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           workspaces: packages/han-rs
       - name: Test han-server
         run: cargo test --package han-server
 
-  build:
+  build-pr:
     needs: test
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Build without pushing
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: packages/han-rs
+          file: packages/han-rs/crates/han-server/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish:
+    needs: test
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: han-production
     permissions:
       contents: read
       id-token: write
     outputs:
       digest: ${{ steps.push.outputs.digest }}
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: docker/setup-buildx-action@v3
-
-      - name: Authenticate to Google Cloud (WIF)
-        if: github.event_name == 'push'
-        uses: google-github-actions/auth@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - id: auth
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
           service_account: ${{ vars.HAN_GCP_DEPLOYER_SA }}
-
       - name: Configure Docker for Artifact Registry
-        if: github.event_name == 'push'
         run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
-
-      - name: Build (and push on main)
-        id: push
-        env:
-          PUSH: ${{ github.event_name == 'push' }}
-        run: |
-          set -euo pipefail
-          args=(
-            --file packages/han-rs/crates/han-server/Dockerfile
-            --tag "$IMAGE_REPO:${GITHUB_SHA}"
-            --metadata-file meta.json
-          )
-          if [ "$PUSH" = "true" ]; then
-            docker buildx build "${args[@]}" --push packages/han-rs
-            digest="$(jq -r '."containerimage.digest"' meta.json)"
-            echo "digest=$digest" >> "$GITHUB_OUTPUT"
-          else
-            docker buildx build "${args[@]}" packages/han-rs
-          fi
+      - id: push
+        name: Build and push
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: packages/han-rs
+          file: packages/han-rs/crates/han-server/Dockerfile
+          push: true
+          tags: us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/han/han-server:${{ github.event.workflow_run.head_sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy:
-    needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: publish
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment:
       name: han-production
       url: https://api.han.guru
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      IMAGE_REPO: us-central1-docker.pkg.dev/${{ vars.HAN_GCP_PROJECT_ID }}/han/han-server
+      DIGEST: ${{ needs.publish.outputs.digest }}
+      GITHUB_CLIENT_ID: ${{ vars.HAN_GITHUB_CLIENT_ID }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Refuse to deploy without required values
-        env:
-          GITHUB_CLIENT_ID: ${{ vars.HAN_GITHUB_CLIENT_ID }}
         run: |
           set -euo pipefail
-          if [ -z "${GITHUB_CLIENT_ID}" ]; then
+          if [ -z "$GITHUB_CLIENT_ID" ]; then
             echo "::error::HAN_GITHUB_CLIENT_ID is unset. Slice I must create the OAuth app first."
             exit 1
           fi
-          if [ -z "${{ needs.build.outputs.digest }}" ]; then
-            echo "::error::No image digest from the build job."
+          if [ -z "$DIGEST" ]; then
+            echo "::error::No image digest from the publish job."
             exit 1
           fi
 
-      - name: Authenticate to Google Cloud (WIF)
-        id: auth
-        uses: google-github-actions/auth@v2
+      - id: auth
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
         with:
           workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
           service_account: ${{ vars.HAN_GCP_DEPLOYER_SA }}
 
-      - uses: google-github-actions/setup-gcloud@v2
+      - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
 
       - name: Refuse to deploy without secret versions
         env:
-          # Each required secret must already have an enabled version. The
-          # deploy never writes a placeholder.
+          # Each secret must already have an enabled version. The deploy never
+          # writes a placeholder. The deployer reads version metadata through
+          # roles/secretmanager.viewer, granted per secret in iam.tf.
           SECRETS: han-server-database-url han-server-jwt-secret han-server-master-kek han-server-github-client-secret han-server-stripe-secret-key han-server-stripe-webhook-secret
         run: |
           set -euo pipefail
@@ -155,14 +172,17 @@ jobs:
           gcloud run deploy "$SERVICE" \
             --project "$PROJECT_ID" \
             --region "$REGION" \
-            --image "$IMAGE_REPO@${{ needs.build.outputs.digest }}" \
+            --image "$IMAGE_REPO@$DIGEST" \
             --service-account "han-server-run@${PROJECT_ID}.iam.gserviceaccount.com" \
             --no-invoker-iam-check \
             --port 8080 \
+            --cpu 1 \
+            --memory 1Gi \
+            --concurrency 10 \
             --min-instances 0 \
             --max-instances 1 \
             --add-cloudsql-instances "${PROJECT_ID}:${REGION}:han-pg" \
-            --set-env-vars "PUBLIC_URL=https://api.han.guru,GITHUB_CLIENT_ID=${{ vars.HAN_GITHUB_CLIENT_ID }},RUST_LOG=info" \
+            --set-env-vars "PUBLIC_URL=https://api.han.guru,GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID},RUST_LOG=info,DB_MAX_CONNECTIONS=5" \
             --set-secrets "DATABASE_URL=han-server-database-url:latest,JWT_SECRET=han-server-jwt-secret:latest,GITHUB_CLIENT_SECRET=han-server-github-client-secret:latest,STRIPE_SECRET_KEY=han-server-stripe-secret-key:latest,STRIPE_WEBHOOK_SECRET=han-server-stripe-webhook-secret:latest,MASTER_KEK=han-server-master-kek:1" \
             --quiet
 
@@ -174,32 +194,33 @@ jobs:
           image="$(gcloud run revisions describe "$live" --project "$PROJECT_ID" --region "$REGION" \
             --format='value(spec.containers[0].image)')"
           case "$image" in
-            *"@${{ needs.build.outputs.digest }}") echo "Live revision $live runs $image" ;;
-            *) echo "::error::Live revision $live runs $image, not the pushed digest"; exit 1 ;;
+            *"@$DIGEST") echo "Live revision $live runs $image" ;;
+            *) echo "::error::Live revision $live runs $image, not $DIGEST"; exit 1 ;;
           esac
+          echo "LIVE_REVISION=$live" >> "$GITHUB_ENV"
 
-      - name: Confirm the startup lines in the logs
+      - name: Confirm this revision started with a working database
+        # Reads only the live revision's JSON logs. Degraded mode fails, and so
+        # does an old revision's log. See deploy/firebase/scripts/check_startup.py.
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 12); do
-            logs="$(gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=$SERVICE" \
-              --project "$PROJECT_ID" --limit 200 --freshness 15m --format='value(textPayload)')"
-            if printf '%s' "$logs" | grep -q "Connected to PostgreSQL" &&
-              printf '%s' "$logs" | grep -q "Migrations complete" &&
-              printf '%s' "$logs" | grep -q "LISTEN/NOTIFY triggers created"; then
-              echo "Startup lines present."
+          for _ in $(seq 1 18); do
+            gcloud logging read \
+              "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"$SERVICE\" AND resource.labels.revision_name=\"$LIVE_REVISION\"" \
+              --project "$PROJECT_ID" --limit 300 --freshness 2h --format=json > logs.json
+            if python3 deploy/firebase/scripts/check_startup.py logs.json "$LIVE_REVISION"; then
               exit 0
             fi
             sleep 10
           done
-          echo "::error::Startup lines not found in logs"
+          echo "::error::Startup check did not pass for $LIVE_REVISION"
           exit 1
 
       - name: Point api.han.guru's Hosting rewrite at the server
         working-directory: deploy/firebase
         run: |
           set -euo pipefail
-          node -e 'const fs=require("fs");const f=".firebaserc";const j=JSON.parse(fs.readFileSync(f,"utf8"));j.projects.default=process.env.PROJECT_ID;fs.writeFileSync(f,JSON.stringify(j,null,2));'
+          python3 scripts/firebaserc.py "$PROJECT_ID"
           npx --yes "$FIREBASE_TOOLS" deploy --only hosting:api --project "$PROJECT_ID" --non-interactive
 
       - name: Read-only checks on the public API host
@@ -209,6 +230,5 @@ jobs:
           health="$(curl -fsS --retry 5 --retry-delay 5 "$site/health")"
           printf '%s' "$health" | jq -e 'has("service") and has("status")' >/dev/null
           location="$(curl -sS -o /dev/null -w '%{redirect_url}' "$site/auth/github")"
-          printf '%s' "$location" | grep -q "client_id=${{ vars.HAN_GITHUB_CLIENT_ID }}"
-          printf '%s' "$location" | grep -q "redirect_uri=https://api.han.guru/auth/github/callback"
-          echo "api host health and /auth/github checks passed"
+          python3 deploy/firebase/scripts/check_redirect.py "$location" "$GITHUB_CLIENT_ID" \
+            "https://api.han.guru/auth/github/callback"
