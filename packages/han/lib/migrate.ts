@@ -19,7 +19,11 @@ import { join } from 'node:path';
 import { parseDocument } from 'yaml';
 import { getClaudeConfigDir } from './config/claude-settings.ts';
 import { getHanConfigPaths } from './config/han-settings.ts';
-import { isDeprecatedPluginName, PLUGIN_ALIASES } from './plugin-aliases.ts';
+import {
+  isDeprecatedPluginName,
+  PLUGIN_ALIASES,
+  RENAMED_PLUGINS,
+} from './plugin-aliases.ts';
 
 /**
  * Build migration map from PLUGIN_ALIASES.
@@ -40,6 +44,10 @@ function buildMigrationMap(): Map<string, string> {
         migrationMap.set(oldName.toLowerCase(), canonical);
       }
     }
+  }
+
+  for (const [oldName, newName] of Object.entries(RENAMED_PLUGINS)) {
+    migrationMap.set(oldName.toLowerCase(), newName);
   }
 
   return migrationMap;

@@ -59,7 +59,7 @@ Plugin names are descriptive and straightforward:
 - **Language plugins**: typescript, go, rust, python
 - **Validation plugins**: biome, eslint, shellcheck
 - **Integration plugins**: github, gitlab, playwright-mcp
-- **Discipline plugins**: claude-plugin-development, frontend, backend
+- **Discipline plugins**: plugin-authoring, frontend, backend
 
 ## Within Claude Code
 

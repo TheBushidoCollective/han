@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run claude-agent-sdk typecheck --async",
+            "command": "han hook run agent-sdk typecheck --async",
             "async": true
           }
         ]
@@ -14,7 +14,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run claude-agent-sdk validate-structure --async",
+            "command": "han hook run agent-sdk validate-structure --async",
             "async": true
           }
         ]
@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run claude-agent-sdk typecheck --async",
+            "command": "han hook run agent-sdk typecheck --async",
             "async": true
           }
         ]
@@ -34,7 +34,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "han hook run claude-agent-sdk validate-structure --async",
+            "command": "han hook run agent-sdk validate-structure --async",
             "async": true
           }
         ]

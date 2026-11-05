@@ -115,6 +115,36 @@ describe('migrateSettingsFile', () => {
     expect(updated.enabledPlugins['jutsu-typescript@han']).toBeUndefined();
   });
 
+  test('should migrate reserved-name plugins to their new names', () => {
+    const settingsPath = join(TEST_HOME, '.claude', 'settings.json');
+    const settings = {
+      enabledPlugins: {
+        'claude-agent-sdk@han': true,
+        'claude-plugin-development@han': true,
+        'jutsu-claude-agent-sdk@han': true,
+        'do-claude-plugin-development@han': true,
+      },
+    };
+    writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+
+    const result = migrateSettingsFile(settingsPath);
+
+    expect(result.modified).toBe(true);
+    const updated = JSON.parse(readFileSync(settingsPath, 'utf-8'));
+    expect(updated.enabledPlugins['agent-sdk@han']).toBe(true);
+    expect(updated.enabledPlugins['plugin-authoring@han']).toBe(true);
+    expect(updated.enabledPlugins['claude-agent-sdk@han']).toBeUndefined();
+    expect(
+      updated.enabledPlugins['claude-plugin-development@han']
+    ).toBeUndefined();
+    expect(
+      updated.enabledPlugins['jutsu-claude-agent-sdk@han']
+    ).toBeUndefined();
+    expect(
+      updated.enabledPlugins['do-claude-plugin-development@han']
+    ).toBeUndefined();
+  });
+
   test('should migrate old plugin names in permissions.allow', () => {
     const settingsPath = join(TEST_HOME, '.claude', 'settings.json');
     const settings = {
