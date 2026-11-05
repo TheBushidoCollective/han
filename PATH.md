@@ -198,18 +198,19 @@ organisation 949208237676). This PR stays a draft until the blockers in
 These need an owner or a GitHub admin. None of them can be done from CI, because
 the identity that would need them is not yet able to sign in.
 
-1. **Environments first (GitHub admin).** Create `han-bootstrap`, `han-infra-apply`,
-   `han-production` and `han-hosting`. Each gets required reviewer `43164` and
-   deployment from `main` only. On `han-bootstrap` and `han-infra-apply`, turn off
-   "Allow administrators to bypass configured protection rules". Leave "Prevent
-   self-review" off, because Jason both dispatches and approves. Check each page shows
-   these before step 3.
-   **Artifact 1:** the bypass setting is read from each environment page. No test here
-   verifies it.
-2. **Repository variables (GitHub admin).** `HAN_GCP_PROJECT_ID=thebushido-co`,
-   `HAN_GCP_WIF_PROVIDER=projects/911514101920/locations/global/workloadIdentityPools/han-github/providers/han-github`,
-   `HAN_GCP_TF_PLAN_SA`, `HAN_GCP_TF_APPLY_SA`, `HAN_GCP_DEPLOYER_SA`,
-   `HAN_GCP_HOSTING_DEPLOYER_SA`. Set `HAN_GITHUB_CLIENT_ID` at slice I.
+1. **Environments (GitHub admin): done, read back.** Created on 2026-11-05 with the GitHub
+   API, by an admin session, after checking that none of the four existed. Each has required
+   reviewer `43164` (`jwaldrip`), `prevent_self_review` false, and a deployment branch policy
+   for `main` only. `can_admins_bypass` is `false` on all four. The first version was created
+   with the default, `true`, and was then changed to `false` in a full update that kept the
+   reviewer and the branch policy. No secret was created. No workflow ran from the change.
+   Read back through the API. The settings page was not viewed in the browser.
+2. **Repository variables: done, read back.** `HAN_GCP_PROJECT_ID`, `HAN_GCP_WIF_PROVIDER`,
+   `HAN_GCP_TF_PLAN_SA`, `HAN_GCP_TF_APPLY_SA`, `HAN_GCP_DEPLOYER_SA` and
+   `HAN_GCP_HOSTING_DEPLOYER_SA` are set to the values in this section. They are resource
+   names, not secrets. Not set: `HAN_GITHUB_CLIENT_ID`, which needs an OAuth app that belongs
+   to slice I. Setting the WIF variable does not grant anything: the pool and provider are
+   created only by the bootstrap, which has not run.
 3. **Time-boxed sign-in grant (Jason, owner session).** Write a condition file that
    expires after the approval wait and the apply job's 45-minute limit have passed, with the time chosen by Jason:
 
@@ -309,9 +310,9 @@ Not run here: `terraform plan`, any gcloud mutation, and the workflows themselve
 
 Every item here is a fact the repository cannot establish. Each names who supplies it.
 
-1. **Environment protections.** Reviewer `43164` and `main`-only deployment on all four
-   environments, and whether admins can bypass them. Supplier: a GitHub admin, checked on
-   each environment page, before step 3.
+1. **Environment protections: set and read back (see human step 1).** What remains
+   unverified: the admin bypass is read as `false` through the API, and nothing here tests
+   that it holds against a real admin attempt. Supplier: a GitHub admin, once, by trying it.
 2. **The time-boxed sign-in and its condition.** Whether the WIF exchange honours
    `request.time`, and the expiry. Supplier: Jason, at step 3. A refused exchange fails
    before any change.
@@ -351,10 +352,11 @@ Every item here is a fact the repository cannot establish. Each names who suppli
     here. Supplier: the first run, which fails closed if the field differs.
 11. **`gcloud auth list --format=json` under WIF.** The active account is read from this
     output, and a mismatch stops the run before any change. Supplier: the first run.
-12. **Fork pull requests and the plan identity.** The plan identity is reached from pull
-    requests of this repository, and fork pull requests need the repository setting that
-    withholds secrets and id-token from them. Supplier: a GitHub admin, to confirm that
-    setting.
+12. **Fork pull requests and the plan identity.** The fork approval policy reads
+    `first_time_contributors`, and GitHub does not grant `id-token` to fork pull requests by
+    default. Whether that holds for the plan job is unverified. The repo's default workflow
+    token permission reads `write` (not Han's own setting; Han's workflows declare their
+    permissions). Supplier: a GitHub admin, to confirm the fork setting for this repository.
 13. **Website-repo identities hold project-wide reach (not fixed here).** Read from the
     website repo's Terraform, not live IAM. `astro-deployer` holds project-wide `run.admin`
     and `iam.serviceAccountUser` (`deploy/terraform/astro/service_accounts.tf:69-78`), and
