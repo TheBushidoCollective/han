@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.38.0] - 2026-11-05
+
+### Added
+
+- catalog and track metrics from every harness, and bridge omp (#109) ([a7a02ccc](../../commit/a7a02ccc))
+- bring han current with the Claude Code 2.1.228 harness surface (#107) ([3405f340](../../commit/3405f340))
+- add Han bridge for Google Antigravity IDE via MCP ([fac22376](../../commit/fac22376))
+
+### Fixed
+
+- clear Biome lint errors blocking the validate gate ([5217c19f](../../commit/5217c19f))
+- correct Windows asset name and .exe suffix (#94) ([455cb8e9](../../commit/455cb8e9))
+
+### Other
+
+- live-test results and current setup for all bridges ([62accccd](../../commit/62accccd))
+- format _nav.json with biome ([9f72cdfb](../../commit/9f72cdfb))
+- refresh hook reference and harness installation guides ([da0bfb77](../../commit/da0bfb77))
+
 ## [1.38.0] - 2026-08-12
 
 ### Added
