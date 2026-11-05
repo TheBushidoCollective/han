@@ -1,16 +1,6 @@
-title: Han Terraform apply, Cloud SQL
-description: Manage the han-pg instance settings, its database and its users. Bound with a condition limiting it to exactly the instance projects/thebushido-co/instances/han-pg. The bootstrap creates the instance, and this role cannot create or delete an instance. Database and user resources are not scopable by condition (PATH.md section 8), so this condition fails closed on them until that is decided.
+title: Han Terraform apply, Cloud SQL instance
+description: Refresh and update the han-pg instance settings only. Bound with a condition limiting it to exactly the instance projects/thebushido-co/instances/han-pg. It holds no database or user permission: the bootstrap creates the database and the user, and Terraform manages neither. It cannot create or delete an instance.
 stage: GA
 includedPermissions:
 - cloudsql.instances.get
 - cloudsql.instances.update
-- cloudsql.databases.get
-- cloudsql.databases.create
-- cloudsql.databases.update
-- cloudsql.databases.delete
-- cloudsql.databases.list
-- cloudsql.users.get
-- cloudsql.users.create
-- cloudsql.users.update
-- cloudsql.users.delete
-- cloudsql.users.list

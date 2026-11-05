@@ -1,9 +1,28 @@
 # Cloud SQL instance han-pg. The bootstrap creates it once with the same settings
 # (PATH.md section 8). This import brings it under Terraform, which then owns its
-# settings and the han_team database and user.
+# settings. The database han_team and the user han belong to the bootstrap, which
+# also seeds their password into database-url. Terraform holds no database or user
+# permission, so it cannot read or change either.
 import {
   to = google_sql_database_instance.han
   id = "projects/${var.project_id}/instances/han-pg"
+}
+
+# Forget, do not destroy. These were once Terraform resources. Removing the blocks
+# drops them from state without a delete, so the database and user survive, and a
+# plan shows no deletion. Their password is never in state (write-only).
+removed {
+  from = google_sql_database.han_team
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = google_sql_user.han
+  lifecycle {
+    destroy = false
+  }
 }
 
 # Postgres 16 defaults to ENTERPRISE_PLUS, which rejects db-f1-micro, so the
@@ -38,26 +57,4 @@ resource "google_sql_database_instance" "han" {
   lifecycle {
     prevent_destroy = true
   }
-}
-
-resource "google_sql_database" "han_team" {
-  name     = "han_team"
-  instance = google_sql_database_instance.han.name
-}
-
-# The database password is one ephemeral value per apply. It reaches two
-# places: the SQL user's password, and the database-url secret version. The
-# two must always agree. Both are tied to var.db_credential_version, so both are
-# rewritten together whenever that version changes.
-ephemeral "random_password" "db" {
-  length  = 40
-  special = false
-}
-
-resource "google_sql_user" "han" {
-  name                = "han"
-  instance            = google_sql_database_instance.han.name
-  password_wo         = ephemeral.random_password.db.result
-  password_wo_version = var.db_credential_version
-
 }

@@ -202,6 +202,43 @@ class LeastPrivilege(unittest.TestCase):
         text = (BOOT / "conditions" / "han_pg.yaml").read_text(encoding="utf-8")
         self.assertIn("resource.name == 'projects/thebushido-co/instances/han-pg'", text)
         self.assertNotIn("startsWith", text)
+        self.assertIn("resource.type == 'sqladmin.googleapis.com/Instance'", text)
+
+    def test_the_runtime_cloud_sql_grant_is_conditioned_to_han_pg(self):
+        # The server connects to han-pg only. Google documents this exact condition form.
+        text = (BOOT / "bootstrap.py").read_text(encoding="utf-8")
+        self.assertIn('project_bind(run_member, "roles/cloudsql.client", SQL_CONDITION)', text)
+        self.assertNotIn('"roles/cloudsql.client")', text)
+
+    def test_the_runtime_has_no_logging_role(self):
+        # The server writes JSON to stdout and has no Logging API client (packages/han-rs).
+        text = (BOOT / "bootstrap.py").read_text(encoding="utf-8")
+        self.assertNotIn("roles/logging.logWriter", text)
+
+    def test_the_sql_roles_are_instance_only(self):
+        apply_perms = custom_role_permissions(ROLES / "han_tf_apply_sql.yaml")
+        plan_perms = custom_role_permissions(ROLES / "han_tf_plan_sql.yaml")
+        self.assertEqual(apply_perms, {"cloudsql.instances.get", "cloudsql.instances.update"})
+        self.assertEqual(plan_perms, {"cloudsql.instances.get"})
+
+    def test_no_identity_holds_a_database_or_user_permission(self):
+        # Database and user permissions cannot be scoped to one instance by condition, so no
+        # Han identity holds any. The bootstrap creates them under its own time-limited grant.
+        for path in ROLES.glob("*.yaml"):
+            perms = custom_role_permissions(path)
+            self.assertEqual({p for p in perms if p.startswith(("cloudsql.databases.", "cloudsql.users."))}, set(), path.name)
+        text = (BOOT / "bootstrap.py").read_text(encoding="utf-8")
+        self.assertNotIn("cloudsql.databases.", text)
+        self.assertNotIn("cloudsql.users.", text)
+
+    def test_terraform_has_no_database_user_or_database_password(self):
+        text = terraform_text()
+        for forbidden in (r'resource\s+"google_sql_user"', r'resource\s+"google_sql_database"',
+                          r'ephemeral\s+"random_password"\s+"db"', r'variable\s+"db_credential_version"'):
+            self.assertNotRegex(text, forbidden, forbidden)
+        for address in ("google_sql_database.han_team", "google_sql_user.han",
+                        "google_secret_manager_secret_version.database_url"):
+            self.assertRegex(text, rf"removed\s*\{{\s*from\s*=\s*{re.escape(address)}", address)
 
 
 if __name__ == "__main__":

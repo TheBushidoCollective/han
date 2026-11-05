@@ -25,6 +25,11 @@ on:
         description: "The commit this plan was computed from. Execution refuses any other commit."
         required: true
         type: string
+      rotate_db_password:
+        description: "Generate a new database password and reseed database-url. Changes the plan, so the expected hash must come from a plan run with this set to true. Leave false on a normal run."
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -45,10 +50,15 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Print the plan and check the hash and commit
+        env:
+          ROTATE_FLAG: ${{ inputs.rotate_db_password && '--rotate-db-password' || '' }}
         run: |
+          rotate=()
+          if [ -n "$ROTATE_FLAG" ]; then rotate=("$ROTATE_FLAG"); fi
           python3 -B deploy/firebase/bootstrap/bootstrap.py \
             --expect-sha256 "$EXPECTED_SHA256" \
             --expect-commit "$EXPECTED_COMMIT" \
+            "${rotate[@]}" \
             --plan-file bootstrap-plan.txt
 
       - name: Upload the plan for review
@@ -85,11 +95,16 @@ jobs:
 
       - id: execute
         name: Execute the approved plan
+        env:
+          ROTATE_FLAG: ${{ inputs.rotate_db_password && '--rotate-db-password' || '' }}
         run: |
+          rotate=()
+          if [ -n "$ROTATE_FLAG" ]; then rotate=("$ROTATE_FLAG"); fi
           python3 -B deploy/firebase/bootstrap/bootstrap.py \
             --execute \
             --expect-sha256 "$EXPECTED_SHA256" \
-            --expect-commit "$EXPECTED_COMMIT"
+            --expect-commit "$EXPECTED_COMMIT" \
+            "${rotate[@]}"
 
       - name: Revoke the sign-in (only when the execute step did not succeed)
         # The execute step revokes in its own process on success and on failure, and

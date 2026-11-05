@@ -1,8 +1,11 @@
-# Six Han secrets, every name prefixed han-server-. The bootstrap creates them,
-# empty, with their IAM (PATH.md section 8). Terraform reads the three it writes
-# versions for, through data sources. It creates, updates and deletes no secret,
-# and it changes no secret's IAM. So the apply identity holds no create, delete
-# or setIamPolicy permission.
+# Han secrets, every name prefixed han-server-. The bootstrap creates them, empty,
+# with their IAM (PATH.md section 8). Terraform reads two, jwt-secret and
+# master-kek, and writes their versions. It creates, updates and deletes no secret,
+# and it changes no secret's IAM. So the apply identity holds no create, delete or
+# setIamPolicy permission.
+#
+# database-url is not managed here. The bootstrap seeds it with the password of the
+# han database user, in one ordered run (bootstrap/bootstrap.py, provision_database).
 #
 # Values are set from ephemeral generators or written by an operator out of band,
 # and never appear in state. The apply identity writes these under
@@ -22,10 +25,6 @@ ephemeral "random_bytes" "kek" {
   length = 32
 }
 
-data "google_secret_manager_secret" "database_url" {
-  secret_id = "${local.secret_prefix}database-url"
-}
-
 data "google_secret_manager_secret" "jwt_secret" {
   secret_id = "${local.secret_prefix}jwt-secret"
 }
@@ -34,21 +33,13 @@ data "google_secret_manager_secret" "master_kek" {
   secret_id = "${local.secret_prefix}master-kek"
 }
 
-resource "google_secret_manager_secret_version" "database_url" {
-  secret = data.google_secret_manager_secret.database_url.id
-  secret_data_wo = join("", [
-    "postgres://han:",
-    ephemeral.random_password.db.result,
-    "@localhost/han_team?host=/cloudsql/",
-    google_sql_database_instance.han.connection_name,
-  ])
-  # Same version as the SQL user. See database.tf.
-  secret_data_wo_version = var.db_credential_version
-  # Written only after the SQL user exists, so a failed user creation (the apply
-  # identity's database permissions are not scopable, PATH.md section 8) leaves no
-  # secret holding a password the database does not have. The user is created with
-  # the same ephemeral value, in the same apply.
-  depends_on = [google_sql_user.han]
+# Forget, do not destroy. The database-url version was once a Terraform resource. The
+# bootstrap now owns it, so Terraform drops it from state without a delete.
+removed {
+  from = google_secret_manager_secret_version.database_url
+  lifecycle {
+    destroy = false
+  }
 }
 
 resource "google_secret_manager_secret_version" "jwt_secret" {

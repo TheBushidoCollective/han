@@ -14,6 +14,9 @@ Modes:
   --revoke-only                  remove the bootstrap sign-in member from the
                                  bootstrap account's policy. Runs in its own
                                  always-run workflow step.
+  --rotate-db-password           with --execute: generate a new database password and seed
+                                 database-url with it. It changes the plan, so the hash
+                                 covers the rotation. Never run on a normal rerun.
 
 Every object is described first and created only if the describe says it is
 missing. Only a recognised not-found answer counts as missing. Any other error
@@ -34,7 +37,10 @@ import json
 import os
 import subprocess
 import sys
+import shutil
+import string
 import tempfile
+from secrets import choice
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
@@ -67,8 +73,8 @@ BOOTSTRAP_PRINCIPAL = f"principal://iam.googleapis.com/{SHARED_POOL}/subject/{BO
 STATE_BUCKET = f"{PROJECT}-han-tfstate"
 
 SECRET_PREFIX = "han-server-"
-# Every secret the bootstrap creates. Terraform manages versions of only the
-# three in TF_MANAGED_SECRETS; the rest take values out of band.
+# Every secret the bootstrap creates. Terraform writes versions of only the two in
+# TF_MANAGED_SECRETS. The bootstrap seeds database-url, and the rest take values out of band.
 SECRETS = (
     "database-url",
     "jwt-secret",
@@ -77,7 +83,7 @@ SECRETS = (
     "stripe-secret-key",
     "stripe-webhook-secret",
 )
-TF_MANAGED_SECRETS = ("database-url", "jwt-secret", "master-kek")
+TF_MANAGED_SECRETS = ("jwt-secret", "master-kek")
 KEK_SECRET = "master-kek"
 
 SQL_INSTANCE = "han-pg"
@@ -86,6 +92,20 @@ SQL_EDITION = "enterprise"  # the gcloud spelling of the ENTERPRISE edition
 SQL_TIER = "db-f1-micro"
 SQL_SSL_MODE = "ENCRYPTED_ONLY"
 SQL_CONDITION = HERE / "conditions" / "han_pg.yaml"
+
+# The application database and user. The bootstrap creates both, with the password
+# that database-url carries, so Terraform needs no database or user permission.
+DB_NAME = "han_team"
+DB_USER = "han"
+DB_SECRET = f"{SECRET_PREFIX}database-url"
+DB_PASSWORD_LENGTH = 40
+DB_ALPHABET = string.ascii_letters + string.digits
+CONNECTION_NAME = f"{PROJECT}:{REGION}:{SQL_INSTANCE}"
+# The secret's state label. "ready" is set only after the user and the newest enabled
+# version carry the same password. Any other value makes the next run set both again.
+PW_LABEL = "han-password-state"
+PW_PENDING = "pending"
+PW_READY = "ready"
 
 SERVICE = "han-server"
 ARTIFACT_REPO = "han"
@@ -167,8 +187,9 @@ def is_bootstrap_member(member: str) -> bool:
 
 
 # A backend answers (returncode, stdout, stderr). Reads and writes are kept apart,
-# so a test can assert that the plan never reads.
-Backend = Callable[[str, list[str]], tuple[int, str, str]]
+# so a test can assert that the plan never reads. stdin carries a secret payload, so a
+# secret never has to be an argument or a file.
+Backend = Callable[[str, list[str], str | None], tuple[int, str, str]]
 
 
 @dataclass
@@ -182,16 +203,18 @@ class Runner:
     def _read(self, argv: list[str]) -> tuple[int, str, str]:
         if not self.execute or self.backend is None:
             raise AssertionError("reads happen only in execute mode")
-        return self.backend("read", argv)
+        return self.backend("read", argv, None)
 
-    def write(self, argv: list[str]) -> None:
+    def write(self, argv: list[str], stdin: str | None = None, quiet: bool = False) -> None:
         line = " ".join(argv)
         self.plan.append(line)
         if not self.execute:
             return
-        rc, _, err = self.backend("write", argv)
+        rc, _, err = self.backend("write", argv, stdin)
         if rc != 0:
-            raise StepError(f"command failed ({rc}): {line}\n{err}")
+            # quiet: the error text may echo a credential, so it is not put in the message.
+            detail = "" if quiet else f"\n{err}"
+            raise StepError(f"command failed ({rc}): {line}{detail}")
 
     def ensure_listed(self, list_argv: list[str], name: str, create: list[str]) -> None:
         """Create the object if the list does not name it. A list has no not-found text to read."""
@@ -233,7 +256,7 @@ class Runner:
             raise StepError(f"describe role {role_id} failed for an unexpected reason\n{err}")
 
 
-def steps(r: Runner) -> None:
+def steps(r: Runner, rotate: bool = False) -> None:
     """Every mutation, in dependency order. Plan and execute both walk this list."""
 
     # 1. APIs. Enabling an API changes no other resource.
@@ -297,14 +320,23 @@ def steps(r: Runner) -> None:
          f"--database-version={SQL_VERSION}", f"--edition={SQL_EDITION}", f"--tier={SQL_TIER}",
          f"--ssl-mode={SQL_SSL_MODE}", "--deletion-protection", "--quiet"],
     )
+    # 6b. The application database. Created here, so Terraform needs no database permission.
+    r.ensure_listed(
+        ["gcloud", "sql", "databases", "list", f"--instance={SQL_INSTANCE}", f"--project={PROJECT}", "--format=json"],
+        DB_NAME,
+        ["gcloud", "sql", "databases", "create", DB_NAME, f"--instance={SQL_INSTANCE}", f"--project={PROJECT}", "--quiet"],
+    )
 
-    # 7. Secrets. Created empty. Terraform writes versions of the three it manages.
+    # 7. Secrets. Created empty. Terraform writes two of them, and the bootstrap seeds database-url later (7b).
     for name in SECRETS:
         sid = secret_id(name)
         r.ensure(
             gcloud("secrets", "describe", sid, f"--project={PROJECT}"),
             gcloud("secrets", "create", sid, "--replication-policy=automatic", f"--project={PROJECT}"),
         )
+
+    # 7b. The database user and database-url, seeded with one matching password.
+    provision_database(r, rotate)
 
     # 8. Cloud Run service shell. Private until Terraform sets invoker_iam_disabled.
     r.ensure(
@@ -361,10 +393,10 @@ def steps(r: Runner) -> None:
     project_bind(apply_member, role("hanTfPlanGlobal"))
     project_bind(plan_member, role("hanTfPlanSql"), SQL_CONDITION)
     project_bind(apply_member, role("hanTfApplySql"), SQL_CONDITION)
-    # Runtime: not conditioned to han-pg. A Cloud SQL resource-name condition is not
-    # verified (PATH.md section 8). Name the gap, do not claim it closed.
-    project_bind(run_member, "roles/cloudsql.client")
-    project_bind(run_member, "roles/logging.logWriter")
+    # Runtime: Cloud SQL connect on han-pg only. The condition names the instance type and the
+    # exact instance. No logging role: the server writes JSON to stdout, which Cloud Run collects
+    # for the service identity (PATH.md section 8).
+    project_bind(run_member, "roles/cloudsql.client", SQL_CONDITION)
     # Hosting deployer: the accepted project-wide exception (PATH.md section 8, risk 1).
     project_bind(hosting_member, "roles/firebasehosting.admin")
     project_bind(hosting_member, "roles/serviceusage.serviceUsageConsumer")
@@ -467,6 +499,97 @@ def postcheck(r: Runner) -> None:
             raise StepError(f"{name} has a user-managed key; refusing to continue")
 
 
+def database_url(password: str) -> str:
+    return f"postgres://{DB_USER}:{password}@localhost/{DB_NAME}?host=/cloudsql/{CONNECTION_NAME}"
+
+
+def _user_exists(r: Runner) -> bool:
+    rc, out, err = r._read(["gcloud", "sql", "users", "list", f"--instance={SQL_INSTANCE}",
+                            f"--project={PROJECT}", "--format=json"])
+    if rc != 0:
+        raise StepError(f"cannot list database users: {err}")
+    return DB_USER in {item.get("name") for item in json.loads(out or "[]")}
+
+
+def _enabled_versions(r: Runner) -> int:
+    rc, out, err = r._read(["gcloud", "secrets", "versions", "list", DB_SECRET, f"--project={PROJECT}",
+                            "--filter=state=ENABLED", "--format=json"])
+    if rc != 0:
+        raise StepError(f"cannot list versions of {DB_SECRET}: {err}")
+    return len(json.loads(out or "[]"))
+
+
+def _secret_label(r: Runner) -> str | None:
+    rc, out, err = r._read(["gcloud", "secrets", "describe", DB_SECRET, f"--project={PROJECT}", "--format=json"])
+    if rc != 0:
+        raise StepError(f"cannot describe {DB_SECRET}: {err}")
+    return (json.loads(out).get("labels") or {}).get(PW_LABEL)
+
+
+def provision_database(r: Runner, rotate: bool) -> None:
+    """Create the user and database, and seed database-url with the user's password.
+
+    The password is generated here and reaches gcloud only through a 0600 flags file
+    (for the user) and stdin (for the secret). It is never in an argument, the plan, the
+    log or an artifact. Order, so a failure at any step is repaired by a rerun:
+      1. label database-url pending,
+      2. create the user, or set its password if it exists,
+      3. add a database-url version holding the matching DSN,
+      4. label database-url ready.
+    A rerun changes nothing only when the user exists, an enabled version exists and the
+    label says ready. Any other state runs 1 to 4 again with a new password.
+    """
+    r.plan.append(
+        f"database access: label {DB_SECRET} {PW_PENDING}; create user {DB_USER} or set its password "
+        f"(password in a 0600 flags file, never in argv); add a version of {DB_SECRET} from stdin; "
+        f"label {PW_READY}. Rotate requested: {'yes' if rotate else 'no'}"
+    )
+    if not r.execute:
+        return
+    user_present = _user_exists(r)
+    enabled = _enabled_versions(r)
+    label = _secret_label(r)
+    if not rotate and user_present and enabled > 0 and label == PW_READY:
+        return
+    r.write(["gcloud", "secrets", "update", DB_SECRET, f"--project={PROJECT}",
+             f"--update-labels={PW_LABEL}={PW_PENDING}", "--quiet"])
+    password = "".join(choice(DB_ALPHABET) for _ in range(DB_PASSWORD_LENGTH))
+    workdir = tempfile.mkdtemp(prefix="han-db-")  # mode 0700
+    try:
+        flags = Path(workdir) / "user.yaml"
+        fd = os.open(flags, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump({"--password": password}, fh)  # JSON is valid YAML for --flags-file
+        verb = "set-password" if user_present else "create"
+        r.write(["gcloud", "sql", "users", verb, DB_USER, f"--instance={SQL_INSTANCE}",
+                 f"--project={PROJECT}", f"--flags-file={flags}", "--quiet"], quiet=True)
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+    r.write(["gcloud", "secrets", "versions", "add", DB_SECRET, "--data-file=-", f"--project={PROJECT}", "--quiet"],
+            stdin=database_url(password), quiet=True)
+    r.write(["gcloud", "secrets", "update", DB_SECRET, f"--project={PROJECT}",
+             f"--update-labels={PW_LABEL}={PW_READY}", "--quiet"])
+    del password
+
+
+def database_postcheck(r: Runner) -> None:
+    """Read-only, after the steps. The database, the user and a matching secret must exist."""
+    rc, out, err = r._read(["gcloud", "sql", "databases", "list", f"--instance={SQL_INSTANCE}",
+                            f"--project={PROJECT}", "--format=json"])
+    if rc != 0:
+        raise StepError(f"cannot list databases: {err}")
+    if DB_NAME not in {item.get("name") for item in json.loads(out or "[]")}:
+        raise StepError(f"database {DB_NAME} is missing")
+    if not _user_exists(r):
+        raise StepError(f"database user {DB_USER} is missing")
+    if _enabled_versions(r) < 1:
+        raise StepError(f"{DB_SECRET} has no enabled version")
+    if _secret_label(r) != PW_READY:
+        raise StepError(f"{DB_SECRET} is not marked {PW_READY}, so its password may not match the user")
+
+
+
+
 def _strings(value) -> set[str]:
     if isinstance(value, str):
         return {value}
@@ -527,9 +650,9 @@ def referenced_files() -> list[Path]:
     return [Path(__file__).resolve(), SQL_CONDITION, *roles]
 
 
-def build_plan() -> list[str]:
+def build_plan(rotate: bool = False) -> list[str]:
     r = Runner(execute=False, backend=None)
-    steps(r)
+    steps(r, rotate)
     revoke_plan(r)
     # Contents, not only names: a changed permission, condition or line of code changes the hash.
     for path in referenced_files():
@@ -541,12 +664,13 @@ def plan_sha256(lines: list[str]) -> str:
     return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
 
 
-def run_execute(backend: Backend) -> None:
+def run_execute(backend: Backend, rotate: bool = False) -> None:
     r = Runner(execute=True, backend=backend)
     try:
         preflight(r)
-        steps(r)
+        steps(r, rotate)
         postcheck(r)
+        database_postcheck(r)
     except BaseException:
         # The sign-in must not outlive a failed run. A failure to revoke is reported
         # alongside the original error, which is kept as the cause.
@@ -558,9 +682,9 @@ def run_execute(backend: Backend) -> None:
     revoke(r)
 
 
-def real_backend(kind: str, argv: list[str]) -> tuple[int, str, str]:
+def real_backend(kind: str, argv: list[str], stdin: str | None = None) -> tuple[int, str, str]:
     # Run from the repository root, so the repository-relative paths in the plan resolve.
-    proc = subprocess.run(argv, capture_output=True, text=True, timeout=900, cwd=ROOT)
+    proc = subprocess.run(argv, input=stdin, capture_output=True, text=True, timeout=900, cwd=ROOT)
     return proc.returncode, proc.stdout, proc.stderr
 
 
@@ -579,6 +703,8 @@ def main(argv: list[str], backend: Backend | None = None) -> int:
     parser.add_argument("--execute", action="store_true", help="run the plan (CI only)")
     parser.add_argument("--expect-sha256", help="refuse unless the plan hashes to this value")
     parser.add_argument("--expect-commit", help="refuse unless GITHUB_SHA is this commit")
+    parser.add_argument("--rotate-db-password", action="store_true",
+                        help="generate a new database password and seed database-url with it")
     parser.add_argument("--revoke-only", action="store_true", help="remove the sign-in member and nothing else")
     parser.add_argument("--plan-file", help="write the plan text here")
     args = parser.parse_args(argv)
@@ -595,7 +721,7 @@ def main(argv: list[str], backend: Backend | None = None) -> int:
         print("revoked: the bootstrap sign-in member is absent")
         return 0
 
-    lines = build_plan()
+    lines = build_plan(args.rotate_db_password)
     sha = plan_sha256(lines)
     for line in lines:
         print(line)
@@ -617,7 +743,7 @@ def main(argv: list[str], backend: Backend | None = None) -> int:
               file=sys.stderr)
         return 2
     try:
-        run_execute(backend or real_backend)
+        run_execute(backend or real_backend, args.rotate_db_password)
     except StepError as err:
         print(f"::error::{err}", file=sys.stderr)
         return 1

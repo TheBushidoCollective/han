@@ -189,9 +189,9 @@ class CommitIsChecked(unittest.TestCase):
         self.assertEqual(recorder.calls, [])
 
 
-def terraform_edges() -> set[tuple[str, str]]:
-    """Edges of Terraform's own dependency graph, as (dependent, dependency). Offline:
-    the backend is removed from a copy, so no credential or state is read."""
+def terraform_graph() -> str:
+    """Terraform's own dependency graph, as text. Offline: the backend is removed from a copy,
+    so no credential or state is read."""
     import re
     import tempfile
 
@@ -202,25 +202,26 @@ def terraform_edges() -> set[tuple[str, str]]:
             (work / src.name).write_text(text, encoding="utf-8")
         subprocess.run(["terraform", "init", "-backend=false", "-input=false", "-no-color"], cwd=work,
                        check=True, capture_output=True, timeout=600)
-        graph = subprocess.run(["terraform", "graph"], cwd=work, capture_output=True, text=True, timeout=300).stdout
-    return set(re.findall(r'^\s*"([^"]+)" -> "([^"]+)";', graph, re.M))
+        return subprocess.run(["terraform", "graph"], cwd=work, capture_output=True, text=True, timeout=300).stdout
 
 
 @unittest.skipUnless(shutil.which("terraform"), "terraform is not installed")
-class PasswordWriteOrder(unittest.TestCase):
-    """The first apply must not write a secret that holds a password the database lacks.
-    Terraform's graph is the evidence: the secret version may only depend on the SQL user,
-    never the reverse. A failed user create then skips the secret write."""
+class TerraformForgetsTheDatabaseResources(unittest.TestCase):
+    """The database, the user and database-url are the bootstrap's, not Terraform's. The graph is
+    the evidence: none of those is a node, so Terraform cannot plan, change or destroy them."""
 
     @classmethod
     def setUpClass(cls):
-        cls.edges = terraform_edges()
+        cls.graph = terraform_graph()
 
-    def test_the_secret_version_depends_on_the_sql_user(self):
-        self.assertIn(("google_secret_manager_secret_version.database_url", "google_sql_user.han"), self.edges)
+    def test_no_database_user_or_database_url_version_is_a_node(self):
+        for node in ("google_sql_user.han", "google_sql_database.han_team",
+                     "google_secret_manager_secret_version.database_url", "random_password.db"):
+            self.assertNotIn(node, self.graph, node)
 
-    def test_the_sql_user_does_not_depend_on_the_secret(self):
-        self.assertNotIn(("google_sql_user.han", "google_secret_manager_secret_version.database_url"), self.edges)
+    def test_the_instance_is_still_managed(self):
+        self.assertIn("google_sql_database_instance.han", self.graph)
+
 
 
 class SqlDeletionProtection(unittest.TestCase):

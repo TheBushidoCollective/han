@@ -63,6 +63,14 @@ COMMANDS = [
     "secrets describe",
     "secrets add-iam-policy-binding",
     "auth list",
+    "sql databases create",
+    "sql databases list",
+    "sql users create",
+    "sql users list",
+    "sql users set-password",
+    "secrets versions add",
+    "secrets versions list",
+    "secrets update",
 ]
 
 FLAG_RE = re.compile(r"(?<![\w-])--(?:\[no-\])?([a-z][a-z0-9-]*)")

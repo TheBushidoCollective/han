@@ -61,7 +61,12 @@ def object_key(argv: list[str]) -> tuple[str, str] | None:
 
 
 class FakeCloud:
-    """Holds the objects that exist, the bootstrap account's policy, and every call."""
+    """Holds the objects that exist, the bootstrap account's policy, and every call.
+
+    It also models the database, the user, secret versions and labels, so the password
+    sequence can be checked end to end. It records what each call was given: the flags-file
+    mode and contents, and the stdin payload. The password is read from those, never from argv.
+    """
 
     def __init__(self, *, sign_in_member: bool = True) -> None:
         self.objects: set[tuple[str, str]] = set()
@@ -71,6 +76,13 @@ class FakeCloud:
         self.keys_for: dict[str, str] = {}
         self.fail_write: str | None = None
         self.fail_read: str | None = None
+        self.db_users: dict[str, str] = {}  # user name -> its current password
+        self.databases: set[str] = set()
+        self.versions: dict[str, list[dict]] = {}  # secret -> [{"state", "password"}]
+        self.labels: dict[str, dict] = {}
+        self.flag_files: list[dict] = []  # {"path", "mode", "password"} seen by user calls
+        self.stdin_payloads: list[str] = []
+        self.argv_seen: list[list[str]] = []
         self.policy = {
             "version": 3,
             "etag": "BwYfake",
@@ -86,15 +98,22 @@ class FakeCloud:
                               "expression": "request.time < timestamp('2026-11-05T00:00:00Z')"},
             })
 
-    def __call__(self, kind: str, argv: list[str]) -> tuple[int, str, str]:
+    def __call__(self, kind: str, argv: list[str], stdin: str | None = None) -> tuple[int, str, str]:
+        self.argv_seen.append(argv)
+        if stdin is not None:
+            self.stdin_payloads.append(stdin)
         if kind == "read":
             self.reads.append(argv)
             return self._read(argv)
         self.writes.append(argv)
-        return self._write(argv)
+        return self._write(argv, stdin)
 
     def members(self) -> list[str]:
         return [m for b in self.policy.get("bindings", []) for m in b.get("members", [])]
+
+    def enabled_password(self, secret: str) -> str | None:
+        enabled = [v for v in self.versions.get(secret, []) if v["state"] == "ENABLED"]
+        return enabled[-1]["password"] if enabled else None
 
     def _read(self, argv: list[str]) -> tuple[int, str, str]:
         joined = " ".join(argv)
@@ -111,6 +130,16 @@ class FakeCloud:
             return 0, json.dumps([{"name": n} for (fam, n) in self.objects if fam == "storage buckets"]), ""
         if argv[1:3] == ["sql", "instances"] and "list" in argv:
             return 0, json.dumps([{"name": n} for (fam, n) in self.objects if fam == "sql instances"]), ""
+        if argv[1:3] == ["sql", "users"] and "list" in argv:
+            return 0, json.dumps([{"name": n} for n in self.db_users]), ""
+        if argv[1:3] == ["sql", "databases"] and "list" in argv:
+            return 0, json.dumps([{"name": n} for n in self.databases]), ""
+        if argv[1:3] == ["secrets", "versions"] and "list" in argv:
+            secret = argv[4]
+            items = self.versions.get(secret, [])
+            if "--filter=state=ENABLED" in argv:
+                items = [v for v in items if v["state"] == "ENABLED"]
+            return 0, json.dumps([{"name": str(i)} for i, _ in enumerate(items)]), ""
         key = object_key(argv)
         if key is None:
             raise AssertionError(f"unexpected read: {joined}")
@@ -119,13 +148,15 @@ class FakeCloud:
                 return 0, json.dumps({"uniform_bucket_level_access": True,
                                       "public_access_prevention": "enforced",
                                       "versioning_enabled": True}), ""
+            if key[0] == "secrets":
+                return 0, json.dumps({"labels": self.labels.get(key[1], {})}), ""
             return 0, "{}", ""
         fixture = FAMILY_FIXTURE.get(key[0])
         if fixture is None:
             raise AssertionError(f"no captured not-found text for {key[0]}")
         return 1, "", NOT_FOUND[fixture]["first_line"]
 
-    def _write(self, argv: list[str]) -> tuple[int, str, str]:
+    def _write(self, argv: list[str], stdin: str | None) -> tuple[int, str, str]:
         joined = " ".join(argv)
         if self.fail_write and self.fail_write in joined:
             return 1, "", "ERROR: (gcloud) simulated failure"
@@ -133,10 +164,49 @@ class FakeCloud:
             path = argv[argv.index("set-iam-policy") + 2]
             self.policy = json.loads(Path(path).read_text(encoding="utf-8"))
             return 0, "", ""
+        if argv[1:3] == ["sql", "users"] and ("create" in argv or "set-password" in argv):
+            flags = next(a.split("=", 1)[1] for a in argv if a.startswith("--flags-file="))
+            path = Path(flags)
+            mode = path.stat().st_mode & 0o777  # the file must exist during the call
+            data = json.loads(path.read_text(encoding="utf-8"))
+            self.flag_files.append({"path": flags, "mode": mode, "password": data["--password"]})
+            user = argv[4]
+            if "create" in argv:
+                if user in self.db_users:
+                    return 1, "", "ERROR: (gcloud.sql.users.create) user already exists"
+                self.db_users[user] = data["--password"]
+            else:
+                if user not in self.db_users:
+                    return 1, "", "ERROR: (gcloud.sql.users.set-password) user does not exist"
+                self.db_users[user] = data["--password"]
+            return 0, "", ""
+        if argv[1:3] == ["sql", "databases"] and "create" in argv:
+            self.databases.add(argv[4])
+            return 0, "", ""
+        if argv[1:3] == ["secrets", "versions"] and "add" in argv:
+            if stdin is None:
+                return 1, "", "ERROR: no payload on stdin"
+            prefix = "postgres://han:"
+            if not stdin.startswith(prefix):
+                return 1, "", "ERROR: unexpected payload shape"
+            password = stdin[len(prefix):].split("@", 1)[0]
+            self.versions.setdefault(argv[4], []).append({"state": "ENABLED", "password": password})
+            return 0, "", ""
+        if argv[1:3] == ["secrets", "update"]:
+            for arg in argv:
+                if arg.startswith("--update-labels="):
+                    key, value = arg.split("=", 2)[1:]
+                    self.labels.setdefault(argv[3], {})[key] = value
+            return 0, "", ""
         key = object_key(argv)
         if key and any(v in argv for v in ("create", "create-oidc", "deploy")):
             self.objects.add(key)
         return 0, "", ""
+
+
+def database_payload_password(fake: FakeCloud) -> str:
+    """The password the newest DSN carried, as the fake recorded it from stdin."""
+    return fake.versions[bootstrap.DB_SECRET][-1]["password"]
 
 
 def run(fake, *args: str) -> tuple[int, str, str]:
@@ -150,13 +220,16 @@ def run(fake, *args: str) -> tuple[int, str, str]:
 TEST_COMMIT = "0123456789abcdef0123456789abcdef01234567"
 
 
-def execute(fake: FakeCloud) -> tuple[int, str, str]:
+def execute(fake: FakeCloud, rotate: bool = False) -> tuple[int, str, str]:
     """Execute the current plan as the run of TEST_COMMIT, the only commit it will accept."""
     previous = os.environ.get("GITHUB_SHA")
     os.environ["GITHUB_SHA"] = TEST_COMMIT
+    args = ["--execute", "--expect-sha256", bootstrap.plan_sha256(bootstrap.build_plan(rotate)),
+            "--expect-commit", TEST_COMMIT]
+    if rotate:
+        args.append("--rotate-db-password")
     try:
-        return run(fake, "--execute", "--expect-sha256", bootstrap.plan_sha256(bootstrap.build_plan()),
-                   "--expect-commit", TEST_COMMIT)
+        return run(fake, *args)
     finally:
         if previous is None:
             os.environ.pop("GITHUB_SHA", None)
@@ -390,10 +463,10 @@ class Revoke(unittest.TestCase):
         fake = FakeCloud()
         original = fake._write
 
-        def stubborn(argv):
+        def stubborn(argv, stdin=None):
             if "set-iam-policy" in argv:
                 return 0, "", ""  # claims success and changes nothing
-            return original(argv)
+            return original(argv, stdin)
 
         fake._write = stubborn
         rc, _, err = run(fake, "--revoke-only")
@@ -409,12 +482,12 @@ class Revoke(unittest.TestCase):
         backend = fake
         reads = {"policy": 0}
 
-        def first_read_ok_then_fail(kind, argv):
+        def first_read_ok_then_fail(kind, argv, stdin=None):
             if kind == "read" and "get-iam-policy" in argv:
                 reads["policy"] += 1
                 if reads["policy"] >= 2:
                     return 1, "", "ERROR: (gcloud) transient failure"
-            return backend(kind, argv)
+            return backend(kind, argv, stdin)
 
         rc, _, err = run(first_read_ok_then_fail, "--revoke-only")
         self.assertEqual(rc, 1)
@@ -474,7 +547,7 @@ class TerraformAgreesWithTheBootstrap(unittest.TestCase):
         self.assertNotRegex(text, r'resource\s+"google_secret_manager_secret"\s')
         self.assertNotRegex(text, r'resource\s+"google_secret_manager_secret_iam')
 
-    def test_terraform_reads_only_the_three_secrets_it_writes(self):
+    def test_terraform_reads_only_the_two_secrets_it_writes(self):
         text = self.tf("secrets.tf")
         for name in bootstrap.TF_MANAGED_SECRETS:
             self.assertIn(f'"${{local.secret_prefix}}{name}"', text)
@@ -485,7 +558,7 @@ class TerraformAgreesWithTheBootstrap(unittest.TestCase):
         resources = SCHEMA["resources"]
         self.assertIn("invoker_iam_disabled", resources["google_cloud_run_v2_service"])
         self.assertIn("secret_data_wo_version", resources["google_secret_manager_secret_version"])
-        self.assertIn("password_wo_version", resources["google_sql_user"])
+        self.assertIn("settings.deletion_protection_enabled", resources["google_sql_database_instance"])
         self.assertIn("settings.edition", resources["google_sql_database_instance"])
         self.assertIn("settings.ip_configuration.ssl_mode", resources["google_sql_database_instance"])
         self.assertIn("deletion_protection", resources["google_sql_database_instance"])
@@ -567,6 +640,147 @@ class HostingSiteCreation(unittest.TestCase):
         run_fb, _ = self.fake(set(), create_rc=1)
         with self.assertRaises(RuntimeError):
             mod.ensure("thebushido-co", run_fb)
+
+
+class DatabasePasswordSequence(unittest.TestCase):
+    """The bootstrap creates the han user and seeds database-url with its password.
+
+    These run the real sequence against the fake, which models the user, the versions and the
+    labels. The password is checked as it is handed to gcloud (flags file and stdin), never
+    as text in an argument, a plan, an output or an artifact.
+    """
+
+    def setUp(self):
+        self.fake = FakeCloud()
+        self.rc, self.out, self.err = execute(self.fake)
+        self.assertEqual(self.rc, 0, self.err)
+
+    def test_a_fresh_run_creates_the_user_and_seeds_database_url_with_its_password(self):
+        self.assertIn("han", self.fake.db_users)
+        self.assertIn("han_team", self.fake.databases)
+        self.assertEqual(self.fake.enabled_password(bootstrap.DB_SECRET), self.fake.db_users["han"])
+        self.assertEqual(self.fake.labels[bootstrap.DB_SECRET][bootstrap.PW_LABEL], bootstrap.PW_READY)
+        self.assertTrue(any(a[1:4] == ["sql", "users", "create"] for a in self.fake.argv_seen))
+
+    def test_the_password_never_appears_in_argv_plan_or_output(self):
+        password = self.fake.db_users["han"]
+        argv_text = "\n".join(" ".join(a) for a in self.fake.argv_seen)
+        plan_text = "\n".join(bootstrap.build_plan(False) + bootstrap.build_plan(True))
+        for label, text in (("argv", argv_text), ("plan", plan_text), ("stdout", self.out), ("stderr", self.err)):
+            self.assertNotIn(password, text, label)
+            self.assertNotIn("postgres://", text, label)
+            self.assertNotIn("--password", text.replace("--password-policy", ""), label)
+
+    def test_the_password_reaches_gcloud_only_through_a_private_flags_file_and_stdin(self):
+        self.assertEqual(len(self.fake.flag_files), 1)
+        entry = self.fake.flag_files[0]
+        self.assertEqual(entry["mode"], 0o600)
+        self.assertEqual(entry["password"], self.fake.db_users["han"])
+        self.assertTrue(any(p.startswith("postgres://han:") for p in self.fake.stdin_payloads))
+        self.assertFalse(any(entry["password"] in " ".join(a) for a in self.fake.argv_seen))
+
+    def test_the_flags_file_and_its_directory_are_removed_after_the_call(self):
+        entry = self.fake.flag_files[0]
+        self.assertFalse(Path(entry["path"]).exists())
+        self.assertFalse(Path(entry["path"]).parent.exists())
+
+    def test_the_database_is_created_before_the_user_and_the_secret(self):
+        order = [a[1:4] for a in self.fake.argv_seen if a[1] in ("sql", "secrets")]
+        db = order.index(["sql", "databases", "create"])
+        user = order.index(["sql", "users", "create"])
+        version = order.index(["secrets", "versions", "add"])
+        self.assertLess(db, user)
+        self.assertLess(user, version)
+
+    def test_a_rerun_changes_nothing_when_user_version_and_label_agree(self):
+        users = dict(self.fake.db_users)
+        versions = len(self.fake.versions[bootstrap.DB_SECRET])
+        flag_files = len(self.fake.flag_files)
+        rc, _, err = execute(self.fake)
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(self.fake.db_users, users)
+        self.assertEqual(len(self.fake.versions[bootstrap.DB_SECRET]), versions)
+        self.assertEqual(len(self.fake.flag_files), flag_files)
+
+    def test_rotation_gives_a_new_password_and_the_new_version_matches_it(self):
+        old = self.fake.db_users["han"]
+        rc, _, err = execute(self.fake, rotate=True)
+        self.assertEqual(rc, 0, err)
+        new = self.fake.db_users["han"]
+        self.assertNotEqual(new, old)
+        self.assertEqual(self.fake.enabled_password(bootstrap.DB_SECRET), new)
+        self.assertTrue(any(a[1:4] == ["sql", "users", "set-password"] for a in self.fake.argv_seen))
+
+    def test_rotation_changes_the_plan_so_its_hash_covers_it(self):
+        self.assertNotEqual(bootstrap.plan_sha256(bootstrap.build_plan(False)),
+                            bootstrap.plan_sha256(bootstrap.build_plan(True)))
+
+    def test_a_failed_secret_write_is_repaired_by_the_next_run(self):
+        fake = FakeCloud()
+        fake.fail_write = "versions add"
+        rc, _, _ = execute(fake)
+        self.assertEqual(rc, 1)
+        self.assertIn("han", fake.db_users)  # the user write happened first
+        self.assertEqual(fake.enabled_password(bootstrap.DB_SECRET), None)
+        self.assertEqual(fake.labels[bootstrap.DB_SECRET][bootstrap.PW_LABEL], bootstrap.PW_PENDING)
+        fake.fail_write = None
+        before = len(fake.argv_seen)
+        rc, _, err = execute(fake)
+        self.assertEqual(rc, 0, err)
+        rerun = fake.argv_seen[before:]
+        self.assertTrue(any(a[1:4] == ["sql", "users", "set-password"] for a in rerun))
+        self.assertFalse(any(a[1:4] == ["sql", "users", "create"] for a in rerun))
+        self.assertEqual(fake.enabled_password(bootstrap.DB_SECRET), fake.db_users["han"])
+        self.assertEqual(fake.labels[bootstrap.DB_SECRET][bootstrap.PW_LABEL], bootstrap.PW_READY)
+
+    def test_a_failed_user_create_writes_no_secret_and_the_rerun_creates_the_user(self):
+        fake = FakeCloud()
+        fake.fail_write = "users create"
+        rc, _, _ = execute(fake)
+        self.assertEqual(rc, 1)
+        self.assertEqual(fake.versions.get(bootstrap.DB_SECRET, []), [])
+        self.assertEqual(fake.labels[bootstrap.DB_SECRET][bootstrap.PW_LABEL], bootstrap.PW_PENDING)
+        fake.fail_write = None
+        rc, _, err = execute(fake)
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(fake.enabled_password(bootstrap.DB_SECRET), fake.db_users["han"])
+
+    def test_postcheck_refuses_a_secret_that_is_not_marked_ready(self):
+        self.fake.labels[bootstrap.DB_SECRET][bootstrap.PW_LABEL] = bootstrap.PW_PENDING
+        with self.assertRaises(bootstrap.StepError) as ctx:
+            bootstrap.database_postcheck(bootstrap.Runner(execute=True, backend=self.fake))
+        self.assertIn("not marked", str(ctx.exception))
+
+    def test_postcheck_refuses_a_missing_user(self):
+        del self.fake.db_users["han"]
+        with self.assertRaises(bootstrap.StepError) as ctx:
+            bootstrap.database_postcheck(bootstrap.Runner(execute=True, backend=self.fake))
+        self.assertIn("user han is missing", str(ctx.exception))
+
+    def test_the_plan_has_the_password_destination_and_no_value(self):
+        text = "\n".join(bootstrap.build_plan(False))
+        self.assertIn("never in argv", text)
+        self.assertIn(bootstrap.DB_SECRET, text)
+        self.assertNotIn("postgres://", text)
+
+    def test_a_gcloud_error_that_echoes_the_password_is_not_surfaced(self):
+        fake = FakeCloud()
+        original = fake._write
+        seen: list[str] = []
+
+        def echo(argv, stdin=None):
+            if argv[1:3] == ["sql", "users"] and "create" in argv:
+                flags = next(a.split("=", 1)[1] for a in argv if a.startswith("--flags-file="))
+                seen.append(json.loads(Path(flags).read_text(encoding="utf-8"))["--password"])
+                return 1, "", f"ERROR: could not set {seen[-1]}"
+            return original(argv, stdin)
+
+        fake._write = echo
+        rc, out, err = execute(fake)
+        self.assertEqual(rc, 1)
+        self.assertEqual(len(seen), 1)
+        self.assertNotIn(seen[0], out + err)
+        self.assertNotIn(seen[0], "\n".join(" ".join(a) for a in fake.argv_seen))
 
 
 if __name__ == "__main__":

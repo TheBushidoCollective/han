@@ -66,27 +66,35 @@ Passes only when this revision logged "Connected to PostgreSQL", "Migrations
 complete" and "LISTEN/NOTIFY triggers created", and logged no degraded-mode or
 migration failure. Lines from other revisions do not count.
 
-## 5. Recovering a database password mismatch
+## 5. Database password: the bootstrap owns it, and recovery is a reviewed rerun
 
-The SQL user and the `han-server-database-url` secret take one password,
-generated per apply and tied to `var.db_credential_version`. A failed apply can
-leave one of them behind. To recover:
+The `han` database user and the `database-url` secret take one password. Only the
+bootstrap writes either, so Terraform holds no database or user permission and no
+password variable. The bootstrap sets the password and then adds the matching
+`database-url` version, in that order, and marks the secret `ready` only when both are
+done. The password is generated in the run, reaches gcloud only through a 0600 flags file
+(for the user) and stdin (for the secret), and is never in an argument, the plan, a log or
+an artifact.
 
-1. Confirm which side is stale: the apply log shows which resource failed.
-2. Bump `db_credential_version` by one, in a PR. Merge it through `han-infra`.
-3. Read the saved plan's action for `google_secret_manager_secret_version.database_url`
-   and `google_sql_user.han`. Both must be `update`. If either is `replace`, the
-   plan guard refuses it. Then a reviewed `DESTROY_ALLOWLIST` entry for that
-   exact address is needed, added in a PR and reviewed before merge.
-4. The apply rewrites the SQL user and the secret version together.
-5. Redeploy `han-server` so the new revision reads the new secret.
+A failed run is repaired by running the bootstrap again, with no change to the code:
 
-Do not edit the secret or the user by hand. Both are managed by Terraform.
+1. Run the plan and read it. A normal rerun changes nothing when the user exists, an enabled
+   `database-url` version exists and the secret is marked `ready`. Otherwise the plan runs the
+   sequence again, with a new password, so the user and the newest enabled version match.
+2. Dispatch Han Bootstrap as section 8 describes, with `expected_sha256` from that plan.
+3. To rotate the password on purpose, dispatch with `rotate_db_password` set to true, and
+   compute the hash with `--rotate-db-password`. The rotation changes the plan, so the hash
+   covers it. Rotation changes the password the database accepts for new connections, so a
+   running revision that opens new connections after the rotation fails them until it is
+   replaced. Rotate only with a deploy ready to follow: `han-server` reads
+   `database-url:latest`, so the next revision uses the new password.
 
-**Unverified (artifact 7 in section 8):** whether the provider reports a change to
-`secret_data_wo_version` or `password_wo_version` as an in-place update or a
-replacement. The installed schema does not say. The first plan that bumps the
-version shows it. Until then, step 3 is the check, not an assumption.
+Do not edit the secret or the user by hand. The bootstrap is the only writer.
+
+**Unverified (artifact 20):** that `gcloud secrets describe` returns the `labels` field this
+run reads, and that `sql users create` and `set-password` accept `password` in a flags file
+exactly as the captured help says. The first run settles both. If a field is missing, the
+run treats the secret as not ready and writes it again, so a wrong guess fails safe.
 
 ## 6. Custom domains (after slice K)
 
@@ -142,24 +150,27 @@ organisation 949208237676). This PR stays a draft until the blockers in
 
 | Identity | Environment | Project grants | Resource grants |
 |---|---|---|---|
-| `han-tf-plan` | none (PRs) | `hanTfPlanGlobal`, `hanTfPlanSql` (instance condition) | `hanTfPlanSecrets` on the three Terraform secrets, `run.viewer` on `han-server`, `artifactregistry.reader` on `han`, `storage.objectViewer` on the state bucket |
-| `han-tf-apply` | `han-infra-apply` | `hanTfPlanGlobal`, `hanTfApplySql` (instance condition) | `hanTfApplySecrets` on `database-url` and `jwt-secret`, `hanTfApplyKekVersions` on `master-kek` (no destroy), `run.admin` on `han-server`, `artifactregistry.reader` on `han` (read only, for the data source), `storage.objectAdmin` on the state bucket |
+| `han-tf-plan` | none (PRs) | `hanTfPlanGlobal`, `hanTfPlanSql` (instance condition) | `hanTfPlanSecrets` on `jwt-secret` and `master-kek`, `run.viewer` on `han-server`, `artifactregistry.reader` on `han`, `storage.objectViewer` on the state bucket |
+| `han-tf-apply` | `han-infra-apply` | `hanTfPlanGlobal`, `hanTfApplySql` (instance condition, `instances.get` and `instances.update` only) | `hanTfApplySecrets` on `jwt-secret`, `hanTfApplyKekVersions` on `master-kek` (no destroy), `run.admin` on `han-server`, `artifactregistry.reader` on `han` (read only), `storage.objectAdmin` on the state bucket |
 | `han-deployer` | `han-production` | none | `run.developer` on `han-server` (Terraform), `artifactregistry.writer` on `han`, `secretmanager.viewer` on all six secrets, `logging.viewAccessor` on the `startup` view, `iam.serviceAccountUser` on `han-server-run` |
 | `han-hosting-deployer` | `han-hosting` | `firebasehosting.admin`, `serviceusage.serviceUsageConsumer` (accepted risk 1). `firebase.viewer` is not granted (artifact 15) | `run.viewer` on `han-server` (Terraform) |
-| `han-server-run` | none | `cloudsql.client`, `logging.logWriter` (both unconditioned, see artifact 6) | `secretmanager.secretAccessor` on all six secrets |
+| `han-server-run` | none | `cloudsql.client` on `han-pg` only (instance condition, artifact 6), no logging role | `secretmanager.secretAccessor` on all six secrets |
 
 - **Created by the bootstrap, not by Terraform:** the five identities, the `han-github`
   pool and provider, the state bucket, the six secrets (empty), the `han-pg` instance
-  (same settings as Terraform), the `han-server` Cloud Run shell (private), the
-  `han` Artifact Registry repository, the log bucket, sink and view.
+  (same settings as Terraform), the `han_team` database, the `han` database user, the
+  `han-server` Cloud Run shell (private), the `han` Artifact Registry repository, the log
+  bucket, sink and view. The bootstrap also seeds `database-url` with the user's password
+  (section 5), so no database or user permission is granted to any Han identity.
 - **Hosting sites** are created by the Hosting deploy job, before its deploy, by
   `deploy/firebase/scripts/ensure_hosting_sites.py`. That job already holds the
   Hosting identity and the pinned CLI. The bootstrap does not run Firebase.
 - **Terraform** (`deploy/firebase/terraform`) imports the `han-pg` instance and the
   `han-server` service, reads the secrets and identities as data, writes versions of
-  the three secrets it manages, and manages the `han-pg` database and user and the
-  service's invoker setting and IAM. It creates no secret, no secret IAM, no identity,
-  no project IAM, no project API, no Firebase project and no Hosting site.
+  `jwt-secret` and `master-kek`, and manages the service's invoker setting and IAM. It
+  forgets the database, the user and the `database-url` version by `removed` blocks, without
+  destroying them. It creates no secret, no secret IAM, no identity, no project IAM, no
+  project API, no Firebase project and no Hosting site.
 - **The bootstrap** (`bootstrap/bootstrap.py`) has three modes:
   - Default: print the plan and its `plan-sha256`. It reads nothing and calls no
     cloud API. The hash covers repository-relative paths, the code, and the role and condition
@@ -243,9 +254,9 @@ the identity that would need them is not yet able to sign in.
 
 ### Tests, and what they prove
 
-Run with `python3 -m unittest discover -s deploy/firebase/test -p 'test_*.py'`. 168 tests, all passing:
+Run with `python3 -m unittest discover -s deploy/firebase/test -p 'test_*.py'`. 187 tests, all passing:
 
-- `test_bootstrap.py` (50): plan mode reads and writes nothing, and is deterministic. A
+- `test_bootstrap.py` (64): plan mode reads and writes nothing, and is deterministic. A
   different hash, or execute without a hash, refuses before any call. A first run creates
   every object and leaves no sign-in member, while other members of the bootstrap policy
   are kept. The logging view filter uses `resource.type` only, the log bucket uses
@@ -259,7 +270,7 @@ Run with `python3 -m unittest discover -s deploy/firebase/test -p 'test_*.py'`. 
   the bootstrap passes is one the installed gcloud 580.0.0 accepts (`gcloud-flags.json`).
   The Terraform schema has every attribute used (`tf-schema.json`). The infra workflow's
   bucket name matches the bootstrap's.
-- `test_isolation.py` (18): Terraform grants are the reviewed set, no owner, editor or
+- `test_isolation.py` (23): Terraform grants are the reviewed set, no owner, editor or
   viewer role is used, no Han role can set or create secret IAM, and the shared pool is
   referenced only by the bootstrap workflow. The least-privilege checks: no `firebase.viewer`,
   the apply identity reads the registry and holds no `repoAdmin`, Terraform manages no
@@ -310,19 +321,22 @@ Every item here is a fact the repository cannot establish. Each names who suppli
    Jason makes: `iam.serviceAccountUser` on `han-server-run` lets the holder run a
    workload as the runtime account, which reads all six secrets. Supplier: the first apply,
    and Jason's decision.
-5. **Cloud SQL database and user conditions.** A condition on `resource.name` for
-   `cloudsql.databases.*` and `cloudsql.users.*` is not verified, and those resources are
-   not scopable the way instances are. The apply role therefore fails closed on
-   `google_sql_database.han_team` and `google_sql_user.han` until a decision is made.
-   Options for Jason: accept the project-wide `cloudsql.databases` and `cloudsql.users`
-   permissions, or create those two resources by a different reviewed path.
-6. **Runtime Cloud SQL and logging scope.** `cloudsql.client` and `logging.logWriter` on
-   `han-server-run` are project-level and unconditioned. A Cloud SQL condition on an
-   instance is not verified, so the grant reaches every instance in the project. Supplier:
-   Jason's decision after a condition is verified, or accept it and say so in this PR.
-7. **Write-only read-back and replacement.** Whether the provider reads a write-only value
-   back during refresh, and whether bumping `db_credential_version` is an update or a
-   replacement. Supplier: the first plan. Section 5 step 3 depends on it.
+5. **Cloud SQL database and user permissions: closed by design.** No Han identity holds
+   any database or user permission. The bootstrap creates `han_team` and the `han` user under
+   its own time-limited grant, so the condition question no longer applies. Supplier: none
+   for this PR. Google documents no Cloud SQL database or user resource type a condition can
+   match, so the bootstrap route is the only one that avoids a standing grant.
+6. **Runtime Cloud SQL scope: narrowed, not yet proven.** `cloudsql.client` on `han-server-run`
+   is bound with the instance condition, `resource.type == 'sqladmin.googleapis.com/Instance'`
+   and `resource.name` for `han-pg`, the form Google's Cloud SQL page documents. `logging.logWriter`
+   is removed: the server writes JSON to stdout, and it has no Logging API client (checked in
+   `packages/han-rs/crates/han-server`). Supplier: the first deploy. Its `check_startup`
+   requires "Connected to PostgreSQL" through the `startup` view, so a missing grant fails the
+   deploy rather than passing it.
+7. **Write-only read-back and replacement, narrowed.** The question is now limited to
+   `jwt-secret` and `master-kek`. The database password is no longer in Terraform. Whether
+   the provider reads a write-only value back during refresh, and whether bumping the
+   version is an update or a replacement. Supplier: the first plan.
 8. **Terraform's GCS backend under the plan identity.** Whether `storage.objectViewer` on
    the state bucket is enough for `init`, or whether the backend also needs a bucket read.
    Supplier: the first plan.
@@ -354,20 +368,24 @@ Every item here is a fact the repository cannot establish. Each names who suppli
     permission, add the one permission it names by a reviewed PR, and do not restore the role.
 16. **Apply reads the registry with `artifactregistry.reader`.** The repository data source
     needs `repositories.get`, which the reader role has. Supplier: the first plan.
-17. **Exact-match SQL condition.** `resource.name == 'projects/thebushido-co/instances/han-pg'`
-    replaces the prefix match. Whether Cloud SQL evaluates that name in an IAM condition is
-    unverified (artifacts 5 and 6). Supplier: the first plan and the first apply.
-18. **First apply and the database password.** The secret version is written only after the
-    SQL user is created, in the same apply and from the same ephemeral value. A graph test
-    checks that order. So a failed user create (artifact 5) writes no secret, and the first
-    apply cannot leave a secret the database lacks. One window remains. If the user is created
-    and the secret write then fails, the next apply writes a new password to the secret while
-    the user keeps the old one. Recovery is section 5: bump `db_credential_version`, which
-    rewrites both in one apply. Supplier: the first plan, which shows whether that rewrite is
-    an update or a replacement (artifact 7).
+17. **Exact-match SQL condition with its resource type.** The condition now names
+    `sqladmin.googleapis.com/Instance` and the exact `han-pg` resource name. Whether Cloud SQL
+    evaluates it as written for the runtime connection and for the apply's instance calls
+    is unverified. Supplier: the first plan and the first deploy. A refusal fails closed.
+18. **First apply and the database password: closed by ordering and a state label.** The
+    bootstrap sets the password, then adds the matching version, and marks the secret `ready`
+    only after both. A failed run is repaired by a rerun, and a rerun changes nothing when the
+    user, an enabled version and the `ready` label all agree (section 5). The residual is a
+    rotation that stops between its steps, which the next run repairs. Supplier: the first run
+    shows whether the labels read back as written (artifact 20).
 19. **Cloud SQL deletion protection.** `settings.deletion_protection_enabled = true` is set in
     Terraform, matching the bootstrap's `--deletion-protection`. Supplier: the first plan after
     import must show no change to it.
+20. **gcloud behaviour the password sequence relies on.** `gcloud secrets describe` returns a
+    `labels` field, and `sql users create` and `set-password` accept `password` in a
+    `--flags-file`. Both are in the installed help or the API, and neither was run against
+    the live project. Supplier: the first run. A missing label reads as not ready, so the run
+    writes the password again, which is the safe direction.
 
 ### Residual risk, accepted or open
 
@@ -380,8 +398,9 @@ Every item here is a fact the repository cannot establish. Each names who suppli
    It outranks anything Han builds. **Owner: the website team.**
 4. **The plan identity is reachable from any ref of the named workflows.** Accepted by
    Jason. Its grants are read-only, and it reads state.
-5. **Secret values are never in Terraform state.** The three Terraform secrets take
-   write-only values. The other three take values by an operator, out of band.
+5. **Secret values are never in Terraform state.** Terraform writes two secrets, `jwt-secret`
+   and `master-kek`, both with write-only values. The bootstrap writes `database-url` from
+   stdin. The other three take values by an operator, out of band.
 
 ### Merge order (recorded, not a blocker)
 

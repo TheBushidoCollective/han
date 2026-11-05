@@ -32,12 +32,6 @@ variable "db_tier" {
   default     = "db-f1-micro"
 }
 
-variable "db_credential_version" {
-  description = "Bump together to regenerate the database password in both the SQL user and the database-url secret. See PATH.md section 5."
-  type        = number
-  default     = 1
-}
-
 variable "placeholder_image" {
   description = "Image the Cloud Run service shell was created with. The deploy workflow replaces it by digest, and Terraform ignores template changes."
   type        = string
