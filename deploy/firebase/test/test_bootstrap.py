@@ -783,5 +783,43 @@ class DatabasePasswordSequence(unittest.TestCase):
         self.assertNotIn(seen[0], "\n".join(" ".join(a) for a in fake.argv_seen))
 
 
+class CloudSdkFileLoggingIsOff(unittest.TestCase):
+    """gcloud's per-run debug log records argument values, including values read from a flags
+    file. The bootstrap runs every gcloud call with that log turned off. The locally measured
+    effect is in real_backend's comment and in PATH.md section 5."""
+
+    def test_real_backend_sets_the_variable_and_passes_stdin(self):
+        import subprocess
+        from unittest import mock
+
+        seen: dict = {}
+
+        def fake_run(argv, **kwargs):
+            seen.update(kwargs)
+            seen["argv"] = argv
+            return subprocess.CompletedProcess(argv, 0, "", "")
+
+        with mock.patch.object(bootstrap.subprocess, "run", side_effect=fake_run):
+            bootstrap.real_backend("write", ["gcloud", "version"], "payload")
+        self.assertEqual(seen["env"]["CLOUDSDK_CORE_DISABLE_FILE_LOGGING"], "1")
+        self.assertEqual(seen["input"], "payload")
+        self.assertEqual(seen["argv"], ["gcloud", "version"])
+
+    def test_the_variable_is_set_even_when_the_caller_has_none(self):
+        import subprocess
+        from unittest import mock
+
+        seen: dict = {}
+
+        def fake_run(argv, **kwargs):
+            seen.update(kwargs)
+            return subprocess.CompletedProcess(argv, 0, "", "")
+
+        with mock.patch.dict(os.environ, {}, clear=False), mock.patch.object(bootstrap.subprocess, "run", side_effect=fake_run):
+            os.environ.pop("CLOUDSDK_CORE_DISABLE_FILE_LOGGING", None)
+            bootstrap.real_backend("read", ["gcloud", "version"])
+        self.assertEqual(seen["env"]["CLOUDSDK_CORE_DISABLE_FILE_LOGGING"], "1")
+
+
 if __name__ == "__main__":
     unittest.main()

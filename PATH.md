@@ -73,8 +73,11 @@ bootstrap writes either, so Terraform holds no database or user permission and n
 password variable. The bootstrap sets the password and then adds the matching
 `database-url` version, in that order, and marks the secret `ready` only when both are
 done. The password is generated in the run, reaches gcloud only through a 0600 flags file
-(for the user) and stdin (for the secret), and is never in an argument, the plan, a log or
-an artifact.
+(for the user) and stdin (for the secret), and is never in an argument, the plan, the run
+output or an artifact. gcloud's own per-run debug log is turned off for these calls. Measured
+locally on the installed gcloud 580.0.0 with a sentinel value: without the variable, a run
+wrote a log file and the flags-file value was in it; with the variable, the run wrote no
+log file. Whether Cloud SQL's audit log records the password is unverified (artifact 20).
 
 A failed run is repaired by running the bootstrap again, with no change to the code:
 
@@ -168,8 +171,8 @@ organisation 949208237676). This PR stays a draft until the blockers in
 - **Terraform** (`deploy/firebase/terraform`) imports the `han-pg` instance and the
   `han-server` service, reads the secrets and identities as data, writes versions of
   `jwt-secret` and `master-kek`, and manages the service's invoker setting and IAM. It
-  forgets the database, the user and the `database-url` version by `removed` blocks, without
-  destroying them. It creates no secret, no secret IAM, no identity, no project IAM, no
+  declares no database, user or database-url version. Nothing has been applied, so no state
+  holds any of them. It creates no secret, no secret IAM, no identity, no project IAM, no
   project API, no Firebase project and no Hosting site.
 - **The bootstrap** (`bootstrap/bootstrap.py`) has three modes:
   - Default: print the plan and its `plan-sha256`. It reads nothing and calls no
@@ -262,8 +265,8 @@ Run with `python3 -m unittest discover -s deploy/firebase/test -p 'test_*.py'`. 
   are kept. The logging view filter uses `resource.type` only, the log bucket uses
   `--retention-days`, the sink writes only to the custom bucket, and the Cloud Run shell
   is private. The SQL instance matches Terraform's edition, version, SSL mode and
-  deletion protection. Secret grants are per secret with no condition, and only the three
-  Terraform secrets get the custom roles. A second run creates nothing. A permission error
+  deletion protection. Secret grants are per secret with no condition, and only the two
+  Terraform secrets, `jwt-secret` and `master-kek`, get the custom roles. A second run creates nothing. A permission error
   is never treated as missing, and an unexpected describe error creates nothing. Revoke
   runs after a failed step, after a failed verification, and after a user key is found. It
   fails when the policy cannot be read or the member survives the write. Every gcloud flag
@@ -290,9 +293,9 @@ Run with `python3 -m unittest discover -s deploy/firebase/test -p 'test_*.py'`. 
   records `has_changes=true`, 1 fails. The bootstrap plan from a second checkout path hashes
   the same, a changed role or condition changes the hash, no plan line names an absolute
   path, and a run from another commit is refused before any cloud call.
-  Terraform's own dependency graph puts the secret version after the SQL user, which is
-  checked offline. The instance sets Cloud SQL's own deletion protection, and the provider
-  schema has that attribute under `settings`.
+  Terraform's own dependency graph has no node for the database, the user or the
+  database-url version, which is checked offline. The instance sets Cloud SQL's own
+  deletion protection, and the provider schema has that attribute under `settings`.
 
 The fault-injection proof, run once against the pre-fix workflow and script: a plan that
 exits 2 ended its step with exit 2 and wrote no `has_changes`, so the apply job could not
@@ -368,10 +371,17 @@ Every item here is a fact the repository cannot establish. Each names who suppli
     permission, add the one permission it names by a reviewed PR, and do not restore the role.
 16. **Apply reads the registry with `artifactregistry.reader`.** The repository data source
     needs `repositories.get`, which the reader role has. Supplier: the first plan.
-17. **Exact-match SQL condition with its resource type.** The condition now names
-    `sqladmin.googleapis.com/Instance` and the exact `han-pg` resource name. Whether Cloud SQL
-    evaluates it as written for the runtime connection and for the apply's instance calls
-    is unverified. Supplier: the first plan and the first deploy. A refusal fails closed.
+17. **Exact-match SQL condition, and the instance-update path.** The condition names
+    `sqladmin.googleapis.com/Instance` and the exact `han-pg` resource name. Verified by
+    nothing yet. Two paths are unproven:
+    - The runtime connection and the plan's refresh (`instances.get`). The first plan and the
+      first deploy settle these.
+    - The apply's instance update (`instances.update`). The bootstrap creates the instance with
+      the settings Terraform declares, so the first apply most likely makes no change and never
+      calls it. After a real update, the provider waits on `operations.get`, which is checked
+      as `cloudsql.instances.get`. Whether that check presents the Instance type to the
+      condition is not documented, so an update may apply and still fail the run. This stays
+      unproven until the first real instance change. A refusal fails closed.
 18. **First apply and the database password: closed by ordering and a state label.** The
     bootstrap sets the password, then adds the matching version, and marks the secret `ready`
     only after both. A failed run is repaired by a rerun, and a rerun changes nothing when the
@@ -381,11 +391,17 @@ Every item here is a fact the repository cannot establish. Each names who suppli
 19. **Cloud SQL deletion protection.** `settings.deletion_protection_enabled = true` is set in
     Terraform, matching the bootstrap's `--deletion-protection`. Supplier: the first plan after
     import must show no change to it.
-20. **gcloud behaviour the password sequence relies on.** `gcloud secrets describe` returns a
-    `labels` field, and `sql users create` and `set-password` accept `password` in a
-    `--flags-file`. Both are in the installed help or the API, and neither was run against
-    the live project. Supplier: the first run. A missing label reads as not ready, so the run
-    writes the password again, which is the safe direction.
+20. **gcloud behaviour, and the audit log, that the password sequence relies on.**
+    - `gcloud secrets describe` returns a `labels` field, and `sql users create` and
+      `set-password` accept `password` in a `--flags-file`. Both are in the installed help or
+      the API. Neither has run against the live project. A missing label reads as not ready, so
+      the run writes the password again, which is the safe direction.
+    - Cloud SQL's Admin Activity audit log records `users.insert` and `users.update`. Nothing in
+      this repository shows that Google redacts the password field of those entries. Anyone with
+      project-wide log access in `thebushido-co` could read them. The old Terraform route called
+      the same API, so this exposure is not new. Unverified, and not tested here. Supplier: a
+      project log reader, who can check the entries after the first run.
+    - Supplier for the first run: confirm the labels read back as written.
 
 ### Residual risk, accepted or open
 

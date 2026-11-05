@@ -8,23 +8,6 @@ import {
   id = "projects/${var.project_id}/instances/han-pg"
 }
 
-# Forget, do not destroy. These were once Terraform resources. Removing the blocks
-# drops them from state without a delete, so the database and user survive, and a
-# plan shows no deletion. Their password is never in state (write-only).
-removed {
-  from = google_sql_database.han_team
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = google_sql_user.han
-  lifecycle {
-    destroy = false
-  }
-}
-
 # Postgres 16 defaults to ENTERPRISE_PLUS, which rejects db-f1-micro, so the
 # edition is set explicitly. The bootstrap passes the same edition to gcloud.
 resource "google_sql_database_instance" "han" {

@@ -531,7 +531,9 @@ def provision_database(r: Runner, rotate: bool) -> None:
 
     The password is generated here and reaches gcloud only through a 0600 flags file
     (for the user) and stdin (for the secret). It is never in an argument, the plan, the
-    log or an artifact. Order, so a failure at any step is repaired by a rerun:
+    run output or an artifact. gcloud's own debug log is off for these calls (real_backend).
+    Whether Cloud SQL's audit log records the password is unverified (PATH.md artifact 20).
+    Order, so a failure at any step is repaired by a rerun:
       1. label database-url pending,
       2. create the user, or set its password if it exists,
       3. add a database-url version holding the matching DSN,
@@ -684,7 +686,12 @@ def run_execute(backend: Backend, rotate: bool = False) -> None:
 
 def real_backend(kind: str, argv: list[str], stdin: str | None = None) -> tuple[int, str, str]:
     # Run from the repository root, so the repository-relative paths in the plan resolve.
-    proc = subprocess.run(argv, input=stdin, capture_output=True, text=True, timeout=900, cwd=ROOT)
+    # gcloud writes a debug log for each run, and that log records argument values, including
+    # values read from --flags-file. The database password is one of those, so the log is off.
+    # Checked locally: with this variable a run created no log file, and a flags-file value
+    # was not found in any log. Without it, one file was created and held the value.
+    env = {**os.environ, "CLOUDSDK_CORE_DISABLE_FILE_LOGGING": "1"}
+    proc = subprocess.run(argv, input=stdin, capture_output=True, text=True, timeout=900, cwd=ROOT, env=env)
     return proc.returncode, proc.stdout, proc.stderr
 
 

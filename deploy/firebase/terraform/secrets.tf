@@ -33,15 +33,6 @@ data "google_secret_manager_secret" "master_kek" {
   secret_id = "${local.secret_prefix}master-kek"
 }
 
-# Forget, do not destroy. The database-url version was once a Terraform resource. The
-# bootstrap now owns it, so Terraform drops it from state without a delete.
-removed {
-  from = google_secret_manager_secret_version.database_url
-  lifecycle {
-    destroy = false
-  }
-}
-
 resource "google_secret_manager_secret_version" "jwt_secret" {
   secret                 = data.google_secret_manager_secret.jwt_secret.id
   secret_data_wo         = ephemeral.random_password.jwt.result

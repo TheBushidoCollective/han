@@ -157,7 +157,7 @@ jobs:
         env:
           # Each secret must already have an enabled version. The deploy never
           # writes a placeholder. The deployer reads version metadata through
-          # roles/secretmanager.viewer, granted per secret in iam.tf.
+          # roles/secretmanager.viewer, granted per secret by bootstrap.py (section 12).
           SECRETS: han-server-database-url han-server-jwt-secret han-server-master-kek han-server-github-client-secret han-server-stripe-secret-key han-server-stripe-webhook-secret
         run: |
           set -euo pipefail
@@ -217,7 +217,7 @@ jobs:
         run: |
           set -euo pipefail
           for _ in $(seq 1 18); do
-            # Reads only the constrained view (bootstrap.py step 9): a bucket that
+            # Reads only the constrained view (bootstrap.py step 10): a bucket that
             # receives han-server logs only, through a view the deployer can view.
             gcloud logging read \
               "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"$SERVICE\" AND resource.labels.revision_name=\"$LIVE_REVISION\"" \

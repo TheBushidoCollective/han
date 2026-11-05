@@ -206,9 +206,10 @@ def terraform_graph() -> str:
 
 
 @unittest.skipUnless(shutil.which("terraform"), "terraform is not installed")
-class TerraformForgetsTheDatabaseResources(unittest.TestCase):
-    """The database, the user and database-url are the bootstrap's, not Terraform's. The graph is
-    the evidence: none of those is a node, so Terraform cannot plan, change or destroy them."""
+class TerraformHasNoDatabaseResources(unittest.TestCase):
+    """Terraform declares no database, user or database-url version. The graph is the evidence:
+    none of those is a node. Nothing was ever applied, so no state held them, and this test
+    does not claim anything about a state that did."""
 
     @classmethod
     def setUpClass(cls):

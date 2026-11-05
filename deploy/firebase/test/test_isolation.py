@@ -236,9 +236,7 @@ class LeastPrivilege(unittest.TestCase):
         for forbidden in (r'resource\s+"google_sql_user"', r'resource\s+"google_sql_database"',
                           r'ephemeral\s+"random_password"\s+"db"', r'variable\s+"db_credential_version"'):
             self.assertNotRegex(text, forbidden, forbidden)
-        for address in ("google_sql_database.han_team", "google_sql_user.han",
-                        "google_secret_manager_secret_version.database_url"):
-            self.assertRegex(text, rf"removed\s*\{{\s*from\s*=\s*{re.escape(address)}", address)
+        self.assertNotIn("removed {", text)
 
 
 if __name__ == "__main__":
