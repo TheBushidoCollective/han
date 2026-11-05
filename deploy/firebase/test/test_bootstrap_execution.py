@@ -1,5 +1,7 @@
 """Offline contract tests for per-execution identity; no vendor writes or tokens."""
 import base64
+import contextlib
+import io
 import copy
 import importlib.util
 import json
@@ -94,3 +96,21 @@ class ExecutionContract(unittest.TestCase):
             token, metadata = e.get_assertion(m)
             self.assertEqual(token, assertion)
             self.assertEqual(metadata['run_id'], R)
+
+    def test_readiness_retries_impersonation_without_logging_credentials(self):
+        m = manifest()
+        out = io.StringIO()
+        with mock.patch.object(e, 'check_ci'), mock.patch.object(e, 'get_assertion', return_value=('assertion-secret', {})), \
+             mock.patch.object(e.time, 'time', return_value=e.deadline_timestamp(T) - 3600), \
+             mock.patch.object(e.time, 'monotonic', return_value=0), mock.patch.object(e.time, 'sleep'), \
+             mock.patch.object(e, 'http_json', side_effect=[
+                 {'access_token': 'federated-secret'}, e.Refuse('not ready'),
+                 {'access_token': 'federated-secret'}, {'accessToken': 'owner-secret'},
+             ]) as http, contextlib.redirect_stdout(out):
+            e.wait_for_federation(m)
+        self.assertEqual(http.call_count, 4)
+        self.assertIn('Execution-specific federation is ready', out.getvalue())
+        for secret in ('assertion-secret', 'federated-secret', 'owner-secret'):
+            self.assertNotIn(secret, out.getvalue())
+        self.assertEqual(http.call_args_list[0].args[0], 'https://sts.googleapis.com/v1/token')
+        self.assertIn(':generateAccessToken', http.call_args_list[1].args[0])
