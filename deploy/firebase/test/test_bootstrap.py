@@ -1564,6 +1564,18 @@ class WorkflowIsAnInput(unittest.TestCase):
                   for line in original]
         self.assertNotEqual(bootstrap.plan_sha256(original), bootstrap.plan_sha256(edited))
 
+    def test_execution_contract_is_hashed_into_both_plans(self):
+        path = BOOT_DIR / "execution.py"
+        self.assertIn(path.resolve(), [p.resolve() for p in bootstrap.referenced_files()])
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        altered = hashlib.sha256(path.read_bytes() + b"# changed\n").hexdigest()
+        for rotate in (False, True):
+            plan = bootstrap.build_plan(rotate)
+            line = f"input deploy/firebase/bootstrap/execution.py sha256 {digest}"
+            self.assertIn(line, plan)
+            modified = [item.replace(digest, altered) if item == line else item for item in plan]
+            self.assertNotEqual(bootstrap.plan_sha256(plan), bootstrap.plan_sha256(modified))
+
 
 if __name__ == "__main__":
     unittest.main()
