@@ -375,6 +375,45 @@ function MermaidDiffBlock({ diff }: { diff: MermaidDiff }) {
 	return null;
 }
 
+/**
+ * Heading that adds a change badge when the section changed (only when
+ * showChanges is true)
+ */
+function SectionHeading({
+	level,
+	showChanges,
+	changes,
+	children,
+	...props
+}: React.HTMLAttributes<HTMLHeadingElement> & {
+	level: 2 | 3 | 4;
+	showChanges: boolean;
+	changes: SectionChange[];
+	children?: React.ReactNode;
+}) {
+	const headingText =
+		typeof children === "string"
+			? children
+			: Array.isArray(children)
+				? children.filter((c) => typeof c === "string").join("")
+				: "";
+
+	const badge = showChanges ? getSectionBadge(headingText, changes) : null;
+	const Tag = `h${level}` as const;
+
+	// Use flex layout for proper badge alignment
+	if (badge) {
+		return (
+			<Tag {...props} className="flex items-center gap-3">
+				<span>{children}</span>
+				<SectionBadge type={badge} />
+			</Tag>
+		);
+	}
+
+	return <Tag {...props}>{children}</Tag>;
+}
+
 interface PaperContentProps {
 	content: string;
 	initialSectionChanges: SectionChange[];
@@ -396,43 +435,31 @@ export default function PaperContent({
 	const changes =
 		sectionChanges.length > 0 ? sectionChanges : initialSectionChanges;
 
-	// Create heading components that add badges (only when showChanges is true)
-	const createHeading = (level: 2 | 3 | 4) => {
-		const HeadingComponent = ({
-			children,
-			...props
-		}: React.HTMLAttributes<HTMLHeadingElement> & {
-			children?: React.ReactNode;
-		}) => {
-			const headingText =
-				typeof children === "string"
-					? children
-					: Array.isArray(children)
-						? children.filter((c) => typeof c === "string").join("")
-						: "";
-
-			const badge = showChanges ? getSectionBadge(headingText, changes) : null;
-			const Tag = `h${level}` as const;
-
-			// Use flex layout for proper badge alignment
-			if (badge) {
-				return (
-					<Tag {...props} className="flex items-center gap-3">
-						<span>{children}</span>
-						<SectionBadge type={badge} />
-					</Tag>
-				);
-			}
-
-			return <Tag {...props}>{children}</Tag>;
-		};
-		return HeadingComponent;
-	};
-
 	const markdownComponents: Components = {
-		h2: createHeading(2),
-		h3: createHeading(3),
-		h4: createHeading(4),
+		h2: (props) => (
+			<SectionHeading
+				level={2}
+				showChanges={showChanges}
+				changes={changes}
+				{...props}
+			/>
+		),
+		h3: (props) => (
+			<SectionHeading
+				level={3}
+				showChanges={showChanges}
+				changes={changes}
+				{...props}
+			/>
+		),
+		h4: (props) => (
+			<SectionHeading
+				level={4}
+				showChanges={showChanges}
+				changes={changes}
+				{...props}
+			/>
+		),
 		pre(props) {
 			const { children, ...rest } = props;
 			const child = children as
