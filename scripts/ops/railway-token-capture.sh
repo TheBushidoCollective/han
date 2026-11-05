@@ -47,13 +47,15 @@ esac
 die() { echo "error: $*" >&2; exit 1; }
 
 # Reports, on any non-zero exit after auto-apply may have been disabled, that it
-# is still disabled. It only reports; it never restores.
+# is still disabled. It only reports; it never restores. Exit codes outside
+# 0, 1 and 2 are normalised to 1 so the documented codes hold.
 # shellcheck disable=SC2329  # invoked by the EXIT trap below
 report_on_exit() {
   local rc=$?
   if [ "$rc" -ne 0 ] && [ -f "$STATE_FILE" ]; then
     echo "NOTICE: auto-apply on $WS_NAME may still be DISABLED (prior value recorded in $STATE_FILE)" >&2
   fi
+  if [ "$rc" -ne 0 ] && [ "$rc" -ne 2 ]; then rc=1; fi
   exit "$rc"
 }
 trap report_on_exit EXIT
@@ -65,16 +67,16 @@ tfc_token() {
 
 # Calls the TFC API. The bearer token reaches curl through a process-substituted
 # config file, so it never appears on a command line. A request body, when
-# given, is sent through a pipe on stdin.
+# given, is sent through a pipe on stdin. -f makes HTTP errors fail the call.
 tfc() {
   local method="$1" path="$2" body="${3-}" tok
   tok="$(tfc_token)"
   [ -n "$tok" ] || die "no Terraform Cloud token in $CRED_FILE"
   if [ -n "$body" ]; then
-    printf '%s' "$body" | curl -sS -K <(printf 'header = "Authorization: Bearer %s"\nheader = "Content-Type: application/vnd.api+json"\nheader = "Accept: application/vnd.api+json"\n' "$tok") \
+    printf '%s' "$body" | curl -fsS -K <(printf 'header = "Authorization: Bearer %s"\nheader = "Content-Type: application/vnd.api+json"\nheader = "Accept: application/vnd.api+json"\n' "$tok") \
       -X "$method" --data-binary @- "$TFC_API$path"
   else
-    curl -sS -K <(printf 'header = "Authorization: Bearer %s"\nheader = "Accept: application/vnd.api+json"\n' "$tok") \
+    curl -fsS -K <(printf 'header = "Authorization: Bearer %s"\nheader = "Accept: application/vnd.api+json"\n' "$tok") \
       -X "$method" "$TFC_API$path"
   fi
 }
@@ -83,7 +85,7 @@ tfc() {
 # read the Terraform provider performs. The token travels in the curl config.
 railway_project_ok() {
   local tok="$1" resp
-  resp="$(curl -sS -K <(printf 'header = "Authorization: Bearer %s"\nheader = "Content-Type: application/json"\n' "$tok") \
+  resp="$(curl -fsS -K <(printf 'header = "Authorization: Bearer %s"\nheader = "Content-Type: application/json"\n' "$tok") \
     -X POST "$RAILWAY_API" \
     --data-binary "{\"query\":\"query { project(id: \\\"$RAILWAY_PROJECT_ID\\\") { id name } }\"}")"
   printf '%s' "$resp" | jq -e --arg id "$RAILWAY_PROJECT_ID" \
@@ -114,9 +116,10 @@ var_id() {
 
 # Every run that has not reached a final state. A run in any other state is
 # treated as active, so an unrecognised state blocks the apply rather than passing.
+# policy_checked and policy_override are paused states, so they count as active.
 active_runs() {
   tfc GET "/workspaces/$1/runs?page%5Bsize%5D=20" \
-    | jq -r '.data[] | select(.attributes.status as $s | ["applied","planned_and_finished","errored","canceled","discarded","force_canceled","policy_soft_failed","policy_checked"] | index($s) | not) | .id'
+    | jq -r '.data[] | select(.attributes.status as $s | ["applied","planned_and_finished","errored","canceled","discarded","force_canceled","policy_soft_failed"] | index($s) | not) | .id'
 }
 
 set_auto_apply() {
@@ -185,12 +188,13 @@ printf '%s' "$resp" | jq -e '.data.attributes.sensitive == true and .data.attrib
   || die "variable upload was rejected; auto-apply is left DISABLED"
 echo "RAILWAY_TOKEN variable replaced (value not shown)"
 
-# Clear the clipboard only when it still holds the value that was just accepted.
+# Clear the clipboard only when it still holds the exact value that was just
+# accepted. Otherwise say so, because a token may remain on the clipboard.
 clip_hash="$(printf '%s' "$clip" | shasum -a 256 | cut -d' ' -f1)"
 if [ "$(clipboard | shasum -a 256 | cut -d' ' -f1)" = "$clip_hash" ]; then
   printf '' | pbcopy && echo "clipboard cleared (it held the consumed token)"
 else
-  echo "NOTICE: the clipboard no longer holds the consumed token and was not changed"
+  echo "NOTICE: the clipboard did not exactly match the consumed value and was not changed; clear it yourself"
 fi
 
 run_body="$(jq -nc --arg ws "$ws" \
@@ -199,11 +203,13 @@ resp="$(tfc POST "/runs" "$run_body")"
 run_id="$(printf '%s' "$resp" | jq -r '.data.id // empty')"
 [ -n "$run_id" ] || die "could not create a verification run; auto-apply is left DISABLED"
 
-# Refuse to trust the run unless the API echoes plan-only. Otherwise discard it.
+# Refuse to trust the run unless the API echoes plan-only. Otherwise try to stop it.
 if [ "$(printf '%s' "$resp" | jq -r '.data.attributes["plan-only"]')" != "true" ]; then
-  tfc POST "/runs/$run_id/actions/discard" '{"comment":"not plan-only"}' >/dev/null 2>&1 \
-    || tfc POST "/runs/$run_id/actions/cancel" '{"comment":"not plan-only"}' >/dev/null 2>&1 || true
-  die "API did not confirm plan-only for run $run_id; run discarded; auto-apply is left DISABLED"
+  if ! tfc POST "/runs/$run_id/actions/discard" '{"comment":"not plan-only"}' >/dev/null 2>&1; then
+    tfc POST "/runs/$run_id/actions/cancel" '{"comment":"not plan-only"}' >/dev/null 2>&1 \
+      || echo "NOTICE: run $run_id could not be discarded or cancelled; stop it in Terraform Cloud" >&2
+  fi
+  die "API did not confirm plan-only for run $run_id; auto-apply is left DISABLED"
 fi
 echo "verification run (plan-only): $run_id"
 
