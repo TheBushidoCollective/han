@@ -115,6 +115,51 @@ jobs:
         working-directory: packages/han
         run: bun run scripts/prove-supervisor.ts
 
+  installed-coordinator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: "0.13.0"
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-zigbuild
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Build release coordinator
+        working-directory: packages/han-rs
+        run: cargo zigbuild --locked --release --target x86_64-unknown-linux-gnu -p han-coordinator
+      - name: Install CLI dependencies
+        working-directory: packages/han
+        run: bun install --frozen-lockfile
+      - name: Compile release CLI
+        working-directory: packages/han
+        run: bun scripts/build-bundle.js bun-linux-x64
+      - name: Prove installed release pair
+        working-directory: packages/han
+        shell: bash
+        run: |
+          bun run scripts/prove-installed-coordinator.ts \
+            --cli "$GITHUB_WORKSPACE/packages/han/dist/binaries/han-linux-x64" \
+            --coordinator "$GITHUB_WORKSPACE/packages/han-rs/target/x86_64-unknown-linux-gnu/release/han-coordinator" \
+            --bun-version 1.4.4 \
+            --bun-revision "$(bun -p 'Bun.revision')" \
+            --evidence-dir "$RUNNER_TEMP/han-installed-evidence"
+      - name: Upload installed proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: installed-coordinator-proof
+          path: ${{ runner.temp }}/han-installed-evidence/installed-coordinator.json
+          if-no-files-found: error
+
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
