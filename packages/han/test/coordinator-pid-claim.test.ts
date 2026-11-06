@@ -130,9 +130,16 @@ async function raceClaimants(): Promise<string[]> {
   writeFileSync(startFlag, 'go', 'utf-8');
 
   return await Promise.all(
-    readers.map(({ reader, decoder, carry }) =>
-      readLine(reader, decoder, carry)
-    )
+    readers.map(async ({ reader, decoder, carry }, index) => {
+      const line = await readLine(reader, decoder, carry);
+      if (!line) {
+        const error = await new Response(
+          children[index].stderr as ReadableStream
+        ).text();
+        throw new Error(`Claimant ${index} exited without a result: ${error}`);
+      }
+      return line;
+    })
   );
 }
 
