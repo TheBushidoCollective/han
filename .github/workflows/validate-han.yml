@@ -50,6 +50,9 @@ jobs:
       - name: Install CLI dependencies
         working-directory: packages/han
         run: bun install --frozen-lockfile
+      - name: Compile Windows CLI for acceptance
+        working-directory: packages/han
+        run: bun scripts/build-bundle.js bun-windows-x64
       - name: Test Windows bridge and security controls
         working-directory: packages/han
         shell: pwsh
@@ -65,9 +68,6 @@ jobs:
             bun test $test
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
-      - name: Compile Windows CLI for acceptance
-        working-directory: packages/han
-        run: bun scripts/build-bundle.js bun-windows-x64
       - name: Prove installed Windows pair
         shell: pwsh
         run: |
