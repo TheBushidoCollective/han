@@ -5,6 +5,7 @@
  * NOTE: These tests require the native module for git operations.
  */
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -229,6 +230,108 @@ describe('hook-cache.ts', () => {
 
       const result = loadCacheManifest('empty-file-plugin', 'empty-file-hook');
       expect(result).toBeNull();
+    });
+  });
+
+  describe('gitignore scanner semantics', () => {
+    function fixture(dir: string): void {
+      const path = join(projectDir, dir);
+      mkdirSync(path, { recursive: true });
+      writeFileSync(join(path, 'package.json'), '{}');
+      writeFileSync(join(path, 'index.ts'), '');
+    }
+
+    function expectScans(root: string, included: string[]): void {
+      expect(findFilesWithGlob(root, ['**/index.ts']).sort()).toEqual(
+        included.map((dir) => join(root, dir, 'index.ts')).sort()
+      );
+      expect(findDirectoriesWithMarkers(root, ['package.json']).sort()).toEqual(
+        included.map((dir) => join(root, dir)).sort()
+      );
+    }
+
+    test('applies scoped git rules to both scanners and workspace scans', () => {
+      const git = spawnSync('git', ['init', '-q', projectDir]);
+      expect(git.status).toBe(0);
+      writeFileSync(
+        join(projectDir, '.gitignore'),
+        '/**/node_modules/\n/**/.next/\n/generated/\nblocked/\n*.tmp/\n!keep.tmp/\nnamed.ts/\nspace\\ dir/\n\\#hash/\n\\!bang/\nCase/\n'
+      );
+      const included = [
+        'packages/app',
+        'packages/app/generated',
+        'packages/app/keep.tmp',
+        'packages/other',
+        'packages/other/local-only',
+        'case',
+      ];
+      const excluded = [
+        'node_modules/dependency',
+        'packages/app/node_modules/dependency',
+        '.next/build',
+        'packages/app/.next/build',
+        'generated',
+        'blocked/child',
+        'packages/app/drop.tmp',
+        'packages/app/local-only',
+        'named.ts',
+        'space dir',
+        '#hash',
+        '!bang',
+        'Case',
+      ];
+      for (const dir of [...included, ...excluded]) fixture(dir);
+      writeFileSync(
+        join(projectDir, 'packages/app/.gitignore'),
+        'local-only/\n'
+      );
+      writeFileSync(join(projectDir, 'blocked/.gitignore'), '!child/\n');
+      expectScans(projectDir, included);
+      expect(findFilesWithGlob(projectDir, ['.next/build/index.ts'])).toEqual(
+        []
+      );
+      expect(
+        findDirectoriesWithMarkers(projectDir, ['.next/build/package.json'])
+      ).toEqual([]);
+      expectScans(join(projectDir, 'packages/app'), [
+        '.',
+        'generated',
+        'keep.tmp',
+      ]);
+    });
+
+    test('distinguishes directory-only rules from files and preserves whitespace', () => {
+      writeFileSync(
+        join(projectDir, '.gitignore'),
+        'named.ts/\nignored\\ space.ts\ntrailing\\ .ts\n# comment\n\\#hidden.ts\n\\!hidden.ts\n'
+      );
+      fixture('dir/named.ts');
+      writeFileSync(join(projectDir, 'named.ts'), '');
+      writeFileSync(join(projectDir, 'ignored space.ts'), '');
+      writeFileSync(join(projectDir, 'trailing .ts'), '');
+      writeFileSync(join(projectDir, '#hidden.ts'), '');
+      writeFileSync(join(projectDir, '!hidden.ts'), '');
+      expect(findFilesWithGlob(projectDir, ['**/*.ts']).sort()).toEqual([
+        join(projectDir, 'named.ts'),
+      ]);
+      expect(findDirectoriesWithMarkers(projectDir, ['package.json'])).toEqual(
+        []
+      );
+    });
+
+    test('uses enclosing configured roots only for their descendants', () => {
+      writeFileSync(join(projectDir, '.gitignore'), 'blocked/\n');
+      fixture('workspace/allowed');
+      fixture('workspace/blocked');
+      expectScans(join(projectDir, 'workspace'), ['allowed']);
+
+      const pluginRoot = join(testDir, 'plugin');
+      mkdirSync(join(pluginRoot, 'blocked'), { recursive: true });
+      writeFileSync(join(pluginRoot, 'blocked/package.json'), '{}');
+      writeFileSync(join(pluginRoot, 'blocked/index.ts'), '');
+      expectScans(pluginRoot, ['blocked']);
+      writeFileSync(join(pluginRoot, '.gitignore'), 'blocked/\n');
+      expectScans(pluginRoot, []);
     });
   });
 

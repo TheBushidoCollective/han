@@ -7,7 +7,7 @@ This directory contains plugins for specialized or niche domains that don't fit 
 | Plugin | Description |
 |--------|-------------|
 | android | Android development with Gradle and Jetpack Compose |
-| claude-agent-sdk | Claude Agent SDK for building AI agents |
+| agent-sdk | Claude Agent SDK for building AI agents |
 | fnox | Fnox secrets management |
 | han-plugins | Han plugin structure validation |
 | ios | iOS development with Xcode |
