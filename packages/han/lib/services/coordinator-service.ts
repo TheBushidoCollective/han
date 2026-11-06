@@ -399,10 +399,11 @@ export async function startCoordinatorService(): Promise<void> {
 
     // The daemon creates an ephemeral certificate and publishes its public descriptor.
     try {
-      // Spawn Rust coordinator binary (daemonizes by default, no --daemon flag)
+      // Keep the actual daemon as our child so ownership and shutdown remain reliable.
       state.process = Bun.spawn(
         [
           binaryPath,
+          '--foreground',
           '--port',
           String(port),
           '--data-dir',

@@ -141,6 +141,7 @@ describe('startCoordinatorService with binary found', () => {
     await expect(cs.startCoordinatorService()).rejects.toThrow('test double');
     expect(mockBunSpawn).toHaveBeenCalled();
     const args = mockBunSpawn.mock.calls[0][0] as string[];
+    expect(args).toContain('--foreground');
     expect(args).toContain('--data-dir');
     expect(args[args.indexOf('--data-dir') + 1]).toBe(getHanDataDir());
   });
