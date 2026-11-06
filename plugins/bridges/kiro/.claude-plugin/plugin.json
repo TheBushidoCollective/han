@@ -4,7 +4,7 @@
   "description": "Bridge plugin that enables Han's hook ecosystem (validation, context injection, orchestration) to work with Kiro CLI by translating Kiro hook events into Han hook executions.",
   "author": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",

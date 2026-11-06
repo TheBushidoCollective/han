@@ -62,7 +62,7 @@ For validation/quality enforcement plugins:
   "description": "Validation and quality enforcement for {Technology} projects.",
   "author": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "homepage": "https://han.guru",
   "repository": "https://github.com/thebushidocollective/han",
@@ -122,7 +122,7 @@ For MCP server integrations:
   "description": "MCP server for {Service} integration.",
   "author": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "homepage": "https://han.guru",
   "repository": "https://github.com/thebushidocollective/han",
@@ -191,7 +191,7 @@ For discipline/agent plugins:
   "description": "Specialized agents for {discipline} development.",
   "author": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "homepage": "https://han.guru",
   "repository": "https://github.com/thebushidocollective/han",

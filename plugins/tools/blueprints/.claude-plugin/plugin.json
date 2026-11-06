@@ -4,7 +4,7 @@
   "description": "Skills and hooks for managing technical blueprint documentation. Provides guidelines for writing, maintaining, and organizing blueprints using native tools (Glob, Grep, Read, Write).",
   "author": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",

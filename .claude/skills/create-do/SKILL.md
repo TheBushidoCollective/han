@@ -47,7 +47,7 @@ Create `.claude-plugin/plugin.json`:
   "description": "Specialized agents for {discipline area} including {key responsibilities}.",
   "author": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",

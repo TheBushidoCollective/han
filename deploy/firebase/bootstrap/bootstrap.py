@@ -26,8 +26,14 @@ Every object is described first and created only if the describe says it is
 missing. Only a recognised not-found answer counts as missing. Any other error
 stops the run, so an uncertain answer never becomes a create or a grant.
 
-The last act of every execute, success or failure, is the revoke. If it cannot
-verify that the sign-in member is gone, the run fails.
+Preflight rejects the known legacy shared-pool subject, potentially matching
+shared or execution pool principal sets, wildcard pools and public members,
+even when their conditions have expired. Unparseable principal sets fail closed.
+The last act of every execute, success or failure, is revoke. It removes only
+this execution's approved member and verifies these routes are absent again.
+Legacy and unrelated grants are reported and left in place. A legacy grant
+requires separately authorized cleanup. The checks cover only the bootstrap
+service account's direct IAM policy, not inherited grants or delegation.
 
 The backend is injected. Tests use a fake backend. CI uses the real gcloud
 commands, authenticated by WIF.
@@ -76,9 +82,12 @@ WORKFLOWS_ALLOWED_TO_SIGN_IN = ("han-infra.yml", "deploy-han-server.yml", "deplo
 # The sign-in identity this job uses. The website's reviewed grant (contract C1) time-boxes it before the run
 # (PATH.md section 8). This run removes the principal from that grant again.
 BOOTSTRAP_SA = f"terraform-bootstrap@{PROJECT}.iam.gserviceaccount.com"
+# Legacy identity is independent of the execution-specific registration and is never removed here.
+LEGACY_POOL = f"projects/{PROJECT_NUMBER}/locations/global/workloadIdentityPools/github"
+LEGACY_PRINCIPAL = f"principal://iam.googleapis.com/{LEGACY_POOL}/subject/repo:{REPO}:environment:han-bootstrap"
 # Populated only from a validated execution manifest before credentialed work.
 BOOTSTRAP_PRINCIPAL = ""
-SHARED_POOL = ""
+EXECUTION_POOL = ""
 ACTIVE_EXECUTION = None
 
 # The sign-in grant the website side creates, time-boxed (contract C1). Preflight matches all of it exactly. Revoke
@@ -800,25 +809,33 @@ def policy_tuples(policy: dict) -> set[tuple]:
 
 
 def capable_members(policy: dict) -> list[str]:
-    """Members that could match the Han principal without naming it: every user, every authenticated
-    identity, and any principal set over the shared pool or a wildcard pool. They are never deleted;
-    a run that finds one stops and reports it."""
+    """Report legacy, public and potentially matching pool-set grants, regardless of condition."""
     found = []
     for binding in policy.get("bindings", []):
         for member in binding.get("members", []):
-            if member in ("allUsers", "allAuthenticatedUsers") or shared_pool_set(member):
+            if (member in ("allUsers", "allAuthenticatedUsers", LEGACY_PRINCIPAL)
+                    or shared_pool_set(member)):
                 found.append(member)
     return found
 
 
 def shared_pool_set(member: str) -> bool:
-    """A principal set whose pool is the shared github pool, or any pool wildcard."""
+    """Fail closed on unparseable principal sets; compare pool components, not string prefixes."""
     prefix = "principalSet://"
     if not member.startswith(prefix):
         return False
     target = member[len(prefix):]
-    return (target.startswith(f"iam.googleapis.com/{SHARED_POOL}")
-            or "projects/-" in target or "/workloadIdentityPools/*" in target)
+    match = re.fullmatch(
+        r"iam\.googleapis\.com/projects/([^/]+)/locations/([^/]+)/workloadIdentityPools/([^/]+)(?:/(.+))?",
+        target,
+    )
+    if match is None:
+        return True
+    project, location, pool, _selector = match.groups()
+    if project not in (PROJECT_NUMBER, "-", "*") or location not in ("global", "-", "*"):
+        return False
+    execution_pool_id = EXECUTION_POOL.rsplit("/", 1)[-1]
+    return pool in ("github", execution_pool_id, "-", "*")
 
 
 def is_approved_grant(binding: dict, approved: str) -> bool:
@@ -1019,10 +1036,10 @@ def main(argv: list[str], backend: Backend | None = None) -> int:
         except (OSError, ValueError, execution.Refuse) as exc:
             print(f"::error::invalid execution manifest: {exc}; nothing ran", file=sys.stderr)
             return 2
-        global ACTIVE_EXECUTION, BOOTSTRAP_PRINCIPAL, SHARED_POOL
+        global ACTIVE_EXECUTION, BOOTSTRAP_PRINCIPAL, EXECUTION_POOL
         ACTIVE_EXECUTION = manifest
         BOOTSTRAP_PRINCIPAL = manifest["member"]
-        SHARED_POOL = f"projects/{PROJECT_NUMBER}/locations/global/workloadIdentityPools/{manifest['pool_id']}"
+        EXECUTION_POOL = f"projects/{PROJECT_NUMBER}/locations/global/workloadIdentityPools/{manifest['pool_id']}"
 
     if args.revoke_only:
         if args.execute:

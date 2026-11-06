@@ -4,7 +4,7 @@
   "description": "Absinthe GraphQL skills for Elixir with schema design, resolvers, and subscriptions.",
   "author": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",

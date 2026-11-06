@@ -92,4 +92,4 @@ MIT License - see [LICENSE](LICENSE)
 
 ---
 
-Built by [The Bushido Collective](https://thebushido.co)
+Built by [The Bushido Collective](https://withbushido.ai)

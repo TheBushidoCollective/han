@@ -1,11 +1,11 @@
 {
 	"name": "han-website",
-	"version": "1.38.0",
+	"version": "1.38.1",
 	"private": true,
 	"scripts": {
 		"dev": "bun run --bun next dev",
 		"prebuild": "bun run scripts/generate-marketplace.ts && bun run scripts/generate-search-index.ts && bun run scripts/generate-rss.ts && bun run scripts/generate-sitemap.ts && bun run scripts/generate-paper-revisions.ts",
-		"build": "bun run --bun next build",
+		"build": "node ./node_modules/next/dist/bin/next build",
 		"start": "bun run --bun serve out -p 3000",
 		"lint": "biome check --error-on-warnings .",
 		"test": "bun test",
