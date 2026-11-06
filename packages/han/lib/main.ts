@@ -69,6 +69,7 @@ async function _getCreateCommands() {
  */
 export function getVersionInfo(): string {
   const lines = [`han ${version}`];
+  lines.push(`  Bun: ${Bun.version} (${Bun.revision})`);
 
   // Show binary location
   const binaryPath = process.argv[1] || 'unknown';
