@@ -30,11 +30,11 @@ This plugin includes hooks that automatically regenerate Playwright test files f
 
 - Feature files (`*.feature`) are modified
 - Step definition files are changed
-- Playwright configuration is updated
+- Playwright configuration or package metadata is updated
 
 ### How It Works
 
-The hooks use `han hook run` to detect directories with `playwright.config.ts` or `playwright.config.js` and run `npx bddgen` to regenerate test files:
+The hook discovers directories with a Playwright configuration only when their nearest `package.json` declares `playwright-bdd` in `dependencies` or `devDependencies`. It selects the first existing config in this order: `playwright.bdd.config.ts`, `playwright.bdd.config.js`, `playwright.config.ts`, `playwright.config.js`. It passes that filename to `npx bddgen --config`:
 
 ```bash
 han hook run playwright-bdd generate
