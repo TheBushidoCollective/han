@@ -188,11 +188,7 @@ async function rawStatus(
 	return await promise;
 }
 
-async function attackerControls(
-	browser: Browser,
-	url: string,
-	token: string,
-) {
+async function attackerControls(browser: Browser, url: string, token: string) {
 	const server = http.createServer((_req, res) => {
 		res.writeHead(200, { "content-type": "text/html" });
 		res.end("<!doctype html><title>Attacker</title>");
@@ -202,7 +198,8 @@ async function attackerControls(
 	server.listen(0, listening.resolve);
 	await listening.promise;
 	const address = server.address();
-	if (!address || typeof address === "string") throw new Error("No attacker port");
+	if (!address || typeof address === "string")
+		throw new Error("No attacker port");
 	const attacker = `http://localhost:${address.port}`;
 	try {
 		// A fresh context prevents an existing per-tab session from affecting the result.
@@ -216,7 +213,11 @@ async function attackerControls(
 			});
 			await page.goto(attacker);
 			const [root] = await Promise.all([
-				page.waitForResponse((response) => response.url() === `${url}/` && response.request().isNavigationRequest()),
+				page.waitForResponse(
+					(response) =>
+						response.url() === `${url}/` &&
+						response.request().isNavigationRequest(),
+				),
 				page.evaluate((target) => {
 					const link = document.createElement("a");
 					link.href = `${target}/`;
@@ -228,8 +229,14 @@ async function attackerControls(
 			expect((await root.request().allHeaders())["sec-fetch-site"]).toBe(
 				"cross-site",
 			);
-			await expect(page.getByText("Open the local dashboard using han browse.")).toBeVisible();
-			expect(await page.evaluate(() => sessionStorage.getItem("han.dashboard.accessToken"))).toBeNull();
+			await expect(
+				page.getByText("Open the local dashboard using han browse."),
+			).toBeVisible();
+			expect(
+				await page.evaluate(() =>
+					sessionStorage.getItem("han.dashboard.accessToken"),
+				),
+			).toBeNull();
 			expect(requests).not.toContain("/_han/session");
 			expect(requests).not.toContain("/graphql");
 
@@ -238,7 +245,9 @@ async function attackerControls(
 				predicate: (message) => message.text().includes("frame-ancestors"),
 			});
 			const frameResponse = page.waitForResponse(
-				(response) => response.url() === `${url}/` && response.request().resourceType() === "document",
+				(response) =>
+					response.url() === `${url}/` &&
+					response.request().resourceType() === "document",
 			);
 			await page.evaluate(() => {
 				const frame = document.createElement("iframe");
@@ -270,8 +279,16 @@ async function attackerControls(
 				link.click();
 			}, url);
 			expect((await exchange).status()).toBe(401);
-			await expect(page.getByText("Dashboard launch expired or was rejected. Run han browse again.")).toBeVisible();
-			expect(await page.evaluate(() => sessionStorage.getItem("han.dashboard.accessToken"))).toBeNull();
+			await expect(
+				page.getByText(
+					"Dashboard launch expired or was rejected. Run han browse again.",
+				),
+			).toBeVisible();
+			expect(
+				await page.evaluate(() =>
+					sessionStorage.getItem("han.dashboard.accessToken"),
+				),
+			).toBeNull();
 			expect(paths).not.toContain("/graphql");
 		} finally {
 			await inventedContext.close();
@@ -283,27 +300,47 @@ async function attackerControls(
 			await page.goto(attacker);
 			for (const tag of ["iframe", "img"] as const) {
 				const response = page.waitForResponse(
-					(res) => res.url() === `${url}/` && res.request().resourceType() === (tag === "iframe" ? "document" : "image"),
+					(res) =>
+						res.url() === `${url}/` &&
+						res.request().resourceType() ===
+							(tag === "iframe" ? "document" : "image"),
 				);
-				await page.evaluate(({ target, tag }) => {
-					const element = document.createElement(tag);
-					element.src = `${target}/`;
-					document.body.appendChild(element);
-				}, { target: url, tag });
+				await page.evaluate(
+					({ target, tag }) => {
+						const element = document.createElement(tag);
+						element.src = `${target}/`;
+						document.body.appendChild(element);
+					},
+					{ target: url, tag },
+				);
 				const result = await response;
 				expect(result.status()).toBe(403);
-				expect((await result.request().allHeaders())["sec-fetch-site"]).toBe("cross-site");
+				expect((await result.request().allHeaders())["sec-fetch-site"]).toBe(
+					"cross-site",
+				);
 			}
 			// Browser network policies may block either operation before it reaches the gateway.
 			const browserResults = await page.evaluate(async (target) => {
 				const api = await fetch(`${target}/graphql`, {
 					method: "POST",
-					headers: { "content-type": "application/json", authorization: "Bearer invalid" },
+					headers: {
+						"content-type": "application/json",
+						authorization: "Bearer invalid",
+					},
 					body: JSON.stringify({ query: "query { __typename }" }),
-				}).then((response) => response.ok, () => false);
+				}).then(
+					(response) => response.ok,
+					() => false,
+				);
 				const socket = await new Promise<boolean>((resolve) => {
-					const ws = new WebSocket(target.replace("http:", "ws:") + "/graphql", "graphql-transport-ws");
-					ws.onopen = () => { ws.close(); resolve(true); };
+					const ws = new WebSocket(
+						target.replace("http:", "ws:") + "/graphql",
+						"graphql-transport-ws",
+					);
+					ws.onopen = () => {
+						ws.close();
+						resolve(true);
+					};
 					ws.onerror = () => resolve(false);
 					ws.onclose = () => resolve(false);
 				});
@@ -311,28 +348,32 @@ async function attackerControls(
 			}, url);
 			expect(browserResults).toEqual({ api: false, socket: false });
 			// Raw controls prove the gateway, not merely browser CORS or local-network policy, rejects them.
-			expect(await rawStatus(url, "/graphql", "OPTIONS", {
-				origin: attacker,
-				"sec-fetch-site": "cross-site",
-				"access-control-request-method": "POST",
-				"access-control-request-headers": "authorization,content-type",
-			})).toBe(403);
-			expect(await rawStatus(url, "/graphql", "GET", {
-				origin: attacker,
-				"sec-fetch-site": "cross-site",
-				connection: "Upgrade",
-				upgrade: "websocket",
-				"sec-websocket-version": "13",
-				"sec-websocket-key": "dGhlIHNhbXBsZSBub25jZQ==",
-				"sec-websocket-protocol": "graphql-transport-ws",
-				authorization: `Bearer ${token}`,
-			})).toBe(403);
+			expect(
+				await rawStatus(url, "/graphql", "OPTIONS", {
+					origin: attacker,
+					"sec-fetch-site": "cross-site",
+					"access-control-request-method": "POST",
+					"access-control-request-headers": "authorization,content-type",
+				}),
+			).toBe(403);
+			expect(
+				await rawStatus(url, "/graphql", "GET", {
+					origin: attacker,
+					"sec-fetch-site": "cross-site",
+					connection: "Upgrade",
+					upgrade: "websocket",
+					"sec-websocket-version": "13",
+					"sec-websocket-key": "dGhlIHNhbXBsZSBub25jZQ==",
+					"sec-websocket-protocol": "graphql-transport-ws",
+					authorization: `Bearer ${token}`,
+				}),
+			).toBe(403);
 		} finally {
 			await context.close();
 		}
 	} finally {
 		const closed = Promise.withResolvers<void>();
-		server.close((error) => error ? closed.reject(error) : closed.resolve());
+		server.close((error) => (error ? closed.reject(error) : closed.resolve()));
 		await closed.promise;
 	}
 }
@@ -508,7 +549,8 @@ test("real launcher, gateway and live GraphQL subscriptions with security contro
 		).toBe(401);
 		const [documentResponse, exchangeResponse, graph] = await Promise.all([
 			page.waitForResponse(
-				(response) => response.url() === `${url}/` &&
+				(response) =>
+					response.url() === `${url}/` &&
 					response.request().isNavigationRequest() &&
 					response.request().frame() === page.mainFrame(),
 				{ timeout: 45_000 },
@@ -544,7 +586,9 @@ test("real launcher, gateway and live GraphQL subscriptions with security contro
 		const securityHeaders = await documentResponse.allHeaders();
 		expect(securityHeaders["referrer-policy"]).toBe("no-referrer");
 		expect(securityHeaders["x-content-type-options"]).toBe("nosniff");
-		expect(securityHeaders["content-security-policy"]).toContain("frame-ancestors 'none'");
+		expect(securityHeaders["content-security-policy"]).toContain(
+			"frame-ancestors 'none'",
+		);
 		expect(exchangeResponse.status()).toBe(200);
 		const graphBody = await graph.json();
 		expect(graphBody.data).toBeTruthy();

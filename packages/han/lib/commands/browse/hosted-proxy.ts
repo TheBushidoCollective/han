@@ -114,7 +114,12 @@ function guard(
     site === 'cross-site' &&
     mode === 'navigate' &&
     dest === 'document';
-  if (site && site !== 'same-origin' && site !== 'none' && !publicRootNavigation)
+  if (
+    site &&
+    site !== 'same-origin' &&
+    site !== 'none' &&
+    !publicRootNavigation
+  )
     return 403;
   if (originRequired && site && site !== 'same-origin') return 403;
   if (originRequired && dest && dest !== 'empty') return 403;
