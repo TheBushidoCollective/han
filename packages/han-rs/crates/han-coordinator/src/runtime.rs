@@ -147,7 +147,12 @@ pub fn prepare(dir: &Path) -> io::Result<PathBuf> {
     Ok(runtime)
 }
 
-#[cfg(not(unix))]
+#[cfg(windows)]
+pub fn prepare(dir: &Path) -> io::Result<PathBuf> {
+    crate::windows_coordinator_runtime::prepare(dir)
+}
+
+#[cfg(not(any(unix, windows)))]
 pub fn prepare(_dir: &Path) -> io::Result<PathBuf> {
     Err(io::Error::new(io::ErrorKind::Unsupported, "secure runtime directory ACL support is required on this platform"))
 }
@@ -168,7 +173,12 @@ pub fn read_descriptor(runtime: &Path) -> io::Result<Descriptor> {
     serde_json::from_slice(&data).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
 }
 
-#[cfg(not(unix))]
+#[cfg(windows)]
+pub fn read_descriptor(runtime: &Path) -> io::Result<Descriptor> {
+    crate::windows_coordinator_runtime::read_descriptor(runtime)
+}
+
+#[cfg(not(any(unix, windows)))]
 pub fn read_descriptor(_runtime: &Path) -> io::Result<Descriptor> {
     Err(io::Error::new(io::ErrorKind::Unsupported, "secure descriptor ACL support is required on this platform"))
 }

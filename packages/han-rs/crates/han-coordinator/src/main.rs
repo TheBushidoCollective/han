@@ -15,6 +15,10 @@ mod watcher_bridge;
 mod windows_process_identity;
 #[cfg(windows)]
 mod windows_secure_fs;
+#[cfg(windows)]
+mod windows_runtime_helper;
+#[cfg(windows)]
+mod windows_coordinator_runtime;
 
 use clap::Parser;
 use grpc::{
@@ -189,6 +193,17 @@ fn resolve_db_path(cli_path: Option<&str>, data_dir: &std::path::Path) -> String
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(windows)]
+    {
+        let mut args = std::env::args_os();
+        let _program = args.next();
+        if args.next().as_deref() == Some(std::ffi::OsStr::new("--local-runtime"))
+            && args.next().is_none()
+        {
+            windows_runtime_helper::run()?;
+            return Ok(());
+        }
+    }
     // Parse CLI args
     let cli = Cli::parse();
     let supervisor = match (&cli.supervisor_pid, &cli.supervisor_nonce, &cli.supervisor_generation) {
