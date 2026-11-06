@@ -562,12 +562,95 @@ async function standaloneStopPreservesUnrelatedMarker(): Promise<void> {
   }
 }
 
+async function committedStopSurvivesFailure(
+  failure: 'child' | 'requester'
+): Promise<void> {
+  const dir = directory();
+  const supervisor = Bun.spawn(
+    [
+      process.execPath,
+      cli,
+      'coordinator',
+      'start',
+      '--foreground',
+      '--port',
+      '0',
+    ],
+    { env: environment(dir), stdout: 'pipe', stderr: 'pipe' }
+  );
+  children.push(supervisor);
+  let ownedPid: number | undefined;
+  let requester: Bun.Subprocess | undefined;
+  let paused = false;
+  try {
+    const descriptor = await ready(dir, supervisor);
+    ownedPid = descriptor.pid;
+    assertChild(descriptor.pid, supervisor.pid);
+    assert.ok(descriptor.supervisor);
+    assert.equal(descriptor.supervisor.pid, supervisor.pid);
+    supervisor.kill('SIGSTOP');
+    paused = true;
+    requester = Bun.spawn(
+      [process.execPath, cli, 'coordinator', 'stop', '--port', '0'],
+      { env: environment(dir), stdout: 'pipe', stderr: 'pipe' }
+    );
+    children.push(requester);
+    const marker = join(
+      dir,
+      'runtime',
+      `coordinator.stopping.${descriptor.supervisor.nonce}.${descriptor.supervisor.generationId}.json`
+    );
+    await waitFor('committed shutdown intent', () => {
+      if (requester?.exitCode !== null)
+        throw new Error('stop requester exited before intent was committed');
+      return existsSync(marker) ? true : undefined;
+    });
+    assert.deepEqual(JSON.parse(readFileSync(marker, 'utf8')), descriptor);
+    assert.equal(existsSync(join(dir, 'runtime/coordinator.json')), false);
+    if (failure === 'child') killChild(descriptor.pid, supervisor.pid);
+    else requester.kill('SIGKILL');
+    supervisor.kill('SIGCONT');
+    paused = false;
+    await waitFor('supervisor to honor committed intent', () =>
+      supervisor.exitCode !== null ? supervisor.exitCode : undefined
+    );
+    assert.equal(supervisor.exitCode, 0);
+    await waitFor('committed shutdown child exit', () =>
+      !existsSync(`/proc/${descriptor.pid}`) ? true : undefined
+    );
+    ownedPid = undefined;
+    if (failure === 'child') {
+      await waitFor('stop requester exit', () =>
+        requester?.exitCode !== null ? requester?.exitCode : undefined
+      );
+      assert.equal(requester.exitCode, 0);
+    } else {
+      await requester.exited;
+      assert.notEqual(requester.exitCode, 0);
+    }
+    assertStoppedRecords(dir);
+    console.log(
+      `committed shutdown survived ${failure} failure without restarting`
+    );
+  } finally {
+    if (paused && supervisor.exitCode === null) supervisor.kill('SIGCONT');
+    if (ownedPid !== undefined && supervisor.exitCode === null)
+      killChild(ownedPid, supervisor.pid);
+    if (supervisor.exitCode === null) supervisor.kill();
+    await supervisor.exited;
+    if (requester && requester.exitCode === null) requester.kill();
+    if (requester) await requester.exited;
+  }
+}
+
 try {
   await supervisorRecovery();
   await replacementSurvivesOldOwner();
   await replacementWinsStartupRace();
   await intentionalStopAndRestart();
   await standaloneStopPreservesUnrelatedMarker();
+  await committedStopSurvivesFailure('child');
+  await committedStopSurvivesFailure('requester');
 } finally {
   for (const child of children) if (child.exitCode === null) child.kill();
   await Promise.all(children.map((child) => child.exited));
