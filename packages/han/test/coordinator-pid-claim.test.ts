@@ -20,6 +20,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -464,3 +465,15 @@ test('delayed removal of an empty reservation cannot remove a successor', async 
   expect(readdirSync(reservation)).toEqual(successorOwner);
   expect(winner.exitCode).toBeNull();
 }, 30_000);
+
+test.skipIf(process.platform === 'win32')(
+  'PID symlinks are rejected without changing their target',
+  () => {
+    const path = join(dataDir, 'coordinator.pid');
+    const target = join(dataDir, 'target');
+    writeFileSync(target, '123', { mode: 0o600 });
+    symlinkSync(target, path);
+    expect(() => claimSupervisorPid(path)).toThrow();
+    expect(readFileSync(target, 'utf8')).toBe('123');
+  }
+);
