@@ -739,40 +739,21 @@ test("real launcher, gateway and live GraphQL subscriptions with security contro
 			await expect(
 				brokenPage.getByText(message, { exact: false }),
 			).toBeVisible();
-			const messageCount = async () =>
-				await brokenPage.evaluate(async (sessionId) => {
-					const authorization = sessionStorage.getItem(
-						"han.dashboard.accessToken",
-					);
-					const response = await fetch("/graphql", {
-						method: "POST",
-						headers: {
-							"content-type": "application/json",
-							authorization: `Bearer ${authorization}`,
-						},
-						body: JSON.stringify({
-							query:
-								"query($id: String!) { session(id: $id) { messageCount } }",
-							variables: { id: sessionId },
-						}),
-					});
-					const result = await response.json();
-					if (
-						!response.ok ||
-						result.errors ||
-						typeof result.data?.session?.messageCount !== "number"
-					) {
-						throw new Error("Negative-control session query failed");
-					}
-					return result.data.session.messageCount as number;
-				}, id);
-			const before = await messageCount();
+			const priorEvents = observed.events.filter(
+				(event) =>
+					event.field === "sessionMessageAdded" && event.sessionId === id,
+			).length;
 			const withheld = `transport withheld ${randomUUID()}`;
 			await appendFile(transcript, line(id, withheld));
 			await until(
-				async () => (await messageCount()) > before,
-				"negative message indexed over real HTTP",
+				() =>
+					observed.events.filter(
+						(event) =>
+							event.field === "sessionMessageAdded" && event.sessionId === id,
+					).length > priorEvents,
+				"negative-control message delivered to the connected browser",
 			);
+			await expect(page.getByText(withheld, { exact: false })).toBeVisible();
 			await sleep(3_000);
 			await expect(
 				brokenPage.getByText(withheld, { exact: false }),
