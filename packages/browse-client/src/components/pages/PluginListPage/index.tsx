@@ -277,10 +277,7 @@ function PluginsContent({
 						zIndex: 1000,
 					}}
 				>
-					<Text
-						size="sm"
-						style={{ color: theme.colors.bg.primary }}
-					>
+					<Text size="sm" style={{ color: theme.colors.bg.primary }}>
 						{toast.message}
 					</Text>
 				</Box>

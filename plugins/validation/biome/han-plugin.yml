@@ -1,7 +1,7 @@
 hooks:
   lint:
     event: [Stop, PostToolUse:Edit|Write|NotebookEdit]
-    command: "npx -y @biomejs/biome check --write --error-on-warnings ${HAN_FILES}"
+    command: "npx -y @biomejs/biome check --error-on-warnings ${HAN_FILES}"
     dir_test: '[ "$(cat biome.json | han parse json root)" != "false" ]'
     dirs_with:
       - "biome.json"

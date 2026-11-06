@@ -1,12 +1,12 @@
 declare module "react-native-web" {
 	import type {
 		CSSProperties,
+		ForwardRefExoticComponent,
+		KeyboardEvent,
+		MouseEvent,
 		ReactNode,
 		Ref,
-		ForwardRefExoticComponent,
 		RefAttributes,
-		MouseEvent,
-		KeyboardEvent,
 		UIEvent,
 	} from "react";
 
