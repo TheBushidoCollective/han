@@ -1,12 +1,11 @@
-import { spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
-import { findCoordinatorBinary } from './binary.ts';
 import {
   type LocalCoordinatorDescriptor,
   type SupervisorBinding,
   validateCoordinatorDescriptor,
   validSupervisorBinding,
 } from './connection.ts';
+import { findCoordinatorBinary, spawnSync } from './windows-helper.ts';
 
 export class CoordinatorSecurityError extends Error {
   constructor(message: string) {

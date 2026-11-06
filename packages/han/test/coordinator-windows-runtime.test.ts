@@ -1,7 +1,9 @@
-import { afterAll, afterEach, beforeEach, expect, mock, test } from 'bun:test';
-import { spawnSync as realSpawnSync } from 'node:child_process';
+import { afterAll, beforeEach, expect, mock, test } from 'bun:test';
 import { join, resolve } from 'node:path';
-import { findCoordinatorBinary as realFindCoordinatorBinary } from '../lib/coordinator/binary.ts';
+
+const realHelper = {
+  ...(await import('../lib/coordinator/windows-helper.ts')),
+};
 
 let binary: string | null = 'native-helper';
 let output: unknown = null;
@@ -16,18 +18,13 @@ let invocation:
     }
   | undefined;
 
-let intercept = false;
-mock.module('../lib/coordinator/binary.ts', () => ({
-  findCoordinatorBinary: () =>
-    intercept ? binary : realFindCoordinatorBinary(),
-}));
-mock.module('node:child_process', () => ({
+mock.module('../lib/coordinator/windows-helper.ts', () => ({
+  findCoordinatorBinary: () => binary,
   spawnSync: (
     executable: string,
     argv: string[],
     options: { input: string; maxBuffer: number; timeout: number }
   ) => {
-    if (!intercept) return realSpawnSync(executable, argv, options);
     invocation = { executable, argv, options };
     return {
       status: exitStatus,
@@ -38,10 +35,7 @@ mock.module('node:child_process', () => ({
   },
 }));
 afterAll(() => {
-  mock.module('node:child_process', () => ({ spawnSync: realSpawnSync }));
-  mock.module('../lib/coordinator/binary.ts', () => ({
-    findCoordinatorBinary: realFindCoordinatorBinary,
-  }));
+  mock.module('../lib/coordinator/windows-helper.ts', () => realHelper);
 });
 // Install the fake native boundary before loading the bridge.
 const bridge = await import('../lib/coordinator/windows-runtime.ts');
@@ -91,18 +85,12 @@ function recorded() {
 const sent = () => JSON.parse(recorded().options.input);
 
 beforeEach(() => {
-  intercept = true;
   binary = 'native-helper';
   output = null;
   exitStatus = 0;
   failure = undefined;
   rawOutput = undefined;
   invocation = undefined;
-});
-afterEach(() => {
-  intercept = false;
-  rawOutput = undefined;
-  failure = undefined;
 });
 
 test('bounded inherited-pipe envelope rejects missing or incompatible helper without exposing diagnostics', () => {
