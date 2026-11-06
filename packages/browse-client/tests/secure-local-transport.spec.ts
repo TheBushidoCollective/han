@@ -25,10 +25,9 @@ test.use({ trace: "off", screenshot: "off", video: "off" });
 const clientDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cli = resolve(clientDir, "../han/lib/main.ts");
 const bun = process.env.HAN_TRANSPORT_BUN || "bun";
-const coordinatorBinary = resolve(
-	clientDir,
-	"../han-rs/target/release/han-coordinator",
-);
+const coordinatorBinary =
+	process.env.HAN_TRANSPORT_COORDINATOR ||
+	resolve(clientDir, "../han-rs/target/release/han-coordinator");
 
 interface Gateway {
 	child: ChildProcess;

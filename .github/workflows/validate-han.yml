@@ -75,6 +75,17 @@ jobs:
           if ($cli.Count -ne 1) { throw "Expected exactly one Windows CLI binary" }
           bun packages/han/scripts/prove-installed-windows-coordinator.ts $cli[0].FullName packages/han-rs/target/debug/han-coordinator.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Install browser proof dependencies
+        working-directory: packages/browse-client
+        run: bun install --frozen-lockfile
+      - name: Install isolated headless Chromium
+        working-directory: packages/browse-client
+        run: bunx playwright install chromium
+      - name: Prove Windows launcher and live browser transport
+        working-directory: packages/browse-client
+        env:
+          HAN_TRANSPORT_COORDINATOR: ${{ github.workspace }}\packages\han-rs\target\debug\han-coordinator.exe
+        run: bunx playwright test --config playwright.transport.config.ts
 
   gateway-runtime-comparison:
     if: github.ref != 'refs/heads/integrate/windows-local-transport-wip'
