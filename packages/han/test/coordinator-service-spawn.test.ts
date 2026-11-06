@@ -66,6 +66,7 @@ const mockDescriptor = mock(() => ({
   grpcPort: 41958,
   certificatePem: 'certificate',
   bearerToken: 'token',
+  supervisor: null,
 }));
 mock.module('../lib/coordinator/connection.ts', () => ({
   ...realConnection,
@@ -115,6 +116,7 @@ beforeEach(() => {
     grpcPort: 41958,
     certificatePem: 'certificate',
     bearerToken: 'token',
+    supervisor: null,
   });
   consoleOutput = [];
   originalLog = console.log;
@@ -171,6 +173,21 @@ describe('startCoordinatorService with binary found', () => {
     expect(args).toContain('--foreground');
     expect(args).toContain('--data-dir');
     expect(args[args.indexOf('--data-dir') + 1]).toBe(getHanDataDir());
+  });
+
+  test('passes all supervisor binding fields to its own foreground child', async () => {
+    await cs.stopCoordinatorService();
+    mockHealth.mockResolvedValue(false);
+    const supervisor = {
+      pid: process.pid,
+      nonce: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      generationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    };
+    await expect(cs.startCoordinatorService({ supervisor })).rejects.toThrow('test double');
+    const args = mockBunSpawn.mock.calls[0][0] as string[];
+    expect(args[args.indexOf('--supervisor-pid') + 1]).toBe(String(supervisor.pid));
+    expect(args[args.indexOf('--supervisor-nonce') + 1]).toBe(supervisor.nonce);
+    expect(args[args.indexOf('--supervisor-generation') + 1]).toBe(supervisor.generationId);
   });
 
   test('handles spawn failure gracefully', async () => {
@@ -355,6 +372,7 @@ describe('stopCoordinatorService ownership', () => {
       grpcPort: 41958,
       certificatePem: 'replacement',
       bearerToken: 'other',
+      supervisor: null,
     });
     await cs.stopCoordinatorService();
     expect(mockShutdown).not.toHaveBeenCalled();

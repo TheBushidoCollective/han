@@ -29,6 +29,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   claimSupervisorPid,
+  readSupervisorIdentity,
   releaseSupervisorPid,
 } from '../lib/commands/coordinator/pid-claim.ts';
 
@@ -48,6 +49,16 @@ afterEach(async () => {
   }
   await Promise.all(children.map((child) => child.exited));
   rmSync(dataDir, { recursive: true, force: true });
+});
+
+test('read-only identity follows the owned reservation and rejects its absence after release', () => {
+  const path = join(dataDir, 'coordinator.pid');
+  const result = claimSupervisorPid(path);
+  expect(result.kind).toBe('owned');
+  if (result.kind !== 'owned') throw new Error('claim was not acquired');
+  expect(readSupervisorIdentity(path)).toEqual({ pid: process.pid, nonce: result.claim.nonce });
+  releaseSupervisorPid(result.claim);
+  expect(readSupervisorIdentity(path)).toBeNull();
 });
 
 /**

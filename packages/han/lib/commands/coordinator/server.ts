@@ -7,9 +7,11 @@
  */
 
 import {
+  type CoordinatorStartResult,
   startCoordinatorService,
   stopCoordinatorService,
 } from '../../services/coordinator-service.ts';
+import type { SupervisorBinding } from '../../coordinator/connection.ts';
 import type { CoordinatorOptions } from './types.ts';
 
 /**
@@ -17,19 +19,19 @@ import type { CoordinatorOptions } from './types.ts';
  * Starts the Rust han-coordinator binary as a daemon process.
  */
 export async function startServer(
-  options: CoordinatorOptions = {}
-): Promise<void> {
+  options: CoordinatorOptions = {},
+  supervisor?: SupervisorBinding
+): Promise<CoordinatorStartResult> {
   if (options.port !== undefined) {
     process.env.HAN_COORDINATOR_PORT = String(options.port);
   }
-  await startCoordinatorService();
+  return startCoordinatorService({ supervisor });
 }
 
 /**
  * Stop the coordinator server.
  * Sends graceful shutdown to the Rust coordinator binary.
  */
-export function stopServer(): void {
-  // Fire and forget — stopCoordinatorService is async but shutdown is best-effort
-  void stopCoordinatorService();
+export async function stopServer(): Promise<void> {
+  await stopCoordinatorService();
 }

@@ -22,17 +22,21 @@ import {
 import { dirname, join, resolve } from 'node:path';
 import { Code, ConnectError } from '@connectrpc/connect';
 import { checkHealth } from '../commands/coordinator/health.ts';
+import { readShutdownIntent } from '../commands/coordinator/shutdown-intent.ts';
 import { getHanDataDir } from '../config/claude-settings.ts';
 import {
   CoordinatorSecurityError,
   getCoordinatorDataDir,
   type LocalCoordinatorDescriptor,
+  sameCoordinator,
+  sameSupervisor,
+  type SupervisorBinding,
   readCoordinatorDescriptor,
 } from '../coordinator/connection.ts';
 import { createCoordinatorClients } from '../grpc/client.ts';
 
 async function isCoordinatorServing(port: number): Promise<boolean> {
-  return (await checkHealth(port)) !== null;
+  return Boolean(await checkHealth(port));
 }
 
 const DEFAULT_PORT = 41957;
@@ -78,6 +82,11 @@ const state: CoordinatorState = {
   ownedDescriptor: null,
   ownsProcess: false,
 };
+
+export type CoordinatorStartResult =
+  | { kind: 'owned'; child: Bun.Subprocess; descriptor: LocalCoordinatorDescriptor }
+  | { kind: 'attached' }
+  | { kind: 'shutdown-requested'; child: Bun.Subprocess; descriptor: LocalCoordinatorDescriptor };
 
 /**
  * Get the effective coordinator port.
@@ -364,20 +373,20 @@ function buildHealthFailureMessage(port: number, budgetMs: number): string {
  * If the coordinator is already running (another process), this just
  * verifies connectivity. Otherwise, spawns the Rust binary as a daemon.
  */
-export async function startCoordinatorService(): Promise<void> {
-  if (state.isRunning && (await isCoordinatorServing(state.port))) return;
+export async function startCoordinatorService(options: { supervisor?: SupervisorBinding } = {}): Promise<CoordinatorStartResult> {
+  if (state.isRunning && (await isCoordinatorServing(state.port))) {
+    if (state.ownsProcess && state.process && state.ownedDescriptor)
+      return { kind: 'owned', child: state.process, descriptor: state.ownedDescriptor };
+    return { kind: 'attached' };
+  }
   state.isRunning = false;
-
   const port = getEffectivePort();
-
-  // Check if coordinator is already running (from another process)
   if (await isCoordinatorServing(port)) {
-    console.log('[coordinator] Coordinator already running, connecting...');
     state.isRunning = true;
     state.port = port;
     state.ownsProcess = false;
     state.ownedDescriptor = null;
-    return;
+    return { kind: 'attached' };
   }
 
   // Find the binary
@@ -407,13 +416,14 @@ export async function startCoordinatorService(): Promise<void> {
     } else {
       throw new Error(buildHealthFailureMessage(port, budgetMs));
     }
-    return;
+    return { kind: 'attached' };
   }
 
   try {
     console.log(`[coordinator] Starting ${binaryPath} on port ${port}`);
 
     // The daemon creates an ephemeral certificate and publishes its public descriptor.
+    state.ownedDescriptor = null;
     try {
       // Keep the actual daemon as our child so ownership and shutdown remain reliable.
       state.process = Bun.spawn(
@@ -425,6 +435,11 @@ export async function startCoordinatorService(): Promise<void> {
           '--data-dir',
           getCoordinatorDataDir(),
           '--scan-on-start',
+          ...(options.supervisor ? [
+            '--supervisor-pid', String(options.supervisor.pid),
+            '--supervisor-nonce', options.supervisor.nonce,
+            '--supervisor-generation', options.supervisor.generationId,
+          ] : []),
         ],
         {
           stdout: 'ignore',
@@ -435,43 +450,66 @@ export async function startCoordinatorService(): Promise<void> {
       state.process.unref();
       state.ownsProcess = true;
 
-      // Wait for it to become healthy
+      const child = state.process;
       const budgetMs = getHealthBudgetMs();
-      const healthy = await waitForHealthy(port, budgetMs);
-      if (healthy) {
-        const descriptor = readCoordinatorDescriptor();
-        if (
-          descriptor.pid !== state.process.pid ||
-          state.process.exitCode !== null
-        ) {
-          if (state.process.exitCode === null) state.process.kill();
-          state.process = null;
-          state.ownsProcess = false;
-          state.ownedDescriptor = null;
-        } else {
+      const deadline = Date.now() + budgetMs;
+      let delay = 100;
+      const stopping = () => options.supervisor
+        ? readShutdownIntent(options.supervisor, child.pid, state.ownedDescriptor ?? undefined)
+        : null;
+      while (Date.now() < deadline) {
+        let intent = stopping();
+        if (intent) return { kind: 'shutdown-requested', child, descriptor: intent };
+        let healthy = false;
+        try {
+          healthy = Boolean(await checkHealth(port, true));
+        } catch (error) {
+          intent = stopping();
+          if (intent) return { kind: 'shutdown-requested', child, descriptor: intent };
+          throw error;
+        }
+        intent = stopping();
+        if (intent) return { kind: 'shutdown-requested', child, descriptor: intent };
+        if (healthy) {
+          const descriptor = readCoordinatorDescriptor();
+          if (descriptor.pid !== child.pid || child.exitCode !== null) {
+            if (child.exitCode === null) child.kill();
+            state.process = null;
+            state.ownsProcess = false;
+            state.isRunning = true;
+            state.port = port;
+            return { kind: 'attached' };
+          }
+          if (!sameSupervisor(descriptor.supervisor, options.supervisor ?? null))
+            throw new CoordinatorSecurityError('Coordinator supervisor binding mismatch');
           state.ownedDescriptor = descriptor;
+          state.isRunning = true;
+          state.port = port;
+          return { kind: 'owned', child, descriptor };
         }
-        state.isRunning = true;
-        state.port = port;
-        console.log('[coordinator] Coordinator started and healthy');
-      } else {
-        // Don't leak an orphaned child running a full --scan-on-start against
-        // a multi-GB database; kill it before dropping the handle.
-        try {
-          state.process?.kill();
-        } catch {
-          // Best-effort — process may have already exited.
-        }
-        state.process = null;
-        state.ownsProcess = false;
-        throw new Error(buildHealthFailureMessage(port, budgetMs));
+        if (child.exitCode !== null) break;
+        await Bun.sleep(Math.min(delay, Math.max(0, deadline - Date.now())));
+        delay = Math.min(delay * 2, 2000);
       }
+      const intent = stopping();
+      if (intent) return { kind: 'shutdown-requested', child, descriptor: intent };
+      throw new Error(buildHealthFailureMessage(port, budgetMs));
     } catch (error) {
+      if (options.supervisor && state.process) {
+        const intent = readShutdownIntent(options.supervisor, state.process.pid, state.ownedDescriptor ?? undefined);
+        if (intent) return { kind: 'shutdown-requested', child: state.process, descriptor: intent };
+      }
       if (state.ownsProcess && state.process) {
+        const child = state.process;
         try {
-          state.process.kill();
+          if (child.exitCode === null) child.kill();
+          await child.exited;
         } catch {
           /* Child already exited. */
+        }
+        if (options.supervisor) {
+          const intent = readShutdownIntent(options.supervisor, child.pid, state.ownedDescriptor ?? undefined);
+          if (intent) return { kind: 'shutdown-requested', child, descriptor: intent };
         }
       }
       state.process = null;
@@ -522,12 +560,7 @@ export async function stopCoordinatorService(): Promise<void> {
   if (
     !owned ||
     !current ||
-    current.instanceId !== owned.instanceId ||
-    current.pid !== owned.pid ||
-    current.certificatePem !== owned.certificatePem ||
-    current.bearerToken !== owned.bearerToken ||
-    current.grpcPort !== owned.grpcPort ||
-    current.httpsPort !== owned.httpsPort ||
+    !sameCoordinator(current, owned) ||
     !state.process ||
     state.process.exitCode !== null
   ) {
@@ -555,8 +588,12 @@ export async function stopCoordinatorService(): Promise<void> {
       state.ownedDescriptor = null;
       throw error;
     }
-    // If gRPC shutdown fails, kill the process directly
-    if (state.process) {
+    // A lost response can follow a committed shutdown. Never kill that child
+    // or discard the intent that the supervisor must finish consuming.
+    const committed = owned.supervisor && state.process
+      ? readShutdownIntent(owned.supervisor, state.process.pid, owned)
+      : null;
+    if (!committed && state.process) {
       state.process.kill();
       console.log('[coordinator] Process killed');
     }

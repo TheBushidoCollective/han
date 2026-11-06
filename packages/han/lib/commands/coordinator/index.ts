@@ -114,14 +114,8 @@ export function registerCoordinatorCommands(program: Command): void {
           ? parseInt(options.port, 10)
           : getCoordinatorPort();
 
-        // Stop if running
-        const status = await getStatus(port);
-        if (status.running) {
-          console.log('[coordinator] Stopping...');
-          await stopDaemon(port);
-          // Wait a moment for port to be released
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
+        console.log('[coordinator] Stopping...');
+        await stopDaemon(port);
 
         // Start
         console.log('[coordinator] Starting...');
