@@ -70,6 +70,16 @@ describe('installed Windows proof diagnostics', () => {
     );
   });
 
+  test('classifies startup timeout without printing command output', () => {
+    const output = `${secret}\nCoordinator failed to start within 60s timeout. ${secret}`;
+    const report = safeProofFailure(
+      'partial-claim-start',
+      new ProofCommandError(1, output)
+    );
+    expect(JSON.parse(report).reason).toBe('startup_timeout');
+    expect(report.includes(secret)).toBe(false);
+  });
+
   test('keeps cleanup reporting separate from the initiating failure', () => {
     const primary = safeProofFailure(
       'initial-start',

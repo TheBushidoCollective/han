@@ -148,6 +148,7 @@ export function safeHelperDiagnostic(
 export class ProofCommandError extends Error {
   readonly exitStatus: number | null;
   readonly diagnostic: SafeHelperDiagnostic | undefined;
+  readonly startupTimeout: boolean;
   constructor(exitStatus: number | null, output: string) {
     super('Installed command failed');
     this.exitStatus =
@@ -155,14 +156,18 @@ export class ProofCommandError extends Error {
         ? exitStatus
         : null;
     this.diagnostic = safeHelperDiagnostic(output);
+    this.startupTimeout =
+      /Coordinator failed to start within \d+s timeout\./.test(output);
   }
 }
 
 export function safeProofFailure(phase: string, error: unknown): string {
   const command = error instanceof ProofCommandError ? error : undefined;
+  const startupTimeout = command?.startupTimeout === true;
   return JSON.stringify({
     phase: phases.includes(phase) ? phase : 'setup',
     exitStatus: command?.exitStatus ?? null,
     diagnostic: command?.diagnostic ?? null,
+    ...(startupTimeout ? { reason: 'startup_timeout' } : {}),
   });
 }
