@@ -34,7 +34,12 @@ pub(crate) fn open_runtime(runtime: &Path, create: bool) -> io::Result<PinnedDir
         return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid runtime directory"));
     }
     let data = runtime.parent().ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "runtime has no data directory"))?;
-    PinnedDirectory::open_data_directory(data)?.open_private_child(OsStr::new("runtime"), create)
+    let directory = if create {
+        PinnedDirectory::prepare_data_directory(data)?
+    } else {
+        PinnedDirectory::open_data_directory(data)?
+    };
+    directory.open_private_child(OsStr::new("runtime"), create)
 }
 
 pub(crate) fn prepare(data: &Path) -> io::Result<PathBuf> {

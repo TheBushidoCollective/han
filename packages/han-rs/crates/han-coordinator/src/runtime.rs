@@ -366,11 +366,11 @@ mod tests {
     }
     #[cfg(windows)]
     #[test]
-    fn windows_refuses_runtime_without_acl_implementation() {
+    fn windows_prepares_private_runtime_without_publishing_descriptor() {
         let temp = tempfile::tempdir().unwrap();
-        let error = prepare(temp.path()).unwrap_err();
-        assert_eq!(error.kind(), io::ErrorKind::Unsupported);
-        assert!(!temp.path().join("runtime").exists());
+        let runtime = prepare(temp.path()).unwrap();
+        assert!(runtime.is_dir());
+        assert_eq!(read_descriptor(&runtime).unwrap_err().kind(), io::ErrorKind::NotFound);
     }
 
     #[cfg(unix)]

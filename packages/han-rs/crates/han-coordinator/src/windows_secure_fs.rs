@@ -36,7 +36,7 @@ use windows_sys::Win32::Security::{
     EqualSid, GetAce, GetAclInformation, GetSecurityDescriptorControl,
     GetSecurityDescriptorDacl, GetTokenInformation, IsValidAcl, IsValidSid, IsWellKnownSid,
     AclSizeInformation, ACL, ACL_SIZE_INFORMATION, ACCESS_ALLOWED_ACE,
-    DACL_SECURITY_INFORMATION, INHERITED_ACE, WinBuiltinAdministratorsSid, WinLocalSystemSid,
+    DACL_SECURITY_INFORMATION, INHERITED_ACE, INHERIT_ONLY_ACE, WinBuiltinAdministratorsSid, WinLocalSystemSid,
     OWNER_SECURITY_INFORMATION, SE_DACL_PROTECTED, TOKEN_QUERY, TOKEN_USER, TokenUser,
 };
 use windows_sys::Win32::Security::Authorization::{
@@ -458,6 +458,12 @@ fn verify_acl_mode(handle: &OwnedHandle, private: bool, ancestor: bool) -> io::R
         let count = unsafe { *((sid as *const u8).add(1)) } as usize;
         if 8usize + 8 + count * 4 > ace.Header.AceSize as usize || unsafe { IsValidSid(sid) } == 0 {
             return Err(invalid("invalid ACE SID"));
+        }
+        // Inherit-only ACEs do not grant access on this opened ancestor.
+        // Descendants are independently checked and private creations use
+        // protected DACLs.
+        if ancestor && (ace.Header.AceFlags as u32 & INHERIT_ONLY_ACE) != 0 {
+            continue;
         }
         if unsafe { EqualSid(sid, user) } != 0 {
             user_allowed = true;
