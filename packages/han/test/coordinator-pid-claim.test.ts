@@ -15,12 +15,14 @@
  */
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -217,6 +219,7 @@ test('a live reservation blocks before its PID is published', () => {
     JSON.stringify({ version: 1, pid: process.pid, nonce }),
     { mode: 0o600 }
   );
+  utimesSync(reservation, new Date(0), new Date(0));
   expect(claimSupervisorPid(path)).toEqual({
     kind: 'blocked',
     pid: process.pid,
@@ -232,6 +235,7 @@ test('old release cannot remove a later acquisition', () => {
   const second = claimSupervisorPid(path);
   if (second.kind !== 'owned') throw new Error('Second claim blocked');
   releaseSupervisorPid(first.claim);
+  expect(existsSync(path)).toBe(true);
   expect(readFileSync(path, 'utf8')).toBe(String(process.pid));
   expect(readdirSync(`${path}.takeover`)).toEqual([second.claim.owner]);
   releaseSupervisorPid(second.claim);
@@ -478,6 +482,7 @@ test('delayed removal of an empty reservation cannot remove a successor', async 
   const successorOwner = readdirSync(reservation);
   writeFileSync(resume, 'go');
   expect(await readLine(reader, decoder, carry)).toBe(`BLOCKED:${winner.pid}`);
+  expect(existsSync(reservation)).toBe(true);
   expect(readFileSync(path, 'utf8')).toBe(String(winner.pid));
   expect(readdirSync(reservation)).toEqual(successorOwner);
   expect(winner.exitCode).toBeNull();
@@ -494,3 +499,41 @@ test.skipIf(process.platform === 'win32')(
     expect(readFileSync(target, 'utf8')).toBe('123');
   }
 );
+
+test('retry exhaustion never grants ownership', async () => {
+  const path = join(dataDir, 'coordinator.pid');
+  const reservation = `${path}.takeover`;
+  const modulePath = join(
+    import.meta.dir,
+    '..',
+    'lib',
+    'commands',
+    'coordinator',
+    'pid-claim.ts'
+  );
+  const script = `
+    const fs = await import('node:fs');
+    const real = { ...fs };
+    const { mock } = await import('bun:test');
+    mock.module('node:fs', () => ({ ...real, renameSync(source, destination) {
+      if (destination === ${JSON.stringify(reservation)}) throw Object.assign(new Error('contended'), { code: 'EEXIST' });
+      return real.renameSync(source, destination);
+    }}));
+    const { claimSupervisorPid } = await import(${JSON.stringify(modulePath)});
+    try {
+      claimSupervisorPid(${JSON.stringify(path)});
+      console.log('UNEXPECTED_OWNERSHIP');
+    } catch (error) {
+      console.log('ERROR:' + error.message);
+    }
+  `;
+  const child = Bun.spawn([process.execPath, '-e', script], {
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  const reader = (child.stdout as ReadableStream<Uint8Array>).getReader();
+  expect(await readLine(reader, new TextDecoder(), { text: '' })).toBe(
+    'ERROR:Supervisor claim contention exceeded retry limit'
+  );
+  expect(await child.exited).toBe(0);
+});

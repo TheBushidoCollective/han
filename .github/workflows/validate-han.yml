@@ -60,6 +60,25 @@ jobs:
             test "$result" -eq 0
           fi
 
+  pid-mutation-controls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        mutation: [emptyPublication, unguardedPid, recursiveReclaim, ageSteal, staleRelease, probeFailure, exhaustion]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - name: Install dependencies
+        working-directory: packages/han
+        run: bun install --frozen-lockfile
+      - name: Prove ownership guard rejects mutation
+        working-directory: packages/han
+        run: bun run scripts/prove-pid-claims.ts "${{ matrix.mutation }}"
+
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
