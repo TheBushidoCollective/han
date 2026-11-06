@@ -37,17 +37,19 @@ const DEFAULT_PORT = 41957;
  * Create typed gRPC clients for all coordinator services.
  */
 export function createCoordinatorClients(
-  _port = DEFAULT_PORT
+  port = DEFAULT_PORT
 ): CoordinatorClients {
-  const descriptor = readCoordinatorDescriptor();
-  if (descriptor.grpcPort === null)
-    throw new CoordinatorSecurityError('Coordinator gRPC listener is disabled');
-  const grpcPort = descriptor.grpcPort;
   const transport = createGrpcWebTransport({
-    baseUrl: `https://127.0.0.1:${grpcPort}`,
+    baseUrl: `https://127.0.0.1:${port}`,
     useBinaryFormat: true,
     fetch: Object.assign(
       (input: string | URL | Request, init?: RequestInit) => {
+        const descriptor = readCoordinatorDescriptor();
+        if (descriptor.grpcPort === null)
+          throw new CoordinatorSecurityError(
+            'Coordinator gRPC listener is disabled'
+          );
+        const grpcPort = descriptor.grpcPort;
         const url = new URL(
           typeof input === 'string'
             ? input
@@ -55,8 +57,6 @@ export function createCoordinatorClients(
               ? input.href
               : input.url
         );
-        if (url.origin !== `https://127.0.0.1:${grpcPort}`)
-          throw new CoordinatorSecurityError('Invalid gRPC destination');
         return coordinatorFetch(
           descriptor,
           grpcPort,

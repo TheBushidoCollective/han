@@ -96,8 +96,12 @@ function findCoordinatorBinary(): string | null {
   const home = process.env.HOME || process.env.USERPROFILE || '/tmp';
   const binaryName =
     process.platform === 'win32' ? 'han-coordinator.exe' : 'han-coordinator';
-  const sibling = join(dirname(realpathSync(process.execPath)), binaryName);
-  if (existsSync(sibling)) return sibling;
+  try {
+    const sibling = join(dirname(realpathSync(process.execPath)), binaryName);
+    if (existsSync(sibling)) return sibling;
+  } catch {
+    // Executable path not resolvable
+  }
 
   // 0. Local Rust build (dev mode: running from .ts source)
   const mainFile = process.argv[1] || '';
@@ -553,9 +557,16 @@ export function checkClientVersion(clientVersion: string): boolean {
     );
     // Schedule restart after a short delay
     setTimeout(async () => {
-      console.log('[coordinator] Restarting for version upgrade...');
-      await stopCoordinatorService();
-      await startCoordinatorService();
+      try {
+        console.log('[coordinator] Restarting for version upgrade...');
+        await stopCoordinatorService();
+        await startCoordinatorService();
+      } catch (err) {
+        console.error(
+          '[coordinator] Failed to restart for version upgrade:',
+          err
+        );
+      }
     }, 1000);
     return true;
   }
