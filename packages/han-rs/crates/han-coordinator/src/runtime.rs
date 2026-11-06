@@ -368,7 +368,7 @@ mod tests {
     #[test]
     fn windows_prepares_private_runtime_without_publishing_descriptor() {
         let temp = tempfile::tempdir().unwrap();
-        let runtime = prepare(temp.path()).unwrap();
+        let runtime = prepare(&temp.path().join("han-data")).unwrap();
         assert!(runtime.is_dir());
         assert_eq!(read_descriptor(&runtime).unwrap_err().kind(), io::ErrorKind::NotFound);
     }

@@ -134,7 +134,10 @@ impl PinnedDirectory {
                             | windows_sys::Win32::Storage::FileSystem::FILE_ADD_SUBDIRECTORY,
                         FILE_SHARE_READ | FILE_SHARE_WRITE,
                         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT) };
-                    if raw == INVALID_HANDLE_VALUE { return Err(io::Error::last_os_error()); }
+                    if raw == INVALID_HANDLE_VALUE {
+                        let error = io::Error::last_os_error();
+                        return Err(io::Error::new(error.kind(), format!("reopen pinned parent: {error}")));
+                    }
                     let creation_parent = unsafe { OwnedHandle::from_raw_handle(raw as _) };
                     let pinned_id: FILE_ID_INFO = file_info(parent, FileIdInfo)?;
                     let reopened_id: FILE_ID_INFO = file_info(&creation_parent, FileIdInfo)?;
@@ -146,10 +149,10 @@ impl PinnedDirectory {
                         Ok(next) => next,
                         Err(error) if error.kind() == io::ErrorKind::AlreadyExists =>
                             open_child(parent, name, true, access)?,
-                        Err(error) => return Err(error),
+                        Err(error) => return Err(io::Error::new(error.kind(), format!("create private directory component: {error}"))),
                     }
                 }
-                Err(error) => return Err(error),
+                Err(error) => return Err(io::Error::new(error.kind(), format!("open directory component: {error}"))),
             };
             if parts.peek().is_some() { verify_ancestor_acl(&next)?; }
             handles.push(next);
