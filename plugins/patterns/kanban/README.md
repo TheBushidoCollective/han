@@ -14,7 +14,7 @@ Install with the han CLI:
 han plugin install kanban
 ```
 
-In Claude Code, invoke the skill as `/kanban:ledger-tasks-yylo`. The YYLO Ledger CLI must be installed separately.
+The skill is named `ledger-tasks-yylo`. In the Han OpenCode bridge, use `han_skills` with `action="load"` and `skill="ledger-tasks-yylo"`. The YYLO Ledger CLI must be installed separately.
 
 ## Source
 
