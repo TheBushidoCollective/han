@@ -240,7 +240,17 @@ export function claimSupervisorPid(path: string): ClaimResult {
         const previous = readSupervisorPid(pidPath);
         if (previous !== null && alive(previous)) {
           unlinkSync(join(reservation, owner));
-          rmdirSync(reservation);
+          try {
+            rmdirSync(reservation);
+          } catch (error) {
+            if (
+              !missing(error) &&
+              !['ENOTEMPTY', 'EEXIST'].includes(
+                (error as NodeJS.ErrnoException).code ?? ''
+              )
+            )
+              throw error;
+          }
           return { kind: 'blocked', pid: previous };
         }
         const tempPid = join(dir, `.${basename(pidPath)}.${nonce}.pid`);

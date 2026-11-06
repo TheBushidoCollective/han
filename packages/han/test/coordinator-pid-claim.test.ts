@@ -393,3 +393,74 @@ test('uncertain liveness cannot reclaim a reservation', () => {
     process.kill = original;
   }
 });
+
+test('delayed removal of an empty reservation cannot remove a successor', async () => {
+  const dead = Bun.spawn([process.execPath, '-e', ''], { stdout: 'ignore' });
+  await dead.exited;
+  const path = join(dataDir, 'coordinator.pid');
+  const reservation = `${path}.takeover`;
+  const nonce = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  const resume = join(dataDir, 'resume');
+  mkdirSync(reservation, { mode: 0o700 });
+  writeFileSync(
+    join(reservation, `owner.${nonce}.json`),
+    JSON.stringify({ version: 1, pid: dead.pid, nonce }),
+    { mode: 0o600 }
+  );
+  const modulePath = join(
+    import.meta.dir,
+    '..',
+    'lib',
+    'commands',
+    'coordinator',
+    'pid-claim.ts'
+  );
+  const pausedScript = `
+    const fs = await import('node:fs');
+    const real = { ...fs };
+    const { mock } = await import('bun:test');
+    mock.module('node:fs', () => ({ ...real, rmdirSync(path) {
+      if (path === ${JSON.stringify(reservation)}) {
+        console.log('PAUSED');
+        while (!real.existsSync(${JSON.stringify(resume)})) {}
+      }
+      return real.rmdirSync(path);
+    }}));
+    const { claimSupervisorPid } = await import(${JSON.stringify(modulePath)});
+    const result = claimSupervisorPid(${JSON.stringify(path)});
+    console.log(result.kind === 'owned' ? 'WON' : 'BLOCKED:' + result.pid);
+    await Promise.withResolvers().promise;
+  `;
+  const winnerScript = `
+    const { claimSupervisorPid } = await import(${JSON.stringify(modulePath)});
+    const result = claimSupervisorPid(${JSON.stringify(path)});
+    console.log(result.kind === 'owned' ? 'WON' : 'BLOCKED:' + result.pid);
+    await Promise.withResolvers().promise;
+  `;
+  const paused = Bun.spawn([process.execPath, '-e', pausedScript], {
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  children.push(paused);
+  const reader = (paused.stdout as ReadableStream<Uint8Array>).getReader();
+  const decoder = new TextDecoder();
+  const carry = { text: '' };
+  expect(await readLine(reader, decoder, carry)).toBe('PAUSED');
+  const winner = Bun.spawn([process.execPath, '-e', winnerScript], {
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  children.push(winner);
+  const winnerReader = (
+    winner.stdout as ReadableStream<Uint8Array>
+  ).getReader();
+  expect(await readLine(winnerReader, new TextDecoder(), { text: '' })).toBe(
+    'WON'
+  );
+  const successorOwner = readdirSync(reservation);
+  writeFileSync(resume, 'go');
+  expect(await readLine(reader, decoder, carry)).toBe(`BLOCKED:${winner.pid}`);
+  expect(readFileSync(path, 'utf8')).toBe(String(winner.pid));
+  expect(readdirSync(reservation)).toEqual(successorOwner);
+  expect(winner.exitCode).toBeNull();
+}, 30_000);
