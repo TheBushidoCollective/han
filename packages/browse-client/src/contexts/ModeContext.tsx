@@ -14,8 +14,8 @@ import {
 	useMemo,
 	useState,
 } from "react";
-import type { Org, TeamMember, User } from "../types/auth.ts";
 import { isLocalDashboard } from "../bootstrap.ts";
+import type { Org, TeamMember, User } from "../types/auth.ts";
 
 /**
  * Application mode - local for han browse, hosted for team dashboard

@@ -22,8 +22,8 @@ import {
 import { dirname, join, resolve } from 'node:path';
 import { checkHealth } from '../commands/coordinator/health.ts';
 import { getHanDataDir } from '../config/claude-settings.ts';
-import { createCoordinatorClients } from '../grpc/client.ts';
 import { getCoordinatorDataDir } from '../coordinator/connection.ts';
+import { createCoordinatorClients } from '../grpc/client.ts';
 
 async function isCoordinatorServing(port: number): Promise<boolean> {
   return (await checkHealth(port)) !== null;

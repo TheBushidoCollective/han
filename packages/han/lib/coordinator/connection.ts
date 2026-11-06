@@ -1,10 +1,10 @@
 import {
-  constants,
-  openSync,
   closeSync,
+  constants,
   fstatSync,
-  readFileSync,
   lstatSync,
+  openSync,
+  readFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';

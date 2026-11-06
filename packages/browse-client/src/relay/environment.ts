@@ -19,8 +19,8 @@ import {
 	Store,
 	type SubscribeFunction,
 } from "relay-runtime";
-import { getGraphQLEndpoints } from "../config/urls.ts";
 import { dashboardAuthorization } from "../bootstrap.ts";
+import { getGraphQLEndpoints } from "../config/urls.ts";
 
 /**
  * Parse a multipart/mixed response for @defer support

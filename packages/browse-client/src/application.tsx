@@ -3,9 +3,9 @@ import { StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
+import { isLocalDashboard } from "./bootstrap.ts";
 import { Center, Text } from "./components/atoms";
 import { ConnectionGate } from "./components/organisms/ConnectionGate.tsx";
-import { isLocalDashboard } from "./bootstrap.ts";
 
 Sentry.init({
 	dsn: "https://e7b6f89f9beb6cfa75305f7e8ddd5e3e@o4509221255077888.ingest.us.sentry.io/4509221258158080",

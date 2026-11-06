@@ -9,9 +9,9 @@ import { type Client, createClient } from '@connectrpc/connect';
 import { createGrpcWebTransport } from '@connectrpc/connect-web';
 import { checkHealth } from '../commands/coordinator/health.ts';
 import {
+  CoordinatorSecurityError,
   coordinatorFetch,
   readCoordinatorDescriptor,
-  CoordinatorSecurityError,
 } from '../coordinator/connection.ts';
 import {
   CoordinatorService,

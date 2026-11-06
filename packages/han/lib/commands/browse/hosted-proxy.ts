@@ -1,9 +1,9 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import {
+  closeSync,
   constants,
   lstatSync,
   openSync,
-  closeSync,
   readFileSync,
   unlinkSync,
   writeFileSync,
@@ -26,7 +26,6 @@ import {
   coordinatorWebSocket,
   getCoordinatorDataDir,
 } from '../../coordinator/connection.ts';
-
 
 export const HOSTED_DASHBOARD_ORIGIN = 'https://dashboard.local.han.guru';
 const TOKEN_LIFETIME = 120_000;

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import {
   existsSync,
-  mkdtempSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   rmSync,
   statSync,
@@ -12,7 +12,6 @@ import { connect } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import WebSocket from 'ws';
 import { startHostedDashboardProxy } from '../lib/commands/browse/hosted-proxy.ts';
 
 const cleanups: Array<() => void | Promise<void>> = [];
@@ -200,22 +199,62 @@ describe('local dashboard gateway', () => {
   });
   test('closes websocket before upstream connection when token is invalid', async () => {
     const { proxy } = await setup();
-    const socket = new WebSocket(
-      `${proxy.url.replace('http:', 'ws:')}/graphql`,
-      'graphql-transport-ws',
-      { origin: proxy.url }
+    const target = new URL(proxy.url);
+    const { promise, resolve, reject } = Promise.withResolvers<number>();
+    const socket = connect(Number(target.port), target.hostname);
+    let buffer = Buffer.alloc(0);
+    let upgraded = false;
+    socket.setTimeout(5000, () =>
+      socket.destroy(new Error('WebSocket timed out'))
     );
-    const closed = Promise.withResolvers<number>();
-    socket.on('open', () =>
-      socket.send(
-        JSON.stringify({
-          type: 'connection_init',
-          payload: { authorization: 'Bearer incorrect' },
-        })
-      )
+    socket.on('error', reject);
+    socket.on('end', () =>
+      reject(new Error('WebSocket closed before close frame'))
     );
-    socket.on('close', (code) => closed.resolve(code));
-    socket.on('error', closed.reject);
-    expect(await closed.promise).toBe(4401);
+    socket.on('connect', () => {
+      socket.write(
+        `GET /graphql HTTP/1.1\r\nHost: ${target.host}\r\nOrigin: ${proxy.url}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Protocol: graphql-transport-ws\r\n\r\n`
+      );
+    });
+    socket.on('data', (chunk) => {
+      buffer = Buffer.concat([buffer, chunk]);
+      if (!upgraded) {
+        const end = buffer.indexOf('\r\n\r\n');
+        if (end < 0) return;
+        const headers = buffer.subarray(0, end).toString();
+        if (!/^HTTP\/1\.1 101\b/.test(headers)) {
+          socket.destroy();
+          reject(
+            new Error(`WebSocket upgrade rejected: ${headers.split('\r\n')[0]}`)
+          );
+          return;
+        }
+        upgraded = true;
+        buffer = buffer.subarray(end + 4);
+        const payload = Buffer.from(
+          JSON.stringify({
+            type: 'connection_init',
+            payload: { authorization: 'Bearer incorrect' },
+          })
+        );
+        const mask = Buffer.from([1, 2, 3, 4]);
+        const masked = Buffer.from(
+          payload.map((byte, index) => byte ^ mask[index % 4])
+        );
+        socket.write(
+          Buffer.concat([
+            Buffer.from([0x81, 0x80 | payload.length]),
+            mask,
+            masked,
+          ])
+        );
+      }
+      if (buffer.length >= 4 && (buffer[0] & 0x0f) === 8) {
+        const code = buffer.readUInt16BE(2);
+        socket.end();
+        resolve(code);
+      }
+    });
+    expect(await promise).toBe(4401);
   });
 });

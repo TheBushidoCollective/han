@@ -8,11 +8,11 @@
  * are properly coordinated across all Claude sessions.
  */
 
-import {
-  coordinatorRequest,
-  CoordinatorSecurityError,
-} from '../coordinator/connection.ts';
 import { checkHealth } from '../commands/coordinator/health.ts';
+import {
+  CoordinatorSecurityError,
+  coordinatorRequest,
+} from '../coordinator/connection.ts';
 
 /**
  * Debug logging

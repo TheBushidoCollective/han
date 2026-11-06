@@ -6,8 +6,8 @@
 
 import { type Client, createClient } from "graphql-ws";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getGraphQLEndpoints } from "../config/urls.ts";
 import { dashboardAuthorization } from "../bootstrap.ts";
+import { getGraphQLEndpoints } from "../config/urls.ts";
 
 /**
  * Singleton WebSocket client for subscriptions

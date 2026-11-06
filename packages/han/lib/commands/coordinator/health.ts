@@ -1,7 +1,7 @@
 import { connect } from 'node:net';
 import {
-  coordinatorRequest,
   CoordinatorSecurityError,
+  coordinatorRequest,
   readCoordinatorDescriptor,
 } from '../../coordinator/connection.ts';
 import { getCoordinatorPort } from './types.ts';
