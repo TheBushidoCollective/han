@@ -73,6 +73,7 @@ export interface WindowsRecoverySnapshot {
   pidFile: WindowsRecord | null;
   stoppingNames: string[];
   stopping: Array<{ name: string; record: WindowsRecord }>;
+  authorities: Array<{ name: string; record: WindowsRecord }>;
 }
 export type RecoverySnapshot = PosixRecoverySnapshot | WindowsRecoverySnapshot;
 type ProcessState = 'alive' | 'gone' | 'absent';
@@ -85,6 +86,8 @@ export interface RecoveryInspection {
   stoppingNames: string[];
   stoppingBindings: SupervisorBinding[];
   supervisorProcess?: WindowsProcessIdentity | null;
+  claimState?: ProcessState;
+  claimProcess?: WindowsProcessIdentity | null;
 }
 
 /** Reject any new record or claim identity while permitting removal and an exact intent rename. */
@@ -134,6 +137,11 @@ export function assertRecoveryFence(
     for (const name of ['reservation', 'ownerFile', 'pidFile'] as const)
       if (current[name] !== null && !equal(initial[name], current[name]))
         conflict();
+    for (const entry of current.authorities) {
+      const old = initial.authorities.find((item) => item.name === entry.name);
+      if (old && equal(old.record, entry.record)) continue;
+      conflict();
+    }
   }
   if (current.active !== null && !equal(initial.active, current.active))
     conflict();
@@ -262,6 +270,18 @@ function validSnapshot(
         (index === 0 || v[index - 1].name < entry.name) &&
         record(entry.record, identity)
     );
+  const authorities = (v: unknown, identity: (v: unknown) => boolean) =>
+    Array.isArray(v) &&
+    v.length <= 256 &&
+    v.every(
+      (entry, index) =>
+        object(entry) &&
+        exact(entry, ['name', 'record']) &&
+        typeof entry.name === 'string' &&
+        /^coordinator\.authority\.[0-9a-f-]+\.json$/.test(entry.name) &&
+        (index === 0 || v[index - 1].name < entry.name) &&
+        record(entry.record, identity)
+    );
   if (value.platform === 'posix') {
     if (
       !exact(value, [
@@ -322,9 +342,11 @@ function validSnapshot(
       'pidFile',
       'stoppingNames',
       'stopping',
+      'authorities',
     ]) ||
     !Array.isArray(value.stoppingNames) ||
-    !stopping(value.stopping, windowsIdentity)
+    !stopping(value.stopping, windowsIdentity) ||
+    !authorities(value.authorities, windowsIdentity)
   )
     return false;
   return (
@@ -442,9 +464,11 @@ export function recoveryInspect(
             'descriptor',
             'childState',
             'supervisorState',
+            'supervisorProcess',
+            'claimState',
+            'claimProcess',
             'stoppingNames',
             'stoppingBindings',
-            'supervisorProcess',
           ]
         : [
             'status',
@@ -477,12 +501,22 @@ export function recoveryInspect(
     (value.descriptor === null) !== (value.childState === 'absent')
   )
     throw new CoordinatorSecurityError('Invalid recovery inspection');
-  if (
-    process.platform === 'win32' &&
-    value.supervisorProcess !== null &&
-    !validWindowsProcessIdentity(value.supervisorProcess)
-  )
-    throw new CoordinatorSecurityError('Invalid supervisor process identity');
+  if (process.platform === 'win32') {
+    if (
+      value.supervisorProcess !== null &&
+      value.supervisorProcess !== undefined &&
+      !validWindowsProcessIdentity(value.supervisorProcess)
+    )
+      throw new CoordinatorSecurityError('Invalid supervisor process identity');
+    if (!states.includes(value.claimState as ProcessState))
+      throw new CoordinatorSecurityError('Invalid claim state');
+    if (
+      value.claimProcess !== null &&
+      value.claimProcess !== undefined &&
+      !validWindowsProcessIdentity(value.claimProcess)
+    )
+      throw new CoordinatorSecurityError('Invalid claim process identity');
+  }
   if (value.descriptor !== null)
     validateCoordinatorDescriptor(value.descriptor);
   return value;

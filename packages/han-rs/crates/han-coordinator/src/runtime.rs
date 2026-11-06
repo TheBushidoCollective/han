@@ -369,9 +369,7 @@ mod tests {
     #[test]
     fn waiting_withdrawal_observes_replacement_published_under_guard() {
         let temp = tempfile::tempdir().unwrap();
-        let runtime = prepare(temp.path()).unwrap();
-        let binding = SupervisorBinding::validate(123, uuid::Uuid::new_v4().to_string(), uuid::Uuid::new_v4().to_string()).unwrap();
-        let descriptor = Descriptor { transport_version: 1, instance_id: random_token(), pid: 1, https_port: 1234, grpc_port: None, certificate_pem: "cert".into(), bearer_token: random_token(), supervisor: Some(binding.clone()) };
+        let (runtime, binding, descriptor) = supervised_fixture(temp.path());
         let old = PublishedDescriptor::publish(&runtime, &descriptor).unwrap();
         let guard = PublicationGuard::acquire(&runtime).unwrap();
         let context = ShutdownContext { runtime: runtime.clone(), descriptor: descriptor.clone() };

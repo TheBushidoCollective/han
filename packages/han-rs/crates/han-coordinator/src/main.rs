@@ -20,6 +20,8 @@ mod windows_secure_fs;
 #[cfg(windows)]
 mod windows_runtime_helper;
 #[cfg(windows)]
+mod windows_supervisor_authority;
+#[cfg(windows)]
 mod windows_coordinator_runtime;
 
 use clap::Parser;

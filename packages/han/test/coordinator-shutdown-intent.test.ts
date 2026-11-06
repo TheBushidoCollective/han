@@ -25,8 +25,8 @@ import {
   type SupervisorClaim,
 } from '../lib/commands/coordinator/pid-claim.ts';
 
-let dir: string;
-let claim: SupervisorClaim;
+let dir = '';
+let claim: SupervisorClaim | undefined;
 const previous = process.env.HAN_DATA_DIR;
 const binding = {
   pid: process.pid,
@@ -43,9 +43,12 @@ const descriptor = {
   bearerToken: 'a'.repeat(43),
   supervisor: binding,
 };
-let path: string;
+let path = '';
 
 beforeEach(() => {
+  dir = '';
+  path = '';
+  claim = undefined;
   dir = mkdtempSync(join(tmpdir(), 'han-intent-'));
   process.env.HAN_DATA_DIR = dir;
   mkdirSync(join(dir, 'runtime'), { mode: 0o700 });
@@ -61,13 +64,19 @@ beforeEach(() => {
   );
 });
 afterEach(() => {
-  releaseSupervisorPid(claim);
-  if (previous === undefined) delete process.env.HAN_DATA_DIR;
-  else process.env.HAN_DATA_DIR = previous;
-  rmSync(dir, { recursive: true, force: true });
+  try {
+    if (path) rmSync(path, { force: true });
+    if (dir) rmSync(join(dir, 'runtime', 'coordinator.json'), { force: true });
+    if (claim) releaseSupervisorPid(claim);
+  } finally {
+    if (previous === undefined) delete process.env.HAN_DATA_DIR;
+    else process.env.HAN_DATA_DIR = previous;
+    if (dir) rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('accepts and removes only a bound child generation', () => {
+  if (!claim) throw new Error('Missing test supervisor claim');
   writeFileSync(path, JSON.stringify(descriptor), { mode: 0o600 });
   expect(readShutdownIntent(binding, descriptor.pid, descriptor)).toEqual(
     descriptor

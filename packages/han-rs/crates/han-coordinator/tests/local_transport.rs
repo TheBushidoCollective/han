@@ -16,6 +16,27 @@ fn spawn(dir: &std::path::Path, grpc_port: u16) -> Daemon {
         .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
         .spawn().unwrap())
 }
+// Exercise the same guarded claim API as the real supervisor. The test process
+// is the helper's and coordinator's direct parent.
+fn prepare_supervisor(dir: &std::path::Path, nonce: &str) {
+    use std::io::Write;
+    let request = |op: &str, extra: serde_json::Value| {
+        let mut body = serde_json::json!({"version":1, "dataDir":dir, "op":op});
+        body.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
+        let mut child = Command::new(env!("CARGO_BIN_EXE_han-coordinator"))
+            .arg("--local-runtime").stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null())
+            .spawn().unwrap();
+        child.stdin.take().unwrap().write_all(&serde_json::to_vec(&body).unwrap()).unwrap();
+        let output = child.wait_with_output().unwrap();
+        assert!(output.status.success(), "native supervisor helper failed");
+        let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(value["ok"], true);
+        value["result"].clone()
+    };
+    assert_eq!(request("runtime.prepare", serde_json::json!({}))["status"], "prepared");
+    assert_eq!(request("supervisor.acquire", serde_json::json!({"pid":std::process::id(),"nonce":nonce}))["status"], "owned");
+}
+
 
 async fn descriptor(dir: &std::path::Path, child: &mut Child) -> serde_json::Value {
     let deadline = tokio::time::Instant::now() + Duration::from_secs(45);
@@ -113,6 +134,7 @@ async fn supervised_shutdown_is_authenticated_and_commits_intent_before_response
     let dir = tempfile::tempdir().unwrap();
     let nonce = uuid::Uuid::new_v4().to_string();
     let generation = uuid::Uuid::new_v4().to_string();
+    prepare_supervisor(dir.path(), &nonce);
     let mut daemon = Daemon(Command::new(env!("CARGO_BIN_EXE_han-coordinator"))
         .args(["--foreground", "--port", "0", "--grpc-port", "0", "--no-watcher", "--data-dir"])
         .arg(dir.path())
@@ -185,6 +207,7 @@ async fn supervised_shutdown_refuses_a_replaced_descriptor() {
     let dir = tempfile::tempdir().unwrap();
     let nonce = uuid::Uuid::new_v4().to_string();
     let generation = uuid::Uuid::new_v4().to_string();
+    prepare_supervisor(dir.path(), &nonce);
     let mut daemon = Daemon(Command::new(env!("CARGO_BIN_EXE_han-coordinator"))
         .args(["--foreground", "--port", "0", "--grpc-port", "0", "--no-watcher", "--data-dir"])
         .arg(dir.path())

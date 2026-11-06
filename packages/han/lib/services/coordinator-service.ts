@@ -459,37 +459,42 @@ export async function startCoordinatorService(
           ? windowsChildIdentity(getCoordinatorDataDir(), child.pid)
           : null;
       const matchesChild = (
-        descriptor: LocalCoordinatorDescriptor
+        descriptor: LocalCoordinatorDescriptor,
+        allowExited = false
       ): boolean => {
         if (
-          child.exitCode !== null ||
+          (!allowExited && child.exitCode !== null) ||
           descriptor.pid !== child.pid ||
           !sameSupervisor(descriptor.supervisor, options.supervisor ?? null)
         )
           return false;
         if (process.platform !== 'win32') return true;
         const actual = descriptor.process;
-        return (
-          !!childIdentity &&
-          !!actual &&
-          actual.pid === childIdentity.pid &&
-          actual.creationTime === childIdentity.creationTime &&
-          actual.userSid === childIdentity.userSid &&
-          windowsProcessState(getCoordinatorDataDir(), childIdentity) ===
-            'alive'
+        if (
+          !childIdentity ||
+          !actual ||
+          actual.pid !== childIdentity.pid ||
+          actual.creationTime !== childIdentity.creationTime ||
+          actual.userSid !== childIdentity.userSid
+        )
+          return false;
+        const state = windowsProcessState(
+          getCoordinatorDataDir(),
+          childIdentity
         );
+        return allowExited ? state !== 'unknown' : state === 'alive';
       };
       const budgetMs = getHealthBudgetMs();
       const deadline = Date.now() + budgetMs;
       let delay = 100;
-      const stopping = () => {
+      const stopping = (expected?: LocalCoordinatorDescriptor) => {
         if (!options.supervisor) return null;
         const intent = readShutdownIntent(
           options.supervisor,
           child.pid,
-          state.ownedDescriptor ?? undefined
+          expected ?? state.ownedDescriptor ?? undefined
         );
-        if (intent && !matchesChild(intent))
+        if (intent && !matchesChild(intent, true))
           throw new CoordinatorSecurityError(
             'Shutdown intent child identity mismatch'
           );
@@ -512,6 +517,13 @@ export async function startCoordinatorService(
         } else if (descriptor && matchesChild(descriptor)) {
           await checkDescriptorHealth(descriptor, port);
           const current = readOptionalDescriptor();
+          if (current && !sameCoordinator(current, descriptor))
+            throw new CoordinatorSecurityError(
+              'Coordinator changed during startup'
+            );
+          const committed = stopping(descriptor);
+          if (committed)
+            return { kind: 'shutdown-requested', child, descriptor: committed };
           if (
             !current ||
             !sameCoordinator(current, descriptor) ||
@@ -525,6 +537,9 @@ export async function startCoordinatorService(
           state.port = port;
           return { kind: 'owned', child, descriptor };
         } else if (child.exitCode !== null) {
+          const intent = stopping();
+          if (intent)
+            return { kind: 'shutdown-requested', child, descriptor: intent };
           if (descriptor && (await checkStartupObserver(port, predecessor))) {
             state.process = null;
             state.ownsProcess = false;

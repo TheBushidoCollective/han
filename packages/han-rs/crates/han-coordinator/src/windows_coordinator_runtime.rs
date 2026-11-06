@@ -97,32 +97,26 @@ pub(crate) fn read_descriptor(runtime: &Path) -> io::Result<Descriptor> {
     parse_descriptor(&record.bytes)
 }
 
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct SupervisorOwner {
-    version: u32,
-    nonce: String,
-    process: ProcessIdentity,
-}
+
 
 fn required(guard: &RecordGuard<'_>, name: &str) -> io::Result<RecordSnapshot> {
     guard.read(OsStr::new(name))?.ok_or_else(|| invalid("supervisor claim is missing"))
 }
 
-fn supervisor_records(guard: &RecordGuard<'_>, binding: &SupervisorBinding) -> io::Result<Vec<(OsString, RecordSnapshot)>> {
+fn supervisor_records(guard: &RecordGuard<'_>, binding: &SupervisorBinding) -> io::Result<(Vec<(OsString, RecordSnapshot)>, crate::windows_supervisor_authority::Owner)> {
     SupervisorBinding::validate(binding.pid, binding.nonce.clone(), binding.generation_id.clone())?;
     let reservation = required(guard, RESERVATION)?;
     let owner = required(guard, OWNER)?;
     let pid = required(guard, PID)?;
     if reservation.bytes != owner.bytes { return Err(invalid("supervisor records disagree")); }
-    let claim: SupervisorOwner = serde_json::from_slice(&owner.bytes).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+    let claim = crate::windows_supervisor_authority::parse_owner(&owner.bytes)?;
     if claim.version != 1 || claim.nonce != binding.nonce || claim.process.pid != binding.pid {
         return Err(invalid("supervisor claim does not match binding"));
     }
     let pid_text = std::str::from_utf8(&pid.bytes).map_err(|_| invalid("invalid supervisor pid record"))?;
     if pid_text != claim.process.pid.to_string() { return Err(invalid("supervisor pid record disagrees")); }
     windows_process_identity::verify_parent(&claim.process)?;
-    Ok(vec![(RESERVATION.into(), reservation), (OWNER.into(), owner), (PID.into(), pid)])
+    Ok((vec![(RESERVATION.into(), reservation), (OWNER.into(), owner), (PID.into(), pid)], claim))
 }
 
 /// The snapshot travels with shutdown state so that an old generation cannot
@@ -138,7 +132,9 @@ impl PublicationState {
         let guard = lease.guard()?;
         let mut standalone = None;
         let bindings = if let Some(binding) = &descriptor.supervisor {
-            supervisor_records(&guard, binding)?
+            let (records, owner) = supervisor_records(&guard, binding)?;
+            crate::windows_supervisor_authority::ensure_authority(&guard, &owner)?;
+            records
         } else {
             let name = OsString::from(format!(".coordinator-owner-{}.json", uuid::Uuid::new_v4()));
             let identity = windows_process_identity::current_identity()?;

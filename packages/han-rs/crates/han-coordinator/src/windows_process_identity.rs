@@ -223,10 +223,30 @@ pub(crate) fn child_identity(pid: u32) -> io::Result<Option<ProcessIdentity>> {
         WAIT_TIMEOUT => {},
         _ => return Err(io::Error::last_os_error()),
     }
-    let identity = identity_from_handle(child.0)?;
+    let identity = match identity_from_handle(child.0) {
+        Ok(id) => id,
+        Err(error) => {
+            if unsafe { WaitForSingleObject(child.0, 0) } == WAIT_OBJECT_0 {
+                return Ok(None);
+            }
+            return Err(error);
+        }
+    };
     let child_time = identity.creation_time.parse::<u64>().map_err(|_| invalid("invalid child time"))?;
     let parent_time = parent.creation_time.parse::<u64>().map_err(|_| invalid("invalid parent time"))?;
-    if identity.pid != pid || identity.user_sid != parent.user_sid || child_time <= parent_time || parent_pid(pid)? != parent.pid {
+    let child_parent_pid = match parent_pid(pid) {
+        Ok(ppid) => ppid,
+        Err(error) => {
+            if unsafe { WaitForSingleObject(child.0, 0) } == WAIT_OBJECT_0 {
+                return Ok(None);
+            }
+            return Err(error);
+        }
+    };
+    if identity.pid != pid || identity.user_sid != parent.user_sid || child_time <= parent_time || child_parent_pid != parent.pid {
+        if unsafe { WaitForSingleObject(child.0, 0) } == WAIT_OBJECT_0 {
+            return Ok(None);
+        }
         return Err(invalid("process is not the expected child"));
     }
     if liveness(&parent)? != Liveness::Alive {

@@ -816,14 +816,29 @@ async function standaloneStopPreservesUnrelatedMarker(): Promise<void> {
     assert.equal(descriptor.supervisor, null);
     const pidPath = join(dir, 'coordinator.pid');
     writeFileSync(pidPath, String(process.pid));
+    const requester = Bun.spawn(
+      [process.execPath, cli, 'coordinator', 'stop', '--port', '0'],
+      { env: environment(dir), stdout: 'pipe', stderr: 'pipe' }
+    );
+    children.push(requester);
+    await waitFor('standalone stop rejection', () =>
+      requester.exitCode !== null ? requester.exitCode : undefined
+    );
+    assert.notEqual(requester.exitCode, 0);
+    assert.equal(child.exitCode, null);
+    assert.equal(await healthy(descriptor), true);
+    assert.equal(readFileSync(pidPath, 'utf8'), String(process.pid));
+    assert.equal(readDescriptor(dir)?.instanceId, descriptor.instanceId);
+    rmSync(pidPath);
     await cliCommand(dir, 'stop');
     await waitFor('standalone coordinator stop', () =>
       child.exitCode !== null ? child.exitCode : undefined
     );
     assert.equal(child.exitCode, 0);
-    assert.equal(readFileSync(pidPath, 'utf8'), String(process.pid));
     assert.equal(existsSync(join(dir, 'runtime/coordinator.json')), false);
-    console.log('standalone stop preserved unrelated supervisor marker');
+    console.log(
+      'standalone stop rejected an unbound PID without changing state'
+    );
   } finally {
     if (child.exitCode === null) child.kill();
     await child.exited;
@@ -1031,6 +1046,11 @@ async function stopDuringStartup(): Promise<void> {
   const dir = directory();
   const barrier = join(dir, 'startup-held');
   const release = join(dir, 'startup-release');
+  const observed = join(dir, 'startup-intent-observed');
+  const intent = resolve(
+    import.meta.dir,
+    '../lib/commands/coordinator/shutdown-intent.ts'
+  );
   const health = resolve(
     import.meta.dir,
     '../lib/commands/coordinator/health.ts'
@@ -1043,22 +1063,33 @@ async function stopDuringStartup(): Promise<void> {
     const fs = await import('node:fs');
     const { mock } = await import('bun:test');
     const original = await import(${JSON.stringify(health)});
-    const check = original.checkHealth;
+    const check = original.checkDescriptorHealth;
     mock.module(${JSON.stringify(health)}, () => ({
       ...original,
-      async checkHealth(port, starting) {
-        const result = await check(port, starting);
-        if (starting && result) {
+      async checkDescriptorHealth(descriptor, port) {
+        const result = await check(descriptor, port);
+        if (result) {
           fs.writeFileSync(${JSON.stringify(barrier)}, 'held');
           while (!fs.existsSync(${JSON.stringify(release)})) await Bun.sleep(20);
         }
         return result;
       },
     }));
+    const originalIntent = await import(${JSON.stringify(intent)});
+    mock.module(${JSON.stringify(intent)}, () => ({
+      ...originalIntent,
+      readShutdownIntent(...args) {
+        const result = originalIntent.readShutdownIntent(...args);
+        if (result && args[2]) fs.writeFileSync(${JSON.stringify(observed)}, 'observed');
+        return result;
+      },
+    }));
     const { startDaemon } = await import(${JSON.stringify(daemon)});
     try { await startDaemon({ port: 0, foreground: true }); } catch (e) { console.error(e); process.exitCode = 1; }
   `;
-  const supervisor = Bun.spawn([process.execPath, '-e', script], {
+  const fixture = join(dir, 'startup-fixture.ts');
+  writeFileSync(fixture, script);
+  const supervisor = Bun.spawn([process.execPath, fixture], {
     env: environment(dir),
     stdout: 'pipe',
     stderr: 'pipe',
@@ -1093,7 +1124,20 @@ async function stopDuringStartup(): Promise<void> {
         throw new Error('requester exited before startup intent');
       return existsSync(marker) ? true : undefined;
     });
+    assertChild(descriptor.pid, supervisor.pid);
+    process.kill(descriptor.pid, 'SIGSTOP');
+    await waitFor('startup child suspended', () =>
+      /^\d+ \(.*\) T /.test(
+        readFileSync(`/proc/${descriptor.pid}/stat`, 'utf8')
+      )
+        ? true
+        : undefined
+    );
     writeFileSync(release, 'release');
+    await waitFor('startup supervisor observed pinned intent', () =>
+      existsSync(observed) ? true : undefined
+    );
+    process.kill(descriptor.pid, 'SIGCONT');
     await waitFor('startup supervisor stop', () =>
       supervisor.exitCode !== null ? supervisor.exitCode : undefined
     );

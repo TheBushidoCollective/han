@@ -10,6 +10,7 @@ use crate::runtime::{Descriptor, SupervisorBinding};
 use crate::windows_process_identity::{self as processes, Liveness, ProcessIdentity};
 use crate::windows_secure_fs::{FileIdentity, PinnedDirectory, RecordGuard, RecordSnapshot};
 use crate::windows_secure_fs::CoordinatorLease;
+use crate::windows_supervisor_authority::{self as authorities, Owner};
 
 const MAX_MESSAGE: usize = 128 * 1024;
 
@@ -97,8 +98,10 @@ impl RecoveryRecord {
     }
 }
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 struct StoppingRecord { name: String, record: RecoveryRecord }
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AuthorityRecord { name: String, record: RecoveryRecord }
 
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -113,6 +116,7 @@ struct RecoverySnapshot {
     pid_file: Option<RecoveryRecord>,
     stopping_names: Vec<String>,
     stopping: Vec<StoppingRecord>,
+    authorities: Vec<AuthorityRecord>,
 }
 
 
@@ -126,9 +130,7 @@ struct Claim {
     pid_file: WireFileIdentity,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct Owner { version: u32, nonce: String, process: ProcessIdentity }
+
 
 fn uuid(s: &str) -> bool { uuid::Uuid::parse_str(s).is_ok_and(|id| id.hyphenated().to_string() == s) }
 fn binding(b: &SupervisorBinding) -> io::Result<()> {
@@ -246,74 +248,13 @@ fn remove_incomplete(guard: &RecordGuard<'_>, kind: &str, partial: &PartialRecor
     guard.remove(OsStr::new(reservation), &partial.reservation)
 }
 
-fn acquire(path: &Path, kind: &str) -> io::Result<Value> {
-    stage("parent_identity");
-    let parent = processes::own_parent_identity()?;
-    if parent.user_sid != processes::current_identity()?.user_sid { return Err(invalid()); }
-    let dir = directory(path, true)?;
-    stage("publication_lock");
-    let guard = RecordGuard::open(&dir)?;
-    stage("claim_acquisition");
-    if let Some(partial) = incomplete(&guard, kind)? {
-        if partial.liveness == Liveness::Alive {
-            return Ok(json!({"status":"blocked", "ownerPid":partial.owner.process.pid}));
-        }
-        remove_incomplete(&guard, kind, &partial)?;
-    }
-    if let Some(existing) = records(&guard, kind)? {
-        match processes::liveness(&existing.owner.process)? {
-            Liveness::Alive => return Ok(json!({"status":"blocked", "ownerPid":existing.owner.process.pid})),
-            Liveness::Unknown => return Err(invalid()),
-            Liveness::Gone => remove_records(&guard, kind, &existing)?,
-        }
-    }
-    let owner = Owner { version: 1, nonce: uuid::Uuid::new_v4().to_string(), process: parent };
-    let bytes = serde_json::to_vec(&owner).map_err(|_| invalid())?;
-    let (r, o, p) = names(kind);
-    let reservation = guard.create_if_absent(OsStr::new(r), &bytes)?;
-    let owner_file = match guard.create_if_absent(OsStr::new(o), &bytes) {
-        Ok(file) => file,
-        Err(e) => { guard.remove(OsStr::new(r), &reservation)?; return Err(e); }
-    };
-    let pid_file = match guard.create_if_absent(OsStr::new(p), owner.process.pid.to_string().as_bytes()) {
-        Ok(file) => file,
-        Err(e) => { guard.remove(OsStr::new(o), &owner_file)?; guard.remove(OsStr::new(r), &reservation)?; return Err(e); }
-    };
-    let r = Records { reservation, owner_file, pid_file, owner };
-    Ok(json!({"status":"owned", "claim":record_claim(&r)}))
-}
-fn claim_operation(path: &Path, kind: &str, claim: &Claim, release: bool) -> io::Result<Value> {
-    valid_claim(claim)?;
-    processes::verify_parent(&claim.process)?;
-    let Some(dir) = read_directory(path)? else { return Ok(json!({"status":"absent"})); };
-    let guard = RecordGuard::open(&dir)?;
-    let Some(r) = records(&guard, kind)? else { return Ok(json!({"status":"absent"})); };
-    if !same_claim(&r, claim) { return Ok(json!({"status":"changed"})); }
-    if release { remove_records(&guard, kind, &r)?; }
-    Ok(json!({"status": if release { "released" } else { "owned" }}))
-}
 fn target_name(target: &Target) -> io::Result<String> {
     match target {
         Target::Active => Ok("coordinator.json".into()),
         Target::Stopping { binding: b } => { binding(b)?; Ok(format!("coordinator.stopping.{}.{}.json", b.nonce, b.generation_id)) }
     }
 }
-fn read_descriptor(path: &Path, target: &Target) -> io::Result<Value> {
-    let name = target_name(target)?;
-    let Some(dir) = read_directory(path)? else { return Ok(Value::Null); };
-    stage("publication_lock");
-    let guard = RecordGuard::open(&dir)?;
-    stage("descriptor_read");
-    let Some(record) = guard.read(OsStr::new(&name))? else { return Ok(Value::Null); };
-    let d = crate::windows_coordinator_runtime::parse_descriptor(&record.bytes)?;
-    descriptor(&d)?;
-    if let Target::Stopping { binding: b } = target {
-        if d.supervisor.as_ref() != Some(b) { return Err(invalid()); }
-    }
-    Ok(json!({"descriptor":d, "identity":WireFileIdentity::from_native(record.identity)}))
-}
-// Directory enumeration discovers names only. Every candidate is reopened through
-// the pinned directory and validated under the publication guard.
+
 fn stopping_names(path: &Path, guard: &RecordGuard<'_>) -> io::Result<Vec<String>> {
     let mut result = Vec::new();
     for entry in std::fs::read_dir(path.join("runtime"))? {
@@ -334,7 +275,193 @@ fn stopping_names(path: &Path, guard: &RecordGuard<'_>) -> io::Result<Vec<String
     Ok(result)
 }
 
-fn recovery_snapshot(path: &Path, guard: &RecordGuard<'_>, target: &Target) -> io::Result<(RecoverySnapshot, Option<Descriptor>, Option<Owner>)> {
+fn is_authority_referenced(
+    nonce: &str,
+    active: Option<&Descriptor>,
+    stopping_descriptors: &[Descriptor],
+    claim_owner: Option<&Owner>,
+) -> bool {
+    if let Some(d) = active {
+        if d.supervisor.as_ref().is_some_and(|b| b.nonce == nonce) {
+            return true;
+        }
+    }
+    for d in stopping_descriptors {
+        if d.supervisor.as_ref().is_some_and(|b| b.nonce == nonce) {
+            return true;
+        }
+    }
+    if let Some(claim) = claim_owner {
+        if claim.nonce == nonce {
+            return true;
+        }
+    }
+    false
+}
+
+fn clean_unreferenced_authorities(
+    guard: &RecordGuard<'_>,
+    active: Option<&Descriptor>,
+    stopping_descriptors: &[Descriptor],
+    claim_owner: Option<&Owner>,
+) -> io::Result<()> {
+    let auth_list = authorities::list_authorities(guard)?;
+    for (name, snapshot, owner) in auth_list {
+        if !is_authority_referenced(&owner.nonce, active, stopping_descriptors, claim_owner) {
+            if processes::liveness(&owner.process)? == Liveness::Gone {
+                guard.remove(OsStr::new(&name), &snapshot)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn acquire(path: &Path, kind: &str) -> io::Result<Value> {
+    stage("parent_identity");
+    let parent = processes::own_parent_identity()?;
+    if parent.user_sid != processes::current_identity()?.user_sid { return Err(invalid()); }
+    let dir = directory(path, true)?;
+    stage("publication_lock");
+    let guard = RecordGuard::open(&dir)?;
+    stage("claim_acquisition");
+    if kind == "supervisor" {
+        let active_snap = guard.read(OsStr::new("coordinator.json"))?;
+        let active_desc = active_snap.as_ref().and_then(|r| crate::windows_coordinator_runtime::parse_descriptor(&r.bytes).ok());
+        let stopping_names_list = stopping_names(path, &guard)?;
+        let mut stopping_descriptors = Vec::new();
+        for name in &stopping_names_list {
+            if let Some(record) = guard.read(OsStr::new(name))? {
+                if let Ok(d) = crate::windows_coordinator_runtime::parse_descriptor(&record.bytes) {
+                    stopping_descriptors.push(d);
+                }
+            }
+        }
+        if let Some(partial) = incomplete(&guard, kind)? {
+            if partial.liveness == Liveness::Alive {
+                return Ok(json!({"status":"blocked", "ownerPid":partial.owner.process.pid}));
+            }
+            if is_authority_referenced(&partial.owner.nonce, active_desc.as_ref(), &stopping_descriptors, None) {
+                authorities::ensure_authority(&guard, &partial.owner)?;
+            }
+            remove_incomplete(&guard, kind, &partial)?;
+        }
+        if let Some(existing) = records(&guard, kind)? {
+            match processes::liveness(&existing.owner.process)? {
+                Liveness::Alive => return Ok(json!({"status":"blocked", "ownerPid":existing.owner.process.pid})),
+                Liveness::Unknown => return Err(invalid()),
+                Liveness::Gone => {
+                    if is_authority_referenced(&existing.owner.nonce, active_desc.as_ref(), &stopping_descriptors, None) {
+                        authorities::ensure_authority(&guard, &existing.owner)?;
+                    }
+                    remove_records(&guard, kind, &existing)?;
+                }
+            }
+        }
+        let auth_list = authorities::list_authorities(&guard)?;
+        if let Some(d) = &active_desc {
+            if state(&d.process)? != "gone" {
+                return Ok(json!({"status":"blocked", "ownerPid":d.pid}));
+            }
+            if let Some(b) = &d.supervisor {
+                if let Ok(Some(sup_proc)) = authorities::resolve_supervisor(Some(d), None, &auth_list) {
+                    if state(sup_proc)? != "gone" {
+                        return Ok(json!({"status":"blocked", "ownerPid":b.pid}));
+                    }
+                }
+            }
+        }
+        for d in &stopping_descriptors {
+            if state(&d.process)? != "gone" {
+                return Ok(json!({"status":"blocked", "ownerPid":d.pid}));
+            }
+            if let Some(b) = &d.supervisor {
+                if let Ok(Some(sup_proc)) = authorities::resolve_supervisor(Some(d), None, &auth_list) {
+                    if state(sup_proc)? != "gone" {
+                        return Ok(json!({"status":"blocked", "ownerPid":b.pid}));
+                    }
+                }
+            }
+        }
+        clean_unreferenced_authorities(&guard, active_desc.as_ref(), &stopping_descriptors, None)?;
+    } else {
+        if let Some(partial) = incomplete(&guard, kind)? {
+            if partial.liveness == Liveness::Alive {
+                return Ok(json!({"status":"blocked", "ownerPid":partial.owner.process.pid}));
+            }
+            remove_incomplete(&guard, kind, &partial)?;
+        }
+        if let Some(existing) = records(&guard, kind)? {
+            match processes::liveness(&existing.owner.process)? {
+                Liveness::Alive => return Ok(json!({"status":"blocked", "ownerPid":existing.owner.process.pid})),
+                Liveness::Unknown => return Err(invalid()),
+                Liveness::Gone => remove_records(&guard, kind, &existing)?,
+            }
+        }
+    }
+    let owner = Owner { version: 1, nonce: uuid::Uuid::new_v4().to_string(), process: parent };
+    let bytes = serde_json::to_vec(&owner).map_err(|_| invalid())?;
+    let (r, o, p) = names(kind);
+    let reservation = guard.create_if_absent(OsStr::new(r), &bytes)?;
+    let owner_file = guard.create_if_absent(OsStr::new(o), &bytes)?;
+    let pid_file = guard.create_if_absent(OsStr::new(p), owner.process.pid.to_string().as_bytes())?;
+    let r = Records { reservation, owner_file, pid_file, owner };
+    Ok(json!({"status":"owned", "claim":record_claim(&r)}))
+}
+
+fn claim_operation(path: &Path, kind: &str, claim: &Claim, release: bool) -> io::Result<Value> {
+    valid_claim(claim)?;
+    processes::verify_parent(&claim.process)?;
+    let Some(dir) = read_directory(path)? else { return Ok(json!({"status":"absent"})); };
+    let guard = RecordGuard::open(&dir)?;
+    let Some(r) = records(&guard, kind)? else { return Ok(json!({"status":"absent"})); };
+    if !same_claim(&r, claim) { return Ok(json!({"status":"changed"})); }
+    if release {
+        if kind == "supervisor" {
+            let active = guard.read(OsStr::new("coordinator.json"))?;
+            let active_desc = active.as_ref().and_then(|rec| crate::windows_coordinator_runtime::parse_descriptor(&rec.bytes).ok());
+            let stopping_names_list = stopping_names(path, &guard)?;
+            let mut stopping_descriptors = Vec::new();
+            for name in &stopping_names_list {
+                if let Some(record) = guard.read(OsStr::new(name))? {
+                    if let Ok(d) = crate::windows_coordinator_runtime::parse_descriptor(&record.bytes) {
+                        stopping_descriptors.push(d);
+                    }
+                }
+            }
+            let referenced = is_authority_referenced(&r.owner.nonce, active_desc.as_ref(), &stopping_descriptors, None);
+            if referenced {
+                authorities::ensure_authority(&guard, &r.owner)?;
+            }
+            remove_records(&guard, kind, &r)?;
+            if !referenced {
+                let auth_name = authorities::authority_name(&r.owner.nonce)?;
+                if let Some(snap) = guard.read(OsStr::new(&auth_name))? {
+                    guard.remove(OsStr::new(&auth_name), &snap)?;
+                }
+            }
+        } else {
+            remove_records(&guard, kind, &r)?;
+        }
+    }
+    Ok(json!({"status": if release { "released" } else { "owned" }}))
+}
+
+fn read_descriptor(path: &Path, target: &Target) -> io::Result<Value> {
+    let name = target_name(target)?;
+    let Some(dir) = read_directory(path)? else { return Ok(Value::Null); };
+    stage("publication_lock");
+    let guard = RecordGuard::open(&dir)?;
+    stage("descriptor_read");
+    let Some(record) = guard.read(OsStr::new(&name))? else { return Ok(Value::Null); };
+    let d = crate::windows_coordinator_runtime::parse_descriptor(&record.bytes)?;
+    descriptor(&d)?;
+    if let Target::Stopping { binding: b } = target {
+        if d.supervisor.as_ref() != Some(b) { return Err(invalid()); }
+    }
+    Ok(json!({"descriptor":d, "identity":WireFileIdentity::from_native(record.identity)}))
+}
+
+fn recovery_snapshot(path: &Path, guard: &RecordGuard<'_>, target: &Target) -> io::Result<(RecoverySnapshot, Option<Descriptor>, Option<Owner>, Vec<(String, RecordSnapshot, Owner)>)> {
     let name = target_name(target)?;
     let active = guard.read(OsStr::new("coordinator.json"))?;
     let selected = if matches!(target, Target::Active) { active.clone() } else { guard.read(OsStr::new(&name))? };
@@ -368,10 +495,24 @@ fn recovery_snapshot(path: &Path, guard: &RecordGuard<'_>, target: &Target) -> i
         let record = guard.read(OsStr::new(name))?.ok_or_else(invalid)?;
         stopping.push(StoppingRecord { name: name.clone(), record: RecoveryRecord::from_native(&record) });
     }
-    let snapshot = RecoverySnapshot { platform: "windows".into(), target: target.clone(), active: wire(&active), selected: wire(&selected),
-        reservation: wire(&reservation), owner_file: wire(&owner_file), pid_file: wire(&pid_file),
-        stopping_names: names, stopping };
-    Ok((snapshot, parsed, owner))
+    let auth_list = authorities::list_authorities(guard)?;
+    let mut authorities_wire = Vec::with_capacity(auth_list.len());
+    for (name, snap, _) in &auth_list {
+        authorities_wire.push(AuthorityRecord { name: name.clone(), record: RecoveryRecord::from_native(snap) });
+    }
+    let snapshot = RecoverySnapshot {
+        platform: "windows".into(),
+        target: target.clone(),
+        active: wire(&active),
+        selected: wire(&selected),
+        reservation: wire(&reservation),
+        owner_file: wire(&owner_file),
+        pid_file: wire(&pid_file),
+        stopping_names: names,
+        stopping,
+        authorities: authorities_wire,
+    };
+    Ok((snapshot, parsed, owner, auth_list))
 }
 
 fn state(identity: &ProcessIdentity) -> io::Result<&'static str> {
@@ -385,29 +526,64 @@ fn state(identity: &ProcessIdentity) -> io::Result<&'static str> {
 fn recovery_inspect(path: &Path, target: &Target) -> io::Result<Value> {
     target_name(target)?;
     let Some(dir) = read_directory(path)? else {
-        let snapshot = RecoverySnapshot { platform: "windows".into(), target: target.clone(), active: None, selected: None, reservation: None, owner_file: None, pid_file: None, stopping_names: Vec::new(), stopping: Vec::new() };
-        return Ok(json!({"status":"absent","snapshot":snapshot,"stoppingNames":[],"stoppingBindings":[],"descriptor":null,"supervisorState":"absent","supervisorProcess":null,"childState":"absent"}));
+        let snapshot = RecoverySnapshot {
+            platform: "windows".into(),
+            target: target.clone(),
+            active: None,
+            selected: None,
+            reservation: None,
+            owner_file: None,
+            pid_file: None,
+            stopping_names: Vec::new(),
+            stopping: Vec::new(),
+            authorities: Vec::new(),
+        };
+        return Ok(json!({
+            "status": "absent",
+            "snapshot": snapshot,
+            "stoppingNames": [],
+            "stoppingBindings": [],
+            "descriptor": null,
+            "childState": "absent",
+            "supervisorState": "absent",
+            "supervisorProcess": null,
+            "claimState": "absent",
+            "claimProcess": null,
+        }));
     };
     let guard = RecordGuard::open(&dir)?;
-    let (snapshot, selected, owner) = recovery_snapshot(path, &guard, target)?;
-    if let (Some(d), Some(owner)) = (&selected, &owner) {
-        if let Some(binding) = &d.supervisor {
-            if owner.nonce != binding.nonce || owner.process.pid != binding.pid { return Err(invalid()); }
-        }
-    }
-    if selected.as_ref().is_some_and(|d| d.supervisor.is_some()) && owner.is_none() { return Err(invalid()); }
-    let supervisor_state = match &owner { Some(owner) => state(&owner.process)?, None => "absent" };
-    let child_state = match &selected { Some(d) => state(&d.process)?, None => "absent" };
+    let (snapshot, selected, owner, auth_list) = recovery_snapshot(path, &guard, target)?;
+    let resolved_supervisor = authorities::resolve_supervisor(selected.as_ref(), owner.as_ref(), &auth_list)?;
+    let supervisor_state = match resolved_supervisor {
+        Some(proc) => state(proc)?,
+        None => "absent",
+    };
+    let supervisor_process = resolved_supervisor;
+    let (claim_process, claim_state) = match &owner {
+        Some(o) => (Some(&o.process), state(&o.process)?),
+        None => (None, "absent"),
+    };
+    let child_state = match &selected {
+        Some(d) => state(&d.process)?,
+        None => "absent",
+    };
     let mut stopping_bindings = Vec::new();
-    for name in &snapshot.stopping_names {
-        let record = guard.read(OsStr::new(name))?.ok_or_else(invalid)?;
-        let d = crate::windows_coordinator_runtime::parse_descriptor(&record.bytes)?;
-        descriptor(&d)?;
+    for item in &snapshot.stopping {
+        let d = crate::windows_coordinator_runtime::parse_descriptor(&STANDARD.decode(&item.record.bytes).map_err(|_| invalid())?)?;
         stopping_bindings.push(d.supervisor.ok_or_else(invalid)?);
     }
-    Ok(json!({"status":if selected.is_some() { "present" } else { "absent" },
-        "stoppingNames":snapshot.stopping_names, "stoppingBindings":stopping_bindings, "snapshot":snapshot,
-        "descriptor":selected, "supervisorState":supervisor_state, "supervisorProcess":owner.as_ref().map(|o| &o.process), "childState":child_state}))
+    Ok(json!({
+        "status": if selected.is_some() { "present" } else { "absent" },
+        "snapshot": snapshot,
+        "descriptor": selected,
+        "childState": child_state,
+        "supervisorState": supervisor_state,
+        "supervisorProcess": supervisor_process,
+        "claimState": claim_state,
+        "claimProcess": claim_process,
+        "stoppingNames": snapshot.stopping_names,
+        "stoppingBindings": stopping_bindings,
+    }))
 }
 
 fn recovery_reclaim(path: &Path, expected: &RecoverySnapshot) -> io::Result<Value> {
@@ -421,16 +597,16 @@ fn recovery_reclaim(path: &Path, expected: &RecoverySnapshot) -> io::Result<Valu
         }
     } else { None };
     let guard = RecordGuard::open(&dir)?;
-    let (current, selected, owner) = recovery_snapshot(path, &guard, &expected.target)?;
+    let (current, selected, owner, auth_list) = recovery_snapshot(path, &guard, &expected.target)?;
     if &current != expected { return Ok(json!({"status":"changed"})); }
-    if selected.is_none() && owner.is_none() { return Ok(json!({"status":"absent"})); }
+    if selected.is_none() && owner.is_none() && current.authorities.is_empty() {
+        return Ok(json!({"status":"absent"}));
+    }
     if let Some(d) = &selected {
         if state(&d.process)? != "gone" { return Ok(json!({"status":"busy"})); }
-        if let Some(binding) = &d.supervisor {
-            let claim = owner.as_ref().ok_or_else(invalid)?;
-            if claim.nonce != binding.nonce || claim.process.pid != binding.pid { return Err(invalid()); }
-        } else if owner.is_some() {
-            return Ok(json!({"status":"busy"}));
+        let resolved_sup = authorities::resolve_supervisor(Some(d), owner.as_ref(), &auth_list)?;
+        if let Some(proc) = resolved_sup {
+            if state(proc)? != "gone" { return Ok(json!({"status":"busy"})); }
         }
     }
     if let Some(owner) = &owner {
@@ -450,6 +626,18 @@ fn recovery_reclaim(path: &Path, expected: &RecoverySnapshot) -> io::Result<Valu
     } else if let Some(full) = records(&guard, "supervisor")? {
         remove_records(&guard, "supervisor", &full)?;
     }
+    let active_now = guard.read(OsStr::new("coordinator.json"))?;
+    let active_desc = active_now.as_ref().and_then(|rec| crate::windows_coordinator_runtime::parse_descriptor(&rec.bytes).ok());
+    let stopping_names_now = stopping_names(path, &guard)?;
+    let mut stopping_descriptors_now = Vec::new();
+    for name in &stopping_names_now {
+        if let Some(record) = guard.read(OsStr::new(name))? {
+            if let Ok(d) = crate::windows_coordinator_runtime::parse_descriptor(&record.bytes) {
+                stopping_descriptors_now.push(d);
+            }
+        }
+    }
+    clean_unreferenced_authorities(&guard, active_desc.as_ref(), &stopping_descriptors_now, None)?;
     Ok(json!({"status":"removed"}))
 }
 
@@ -751,5 +939,165 @@ mod tests {
         let mut identity = processes::current_identity().unwrap();
         identity.creation_time = "0".into();
         assert!(state(&identity).is_err());
+    }
+    fn test_descriptor(pid: u32, supervisor: Option<SupervisorBinding>) -> Descriptor {
+        let mut identity = processes::current_identity().unwrap();
+        let creation: u64 = identity.creation_time.parse().unwrap();
+        identity.creation_time = creation.saturating_add(1).to_string();
+        identity.pid = pid;
+        Descriptor {
+            transport_version: 1,
+            instance_id: uuid::Uuid::new_v4().to_string(),
+            pid,
+            process: identity,
+            https_port: 1234,
+            grpc_port: None,
+            certificate_pem: "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----".into(),
+            bearer_token: "0123456789abcdef0123456789abcdef0123456789a".into(),
+            supervisor,
+        }
+    }
+
+    #[test]
+    fn windows_recovery_interrupted_before_replacement_reservation() {
+        let temp = tempfile::tempdir().unwrap();
+        let data = temp.path().join("data");
+        let dir = directory(&data, true).unwrap();
+        let guard = RecordGuard::open(&dir).unwrap();
+        let mut sup_process = processes::current_identity().unwrap();
+        let sup_creation: u64 = sup_process.creation_time.parse().unwrap();
+        sup_process.creation_time = sup_creation.saturating_add(1).to_string();
+        let sup_nonce = uuid::Uuid::new_v4().to_string();
+        let sup_owner = Owner { version: 1, nonce: sup_nonce.clone(), process: sup_process.clone() };
+        authorities::ensure_authority(&guard, &sup_owner).unwrap();
+        let binding = SupervisorBinding { pid: sup_process.pid, nonce: sup_nonce, generation_id: uuid::Uuid::new_v4().to_string() };
+        let d = test_descriptor(12345, Some(binding));
+        guard.create_if_absent(OsStr::new("coordinator.json"), &serde_json::to_vec(&d).unwrap()).unwrap();
+        drop(guard);
+        let inspection = recovery_inspect(&data, &Target::Active).unwrap();
+        assert_eq!(inspection["status"], "present");
+        assert_eq!(inspection["supervisorState"], "gone");
+        assert_eq!(inspection["supervisorProcess"]["creationTime"], sup_process.creation_time);
+        assert_eq!(inspection["claimState"], "absent");
+        assert!(inspection["claimProcess"].is_null());
+        let snapshot: RecoverySnapshot = serde_json::from_value(inspection["snapshot"].clone()).unwrap();
+        let reclaim_res = recovery_reclaim(&data, &snapshot).unwrap();
+        assert_eq!(reclaim_res["status"], "removed");
+        let guard = RecordGuard::open(&dir).unwrap();
+        assert!(guard.read(OsStr::new("coordinator.json")).unwrap().is_none());
+        assert!(authorities::list_authorities(&guard).unwrap().is_empty());
+    }
+
+    #[test]
+    fn windows_recovery_interrupted_after_replacement_reservation() {
+        let temp = tempfile::tempdir().unwrap();
+        let data = temp.path().join("data");
+        let dir = directory(&data, true).unwrap();
+        let guard = RecordGuard::open(&dir).unwrap();
+        let mut sup_process = processes::current_identity().unwrap();
+        let sup_creation: u64 = sup_process.creation_time.parse().unwrap();
+        sup_process.creation_time = sup_creation.saturating_add(1).to_string();
+        let sup_nonce = uuid::Uuid::new_v4().to_string();
+        let sup_owner = Owner { version: 1, nonce: sup_nonce.clone(), process: sup_process.clone() };
+        authorities::ensure_authority(&guard, &sup_owner).unwrap();
+        let binding = SupervisorBinding { pid: sup_process.pid, nonce: sup_nonce, generation_id: uuid::Uuid::new_v4().to_string() };
+        let d = test_descriptor(12345, Some(binding));
+        guard.create_if_absent(OsStr::new("coordinator.json"), &serde_json::to_vec(&d).unwrap()).unwrap();
+        let mut repl_process = processes::current_identity().unwrap();
+        let repl_creation: u64 = repl_process.creation_time.parse().unwrap();
+        repl_process.creation_time = repl_creation.saturating_add(2).to_string();
+        let repl_nonce = uuid::Uuid::new_v4().to_string();
+        let repl_owner = Owner { version: 1, nonce: repl_nonce, process: repl_process.clone() };
+        let repl_bytes = serde_json::to_vec(&repl_owner).unwrap();
+        guard.create_if_absent(OsStr::new("supervisor.reservation.json"), &repl_bytes).unwrap();
+        drop(guard);
+        let inspection = recovery_inspect(&data, &Target::Active).unwrap();
+        assert_eq!(inspection["status"], "present");
+        assert_eq!(inspection["supervisorState"], "gone");
+        assert_eq!(inspection["supervisorProcess"]["creationTime"], sup_process.creation_time);
+        assert_eq!(inspection["claimState"], "gone");
+        assert_eq!(inspection["claimProcess"]["creationTime"], repl_process.creation_time);
+        let snapshot: RecoverySnapshot = serde_json::from_value(inspection["snapshot"].clone()).unwrap();
+        let reclaim_res = recovery_reclaim(&data, &snapshot).unwrap();
+        assert_eq!(reclaim_res["status"], "removed");
+        let guard = RecordGuard::open(&dir).unwrap();
+        assert!(guard.read(OsStr::new("coordinator.json")).unwrap().is_none());
+        assert!(guard.read(OsStr::new("supervisor.reservation.json")).unwrap().is_none());
+        assert!(authorities::list_authorities(&guard).unwrap().is_empty());
+    }
+
+    #[test]
+    fn windows_stale_reclaim_preserves_successor_reservation() {
+        let temp = tempfile::tempdir().unwrap();
+        let data = temp.path().join("data");
+        let dir = directory(&data, true).unwrap();
+        let guard = RecordGuard::open(&dir).unwrap();
+        let mut sup_process = processes::current_identity().unwrap();
+        let sup_creation: u64 = sup_process.creation_time.parse().unwrap();
+        sup_process.creation_time = sup_creation.saturating_add(1).to_string();
+        let sup_nonce = uuid::Uuid::new_v4().to_string();
+        let sup_owner = Owner { version: 1, nonce: sup_nonce.clone(), process: sup_process.clone() };
+        authorities::ensure_authority(&guard, &sup_owner).unwrap();
+        let binding = SupervisorBinding { pid: sup_process.pid, nonce: sup_nonce, generation_id: uuid::Uuid::new_v4().to_string() };
+        let d = test_descriptor(12345, Some(binding));
+        guard.create_if_absent(OsStr::new("coordinator.json"), &serde_json::to_vec(&d).unwrap()).unwrap();
+        drop(guard);
+        let inspection = recovery_inspect(&data, &Target::Active).unwrap();
+        let stale_snapshot: RecoverySnapshot = serde_json::from_value(inspection["snapshot"].clone()).unwrap();
+        let guard = RecordGuard::open(&dir).unwrap();
+        let mut repl_process = processes::current_identity().unwrap();
+        let repl_creation: u64 = repl_process.creation_time.parse().unwrap();
+        repl_process.creation_time = repl_creation.saturating_add(2).to_string();
+        let repl_nonce = uuid::Uuid::new_v4().to_string();
+        let repl_owner = Owner { version: 1, nonce: repl_nonce, process: repl_process };
+        let repl_bytes = serde_json::to_vec(&repl_owner).unwrap();
+        let repl_snap = guard.create_if_absent(OsStr::new("supervisor.reservation.json"), &repl_bytes).unwrap();
+        drop(guard);
+        assert_eq!(recovery_reclaim(&data, &stale_snapshot).unwrap()["status"], "changed");
+        let guard = RecordGuard::open(&dir).unwrap();
+        assert_eq!(guard.read(OsStr::new("supervisor.reservation.json")).unwrap(), Some(repl_snap));
+    }
+
+    #[test]
+    fn windows_acquisition_cleans_unreferenced_dead_authorities() {
+        let temp = tempfile::tempdir().unwrap();
+        let data = temp.path().join("data");
+        let dir = directory(&data, true).unwrap();
+        let guard = RecordGuard::open(&dir).unwrap();
+        let mut dead_process = processes::current_identity().unwrap();
+        let creation: u64 = dead_process.creation_time.parse().unwrap();
+        dead_process.creation_time = creation.saturating_add(1).to_string();
+        let dead_nonce = uuid::Uuid::new_v4().to_string();
+        let dead_owner = Owner { version: 1, nonce: dead_nonce, process: dead_process };
+        authorities::ensure_authority(&guard, &dead_owner).unwrap();
+        assert_eq!(authorities::list_authorities(&guard).unwrap().len(), 1);
+        drop(guard);
+        let result = acquire(&data, "supervisor").unwrap();
+        assert_eq!(result["status"], "owned");
+        let guard = RecordGuard::open(&dir).unwrap();
+        assert!(authorities::list_authorities(&guard).unwrap().is_empty());
+    }
+
+    #[test]
+    fn windows_modeled_pid_reuse_never_signals_live_fixture() {
+        let temp = tempfile::tempdir().unwrap();
+        let data = temp.path().join("data");
+        let dir = directory(&data, true).unwrap();
+        let guard = RecordGuard::open(&dir).unwrap();
+        let mut reused_process = processes::current_identity().unwrap();
+        let creation: u64 = reused_process.creation_time.parse().unwrap();
+        reused_process.creation_time = creation.saturating_add(10).to_string();
+        let sup_nonce = uuid::Uuid::new_v4().to_string();
+        let sup_owner = Owner { version: 1, nonce: sup_nonce.clone(), process: reused_process.clone() };
+        authorities::ensure_authority(&guard, &sup_owner).unwrap();
+        let binding = SupervisorBinding { pid: reused_process.pid, nonce: sup_nonce, generation_id: uuid::Uuid::new_v4().to_string() };
+        let d = test_descriptor(12345, Some(binding));
+        guard.create_if_absent(OsStr::new("coordinator.json"), &serde_json::to_vec(&d).unwrap()).unwrap();
+        drop(guard);
+        let inspection = recovery_inspect(&data, &Target::Active).unwrap();
+        assert_eq!(inspection["status"], "present");
+        assert_eq!(inspection["supervisorState"], "gone");
+        let snapshot: RecoverySnapshot = serde_json::from_value(inspection["snapshot"].clone()).unwrap();
+        assert_eq!(recovery_reclaim(&data, &snapshot).unwrap()["status"], "removed");
     }
 }

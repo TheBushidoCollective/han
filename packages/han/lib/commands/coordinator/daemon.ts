@@ -331,7 +331,8 @@ export async function startDaemon(
 function reclaimRecovery(inspection: RecoveryInspection): boolean {
   if (
     inspection.childState === 'alive' ||
-    inspection.supervisorState === 'alive'
+    inspection.supervisorState === 'alive' ||
+    (inspection.claimState !== undefined && inspection.claimState === 'alive')
   )
     return false;
   const result = recoveryReclaim(getCoordinatorDataDir(), inspection.snapshot);
@@ -442,6 +443,7 @@ export async function stopDaemon(_port?: number): Promise<void> {
     if (
       selected.childState !== 'alive' &&
       selected.supervisorState !== 'alive' &&
+      (selected.claimState === undefined || selected.claimState !== 'alive') &&
       (!original ||
         selected.descriptor !== null ||
         descriptorIsDead(original)) &&

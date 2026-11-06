@@ -57,6 +57,7 @@ pub(crate) struct FileIdentity {
 /// An opened local data directory whose entire ancestor chain remains pinned.
 pub(crate) struct PinnedDirectory {
     handles: Vec<OwnedHandle>,
+    pub(crate) path: std::path::PathBuf,
 }
 
 impl PinnedDirectory {
@@ -158,7 +159,7 @@ impl PinnedDirectory {
         }
         if handles.len() == 1 { return Err(invalid("drive root is not a private data directory")); }
         verify_acl(handles.last().unwrap(), false)?;
-        Ok(Self { handles })
+        Ok(Self { handles, path: path.to_path_buf() })
     }
 
     fn handle(&self) -> &OwnedHandle {
@@ -184,6 +185,7 @@ impl PinnedDirectory {
         };
         verify_private_acl(&child)?;
         self.handles.push(child);
+        self.path.push(name);
         if create {
             drop(PublicationGuard::open(&self, true)?);
         }
@@ -744,7 +746,7 @@ mod tests {
         let parent = dir(temp.path());
         let access = FILE_READ_ATTRIBUTES | FILE_TRAVERSE | FILE_ADD_FILE | FILE_ADD_SUBDIRECTORY | READ_CONTROL;
         let private = create_private_child(&parent, OsStr::new("private"), true, access).unwrap();
-        let pinned = PinnedDirectory { handles: vec![parent, private] };
+        let pinned = PinnedDirectory { handles: vec![parent, private], path: temp.path().join("private") };
         let first = PublicationGuard::open(&pinned, true).unwrap();
         let lock = open_child_with_share(pinned.handle(), OsStr::new("descriptor-publication.lock"), false,
             FILE_READ_ATTRIBUTES | FILE_READ_DATA | FILE_WRITE_DATA | READ_CONTROL,
@@ -777,7 +779,7 @@ mod tests {
         let parent = dir(temp.path());
         let access = FILE_READ_ATTRIBUTES | FILE_TRAVERSE | FILE_ADD_FILE | FILE_ADD_SUBDIRECTORY | READ_CONTROL;
         let private = create_private_child(&parent, OsStr::new("private"), true, access).unwrap();
-        let pinned = PinnedDirectory { handles: vec![parent, private] };
+        let pinned = PinnedDirectory { handles: vec![parent, private], path: temp.path().join("private") };
         let (name, mut record) = PrivateRecord::create_temp(&pinned, b"payload").unwrap();
         assert_eq!(record.read().unwrap(), b"payload");
         assert!(PrivateRecord::create_temp(&pinned, &vec![0; PrivateRecord::LIMIT + 1]).is_err());
@@ -792,7 +794,7 @@ mod tests {
         let parent = dir(temp.path());
         let access = FILE_READ_ATTRIBUTES | FILE_TRAVERSE | FILE_ADD_FILE | FILE_ADD_SUBDIRECTORY | READ_CONTROL;
         let private = create_private_child(&parent, OsStr::new("private"), true, access).unwrap();
-        let pinned = PinnedDirectory { handles: vec![parent, private] };
+        let pinned = PinnedDirectory { handles: vec![parent, private], path: temp.path().join("private") };
         drop(PublicationGuard::open(&pinned, true).unwrap());
         let lease = CoordinatorLease::acquire(&pinned).unwrap();
         assert!(CoordinatorLease::acquire(&pinned).is_err());
@@ -807,7 +809,7 @@ mod tests {
         let parent = dir(temp.path());
         let access = FILE_READ_ATTRIBUTES | FILE_TRAVERSE | FILE_ADD_FILE | FILE_ADD_SUBDIRECTORY | READ_CONTROL;
         let private = create_private_child(&parent, OsStr::new("private"), true, access).unwrap();
-        let pinned = PinnedDirectory { handles: vec![parent, private] };
+        let pinned = PinnedDirectory { handles: vec![parent, private], path: temp.path().join("private") };
         drop(PublicationGuard::open(&pinned, true).unwrap());
         let lease = CoordinatorLease::acquire(&pinned).unwrap();
         let guard = lease.guard().unwrap();
@@ -840,7 +842,7 @@ mod tests {
         let parent = dir(temp.path());
         let access = FILE_READ_ATTRIBUTES | FILE_TRAVERSE | FILE_ADD_FILE | FILE_ADD_SUBDIRECTORY | READ_CONTROL;
         let private = create_private_child(&parent, OsStr::new("private"), true, access).unwrap();
-        let pinned = PinnedDirectory { handles: vec![parent, private] };
+        let pinned = PinnedDirectory { handles: vec![parent, private], path: temp.path().join("private") };
         drop(PublicationGuard::open(&pinned, true).unwrap());
         let guard = RecordGuard::open(&pinned).unwrap();
         let active = guard.create_if_absent(OsStr::new("active"), b"active").unwrap();
@@ -857,7 +859,7 @@ mod tests {
         let parent = dir(temp.path());
         let access = FILE_READ_ATTRIBUTES | FILE_TRAVERSE | FILE_ADD_FILE | FILE_ADD_SUBDIRECTORY | READ_CONTROL;
         let private = create_private_child(&parent, OsStr::new("private"), true, access).unwrap();
-        let pinned = PinnedDirectory { handles: vec![parent, private] };
+        let pinned = PinnedDirectory { handles: vec![parent, private], path: temp.path().join("private") };
         assert!(RecordGuard::open(&pinned).is_err());
         assert!(CoordinatorLease::acquire(&pinned).is_err());
         assert!(!temp.path().join("private").join("descriptor-publication.lock").exists());
@@ -871,17 +873,17 @@ mod tests {
         let private = create_private_child(&parent, OsStr::new("runtime"), true, access).unwrap();
         drop(private);
         let runtime = temp.path().join("runtime");
-        let pinned = PinnedDirectory { handles: vec![parent] }.open_private_child(OsStr::new("runtime"), false).unwrap();
+        let pinned = PinnedDirectory { handles: vec![parent], path: temp.path().to_path_buf() }.open_private_child(OsStr::new("runtime"), false).unwrap();
         assert!(RecordGuard::open(&pinned).is_err());
         assert!(CoordinatorLease::acquire(&pinned).is_err());
         drop(pinned);
-        let pinned = PinnedDirectory { handles: vec![dir(temp.path())] }.open_private_child(OsStr::new("runtime"), true).unwrap();
+        let pinned = PinnedDirectory { handles: vec![dir(temp.path())], path: temp.path().to_path_buf() }.open_private_child(OsStr::new("runtime"), true).unwrap();
         assert!(RecordGuard::open(&pinned).is_ok());
         assert!(CoordinatorLease::acquire(&pinned).is_ok());
         drop(pinned);
         fs::remove_file(runtime.join("descriptor-publication.lock")).unwrap();
         fs::create_dir(runtime.join("descriptor-publication.lock")).unwrap();
-        assert!(PinnedDirectory { handles: vec![dir(temp.path())] }.open_private_child(OsStr::new("runtime"), true).is_err());
+        assert!(PinnedDirectory { handles: vec![dir(temp.path())], path: temp.path().to_path_buf() }.open_private_child(OsStr::new("runtime"), true).is_err());
         assert!(runtime.join("descriptor-publication.lock").is_dir());
     }
 
@@ -913,7 +915,7 @@ mod tests {
         let parent = dir(temp.path());
         let access = FILE_READ_ATTRIBUTES | FILE_TRAVERSE | FILE_ADD_FILE | FILE_ADD_SUBDIRECTORY | READ_CONTROL;
         let private = create_private_child(&parent, OsStr::new("private"), true, access).unwrap();
-        let pinned = PinnedDirectory { handles: vec![parent, private] };
+        let pinned = PinnedDirectory { handles: vec![parent, private], path: temp.path().join("private") };
         drop(PublicationGuard::open(&pinned, true).unwrap());
         let guard = RecordGuard::open(&pinned).unwrap();
         let old = guard.create_if_absent(OsStr::new("active"), b"old").unwrap();
@@ -1033,6 +1035,10 @@ impl<'a> RecordGuard<'a> {
     pub(crate) fn open(directory: &'a PinnedDirectory) -> io::Result<Self> {
         Ok(Self { guard: PublicationGuard::open(directory, false)? })
     }
+    pub(crate) fn directory_path(&self) -> &Path {
+        &self.guard._directory.path
+    }
+
 
     pub(crate) fn read(&self, name: &OsStr) -> io::Result<Option<RecordSnapshot>> {
         let mut record = match PrivateRecord::open(self.guard._directory, name, false) {

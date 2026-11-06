@@ -305,7 +305,7 @@ mod tests {
         let roots = Roots::open(temp.path()).unwrap();
         (temp, roots)
     }
-    fn parent() -> u32 { unsafe { libc::getppid() } as u32 }
+    fn parent() -> u32 { unsafe { libc::getppid() as u32 } }
     fn install_owner(roots: &Roots, pid: u32, nonce: &str, with_pid: bool) {
         mkdir(&roots.data, "coordinator.pid.takeover").unwrap();
         let dir = open_at(&roots.data, OsStr::new("coordinator.pid.takeover"), libc::O_RDONLY | libc::O_DIRECTORY, 0).unwrap();
