@@ -15,8 +15,18 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
+import { CoordinatorSecurityError, windowsAcquire, windowsCheck, windowsReadSupervisor, windowsRelease, type WindowsClaim, type WindowsProcessIdentity } from '../../coordinator/windows-runtime.ts';
+import { getCoordinatorDataDir } from '../../coordinator/connection.ts';
 
-export interface SupervisorClaim {
+function windowsDataDir(path: string): string {
+  const dataDir = getCoordinatorDataDir();
+  if (resolve(path) !== join(dataDir, 'coordinator.pid'))
+    throw new CoordinatorSecurityError('Invalid Windows supervisor target');
+  return dataDir;
+}
+
+export type SupervisorClaim = {
+  readonly kind: 'unix';
   readonly pidPath: string;
   readonly reservation: string;
   readonly owner: string;
@@ -24,7 +34,13 @@ export interface SupervisorClaim {
   readonly device: number;
   readonly inode: number;
   released: boolean;
-}
+} | {
+  readonly kind: 'windows';
+  readonly pidPath: string;
+  readonly nonce: string;
+  readonly native: WindowsClaim;
+  released: boolean;
+};
 export type ClaimResult =
   | { kind: 'owned'; claim: SupervisorClaim }
   | { kind: 'blocked'; pid: number };
@@ -78,6 +94,7 @@ function pidValue(text: string): number {
   return pid;
 }
 export function readSupervisorPid(path: string): number | null {
+  if (process.platform === 'win32') return windowsReadSupervisor(windowsDataDir(path))?.pid ?? null;
   try {
     return pidValue(protectedFile(path, true).text);
   } catch (e) {
@@ -112,11 +129,8 @@ export class SupervisorReservationBusyError extends Error {}
 /** Read the protected reservation without acquiring or modifying it. */
 export function readSupervisorIdentity(
   path: string
-): { pid: number; nonce: string } | null {
-  if (process.platform === 'win32')
-    throw new Error(
-      'Windows supervisor ACL and reparse-point verification is unavailable'
-    );
+): { pid: number; nonce: string; process?: WindowsProcessIdentity } | null {
+  if (process.platform === 'win32') return windowsReadSupervisor(windowsDataDir(path));
   const pidPath = resolve(path);
   const reservation = `${pidPath}.takeover`;
   try {
@@ -230,6 +244,7 @@ function reclaim(reservation: string, pidPath: string): number | null {
 }
 export function claimStillOwned(claim: SupervisorClaim): boolean {
   if (claim.released) return false;
+  if (claim.kind === 'windows') return windowsCheck(windowsDataDir(claim.pidPath), claim.native) === 'owned';
   try {
     const record = JSON.parse(
       protectedFile(join(claim.reservation, claim.owner)).text
@@ -249,10 +264,12 @@ export function claimStillOwned(claim: SupervisorClaim): boolean {
   }
 }
 export function claimSupervisorPid(path: string): ClaimResult {
-  if (process.platform === 'win32')
-    throw new Error(
-      'Windows supervisor ACL and reparse-point verification is unavailable'
-    );
+  if (process.platform === 'win32') {
+    const dataDir = windowsDataDir(path);
+    const result = windowsAcquire(dataDir, 'supervisor');
+    if (result.status === 'blocked') return {kind:'blocked', pid:result.ownerPid};
+    return {kind:'owned', claim:{kind:'windows', pidPath:resolve(path), nonce:result.claim.nonce, native:result.claim, released:false}};
+  }
   const pidPath = resolve(path);
   const dir = dirname(pidPath);
   mkdirSync(dir, { recursive: true, mode: 0o700 });
@@ -313,6 +330,7 @@ export function claimSupervisorPid(path: string): ClaimResult {
         return {
           kind: 'owned',
           claim: {
+            kind: 'unix',
             pidPath,
             reservation,
             owner,
@@ -339,6 +357,11 @@ export function claimSupervisorPid(path: string): ClaimResult {
 }
 export function releaseSupervisorPid(claim: SupervisorClaim): void {
   if (claim.released) return;
+  if (claim.kind === 'windows') {
+    windowsRelease(windowsDataDir(claim.pidPath), 'supervisor', claim.native);
+    claim.released = true;
+    return;
+  }
   claim.released = true;
   const owner = join(claim.reservation, claim.owner);
   let record: { version?: unknown; pid?: unknown; nonce?: unknown };
