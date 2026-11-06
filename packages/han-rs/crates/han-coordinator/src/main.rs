@@ -279,6 +279,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         daemonize(&cli).await?;
         return Ok(());
     }
+    let shutdown = shutdown_signal();
+    tokio::pin!(shutdown);
+
 
     // Claim the HTTPS port before anything else. `bind` is an atomic,
     // kernel-enforced singleton, so it is the primary mutual exclusion; the
@@ -528,8 +531,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         None
     };
-    let shutdown = shutdown_signal();
-    tokio::pin!(shutdown);
+
 
     // Write PID file
     if let Some(pid_path) = &cli.pid_file {

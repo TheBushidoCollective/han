@@ -135,6 +135,13 @@ export function rotateLogIfNeeded(): void {
   }
 }
 
+export class CoordinatorChildExitError extends Error {
+  constructor(message = 'Coordinator child exited', options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'CoordinatorChildExitError';
+  }
+}
+
 const claims = new Map<string, SupervisorClaim>();
 
 function readPid(): number | null {
@@ -540,7 +547,7 @@ async function runForeground(port: number): Promise<void> {
         console.log('[coordinator] Running. Press Ctrl+C to stop.');
         while (!signal) {
           if (child.exitCode !== null)
-            throw new Error('Coordinator child exited');
+            throw new CoordinatorChildExitError('Coordinator child exited');
           if (observeIntent()) break;
           let healthy: boolean;
           try {
@@ -551,13 +558,17 @@ async function runForeground(port: number): Promise<void> {
               await Promise.race([child.exited, Bun.sleep(2000)]);
               if (observeIntent()) break;
               if (child.exitCode !== null)
-                throw new Error('Coordinator child exited', { cause: error });
+                throw new CoordinatorChildExitError(
+                  'Coordinator child exited',
+                  { cause: error }
+                );
             }
             throw error;
           }
           if (observeIntent()) break;
-          if (!healthy || child.exitCode !== null)
-            throw new Error('Coordinator stopped responding');
+          if (child.exitCode !== null)
+            throw new CoordinatorChildExitError('Coordinator child exited');
+          if (!healthy) throw new Error('Coordinator stopped responding');
           await Bun.sleep(1000);
         }
         if (signal || observeIntent()) break;
@@ -565,7 +576,9 @@ async function runForeground(port: number): Promise<void> {
         if (signal) break;
         if (
           error instanceof CoordinatorSecurityError ||
-          !isExplicitConnectionRefusal(error)
+          (error instanceof Error &&
+            !isExplicitConnectionRefusal(error) &&
+            !(error instanceof CoordinatorChildExitError))
         )
           throw error;
         if (observeIntent()) break;

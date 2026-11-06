@@ -36,6 +36,7 @@ import {
 import { posixPrepare } from '../coordinator/recovery-runtime.ts';
 import {
   readWindowsChildDescriptor,
+  validWindowsProcessIdentity,
   type WindowsChildDescriptor,
   type WindowsClaim,
   windowsAcquire,

@@ -1262,6 +1262,51 @@ async function fixedPortPublicationBarrier(): Promise<void> {
   }
 }
 
+async function securityFailureTerminatesSupervisor(): Promise<void> {
+  const dir = directory();
+  const running = join(dir, 'supervisor-running');
+  const supervisor = observedSupervisor(dir, running);
+  children.push(supervisor);
+  let ownedPid: number | undefined;
+  try {
+    const original = await ready(dir, supervisor);
+    ownedPid = original.pid;
+    assertChild(original.pid, supervisor.pid);
+    await waitFor('supervisor running', () =>
+      existsSync(running) ? true : undefined
+    );
+    // Tamper with the active descriptor to introduce a security error (corrupt bearer token)
+    // without killing the child. The supervisor's next health check must fail closed
+    // and terminate the supervisor rather than continuing or auto-restarting.
+    const tampered = {
+      ...original,
+      bearerToken: 'corrupted-token-padding-to-length-43-bytes!',
+    };
+    writeFileSync(
+      join(dir, 'runtime/coordinator.json'),
+      JSON.stringify(tampered)
+    );
+    await waitFor('supervisor security termination', () =>
+      supervisor.exitCode !== null ? supervisor.exitCode : undefined
+    );
+    assert.notEqual(supervisor.exitCode, 0);
+    console.log(
+      'security error during supervisor loop terminated supervisor without restart'
+    );
+  } finally {
+    if (ownedPid !== undefined && supervisor.exitCode === null)
+      killChild(ownedPid, supervisor.pid);
+    if (supervisor.exitCode === null) supervisor.kill();
+    await supervisor.exited;
+    // Clean up child if still running
+    if (ownedPid !== undefined) {
+      try {
+        process.kill(ownedPid, 'SIGKILL');
+      } catch {}
+    }
+  }
+}
+
 async function defaultBuildIgnoresBarrier(): Promise<void> {
   const dir = directory();
   const barrier = directory();
@@ -1323,6 +1368,7 @@ try {
     await preDispatchFailure('stale-request');
     await preDispatchFailure('dead-requester');
     await stopDuringStartup();
+    await securityFailureTerminatesSupervisor();
   }
 } finally {
   for (const child of children) if (child.exitCode === null) child.kill();

@@ -678,16 +678,19 @@ describe('stopCoordinatorService ownership', () => {
     };
     const child = { pid: 4242, exitCode: null, unref: mock(), kill: mock() };
     mockBunSpawn.mockImplementationOnce(() => child as never);
-    mockDescriptor.mockImplementation(() => ({
-      transportVersion: 1,
-      instanceId: 'owned',
-      pid: child.pid,
-      httpsPort: 41957,
-      grpcPort: 41958,
-      certificatePem: '-----BEGIN CERTIFICATE-----\ntest',
-      bearerToken: 'a'.repeat(43),
-      supervisor,
-    }));
+    mockDescriptor.mockImplementation(
+      () =>
+        ({
+          transportVersion: 1,
+          instanceId: 'owned',
+          pid: child.pid,
+          httpsPort: 41957,
+          grpcPort: 41958,
+          certificatePem: '-----BEGIN CERTIFICATE-----\ntest',
+          bearerToken: 'a'.repeat(43),
+          supervisor,
+        }) as never
+    );
     const intentPath = join(
       getHanDataDir(),
       'runtime',
@@ -721,5 +724,80 @@ describe('stopCoordinatorService ownership', () => {
     } finally {
       realFs.rmSync(intentPath, { force: true });
     }
+  });
+});
+
+describe('isExplicitConnectionRefusal classifier', () => {
+  test('rejects CoordinatorChildExitError', async () => {
+    const { CoordinatorChildExitError } = await import(
+      '../lib/commands/coordinator/daemon.ts'
+    );
+    expect(
+      realConnection.isExplicitConnectionRefusal(
+        new CoordinatorChildExitError()
+      )
+    ).toBe(false);
+  });
+
+  test('rejects security and TLS errors even when wrapped in ConnectError or generic Error', () => {
+    const authError = new realConnection.CoordinatorSecurityError(
+      'Coordinator rejected authenticated request (401)'
+    );
+    expect(realConnection.isExplicitConnectionRefusal(authError)).toBe(false);
+    expect(
+      realConnection.isExplicitConnectionRefusal(
+        new ConnectError(
+          'wrapped',
+          Code.Unknown,
+          undefined,
+          undefined,
+          authError
+        )
+      )
+    ).toBe(false);
+
+    const tlsError = new realConnection.CoordinatorSecurityError(
+      'Coordinator connection failed: UNABLE_TO_VERIFY_LEAF_SIGNATURE'
+    );
+    expect(realConnection.isExplicitConnectionRefusal(tlsError)).toBe(false);
+    expect(
+      realConnection.isExplicitConnectionRefusal(
+        new ConnectError(
+          'wrapped',
+          Code.Unknown,
+          undefined,
+          undefined,
+          tlsError
+        )
+      )
+    ).toBe(false);
+
+    const certError = new Error('certificate has expired');
+    expect(realConnection.isExplicitConnectionRefusal(certError)).toBe(false);
+  });
+
+  test('accepts explicit connection refusal and terminates on cyclic causes', () => {
+    const refusal = new realConnection.CoordinatorSecurityError(
+      'Coordinator connection failed: ECONNREFUSED: Unable to connect'
+    );
+    expect(realConnection.isExplicitConnectionRefusal(refusal)).toBe(true);
+
+    const wrappedRefusal = new ConnectError(
+      'wrapped refusal',
+      Code.Unknown,
+      undefined,
+      undefined,
+      refusal
+    );
+    expect(realConnection.isExplicitConnectionRefusal(wrappedRefusal)).toBe(
+      true
+    );
+
+    // Cyclic cause protection
+    const cyclicA = new Error('error A');
+    const cyclicB = new Error('error B');
+    (cyclicA as { cause?: unknown }).cause = cyclicB;
+    (cyclicB as { cause?: unknown }).cause = cyclicA;
+    expect(realConnection.isExplicitConnectionRefusal(cyclicA)).toBe(false);
   });
 });
