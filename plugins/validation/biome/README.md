@@ -24,17 +24,15 @@ Each skill provides specialized knowledge and patterns for Biome development.
 
 ## Quality Hooks
 
-This plugin includes hooks that ensure Biome checks pass before completing work. The hooks use `@thebushidocollective/han` to support both single-package and monorepo projects.
+The `lint` hook runs Biome checks on Stop and after edits. It detects root
+`biome.json` configurations in single-package and monorepo projects. Checks
+report formatting and lint diagnostics without changing files.
 
-### Monorepo Support
-
-The hooks automatically detect directories with `biome.json` and run Biome checks in each:
+To format selected files explicitly, run:
 
 ```bash
-han hook run --fail-fast --dirs-with biome.json -- npx biome check .
+npx @biomejs/biome check --write <explicit-paths>
 ```
-
-This ensures all packages in your monorepo pass Biome validation before work is marked complete.
 
 ## Installation
 
