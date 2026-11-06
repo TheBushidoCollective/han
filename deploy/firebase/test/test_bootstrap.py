@@ -181,7 +181,7 @@ class FakeCloud:
         if bootstrap.ACTIVE_EXECUTION:
             m = bootstrap.ACTIVE_EXECUTION
             if argv[1:5] == ["iam", "workload-identity-pools", "describe", m["pool_id"]]:
-                return 0, json.dumps({"name": bootstrap.SHARED_POOL, "state": "ACTIVE", "disabled": False}), ""
+                return 0, json.dumps({"name": bootstrap.EXECUTION_POOL, "state": "ACTIVE", "disabled": False}), ""
             if (argv[1:5] == ["iam", "workload-identity-pools", "providers", "list"] and
                     f"--workload-identity-pool={m['pool_id']}" in argv):
                 return 0, json.dumps([{"name": m["provider_resource"]}]), ""
@@ -291,7 +291,7 @@ TEST_RUN = "123456789"
 TEST_EXECUTION = bootstrap.execution.make_manifest(TEST_COMMIT, DEFAULT_PLAN_SHA, "a" * 40, TEST_RUN, "1", EXPIRY, False)
 bootstrap.ACTIVE_EXECUTION = TEST_EXECUTION
 bootstrap.BOOTSTRAP_PRINCIPAL = TEST_EXECUTION["member"]
-bootstrap.SHARED_POOL = f"projects/{bootstrap.PROJECT_NUMBER}/locations/global/workloadIdentityPools/{TEST_EXECUTION['pool_id']}"
+bootstrap.EXECUTION_POOL = f"projects/{bootstrap.PROJECT_NUMBER}/locations/global/workloadIdentityPools/{TEST_EXECUTION['pool_id']}"
 HAN_POOL_MEMBER = (f"principal://iam.googleapis.com/projects/{bootstrap.PROJECT_NUMBER}/locations/global/"
                    f"workloadIdentityPools/{bootstrap.POOL}/subject/repo:{bootstrap.REPO}:environment:han-bootstrap")
 NOT_FOUND_REMOVE = "ERROR: (gcloud) Policy binding with the specified principal, role, and condition not found!"
@@ -883,7 +883,7 @@ class CapableMembers(unittest.TestCase):
 
     def test_a_shared_pool_principal_set_is_left_and_the_run_fails(self):
         fake = FakeCloud()
-        member = f"principalSet://iam.googleapis.com/{bootstrap.SHARED_POOL}/attribute.repository/{bootstrap.REPO}"
+        member = f"principalSet://iam.googleapis.com/{bootstrap.EXECUTION_POOL}/attribute.repository/{bootstrap.REPO}"
         self.add(fake, member, bootstrap.SIGNIN_ROLE)
         rc, _, err = ci_run(fake, *REVOKE_ARGS)
         self.assertEqual(rc, 1)
@@ -920,6 +920,78 @@ class CapableMembers(unittest.TestCase):
         self.assertIn("could match", err)
         self.assertTrue(all("remove-iam-policy-binding" in a for a in fake.writes), fake.writes)
         self.assertIn("allUsers", fake.members())
+
+    def test_legacy_grants_refuse_execute_and_only_current_grant_is_removed(self):
+        legacy_set = f"principalSet://iam.googleapis.com/{bootstrap.LEGACY_POOL}/attribute.repository/{bootstrap.REPO}"
+        wildcard = (f"principalSet://iam.googleapis.com/projects/{bootstrap.PROJECT_NUMBER}/locations/global/"
+                    "workloadIdentityPools/*")
+        for member in (bootstrap.LEGACY_PRINCIPAL, legacy_set, wildcard,
+                       "principalSet://iam.googleapis.com/projects/-/locations/global/workloadIdentityPools/github/*",
+                       "principalSet://iam.googleapis.com/not-a-parseable-pool"):
+            for expired in (False, True):
+                with self.subTest(member=member, expired=expired):
+                    fake = FakeCloud()
+                    legacy = {"role": bootstrap.SIGNIN_ROLE, "members": [member]}
+                    if expired:
+                        legacy["condition"] = {"title": "expired", "expression":
+                                               "request.time < timestamp('2020-01-01T00:00:00Z')"}
+                    fake.policy["bindings"].append(legacy)
+                    rc, _, err = ci_run(fake, *execute_args())
+                    self.assertEqual(rc, 1, err)
+                    self.assertIn(member, err)
+                    self.assertEqual(len(fake.removes), 1)
+                    self.assertTrue(all("remove-iam-policy-binding" in a for a in fake.writes))
+                    self.assertIn(legacy, fake.policy["bindings"])
+                    self.assertIn("user:someone@example.com", fake.members())
+                    self.assertNotIn(bootstrap.BOOTSTRAP_PRINCIPAL, fake.members())
+
+    def test_revoke_leaves_legacy_and_unrelated_bindings_and_reports_failure(self):
+        fake = FakeCloud()
+        legacy = {"role": bootstrap.SIGNIN_ROLE, "members": [bootstrap.LEGACY_PRINCIPAL]}
+        fake.policy["bindings"].append(legacy)
+        rc, _, err = ci_run(fake, *REVOKE_ARGS)
+        self.assertEqual(rc, 1)
+        self.assertIn(bootstrap.LEGACY_PRINCIPAL, err)
+        self.assertEqual(len(fake.removes), 1)
+        self.assertIn(legacy, fake.policy["bindings"])
+        self.assertIn("user:someone@example.com", fake.members())
+        self.assertNotIn(bootstrap.BOOTSTRAP_PRINCIPAL, fake.members())
+
+    def test_unrelated_pool_lookalikes_do_not_block(self):
+        fake = FakeCloud()
+        for project, pool in ((bootstrap.PROJECT_NUMBER, "github-extra"),
+                              ("999999999999", "github"),
+                              (bootstrap.PROJECT_NUMBER, TEST_EXECUTION["pool_id"] + "-extra")):
+            self.add(fake, f"principalSet://iam.googleapis.com/projects/{project}/locations/global/"
+                           f"workloadIdentityPools/{pool}/attribute.repository/{bootstrap.REPO}")
+        rc, _, err = ci_run(fake, *REVOKE_ARGS)
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(len(fake.removes), 1)
+        self.assertEqual(len(fake.members()), 4)
+
+    def test_legacy_inserted_after_preflight_fails_final_absence(self):
+        fake = FakeCloud()
+        original_steps = bootstrap.steps
+        def change_policy(r, rotate):
+            if r.execute:
+                self.add(fake, bootstrap.LEGACY_PRINCIPAL, bootstrap.SIGNIN_ROLE)
+            return original_steps(r, rotate)
+        with ci_env(), mock.patch.object(bootstrap, "steps", side_effect=change_policy):
+            rc, _, err = run(fake, *execute_args())
+        self.assertEqual(rc, 1)
+        self.assertIn(bootstrap.LEGACY_PRINCIPAL, err)
+        self.assertIn(bootstrap.LEGACY_PRINCIPAL, fake.members())
+        self.assertNotIn(bootstrap.BOOTSTRAP_PRINCIPAL, fake.members())
+
+    def test_successful_noop_removal_cannot_prove_absence(self):
+        fake = FakeCloud()
+        fake.noop_remove = True
+        self.add(fake, bootstrap.LEGACY_PRINCIPAL, bootstrap.SIGNIN_ROLE)
+        rc, _, err = ci_run(fake, *REVOKE_ARGS)
+        self.assertEqual(rc, 1)
+        self.assertIn("still present after revoke", err)
+        self.assertIn(bootstrap.BOOTSTRAP_PRINCIPAL, fake.members())
+        self.assertIn(bootstrap.LEGACY_PRINCIPAL, fake.members())
 
 
 class PolicyReadRetry(unittest.TestCase):
