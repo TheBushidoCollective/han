@@ -14,6 +14,7 @@ on:
   push:
     branches:
       - main
+      - integrate/windows-local-transport-wip
     paths:
       - "packages/han/**"
       - "packages/han-rs/**"
@@ -27,7 +28,7 @@ on:
 
 jobs:
   windows-native-primitives:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/integrate/windows-local-transport-wip'
+    if: github.ref == 'refs/heads/integrate/windows-local-transport-wip'
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
