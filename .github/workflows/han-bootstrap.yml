@@ -1,9 +1,8 @@
 name: Han Bootstrap
 
-# Register one exact execution before a dedicated, time-limited WIF route is
-# provisioned by the reviewed website rail. No shared-pool bootstrap grant.
-# The plan is validated before registration; apply waits for the dedicated
-# route without requesting human approval, then revalidates before mutations.
+# Register one exact execution against the permanent, separately managed WIF
+# anchor. The reviewed website rail issues only a time-limited exact-subject
+# lease. The run waits for that lease and revalidates it before mutations.
 
 on:
   workflow_dispatch:

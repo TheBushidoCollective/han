@@ -2,7 +2,7 @@
 """One-shot bootstrap for Han inside the existing project thebushido-co.
 
 Runs only from .github/workflows/han-bootstrap.yml, in the main-only
-han-bootstrap environment and an execution-specific federation route.
+han-bootstrap environment and the permanent, execution-leased federation anchor.
 
 Modes:
   (default)                      print the plan and its sha256. Reads nothing and
@@ -31,9 +31,9 @@ shared or execution pool principal sets, wildcard pools and public members,
 even when their conditions have expired. Unparseable principal sets fail closed.
 The last act of every execute, success or failure, is revoke. It removes only
 this execution's approved member and verifies these routes are absent again.
-Legacy and unrelated grants are reported and left in place. A legacy grant
-requires separately authorized cleanup. The checks cover only the bootstrap
-service account's direct IAM policy, not inherited grants or delegation.
+Legacy and unrelated grants are reported and left in place. In addition to the
+direct policy, preflight and post-revoke independently read the full ancestor
+allow chain. These observations do not audit arbitrary delegation or persistence.
 
 The backend is injected. Tests use a fake backend. CI uses the real gcloud
 commands, authenticated by WIF.
@@ -42,6 +42,7 @@ commands, authenticated by WIF.
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import os
@@ -105,7 +106,7 @@ POLICY_READ_ATTEMPTS = 4
 POLICY_READ_BASE = 1.0
 POLICY_READ_MAX_BACKOFF = 8.0
 # The description contract C1 requires: a 40-hex commit and a 64-hex plan hash.
-CONTRACT_DESCRIPTION = re.compile(r"han-bootstrap commit=[0-9a-f]{40} plan=[0-9a-f]{64} run=[1-9][0-9]{0,19} attempt=1")
+CONTRACT_DESCRIPTION = re.compile(r"han-bootstrap commit=[0-9a-f]{40} plan=[0-9a-f]{64} run=[1-9][0-9]{0,17} attempt=1")
 CONTRACT_CONDITION_KEYS = frozenset({"title", "description", "expression"})
 WORKFLOW_REF = f"{REPO}/.github/workflows/han-bootstrap.yml@refs/heads/main"
 # --execute and --revoke-only run only from that workflow, on main, by dispatch, on a github-hosted runner.
@@ -575,24 +576,67 @@ def revoke_plan(r: Runner) -> None:
                   "then prove the principal is in no binding")
 
 
-def preflight(r: Runner, plan_sha: str, commit: str) -> set[tuple]:
-    """Read-only, before any mutation. Checks the bootstrap account's own IAM policy only: not inherited, project or
-    organisation bindings, and not delegation (reviewer scope note A). The identity, the one exact reviewed grant,
-    its window and its provenance must all hold, and no member may match the principal besides that grant."""
-    # The run must be signed in as the bootstrap account. A wrong identity stops it.
-    rc, out, err = r._read(["gcloud", "auth", "list", "--format=json"])
-    if rc != 0:
-        raise StepError(f"cannot read the active account: {err}")
-    active = [a.get("account") for a in json.loads(out) if a.get("status") == "ACTIVE"]
+def require_bootstrap_account(r: Runner) -> None:
+    rc, out, _ = r._read(["gcloud", "auth", "list", "--format=json"])
+    try:
+        accounts = json.loads(out) if rc == 0 else None
+        active = [a.get("account") for a in accounts if a.get("status") == "ACTIVE"] if isinstance(accounts, list) else []
+    except (TypeError, ValueError, AttributeError):
+        active = []
     if active != [BOOTSTRAP_SA]:
-        raise StepError(f"refusing to continue as {active!r}; expected {BOOTSTRAP_SA}")
+        raise StepError("COVERAGE_READER_IDENTITY_MISMATCH")
+
+
+def coverage_reader(r: Runner):
+    """Create a fixed-account raw read transport; retain credentials only in memory."""
+    require_bootstrap_account(r)
+    rc, out, _ = r._read(["gcloud", "auth", "print-access-token", f"--account={BOOTSTRAP_SA}"])
+    token = out.strip()
+    if rc != 0 or not token or any(c.isspace() for c in token):
+        raise StepError("COVERAGE_READER_AUTH_FAILED")
+    def read(method, url, body, reader):
+        payload = json.dumps({"token": token, "body": base64.b64encode(body).decode("ascii")})
+        rc, raw, _ = r.backend("coverage", [method, url, reader], payload)
+        if rc != 0:
+            raise StepError("COVERAGE_READ_FAILED")
+        return raw.encode("utf-8")
+    return read
+
+
+def verify_coverage(r: Runner, mode: str, reader=None) -> dict:
+    if ACTIVE_EXECUTION is None:
+        raise StepError("COVERAGE_MANIFEST_MISSING")
+    try:
+        snapshot = execution.collect_allow_coverage(ACTIVE_EXECUTION, mode, reader or coverage_reader(r))
+        execution.validate_allow_coverage(snapshot, ACTIVE_EXECUTION, mode, BOOTSTRAP_SA)
+    except execution.Refuse as exc:
+        raise StepError(str(exc)) from exc
+    raw = execution.allow_coverage.canonical(snapshot)
+    receipt = {
+        "version": 1, "kind": "han-bootstrap-coverage-receipt",
+        "manifest_sha256": hashlib.sha256(execution.canonical_manifest(ACTIVE_EXECUTION)).hexdigest(),
+        "reader": BOOTSTRAP_SA, "mode": mode, "depth": (len(snapshot["passes"][0]) - 2) // 2,
+        "snapshot_sha256": hashlib.sha256(raw).hexdigest(),
+        "completed_at": utc_now().strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    print(json.dumps(receipt, sort_keys=True, separators=(",", ":")))
+    return snapshot
+
+
+def preflight(r: Runner, plan_sha: str, commit: str) -> set[tuple]:
+    """Read-only exact anchor, lease, account and complete allow-chain checks.
+
+    The snapshot is a stable observed window, not a lock against trusted IAM
+    administrators or a claim about arbitrary delegation or Owner persistence.
+    """
+    require_bootstrap_account(r)
     if ACTIVE_EXECUTION is None:
         raise StepError("execution manifest missing; nothing ran")
     pool = ACTIVE_EXECUTION["pool_id"]
     rc, pool_out, _ = r._read(["gcloud", "iam", "workload-identity-pools", "describe", pool,
                                "--location=global", f"--project={PROJECT}", "--format=json"])
     if rc != 0:
-        raise StepError("cannot read the execution-specific pool; nothing ran")
+        raise StepError("cannot read the permanent bootstrap anchor pool; nothing ran")
     rc, providers_out, _ = r._read(["gcloud", "iam", "workload-identity-pools", "providers", "list",
                                     f"--workload-identity-pool={pool}", "--location=global",
                                     f"--project={PROJECT}", "--show-deleted", "--format=json"])
@@ -601,16 +645,16 @@ def preflight(r: Runner, plan_sha: str, commit: str) -> set[tuple]:
     try:
         execution.verify_pool(ACTIVE_EXECUTION, json.loads(pool_out), json.loads(providers_out))
     except (ValueError, execution.Refuse) as exc:
-        raise StepError("execution pool is not the exact single-provider pool; nothing ran") from exc
+        raise StepError("bootstrap anchor is not the exact single-provider pool; nothing ran") from exc
     rc, out, _ = r._read(["gcloud", "iam", "workload-identity-pools", "providers", "describe",
                           ACTIVE_EXECUTION["provider_id"], f"--workload-identity-pool={ACTIVE_EXECUTION['pool_id']}",
                           "--location=global", f"--project={PROJECT}", "--format=json"])
     if rc != 0:
-        raise StepError("cannot read the execution-specific provider; nothing ran")
+        raise StepError("cannot read the permanent bootstrap anchor provider; nothing ran")
     try:
         execution.verify_provider(ACTIVE_EXECUTION, json.loads(out))
     except (ValueError, execution.Refuse) as exc:
-        raise StepError("execution-specific provider does not match the contract; nothing ran") from exc
+        raise StepError("bootstrap anchor provider does not match the contract; nothing ran") from exc
     policy = read_policy(r, "cannot read the bootstrap policy before the run")
     found = holders(policy)
     if len(found) != 1:
@@ -620,7 +664,7 @@ def preflight(r: Runner, plan_sha: str, commit: str) -> set[tuple]:
         raise StepError("the bootstrap principal is not in the exact reviewed sign-in grant; nothing ran")
     capable = capable_members(policy)
     if capable:
-        raise StepError(f"a member could match the bootstrap principal: {capable[0]!r}; nothing ran")
+        raise StepError("a member could match the bootstrap principal; nothing ran")
     match = SIGNIN_EXPRESSION.fullmatch(binding["condition"]["expression"])
     try:
         expiry = datetime.strptime(match.group(1), "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
@@ -634,6 +678,13 @@ def preflight(r: Runner, plan_sha: str, commit: str) -> set[tuple]:
     expected = SIGNIN_DESCRIPTION.format(commit=commit, plan=plan_sha, run=ACTIVE_EXECUTION["R"])
     if binding["condition"]["description"] != expected:
         raise StepError("the sign-in does not name this commit and this plan; nothing ran")
+    snapshot = verify_coverage(r, "granted")
+    # The separate gcloud direct-policy read must agree with the stable raw
+    # target policy that the independently collected hierarchy observed.
+    raw_policy = base64.b64decode(snapshot["passes"][0][1]["response_base64"], validate=True)
+    observed = execution.allow_coverage.parse(raw_policy)
+    if execution.allow_coverage.canonical(observed) != execution.allow_coverage.canonical(policy):
+        raise StepError("COVERAGE_UNSTABLE: direct policy changed before execution")
     # Preserve the direct policy baseline before any resource mutation.
     return policy_tuples(policy)
 
@@ -784,7 +835,7 @@ def read_policy(r: Runner, message: str) -> dict:
             time.sleep(min(POLICY_READ_MAX_BACKOFF, POLICY_READ_BASE * 2 ** (attempt - 1)))
         rc, out, err = r._read(argv)
         if rc != 0:
-            last = err
+            last = "policy read failed; details withheld"
             continue
         try:
             policy = json.loads(out)
@@ -858,7 +909,7 @@ def remove_sign_in(r: Runner, binding: dict) -> None:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             json.dump(cond, fh, ensure_ascii=False)
         r.write(gcloud("iam", "service-accounts", "remove-iam-policy-binding", BOOTSTRAP_SA, f"--project={PROJECT}",
-                       f"--member={BOOTSTRAP_PRINCIPAL}", f"--role={SIGNIN_ROLE}", f"--condition-from-file={path}"))
+                       f"--member={BOOTSTRAP_PRINCIPAL}", f"--role={SIGNIN_ROLE}", f"--condition-from-file={path}"), quiet=True)
     finally:
         Path(path).unlink(missing_ok=True)
 
@@ -874,14 +925,23 @@ def pinned_identity_error(commit: str, plan_sha: str) -> str | None:
 
 
 def revoke(r: Runner, commit: str, plan_sha: str, baseline: set[tuple] | None = None) -> None:
-    """Remove the bootstrap principal from the approved grant, the binding whose description names this commit
-    and plan, then prove the principal has no coverage left and that no other grant moved. Only the bootstrap
-    account's own policy is read: project and organisation bindings and delegation are not checked (scope note A).
-    Other descriptions and roles are never touched. Never set-iam-policy: each removal is gcloud's own
-    etag-guarded read-modify-write."""
+    """Remove only the approved exact member, then verify complete allow coverage.
+
+    Direct-policy preservation is checked separately. The independently fetched
+    ancestor snapshot is an observed upper bound, not a delegation audit.
+    """
     if not r.execute:
         revoke_plan(r)
         return
+    require_bootstrap_account(r)
+    # Acquire the explicit reader token while the lease can still mint it.
+    # Even if this read fails, still attempt exact-member revocation.
+    reader = None
+    reader_error = None
+    try:
+        reader = coverage_reader(r)
+    except StepError as exc:
+        reader_error = exc
     approved = SIGNIN_DESCRIPTION.format(commit=commit, plan=plan_sha, run=ACTIVE_EXECUTION["R"])
     policy = read_policy(r, "cannot read the bootstrap policy, so cannot prove the sign-in is revoked")
     before = baseline if baseline is not None else policy_tuples(policy)
@@ -897,6 +957,9 @@ def revoke(r: Runner, commit: str, plan_sha: str, baseline: set[tuple] | None = 
                 last_error = str(err)  # a failed call leads to a re-read, never a give-up
         policy = read_policy(r, "cannot re-read the bootstrap policy after revoke")
     verify_revoked(policy, before, last_error, approved)
+    if reader_error:
+        raise StepError("COVERAGE_READER_AUTH_FAILED after exact revoke") from reader_error
+    verify_coverage(r, "retired", reader=reader)
 
 
 def verify_revoked(policy: dict, before: set[tuple], last_error: str, approved: str) -> None:
@@ -905,28 +968,23 @@ def verify_revoked(policy: dict, before: set[tuple], last_error: str, approved: 
     supplied preflight baseline. Named, never deleted."""
     left = holders(policy)
     if left:
-        named = ", ".join(f"role {b.get('role')!r} (title {(b.get('condition') or {}).get('title')!r})" for b in left)
-        raise StepError(f"bootstrap sign-in member is still present after revoke: {named}; left in place; "
-                        f"last error: {last_error}")
+        raise StepError(f"bootstrap sign-in member is still present after revoke; left in place; last error: {last_error}")
     others = sorted({m for b in policy.get("bindings", [])
                      if b.get("role") == SIGNIN_ROLE and (b.get("condition") or {}).get("title") == SIGNIN_TITLE
                      and (b.get("condition") or {}).get("description") == approved
                      for m in b.get("members", [])})
     if others:
-        raise StepError(f"the approved sign-in grant still binds other members after the principal was removed: "
-                        f"{', '.join(others)}; left in place")
+        raise StepError("the approved sign-in grant still binds other members; left in place")
     capable = capable_members(policy)
     if capable:
-        raise StepError(f"a member could still match the bootstrap principal: {capable[0]!r}; left in place")
+        raise StepError("a member could still match the bootstrap principal; left in place")
     lost = {t for t in before if t[-1] != BOOTSTRAP_PRINCIPAL} - policy_tuples(policy)
     if lost:
-        raise StepError(f"revoke changed a binding it should not have; missing {sorted(lost)[0]}")
+        raise StepError("revoke changed an unrelated binding; policy details withheld")
     # The normal path supplies the read-only preflight baseline.
     added = policy_tuples(policy) - before
     if added:
-        named = ", ".join(f"{member} on {role}" for role, _title, _desc, _expr, member in sorted(added, key=str))
-        raise StepError(f"the bootstrap account's policy gained grants during the revoke window, between its first "
-                        f"read and its final read: {named}; left in place")
+        raise StepError("the bootstrap account's policy gained grants during the verified window; policy details withheld")
 
 
 def rel(path: Path) -> str:
@@ -938,7 +996,7 @@ def referenced_files() -> list[Path]:
     """Every file whose contents the plan depends on: this code, the roles and the condition."""
     roles = [HERE / "roles" / name for name in sorted(CUSTOM_ROLES.values())]
     workflow = ROOT / ".github" / "workflows" / "han-bootstrap.yml"
-    return [Path(__file__).resolve(), HERE / "execution.py", SQL_CONDITION, *roles, workflow]
+    return [Path(__file__).resolve(), HERE / "execution.py", HERE / "allow_coverage.py", SQL_CONDITION, *roles, workflow]
 
 
 def build_plan(rotate: bool = False) -> list[str]:
@@ -975,13 +1033,31 @@ def run_execute(backend: Backend, plan_sha: str, commit: str, rotate: bool = Fal
 
 
 def real_backend(kind: str, argv: list[str], stdin: str | None = None) -> tuple[int, str, str]:
+    if kind == "coverage":
+        try:
+            if len(argv) != 3 or not stdin:
+                raise execution.Refuse("COVERAGE_TRANSPORT_REFUSED")
+            payload = json.loads(stdin)
+            if not isinstance(payload, dict) or set(payload) != {"token", "body"}:
+                raise execution.Refuse("COVERAGE_TRANSPORT_REFUSED")
+            raw = execution.google_coverage_read(
+                argv[0], argv[1], base64.b64decode(payload["body"], validate=True), argv[2], payload["token"]
+            )
+            return 0, raw.decode("utf-8"), ""
+        except (ValueError, TypeError, UnicodeError, execution.Refuse):
+            # Never expose transport exceptions, credentials or response bodies.
+            return 1, "", "COVERAGE_READ_FAILED"
     # Run from the repository root, so the repository-relative paths in the plan resolve.
     # gcloud writes a debug log for each run, and that log records argument values, including
     # values read from --flags-file. The database password is one of those, so the log is off.
     # Checked locally: with this variable a run created no log file, and a flags-file value
     # was not found in any log. Without it, one file was created and held the value.
     env = {**os.environ, "CLOUDSDK_CORE_DISABLE_FILE_LOGGING": "1"}
-    proc = subprocess.run(argv, input=stdin, capture_output=True, text=True, timeout=900, cwd=ROOT, env=env)
+    try:
+        proc = subprocess.run(argv, input=stdin, capture_output=True, text=True,
+                              timeout=30 if kind == "read" else 900, cwd=ROOT, env=env)
+    except subprocess.TimeoutExpired:
+        return 1, "", "command timed out"
     return proc.returncode, proc.stdout, proc.stderr
 
 

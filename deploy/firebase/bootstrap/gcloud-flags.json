@@ -109,6 +109,23 @@
       "user-output-enabled",
       "verbosity"
     ],
+    "auth print-access-token": [
+      "access-token-file",
+      "account",
+      "billing-project",
+      "configuration",
+      "flags-file",
+      "flatten",
+      "format",
+      "help",
+      "impersonate-service-account",
+      "log-http",
+      "project",
+      "quiet",
+      "trace-token",
+      "user-output-enabled",
+      "verbosity"
+    ],
     "iam roles create": [
       "access-token-file",
       "account",
