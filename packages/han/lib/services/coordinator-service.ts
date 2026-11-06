@@ -23,6 +23,7 @@ import { dirname, join, resolve } from 'node:path';
 import { checkHealth } from '../commands/coordinator/health.ts';
 import { getHanDataDir } from '../config/claude-settings.ts';
 import {
+  CoordinatorSecurityError,
   getCoordinatorDataDir,
   type LocalCoordinatorDescriptor,
   readCoordinatorDescriptor,
@@ -509,8 +510,13 @@ export async function stopCoordinatorService(): Promise<void> {
   let current: LocalCoordinatorDescriptor | null = null;
   try {
     current = readCoordinatorDescriptor();
-  } catch {
-    // No verified descriptor means there is no safe RPC shutdown target.
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      state.process = null;
+      state.ownsProcess = false;
+      state.ownedDescriptor = null;
+      throw error;
+    }
   }
   if (
     !owned ||
@@ -536,7 +542,13 @@ export async function stopCoordinatorService(): Promise<void> {
       timeoutSeconds: 5,
     });
     console.log('[coordinator] Graceful shutdown sent');
-  } catch {
+  } catch (error) {
+    if (error instanceof CoordinatorSecurityError) {
+      state.process = null;
+      state.ownsProcess = false;
+      state.ownedDescriptor = null;
+      throw error;
+    }
     // If gRPC shutdown fails, kill the process directly
     if (state.process) {
       state.process.kill();

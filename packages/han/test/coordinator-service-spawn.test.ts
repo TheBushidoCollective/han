@@ -369,4 +369,20 @@ describe('stopCoordinatorService ownership', () => {
     await cs.stopCoordinatorService();
     expect(mockShutdown).not.toHaveBeenCalled();
   });
+
+  test('descriptor security failure does not trigger an unverified shutdown', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = { pid: 4242, exitCode: null, unref: mock(), kill: mock() };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await cs.startCoordinatorService();
+    mockDescriptor.mockImplementationOnce(() => {
+      throw new realConnection.CoordinatorSecurityError('invalid descriptor');
+    });
+    await expect(cs.stopCoordinatorService()).rejects.toThrow(
+      'invalid descriptor'
+    );
+    expect(mockShutdown).not.toHaveBeenCalled();
+    expect(child.kill).not.toHaveBeenCalled();
+  });
 });
