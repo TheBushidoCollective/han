@@ -14,9 +14,20 @@
  * its claim the way a real supervisor does.
  */
 import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import {
+  claimSupervisorPid,
+  releaseSupervisorPid,
+} from '../lib/commands/coordinator/pid-claim.ts';
 
 const CLAIMANTS = 8;
 
@@ -99,7 +110,7 @@ async function raceClaimants(): Promise<string[]> {
   `;
 
   children = Array.from({ length: CLAIMANTS }, () =>
-    Bun.spawn(['bun', '-e', script], {
+    Bun.spawn([process.execPath, '-e', script], {
       env: { ...process.env, HAN_DATA_DIR: dataDir },
       stdout: 'pipe',
       stderr: 'pipe',
@@ -132,11 +143,27 @@ test('concurrent claims produce exactly one winner', async () => {
   expect(outcomes.filter((line) => line.startsWith('BLOCKED:'))).toHaveLength(
     CLAIMANTS - 1
   );
+  const winner = children[outcomes.indexOf('WON')];
+  expect(readFileSync(join(dataDir, 'coordinator.pid'), 'utf8')).toBe(
+    String(winner.pid)
+  );
+  expect(outcomes.filter((line) => line.startsWith('BLOCKED:'))).toEqual(
+    Array.from({ length: CLAIMANTS - 1 }, () => `BLOCKED:${winner.pid}`)
+  );
+  expect(readdirSync(join(dataDir, 'coordinator.pid.takeover'))).toHaveLength(
+    1
+  );
+  expect(winner.exitCode).toBeNull();
 }, 30_000);
 
 test('a claim held by a live process is refused, not stolen', async () => {
-  const holder = Bun.spawn(['sleep', '30'], { stdout: 'ignore' });
-  writeFileSync(join(dataDir, 'coordinator.pid'), String(holder.pid), 'utf-8');
+  const holder = Bun.spawn(
+    [process.execPath, '-e', 'setInterval(() => {}, 1000)'],
+    { stdout: 'ignore' }
+  );
+  writeFileSync(join(dataDir, 'coordinator.pid'), String(holder.pid), {
+    mode: 0o600,
+  });
 
   try {
     const outcomes = await raceClaimants();
@@ -151,9 +178,11 @@ test('a claim held by a live process is refused, not stolen', async () => {
 }, 30_000);
 
 test('a dead holder is taken over by exactly one caller', async () => {
-  const dead = Bun.spawn(['true'], { stdout: 'ignore' });
+  const dead = Bun.spawn([process.execPath, '-e', ''], { stdout: 'ignore' });
   await dead.exited;
-  writeFileSync(join(dataDir, 'coordinator.pid'), String(dead.pid), 'utf-8');
+  writeFileSync(join(dataDir, 'coordinator.pid'), String(dead.pid), {
+    mode: 0o600,
+  });
 
   const outcomes = await raceClaimants();
 
@@ -162,3 +191,40 @@ test('a dead holder is taken over by exactly one caller', async () => {
     CLAIMANTS - 1
   );
 }, 30_000);
+
+test('malformed PID metadata cannot grant a claim or be removed', () => {
+  const path = join(dataDir, 'coordinator.pid');
+  writeFileSync(path, '123junk', { mode: 0o600 });
+  expect(() => claimSupervisorPid(path)).toThrow('Malformed supervisor PID');
+  expect(readFileSync(path, 'utf8')).toBe('123junk');
+});
+
+test('a live reservation blocks before its PID is published', () => {
+  const path = join(dataDir, 'coordinator.pid');
+  const reservation = `${path}.takeover`;
+  mkdirSync(reservation, { mode: 0o700 });
+  const nonce = '11111111-1111-4111-8111-111111111111';
+  writeFileSync(
+    join(reservation, `owner.${nonce}.json`),
+    JSON.stringify({ version: 1, pid: process.pid, nonce }),
+    { mode: 0o600 }
+  );
+  expect(claimSupervisorPid(path)).toEqual({
+    kind: 'blocked',
+    pid: process.pid,
+  });
+  expect(readdirSync(reservation)).toEqual([`owner.${nonce}.json`]);
+});
+
+test('old release cannot remove a later acquisition', () => {
+  const path = join(dataDir, 'coordinator.pid');
+  const first = claimSupervisorPid(path);
+  if (first.kind !== 'owned') throw new Error('First claim blocked');
+  releaseSupervisorPid(first.claim);
+  const second = claimSupervisorPid(path);
+  if (second.kind !== 'owned') throw new Error('Second claim blocked');
+  releaseSupervisorPid(first.claim);
+  expect(readFileSync(path, 'utf8')).toBe(String(process.pid));
+  expect(readdirSync(`${path}.takeover`)).toEqual([second.claim.owner]);
+  releaseSupervisorPid(second.claim);
+});

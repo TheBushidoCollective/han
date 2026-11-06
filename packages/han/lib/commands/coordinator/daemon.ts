@@ -11,12 +11,9 @@ import {
   existsSync,
   mkdirSync,
   openSync,
-  readFileSync,
   renameSync,
   rmSync,
   statSync,
-  unlinkSync,
-  writeFileSync,
 } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { getHanDataDir } from '../../config/claude-settings.ts';
@@ -24,6 +21,13 @@ import { getHanBinary } from '../../config/han-settings.ts';
 import { readCoordinatorDescriptor } from '../../coordinator/connection.ts';
 import { createCoordinatorClients } from '../../grpc/client.ts';
 import { checkHealth, waitForHealth } from './health.ts';
+import {
+  claimStillOwned,
+  claimSupervisorPid,
+  readSupervisorPid,
+  releaseSupervisorPid,
+  type SupervisorClaim,
+} from './pid-claim.ts';
 import { startServer, stopServer } from './server.ts';
 import {
   type CoordinatorOptions,
@@ -80,137 +84,29 @@ export function rotateLogIfNeeded(): void {
   }
 }
 
-/**
- * Read PID from file
- */
+const claims = new Map<string, SupervisorClaim>();
+
 function readPid(): number | null {
-  const pidPath = getPidFilePath();
-  try {
-    if (existsSync(pidPath)) {
-      const pid = parseInt(readFileSync(pidPath, 'utf-8').trim(), 10);
-      return Number.isNaN(pid) ? null : pid;
-    }
-  } catch {
-    // Ignore errors
+  return readSupervisorPid(getPidFilePath());
+}
+
+export function claimPidFile(): number | null {
+  const path = getPidFilePath();
+  const existing = claims.get(path);
+  if (existing && !existing.released) {
+    if (!claimStillOwned(existing))
+      throw new Error('Supervisor claim no longer belongs to this process');
+    return null;
   }
+  const result = claimSupervisorPid(path);
+  if (result.kind === 'blocked') return result.pid;
+  claims.set(path, result.claim);
   return null;
 }
 
-/**
- * How long a takeover marker is honored before it is treated as abandoned.
- */
-const TAKEOVER_MARKER_STALE_MS = 5000;
-
-/**
- * Claim the supervisor PID file for this process, atomically.
- *
- * Returns the live pid already holding it, or null once we own it.
- *
- * A plain read-then-write loses the race it exists to win: several
- * `han coordinator start --foreground` invocations landing together all read
- * an empty file, all conclude they are first, and all sit in the keep-alive
- * loop forever. An exclusive create has exactly one winner.
- *
- * Taking over a dead holder's file needs its own serialization, because
- * "unlink what I just saw" can delete a file a fresh winner created a
- * moment ago, and then two callers both believe they won. So the removal
- * runs behind an exclusively created marker: only one caller ever removes a
- * stale file, and a caller that wins the pid file by fast path in that
- * window simply blocks the marker holder instead.
- *
- * Exported so the concurrency behaviour can be tested across real processes.
- */
-export function claimPidFile(): number | null {
-  const pidPath = getPidFilePath();
-  const markerPath = `${pidPath}.takeover`;
-
-  for (let attempt = 0; attempt < 5; attempt++) {
-    if (tryCreateExclusive(pidPath, String(process.pid))) return null;
-
-    const holder = readPid();
-    if (holder === process.pid) return null;
-    if (holder && isProcessRunning(holder)) return holder;
-
-    // The file names a dead pid, or holds nothing readable. Serialize the
-    // takeover so only one caller removes it.
-    if (!tryCreateExclusive(markerPath, String(process.pid))) {
-      clearStaleMarker(markerPath);
-      Bun.sleepSync(25);
-      continue;
-    }
-
-    try {
-      const current = readPid();
-      const revived =
-        current && current !== process.pid && isProcessRunning(current);
-      if (!revived) {
-        try {
-          unlinkSync(pidPath);
-        } catch {
-          // Already gone.
-        }
-      }
-    } finally {
-      try {
-        unlinkSync(markerPath);
-      } catch {
-        // Already gone.
-      }
-    }
-  }
-
-  const holder = readPid();
-  return holder && holder !== process.pid ? holder : null;
-}
-
-/**
- * Create `path` with `contents` only if it does not exist yet. Returns
- * whether this call created it.
- */
-function tryCreateExclusive(path: string, contents: string): boolean {
-  try {
-    writeFileSync(path, contents, { encoding: 'utf-8', flag: 'wx' });
-    return true;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EEXIST') return false;
-    throw error;
-  }
-}
-
-/**
- * Drop a takeover marker whose owner died or which is simply too old to
- * still be meaningful, so a crash mid-takeover cannot wedge every later
- * claim.
- */
-function clearStaleMarker(markerPath: string): void {
-  try {
-    const owner = parseInt(readFileSync(markerPath, 'utf-8').trim(), 10);
-    const ageMs = Date.now() - statSync(markerPath).mtimeMs;
-    if (
-      ageMs > TAKEOVER_MARKER_STALE_MS ||
-      (!Number.isNaN(owner) && !isProcessRunning(owner))
-    ) {
-      unlinkSync(markerPath);
-    }
-  } catch {
-    // Missing or unreadable marker: nothing to clear.
-  }
-}
-
-/**
- * Remove the PID file. Owner-checked by default: a supervisor that lost the
- * claim race must never delete the winner's file on its way out. `stopDaemon`
- * passes force after killing the holder, since the pid it names is gone.
- */
-function removePidFile(force = false): void {
-  const pidPath = getPidFilePath();
-  try {
-    if (existsSync(pidPath) && (force || readPid() === process.pid)) {
-      unlinkSync(pidPath);
-    }
-  } catch {
-    // Ignore errors
-  }
+function releaseClaim(claim: SupervisorClaim): void {
+  if (claims.get(claim.pidPath) === claim) claims.delete(claim.pidPath);
+  releaseSupervisorPid(claim);
 }
 
 /**
@@ -220,15 +116,14 @@ function isProcessRunning(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ESRCH') return false;
+    if ((error as NodeJS.ErrnoException).code === 'EPERM') return true;
+    throw error;
   }
 }
 
-/**
- * Get coordinator status
- * Automatically cleans up stale locks (dead process or old heartbeat)
- */
+/** Get coordinator status without changing supervisor ownership. */
 export async function getStatus(port?: number): Promise<CoordinatorStatus> {
   const effectivePort = port ?? getCoordinatorPort();
   const health = await checkHealth(effectivePort);
@@ -254,11 +149,6 @@ export async function getStatus(port?: number): Promise<CoordinatorStatus> {
     };
   }
 
-  // Clean up stale PID file
-  if (pid && !isProcessRunning(pid)) {
-    removePidFile(true);
-  }
-
   return {
     running: false,
     port: effectivePort,
@@ -279,12 +169,6 @@ export async function startDaemon(
   if (status.running) {
     console.log(`[coordinator] Already running (PID: ${status.pid})`);
     return status;
-  }
-
-  // Clean up stale PID file
-  const stalePid = readPid();
-  if (stalePid && !isProcessRunning(stalePid)) {
-    removePidFile(true);
   }
 
   // Run in foreground mode
@@ -424,6 +308,8 @@ async function runForeground(port: number): Promise<void> {
     );
     return;
   }
+  const claim = claims.get(getPidFilePath());
+  if (!claim) throw new Error('Supervisor claim disappeared');
 
   rotateLogIfNeeded();
 
@@ -434,7 +320,7 @@ async function runForeground(port: number): Promise<void> {
     shuttingDown = true;
     console.log('\n[coordinator] Shutting down...');
     stopServer();
-    removePidFile();
+    releaseClaim(claim);
     process.exit(0);
   };
 
@@ -456,73 +342,77 @@ async function runForeground(port: number): Promise<void> {
   let restartAttempts = 0;
   let currentDelay = RESTART_DELAY_MS;
 
-  while (!shuttingDown) {
-    try {
-      // Start server
-      await startServer({ port });
+  try {
+    while (!shuttingDown) {
+      try {
+        // Start server
+        await startServer({ port });
 
-      // startServer resolving is not proof the coordinator is reachable:
-      // startCoordinatorService swallows a failed spawn or health check
-      // into a logged error instead of throwing, so without this check a
-      // silent no-op "success" fell straight into the keep-alive loop below
-      // with no coordinator ever listening on the port.
-      const timeoutMs = parseInt(
-        process.env.HAN_COORDINATOR_TIMEOUT || '60000',
-        10
-      );
-      const healthy = await waitForHealth(port, timeoutMs, 100);
-      if (!healthy) {
-        console.error(
-          `[coordinator] Coordinator on port ${port} never became reachable ` +
-            `within ${timeoutMs / 1000}s. See ${getLogFilePath()} for details.`
+        // startServer resolving is not proof the coordinator is reachable:
+        // startCoordinatorService swallows a failed spawn or health check
+        // into a logged error instead of throwing, so without this check a
+        // silent no-op "success" fell straight into the keep-alive loop below
+        // with no coordinator ever listening on the port.
+        const timeoutMs = parseInt(
+          process.env.HAN_COORDINATOR_TIMEOUT || '60000',
+          10
         );
-        removePidFile();
-        process.exit(1);
-      }
+        const healthy = await waitForHealth(port, timeoutMs, 100);
+        if (!healthy) {
+          console.error(
+            `[coordinator] Coordinator on port ${port} never became reachable ` +
+              `within ${timeoutMs / 1000}s. See ${getLogFilePath()} for details.`
+          );
+          releaseClaim(claim);
+          process.exit(1);
+        }
 
-      console.log('[coordinator] Running. Press Ctrl+C to stop.');
+        console.log('[coordinator] Running. Press Ctrl+C to stop.');
 
-      // Reset restart attempts on successful start
-      restartAttempts = 0;
-      currentDelay = RESTART_DELAY_MS;
+        // Reset restart attempts on successful start
+        restartAttempts = 0;
+        currentDelay = RESTART_DELAY_MS;
 
-      // Keep process alive until shutdown signal
-      // Use a simple polling approach that properly exits
-      while (!shuttingDown) {
-        const { promise, resolve } = Promise.withResolvers<void>();
-        setTimeout(resolve, 1000);
-        await promise;
-        try {
-          if (!(await checkHealth(port))) {
-            removePidFile();
+        // Keep process alive until shutdown signal
+        // Use a simple polling approach that properly exits
+        while (!shuttingDown) {
+          const { promise, resolve } = Promise.withResolvers<void>();
+          setTimeout(resolve, 1000);
+          await promise;
+          try {
+            if (!(await checkHealth(port))) {
+              releaseClaim(claim);
+              return;
+            }
+          } catch {
+            releaseClaim(claim);
             return;
           }
-        } catch {
-          removePidFile();
-          return;
         }
+      } catch (error) {
+        if (shuttingDown) break;
+
+        restartAttempts++;
+        console.error(
+          `[coordinator] Server crashed (attempt ${restartAttempts}/${MAX_RESTART_ATTEMPTS}):`,
+          error
+        );
+
+        if (restartAttempts >= MAX_RESTART_ATTEMPTS) {
+          console.error('[coordinator] Max restart attempts reached. Exiting.');
+          releaseClaim(claim);
+          process.exit(1);
+        }
+
+        console.log(
+          `[coordinator] Restarting in ${Math.round(currentDelay / 1000)}s...`
+        );
+        await new Promise((r) => setTimeout(r, currentDelay));
+        currentDelay *= RESTART_BACKOFF_MULTIPLIER;
       }
-    } catch (error) {
-      if (shuttingDown) break;
-
-      restartAttempts++;
-      console.error(
-        `[coordinator] Server crashed (attempt ${restartAttempts}/${MAX_RESTART_ATTEMPTS}):`,
-        error
-      );
-
-      if (restartAttempts >= MAX_RESTART_ATTEMPTS) {
-        console.error('[coordinator] Max restart attempts reached. Exiting.');
-        removePidFile();
-        process.exit(1);
-      }
-
-      console.log(
-        `[coordinator] Restarting in ${Math.round(currentDelay / 1000)}s...`
-      );
-      await new Promise((r) => setTimeout(r, currentDelay));
-      currentDelay *= RESTART_BACKOFF_MULTIPLIER;
     }
+  } finally {
+    releaseClaim(claim);
   }
 }
 

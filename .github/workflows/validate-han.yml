@@ -70,6 +70,10 @@ jobs:
         run: bun run tsc --noEmit
         working-directory: ./packages/han
 
+      - name: Exercise supervisor PID ownership
+        run: bun test test/coordinator-pid-claim.test.ts
+        working-directory: ./packages/han
+
       - name: Run tests
         run: bun test --bail
         working-directory: ./packages/han

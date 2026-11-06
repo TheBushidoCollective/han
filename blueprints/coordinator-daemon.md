@@ -78,9 +78,10 @@ The coordinator is a lazily-started daemon that serves as the central GraphQL se
 
 - Lazily started by first client (browse, MCP, hooks)
 - Runs as detached daemon process
-- PID file at `~/.han/coordinator.pid`
-- Stays running until explicitly stopped or system restart
-- Single-instance coordination via lock file
+- The numeric `coordinator.pid` is informational. A nonempty `coordinator.pid.takeover` reservation directory holds the supervisor claim for its lifetime.
+- Each acquisition publishes a unique owner record before its PID. Dead owners can be reclaimed; malformed metadata and uncertain ownership fail closed.
+- Mixed old and new supervisor versions cannot share this ownership guarantee. Stop old supervisors before cutover.
+- Windows secure transport remains unavailable until protected ACL and reparse-point handling is implemented and proven.
 
 **CLI Commands:**
 
