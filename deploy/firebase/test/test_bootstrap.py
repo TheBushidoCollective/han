@@ -97,6 +97,8 @@ class FakeCloud:
         self.flag_files: list[dict] = []  # {"path", "mode", "password"} seen by user calls
         self.stdin_payloads: list[str] = []
         self.argv_seen: list[list[str]] = []
+        self.coverage_reads: list[list[str]] = []
+        self.coverage_overrides: dict[tuple[str, str], object] = {}
         self.policy = {
             "version": 3,
             "etag": "BwYfake",
@@ -109,6 +111,9 @@ class FakeCloud:
     def __call__(self, kind: str, argv: list[str], stdin: str | None = None) -> tuple[int, str, str]:
         self.argv_seen.append(argv)
         self.events.append((kind, argv))
+        if kind == "coverage":
+            self.coverage_reads.append(argv)
+            return self._coverage(argv)
         if stdin is not None:
             self.stdin_payloads.append(stdin)
         if kind == "read":
@@ -118,6 +123,33 @@ class FakeCloud:
         if any(name in " ".join(argv) for name in self.foreign_buckets):
             self.foreign_mutations.append(argv)
         return self._write(argv, stdin)
+
+    def _coverage(self, argv):
+        method, url, reader = argv
+        if reader != bootstrap.BOOTSTRAP_SA:
+            return 1, "", "wrong reader"
+        c = bootstrap.execution.allow_coverage
+        key = (method, url)
+        if key in self.coverage_overrides:
+            value = self.coverage_overrides[key]
+            if isinstance(value, Exception):
+                return 1, "", "injected coverage failure"
+            return 0, json.dumps(value), ""
+        if key == ("GET", c.ACCOUNT_URL):
+            value = {"email": c.READER, "projectId": c.PROJECT_ID, "uniqueId": "111222333"}
+        elif key == ("POST", c.ACCOUNT_URL + ":getIamPolicy"):
+            value = self.policy
+        elif key == ("GET", c.CRM + "projects/" + c.PROJECT_NUMBER):
+            value = {"name": "projects/" + c.PROJECT_NUMBER, "projectId": c.PROJECT_ID,
+                     "state": "ACTIVE", "parent": "organizations/949208237676"}
+        elif key == ("GET", c.CRM + "organizations/949208237676"):
+            value = {"name": "organizations/949208237676", "state": "ACTIVE"}
+        elif method == "POST" and url in (c.CRM + "projects/" + c.PROJECT_NUMBER + ":getIamPolicy",
+                                            c.CRM + "organizations/949208237676:getIamPolicy"):
+            value = {"bindings": []}
+        else:
+            return 1, "", "unexpected coverage endpoint"
+        return 0, json.dumps(value), ""
 
     def _bucket_config(self, name: str) -> dict:
         return {"name": name, "uniform_bucket_level_access": True,
@@ -178,6 +210,10 @@ class FakeCloud:
             return 1, "", "ERROR: (gcloud) PERMISSION_DENIED: forbidden for this identity."
         if argv[1:3] == ["auth", "list"]:
             return 0, json.dumps([{"account": self.account, "status": "ACTIVE"}]), ""
+        if argv[1:3] == ["auth", "print-access-token"]:
+            if f"--account={bootstrap.BOOTSTRAP_SA}" not in argv:
+                return 1, "", "wrong account"
+            return 0, "fake-access-token\n", ""
         if bootstrap.ACTIVE_EXECUTION:
             m = bootstrap.ACTIVE_EXECUTION
             if argv[1:5] == ["iam", "workload-identity-pools", "describe", m["pool_id"]]:
@@ -190,7 +226,7 @@ class FakeCloud:
             m = bootstrap.ACTIVE_EXECUTION
             return 0, json.dumps({
                 "name": m["provider_resource"], "state": "ACTIVE", "disabled": False,
-                "attributeMapping": {"google.subject": "assertion.repository_id + ':' + assertion.run_id + ':' + assertion.run_attempt"},
+                "attributeMapping": {"google.subject": "assertion.repository_id + ':' + assertion.run_id + ':' + assertion.run_attempt + ':' + assertion.sha + ':' + assertion.workflow_sha"},
                 "attributeCondition": bootstrap.execution.provider_condition(m),
                 "oidc": {"issuerUri": bootstrap.execution.ISSUER, "allowedAudiences": [m["audience"]]},
             }), ""
@@ -462,14 +498,11 @@ class FirstRun(unittest.TestCase):
             self.assertNotIn("keys", argv)
             self.assertFalse(argv[1:3] == ["projects", "create"], argv)
 
-    def test_bootstrap_never_recreates_its_temporary_identity(self):
-        temporary_pool = TEST_EXECUTION["pool_id"]
+    def test_bootstrap_never_mutates_the_permanent_lease_anchor(self):
+        anchor = TEST_EXECUTION["pool_id"]
         for argv in self.fake.writes:
-            self.assertFalse(
-                temporary_pool in " ".join(argv) and
-                any(verb in argv for verb in ("create", "create-oidc", "add-iam-policy-binding")),
-                argv,
-            )
+            if argv[1:3] == ["iam", "workload-identity-pools"]:
+                self.assertNotIn(anchor, " ".join(argv), argv)
         lists = [a for a in self.fake.reads if a[1:5] == ["iam", "workload-identity-pools", "providers", "list"]]
         self.assertEqual(len(lists), 1)
         self.assertIn("--show-deleted", lists[0])
@@ -596,13 +629,14 @@ class Revoke(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertFalse(bootstrap.holders(fake.policy))
 
-    def test_the_sign_in_is_removed_when_verification_fails(self):
+    def test_wrong_active_identity_refuses_all_mutations_and_requires_external_retirement(self):
         fake = FakeCloud()
         fake.account = "someone-else@example.com"
         rc, _, err = execute(fake)
         self.assertEqual(rc, 1)
-        self.assertIn("refusing", err)
-        self.assertFalse(bootstrap.holders(fake.policy))
+        self.assertIn("COVERAGE_READER_IDENTITY_MISMATCH", err)
+        self.assertTrue(bootstrap.holders(fake.policy))
+        self.assertEqual(fake.writes, [])
 
     def test_the_sign_in_is_removed_when_a_han_account_has_a_user_key(self):
         fake = FakeCloud()
@@ -676,8 +710,8 @@ class Revoke(unittest.TestCase):
         fake.concurrent_once = concurrent
         rc, _, err = ci_run(fake, *REVOKE_ARGS)
         self.assertEqual(rc, 1, err)  # the grant was not granted by this run, so the run refuses
-        self.assertIn("user:concurrent@example.com on roles/iam.serviceAccountUser", err)
-        self.assertIn("during the revoke window", err)  # the check only sees changes after revoke's first read
+        self.assertIn("policy gained grants", err)
+        self.assertNotIn("user:concurrent@example.com", err)
         self.assertEqual(len(fake.removes), 2)  # the approved grant was still removed, after the retry
         self.assertIn("user:concurrent@example.com", fake.members())  # not deleted by the run
         self.assertFalse(bootstrap.holders(fake.policy))
@@ -692,8 +726,9 @@ class Revoke(unittest.TestCase):
         fake.concurrent_once = concurrent
         rc, _, err = ci_run(fake, *REVOKE_ARGS)
         self.assertEqual(rc, 1, err)
-        self.assertIn("user:newcomer@example.com on roles/viewer", err)
-        self.assertIn("during the revoke window", err)
+        self.assertIn("policy gained grants", err)
+        self.assertNotIn("user:newcomer@example.com", err)
+        self.assertIn("user:newcomer@example.com", fake.members())
 
     def test_persistent_failure_stops_at_the_attempt_limit(self):
         fake = FakeCloud()
@@ -729,17 +764,19 @@ class Revoke(unittest.TestCase):
         fake.policy["bindings"].append({"role": "roles/viewer", "members": [bootstrap.BOOTSTRAP_PRINCIPAL]})
         rc, _, err = ci_run(fake, *REVOKE_ARGS)
         self.assertEqual(rc, 1)
-        self.assertIn("roles/viewer", err)
+        self.assertIn("still present after revoke", err)
+        self.assertNotIn("roles/viewer", err)
         self.assertEqual(len(fake.removes), 1)  # the verified grant is removed; the unexpected one stays
         self.assertTrue(any(b.get("role") == "roles/viewer" and bootstrap.BOOTSTRAP_PRINCIPAL in b["members"]
                             for b in fake.policy["bindings"]))
 
-    def test_an_approved_grant_with_another_member_fails_and_names_it(self):
+    def test_an_approved_grant_with_another_member_fails_without_exposing_it(self):
         fake = FakeCloud()
         fake.set_sign_in(sign_in_binding(DEFAULT_PLAN_SHA, members=[bootstrap.BOOTSTRAP_PRINCIPAL, "user:x@example.com"]))
         rc, _, err = ci_run(fake, *REVOKE_ARGS)
         self.assertEqual(rc, 1, err)  # success would hide a grant that still binds another member
-        self.assertIn("user:x@example.com", err)
+        self.assertIn("still binds other members", err)
+        self.assertNotIn("user:x@example.com", err)
         self.assertEqual(len(fake.removes), 1)  # the principal was removed; the other member was not touched
         self.assertIn("user:x@example.com", fake.members())
         self.assertFalse(bootstrap.holders(fake.policy))
@@ -938,7 +975,8 @@ class CapableMembers(unittest.TestCase):
                     fake.policy["bindings"].append(legacy)
                     rc, _, err = ci_run(fake, *execute_args())
                     self.assertEqual(rc, 1, err)
-                    self.assertIn(member, err)
+                    self.assertIn("could match", err)
+                    self.assertNotIn(member, err)
                     self.assertEqual(len(fake.removes), 1)
                     self.assertTrue(all("remove-iam-policy-binding" in a for a in fake.writes))
                     self.assertIn(legacy, fake.policy["bindings"])
@@ -951,7 +989,8 @@ class CapableMembers(unittest.TestCase):
         fake.policy["bindings"].append(legacy)
         rc, _, err = ci_run(fake, *REVOKE_ARGS)
         self.assertEqual(rc, 1)
-        self.assertIn(bootstrap.LEGACY_PRINCIPAL, err)
+        self.assertIn("could still match", err)
+        self.assertNotIn(bootstrap.LEGACY_PRINCIPAL, err)
         self.assertEqual(len(fake.removes), 1)
         self.assertIn(legacy, fake.policy["bindings"])
         self.assertIn("user:someone@example.com", fake.members())
@@ -979,7 +1018,8 @@ class CapableMembers(unittest.TestCase):
         with ci_env(), mock.patch.object(bootstrap, "steps", side_effect=change_policy):
             rc, _, err = run(fake, *execute_args())
         self.assertEqual(rc, 1)
-        self.assertIn(bootstrap.LEGACY_PRINCIPAL, err)
+        self.assertIn("could still match", err)
+        self.assertNotIn(bootstrap.LEGACY_PRINCIPAL, err)
         self.assertIn(bootstrap.LEGACY_PRINCIPAL, fake.members())
         self.assertNotIn(bootstrap.BOOTSTRAP_PRINCIPAL, fake.members())
 
@@ -1556,6 +1596,34 @@ class StateBucketIsOurs(unittest.TestCase):
 
 
 class ExecutionBoundary(unittest.TestCase):
+    def test_disjoint_principal_sets_survive_complete_execute_and_revoke(self):
+        members = (
+            "principalSet://cloudresourcemanager.googleapis.com/projects/123/type/ServiceAccount",
+            "principalSet://iam.googleapis.com/locations/global/workforcePools/contractors/group/team",
+            "principalSet://iam.googleapis.com/locations/global/workforcePools/contractors/*",
+            "principalSet://agents.global.org-123456789012.system.id.goog/*",
+        )
+        for member in members:
+            for operation in ("execute", "revoke"):
+                with self.subTest(member=member, operation=operation):
+                    fake = FakeCloud()
+                    fake.policy["bindings"].append({"role": "roles/viewer", "members": [member]})
+                    rc, _, err = execute(fake) if operation == "execute" else ci_run(fake, *REVOKE_ARGS)
+                    self.assertEqual(rc, 0, err)
+                    self.assertIn(member, fake.members())
+                    self.assertFalse(bootstrap.holders(fake.policy))
+
+    def test_unknown_principal_set_fails_closed_in_execute_and_revoke(self):
+        member = "principalSet://unknown.example/unsupported"
+        for operation in ("execute", "revoke"):
+            with self.subTest(operation=operation):
+                fake = FakeCloud()
+                fake.policy["bindings"].append({"role": "roles/viewer", "members": [member]})
+                rc, _, err = execute(fake) if operation == "execute" else ci_run(fake, *REVOKE_ARGS)
+                self.assertEqual(rc, 1, err)
+                self.assertTrue(all("remove-iam-policy-binding" in a for a in fake.writes))
+                self.assertIn(member, fake.members())
+
     def test_wrong_provider_refuses_before_resource_mutation(self):
         fake = FakeCloud()
         original_read = fake._read
@@ -1602,6 +1670,65 @@ class ExecutionBoundary(unittest.TestCase):
         self.assertIn("GITHUB_RUN_ATTEMPT", err)
         self.assertEqual(fake.reads + fake.writes, [])
 
+    def test_unreadable_ancestor_fails_before_operational_writes(self):
+        fake = FakeCloud()
+        c = bootstrap.execution.allow_coverage
+        fake.coverage_overrides[("POST", c.CRM + "organizations/949208237676:getIamPolicy")] = PermissionError("403")
+        rc, _, err = execute(fake)
+        self.assertEqual(rc, 1)
+        self.assertIn("COVERAGE_READ_FAILED", err)
+        self.assertTrue(all("remove-iam-policy-binding" in a for a in fake.writes), fake.writes)
+        self.assertTrue(any("organizations/949208237676:getIamPolicy" in a[1] for a in fake.coverage_reads))
+
+    def test_ancestor_wildcard_fails_before_operational_writes(self):
+        fake = FakeCloud()
+        c = bootstrap.execution.allow_coverage
+        fake.coverage_overrides[("POST", c.CRM + "organizations/949208237676:getIamPolicy")] = {
+            "bindings": [{"role": "roles/viewer", "members": ["allAuthenticatedUsers"]}]
+        }
+        rc, _, err = execute(fake)
+        self.assertEqual(rc, 1)
+        self.assertIn("COVERAGE_ALTERNATE_GRANT", err)
+        self.assertTrue(all("remove-iam-policy-binding" in a for a in fake.writes), fake.writes)
+
+    def test_ancestor_wildcard_added_after_preflight_blocks_retired_proof(self):
+        fake = FakeCloud()
+        args = execute_args()
+        fake.set_sign_in(sign_in_binding(DEFAULT_PLAN_SHA))
+        c = bootstrap.execution.allow_coverage
+        original_steps = bootstrap.steps
+        def add_ancestor(r, rotate):
+            if r.execute:
+                fake.coverage_overrides[("POST", c.CRM + "organizations/949208237676:getIamPolicy")] = {
+                    "bindings": [{"role": "roles/viewer", "members": ["allAuthenticatedUsers"]}]
+                }
+            return original_steps(r, rotate)
+        with ci_env(), mock.patch.object(bootstrap, "steps", side_effect=add_ancestor):
+            rc, _, err = run(fake, *args)
+        self.assertEqual(rc, 1)
+        self.assertIn("COVERAGE_ALTERNATE_GRANT", err)
+        self.assertFalse(bootstrap.holders(fake.policy))
+
+    def test_missing_reader_token_still_attempts_exact_revoke(self):
+        fake = FakeCloud()
+        fake.fail_read = "auth print-access-token"
+        rc, _, err = execute(fake)
+        self.assertEqual(rc, 1)
+        self.assertIn("COVERAGE_READER_AUTH_FAILED", err)
+        self.assertEqual(len(fake.removes), 1)
+        self.assertTrue(all("remove-iam-policy-binding" in a for a in fake.writes))
+
+    def test_coverage_receipts_expose_no_tokens_or_raw_policy(self):
+        fake = FakeCloud()
+        rc, out, err = execute(fake)
+        self.assertEqual(rc, 0, err)
+        receipts = [json.loads(line) for line in out.splitlines() if line.startswith('{"completed_at"')]
+        self.assertEqual([r["mode"] for r in receipts], ["granted", "retired"])
+        self.assertTrue(all(r["depth"] == 2 for r in receipts))
+        self.assertNotIn("fake-access-token", out + err)
+        self.assertNotIn("someone@example.com", out + err)
+        self.assertNotIn("response_base64", out + err)
+
     def test_unrelated_policy_addition_during_execution_is_detected(self):
         fake = FakeCloud()
         args = execute_args()
@@ -1636,17 +1763,18 @@ class WorkflowIsAnInput(unittest.TestCase):
                   for line in original]
         self.assertNotEqual(bootstrap.plan_sha256(original), bootstrap.plan_sha256(edited))
 
-    def test_execution_contract_is_hashed_into_both_plans(self):
-        path = BOOT_DIR / "execution.py"
-        self.assertIn(path.resolve(), [p.resolve() for p in bootstrap.referenced_files()])
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        altered = hashlib.sha256(path.read_bytes() + b"# changed\n").hexdigest()
-        for rotate in (False, True):
-            plan = bootstrap.build_plan(rotate)
-            line = f"input deploy/firebase/bootstrap/execution.py sha256 {digest}"
-            self.assertIn(line, plan)
-            modified = [item.replace(digest, altered) if item == line else item for item in plan]
-            self.assertNotEqual(bootstrap.plan_sha256(plan), bootstrap.plan_sha256(modified))
+    def test_execution_and_coverage_code_are_hashed_into_both_plans(self):
+        for filename in ("execution.py", "allow_coverage.py"):
+            path = BOOT_DIR / filename
+            self.assertIn(path.resolve(), [p.resolve() for p in bootstrap.referenced_files()])
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            altered = hashlib.sha256(path.read_bytes() + b"# changed\n").hexdigest()
+            for rotate in (False, True):
+                plan = bootstrap.build_plan(rotate)
+                line = f"input deploy/firebase/bootstrap/{filename} sha256 {digest}"
+                self.assertIn(line, plan)
+                modified = [item.replace(digest, altered) if item == line else item for item in plan]
+                self.assertNotEqual(bootstrap.plan_sha256(plan), bootstrap.plan_sha256(modified))
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ import contextlib
 import io
 import copy
 import importlib.util
+import hashlib
 import json
 import os
 import sys
@@ -35,7 +36,7 @@ def claims(m):
 
 def provider(m):
     return {'name': m['provider_resource'], 'state': 'ACTIVE', 'disabled': False,
-            'attributeMapping': {'google.subject': "assertion.repository_id + ':' + assertion.run_id + ':' + assertion.run_attempt"},
+            'attributeMapping': {'google.subject': "assertion.repository_id + ':' + assertion.run_id + ':' + assertion.run_attempt + ':' + assertion.sha + ':' + assertion.workflow_sha"},
             'attributeCondition': e.provider_condition(m),
             'oidc': {'issuerUri': e.ISSUER, 'allowedAudiences': [m['audience']]}}
 
@@ -43,17 +44,38 @@ def provider(m):
 class ExecutionContract(unittest.TestCase):
     def test_exact_manifest_and_derived_identity(self):
         m = manifest(); self.assertEqual(e.validate_manifest(m), m)
-        self.assertEqual(m['pool_id'], 'han-bs-123456789-1')
+        self.assertEqual(m['version'], 2)
+        self.assertEqual(m['pool_id'], 'han-bootstrap-v2')
+        self.assertEqual(m['subject'], f'1100192477:{R}:1:{C}:{C}')
+        self.assertLessEqual(len(m['subject'].encode()), 127)
+        longest = e.make_manifest(C, H, W, '9' * 18, '1', T, False)
+        self.assertLessEqual(len(longest['subject'].encode()), 127)
+        other = e.make_manifest(C, H, W, '123456790', '1', T, False)
+        self.assertEqual(other['pool_id'], m['pool_id'])
+        self.assertNotEqual(other['member'], m['member'])
         for key, value in [('pool_id', 'wrong'), ('member', 'wrong'), ('audience', 'wrong'),
-                           ('A', '2'), ('version', True), ('rotate_db_password', 'false')]:
+                           ('A', '2'), ('version', True), ('version', 1), ('rotate_db_password', 'false')]:
             changed = dict(m); changed[key] = value
             with self.subTest(key=key), self.assertRaises(e.Refuse): e.validate_manifest(changed)
         for key in ('C', 'H', 'W', 'R', 'T'):
             changed = dict(m); changed[key] = 7
             with self.subTest(key=key), self.assertRaises(e.Refuse): e.validate_manifest(changed)
         with self.assertRaises(e.Refuse): e.validate_manifest({**m, 'extra': 'x'})
-        for run in ('0', '-1', '1' * 21, '12/3'):
+        for run in ('0', '-1', '1' * 19, '12/3'):
             with self.assertRaises(e.Refuse): e.make_manifest(C, H, W, run, '1', T, False)
+
+    def test_cross_language_v2_manifest_vector_and_dynamic_inputs(self):
+        base = ('0' * 40, '1' * 64, '2' * 40, '7', '1', '2000-01-02T03:04:05Z', False)
+        data = e.canonical_manifest(e.make_manifest(*base))
+        self.assertEqual(len(data), 886)
+        self.assertEqual(hashlib.sha256(data).hexdigest(), '4a2309c8347634ed659045024c66a69b907599e85d01a4873707bba9df722afa')
+        self.assertEqual(len(data + b'\n'), 887)
+        self.assertEqual(hashlib.sha256(data + b'\n').hexdigest(), '45d372f5c9ddbc4430f3b06d9eee2d011863d5f8c375a59e432aa151a57fbb82')
+        changes = {0: '3' * 40, 1: '4' * 64, 2: '5' * 40, 3: '8',
+                   5: '2000-01-02T03:04:06Z', 6: True}
+        for index, replacement in changes.items():
+            altered = list(base); altered[index] = replacement
+            self.assertNotEqual(hashlib.sha256(data).digest(), hashlib.sha256(e.canonical_manifest(e.make_manifest(*altered))).digest())
 
     def test_manifest_bytes_must_be_canonical_and_not_duplicate_keys(self):
         m = manifest()
@@ -64,7 +86,7 @@ class ExecutionContract(unittest.TestCase):
             path.write_text(json.dumps(m) + '\n')
             with self.assertRaises(e.Refuse): e.load_manifest(str(path))
             raw = json.dumps(m, sort_keys=True, separators=(',', ':'))
-            path.write_text(raw[:-1] + ',\"version\":1}\n')
+            path.write_text(raw[:-1] + ',\"version\":2}\n')
             with self.assertRaises(e.Refuse): e.load_manifest(str(path))
 
     def test_every_signed_claim_and_expiration_is_required(self):
@@ -115,10 +137,9 @@ class ExecutionContract(unittest.TestCase):
             "assertion.ref == 'refs/heads/main'",
             "assertion.event_name == 'workflow_dispatch'",
             "assertion.workflow_ref == 'TheBushidoCollective/han/.github/workflows/han-bootstrap.yml@refs/heads/main'",
-            f"assertion.sha == '{C}'", f"assertion.workflow_sha == '{C}'",
-            f"assertion.run_id == '{R}'", "assertion.run_attempt == '1'",
+            "assertion.run_attempt == '1'",
             "assertion.runner_environment == 'github-hosted'", "assertion.environment == 'han-bootstrap'",
-            f"assertion.aud == '{m['audience']}'", f"int(assertion.exp) <= {e.deadline_timestamp(T)}",
+            "assertion.sha == assertion.workflow_sha", f"assertion.aud == '{m['audience']}'",
         ]
         self.assertEqual(e.provider_condition(m), " && ".join(expected))
         for clause in expected:

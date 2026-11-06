@@ -15,12 +15,18 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+# Isolated mode excludes this script's directory; import the co-hashed helper
+# only from this reviewed checkout.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import allow_coverage
+
 PROJECT_NUMBER = "911514101920"
 REPOSITORY_ID = "1100192477"
 OWNER_ID = "233175215"
 REPOSITORY = "TheBushidoCollective/han"
 WORKFLOW_REF = REPOSITORY + "/.github/workflows/han-bootstrap.yml@refs/heads/main"
 ISSUER = "https://token.actions.githubusercontent.com"
+POOL_ID = "han-bootstrap-v2"
 PROVIDER_ID = "github"
 SCOPES = "https://www.googleapis.com/auth/cloud-platform"
 KEYS = frozenset({"version", "C", "H", "W", "R", "A", "T", "rotate_db_password", "pool_id",
@@ -47,30 +53,36 @@ def make_manifest(commit: str, plan: str, website: str, run: str, attempt: str,
         raise Refuse("invalid Han commit or manifest digest")
     if not isinstance(website, str) or not re.fullmatch(r"[0-9a-f]{40}", website):
         raise Refuse("invalid website commit")
-    if not isinstance(run, str) or not re.fullmatch(r"[1-9][0-9]{0,19}", run) or attempt != "1" or type(rotate) is not bool:
+    if not isinstance(run, str) or not re.fullmatch(r"[1-9][0-9]{0,17}", run) or attempt != "1" or type(rotate) is not bool:
         raise Refuse("invalid execution ID, attempt or rotation choice")
     deadline_timestamp(deadline)
-    pool = f"han-bs-{run}-1"
+    pool = POOL_ID
     resource = f"projects/{PROJECT_NUMBER}/locations/global/workloadIdentityPools/{pool}/providers/{PROVIDER_ID}"
-    subject = f"{REPOSITORY_ID}:{run}:1"
-    return {"version": 1, "C": commit, "H": plan, "W": website, "R": run, "A": attempt,
+    subject = f"{REPOSITORY_ID}:{run}:1:{commit}:{commit}"
+    if len(subject.encode("utf-8")) > 127:
+        raise Refuse("execution subject exceeds the Google limit")
+    return {"version": 2, "C": commit, "H": plan, "W": website, "R": run, "A": attempt,
             "T": deadline, "rotate_db_password": rotate, "pool_id": pool, "provider_id": PROVIDER_ID,
             "subject": subject, "provider_resource": resource, "audience": "https://iam.googleapis.com/" + resource,
             "member": f"principal://iam.googleapis.com/projects/{PROJECT_NUMBER}/locations/global/workloadIdentityPools/{pool}/subject/{subject}"}
 
 
 def validate_manifest(doc: dict) -> dict:
-    if not isinstance(doc, dict) or set(doc) != KEYS or type(doc.get("version")) is not int or doc["version"] != 1:
+    if not isinstance(doc, dict) or set(doc) != KEYS or type(doc.get("version")) is not int or doc["version"] != 2:
         raise Refuse("execution manifest schema mismatch")
     expected = make_manifest(doc["C"], doc["H"], doc["W"], doc["R"], doc["A"], doc["T"], doc["rotate_db_password"])
     if doc != expected:
         raise Refuse("execution manifest does not match derived identities")
     return expected
 
+def canonical_manifest(m: dict) -> bytes:
+    return json.dumps(validate_manifest(m), sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=False, allow_nan=False).encode("utf-8")
+
 def load_manifest(path: str) -> dict:
-    raw = Path(path).read_text(encoding="utf-8")
-    manifest = validate_manifest(json.loads(raw))
-    if raw != json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n":
+    raw = Path(path).read_bytes()
+    manifest = validate_manifest(json.loads(raw.decode("utf-8")))
+    if raw != canonical_manifest(manifest) + b"\n":
         raise Refuse("execution manifest is not canonical JSON")
     return manifest
 
@@ -78,10 +90,10 @@ def load_manifest(path: str) -> dict:
 def provider_condition(m: dict) -> str:
     pairs = [("repository_owner_id", OWNER_ID), ("repository_id", REPOSITORY_ID),
              ("repository", REPOSITORY), ("ref", "refs/heads/main"), ("event_name", "workflow_dispatch"),
-             ("workflow_ref", WORKFLOW_REF), ("sha", m["C"]), ("workflow_sha", m["C"]),
-             ("run_id", m["R"]), ("run_attempt", "1"), ("runner_environment", "github-hosted"),
-             ("environment", "han-bootstrap"), ("aud", m["audience"])]
-    return " && ".join(f"assertion.{name} == '{value}'" for name, value in pairs) + f" && int(assertion.exp) <= {deadline_timestamp(m['T'])}"
+             ("workflow_ref", WORKFLOW_REF), ("run_attempt", "1"), ("runner_environment", "github-hosted"),
+             ("environment", "han-bootstrap")]
+    return (" && ".join(f"assertion.{name} == '{value}'" for name, value in pairs) +
+            f" && assertion.sha == assertion.workflow_sha && assertion.aud == '{m['audience']}'")
 
 def verify_pool(m: dict, pool: dict, providers: list) -> None:
     expected_name = f"projects/{PROJECT_NUMBER}/locations/global/workloadIdentityPools/{m['pool_id']}"
@@ -102,7 +114,7 @@ def verify_provider(m: dict, provider: dict) -> None:
     allowed_provider = {"name", "displayName", "description", "state", "disabled",
                         "attributeMapping", "attributeCondition", "expireTime", "oidc"}
     allowed_oidc = {"issuerUri", "allowedAudiences", "jwksJson"}
-    mapping = {"google.subject": "assertion.repository_id + ':' + assertion.run_id + ':' + assertion.run_attempt"}
+    mapping = {"google.subject": "assertion.repository_id + ':' + assertion.run_id + ':' + assertion.run_attempt + ':' + assertion.sha + ':' + assertion.workflow_sha"}
     if (set(provider) - allowed_provider or not isinstance(oidc, dict) or set(oidc) - allowed_oidc or
             oidc.get("jwksJson") not in (None, "") or provider.get("expireTime") not in (None, "") or
             provider.get("name") != m["provider_resource"] or provider.get("state") != "ACTIVE" or
@@ -141,6 +153,45 @@ def check_claims(m: dict, claims: dict) -> None:
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *args, **kwargs):
         return None
+
+def collect_allow_coverage(m: dict, mode: str, backend) -> dict:
+    validate_manifest(m)
+    try:
+        return allow_coverage.collect(m, mode, backend)
+    except allow_coverage.CoverageError as exc:
+        raise Refuse(str(exc)) from exc
+
+
+def validate_allow_coverage(snapshot: dict, m: dict, mode: str, reader: str) -> dict:
+    validate_manifest(m)
+    try:
+        return allow_coverage.validate(snapshot, m, mode, reader)
+    except allow_coverage.CoverageError as exc:
+        raise Refuse(str(exc)) from exc
+
+
+def google_coverage_read(method: str, url: str, body: bytes, reader: str, token: str) -> bytes:
+    """Read only the documented IAM hierarchy endpoints with an explicit identity."""
+    account = allow_coverage.ACCOUNT_URL
+    resource = re.escape(allow_coverage.CRM) + r"(?:projects/911514101920|folders/[0-9]+|organizations/[0-9]+)"
+    allowed_get = method == "GET" and body == b"" and (url == account or re.fullmatch(resource, url))
+    allowed_post = (method == "POST" and body == allow_coverage.POLICY_BODY and
+                    (url == account + ":getIamPolicy" or re.fullmatch(resource + r":getIamPolicy", url)))
+    if reader != allow_coverage.READER or not isinstance(token, str) or not token or not (allowed_get or allowed_post):
+        raise Refuse("COVERAGE_TRANSPORT_REFUSED")
+    request = urllib.request.Request(url, method=method, data=body if method == "POST" else None,
+                                     headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"})
+    try:
+        with urllib.request.build_opener(NoRedirect).open(request, timeout=30) as response:
+            if response.status != 200:
+                raise Refuse("COVERAGE_READ_FAILED")
+            raw = response.read(allow_coverage.MAX_RESPONSE + 1)
+            if len(raw) > allow_coverage.MAX_RESPONSE:
+                raise Refuse("COVERAGE_RESPONSE_INVALID")
+            return raw
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        # Do not include request, response or exception text: they can contain tokens or private policy data.
+        raise Refuse("COVERAGE_READ_FAILED") from exc
 
 
 def http_json(url: str, *, data: bytes | None = None, headers: dict | None = None) -> dict:
@@ -224,7 +275,7 @@ def main() -> int:
             m = make_manifest(args.commit, args.plan, args.website, os.environ.get("GITHUB_RUN_ID", ""),
                               os.environ.get("GITHUB_RUN_ATTEMPT", ""), args.deadline, args.rotate)
             check_ci(m)
-            Path(args.manifest).write_text(json.dumps(m, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+            Path(args.manifest).write_bytes(canonical_manifest(m) + b"\n")
             print("Registered execution", m["R"], "attempt", m["A"])
         elif args.mode == "inspect":
             m = load_manifest(args.manifest)

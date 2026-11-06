@@ -3,9 +3,11 @@ name: Validate Han Bootstrap
 on:
   pull_request:
     paths:
+      - 'PATH.md'
       - 'deploy/firebase/bootstrap/**'
       - 'deploy/firebase/test/test_bootstrap.py'
       - 'deploy/firebase/test/test_bootstrap_execution.py'
+      - 'deploy/firebase/test/test_allow_coverage.py'
       - 'deploy/firebase/test/test_auto_fix_security.py'
       - 'deploy/firebase/test/test_failure_analysis_security.py'
       - '.github/workflows/test-failure-analysis.yml'
@@ -15,9 +17,11 @@ on:
   push:
     branches: [main]
     paths:
+      - 'PATH.md'
       - 'deploy/firebase/bootstrap/**'
       - 'deploy/firebase/test/test_bootstrap.py'
       - 'deploy/firebase/test/test_bootstrap_execution.py'
+      - 'deploy/firebase/test/test_allow_coverage.py'
       - 'deploy/firebase/test/test_auto_fix_security.py'
       - 'deploy/firebase/test/test_failure_analysis_security.py'
       - '.github/workflows/test-failure-analysis.yml'
@@ -57,6 +61,8 @@ jobs:
             test_bootstrap.WorkflowIsAnInput test_bootstrap.ExecutionBoundary
       - name: Per-execution identity negative controls
         run: python3 -B -m unittest discover -s deploy/firebase/test -p test_bootstrap_execution.py -v
+      - name: Complete inherited allow coverage controls
+        run: python3 -B -m unittest discover -s deploy/firebase/test -p test_allow_coverage.py -v
       - name: Authenticate auto-fix sources
         run: python3 -B -m unittest discover -s deploy/firebase/test -p test_auto_fix_security.py -v
       - name: Authenticate failure-analysis sources and retries

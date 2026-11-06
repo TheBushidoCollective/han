@@ -64,6 +64,7 @@ COMMANDS = [
     "secrets describe",
     "secrets add-iam-policy-binding",
     "auth list",
+    "auth print-access-token",
     "sql databases create",
     "sql databases list",
     "sql users create",
