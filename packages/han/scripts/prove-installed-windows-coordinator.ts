@@ -5,10 +5,13 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  writeFileSync,
   rmSync,
 } from 'node:fs';
+import { createConnection } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { ProofCommandError, safeProofFailure } from './windows-proof-diagnostics.ts';
 
 // Run only on a disposable Windows CI runner against the freshly built artifacts:
 // bun packages/han/scripts/prove-installed-windows-coordinator.ts <han.exe> <han-coordinator.exe>
@@ -20,6 +23,7 @@ interface Descriptor {
   certificatePem: string;
   bearerToken: string;
   supervisor: { pid: number; nonce: string; generationId: string } | null;
+  process: { pid: number; creationTime: string; userSid: string };
 }
 
 async function waitFor<T>(
@@ -49,7 +53,8 @@ function readDescriptor(data: string): Descriptor | undefined {
 async function run(
   argv: string[],
   cwd: string,
-  env: Record<string, string>
+  env: Record<string, string>,
+  expectedFailure = false
 ): Promise<string> {
   const child = Bun.spawn(argv, { cwd, env, stdout: 'pipe', stderr: 'pipe' });
   const stdout = new Response(child.stdout).text();
@@ -58,11 +63,9 @@ async function run(
   try {
     const code = await child.exited;
     const output = `${await stdout}\n${await stderr}`;
-    assert.equal(
-      code,
-      0,
-      `${argv.slice(1).join(' ')} exited ${code}:\n${output}`
-    );
+    if ((code !== 0) !== expectedFailure) {
+      throw new ProofCommandError(code, output);
+    }
     return output;
   } finally {
     clearTimeout(timer);
@@ -127,6 +130,20 @@ async function live(d: Descriptor): Promise<void> {
   );
 }
 
+async function assertListenerUnbound(port: number): Promise<void> {
+  const { promise, resolve, reject } = Promise.withResolvers<void>();
+  const socket = createConnection({ host: '127.0.0.1', port });
+  socket.setTimeout(5000);
+  socket.once('connect', () => { socket.destroy(); reject(new Error('Listener remains bound')); });
+  socket.once('timeout', () => { socket.destroy(); reject(new Error('Listener probe timed out')); });
+  socket.once('error', (error: NodeJS.ErrnoException) => {
+    socket.destroy();
+    if (error.code === 'ECONNREFUSED') resolve();
+    else reject(new Error('Listener probe failed'));
+  });
+  await promise;
+}
+
 async function main(): Promise<void> {
   if (process.platform !== 'win32' || process.env.CI !== 'true')
     throw new Error('Requires a disposable Windows CI runner');
@@ -169,119 +186,167 @@ async function main(): Promise<void> {
     CLAUDE_CODE_ENABLE_TELEMETRY: '0',
   };
   const command = (...args: string[]) => run([cli, ...args], root, env);
-  // Process selection and termination happen in the same PowerShell process, and
-  // are restricted to the staged executable rather than a name or port match.
-  const ownedProcess = async (
-    pid: number,
-    image: string,
-    kill: boolean
-  ): Promise<boolean> => {
-    assert.ok(Number.isSafeInteger(pid) && pid > 0);
-    const script = `$p=Get-Process -Id ${pid} -ErrorAction SilentlyContinue; if (!$p) { exit 3 }; if ($p.Path -ne $env:HAN_PROOF_IMAGE) { exit 4 }; ${kill ? 'Stop-Process -InputObject $p -Force -ErrorAction Stop' : ''}`;
-    const child = Bun.spawn(
-      [powershell, '-NoProfile', '-NonInteractive', '-Command', script],
-      {
-        cwd: root,
-        env: { ...env, HAN_PROOF_IMAGE: image },
-        stdout: 'ignore',
-        stderr: 'pipe',
-      }
-    );
-    const err = new Response(child.stderr).text();
+  const runtime = join(data, 'runtime');
+  const reservation = join(runtime, 'supervisor.reservation.json');
+  const owner = join(runtime, 'supervisor.owner.json');
+  const pidFile = join(runtime, 'supervisor.pid');
+  const lock = join(runtime, 'descriptor-publication.lock');
+  type Identity = Descriptor['process'];
+  const owned: { identity: Identity; image: string }[] = [];
+  let fixture: { pid: number; exitCode: number | null; kill: () => void; exited: Promise<number> } | undefined;
+  let phase = 'initial-status';
+  let failed = false;
+  let cleanupFailed = false;
+
+  // Verify both the exact staged executable and creation time before signalling.
+  const ownedProcess = async (identity: Identity, image: string, kill: boolean): Promise<boolean> => {
+    assert.ok(Number.isSafeInteger(identity.pid) && identity.pid > 0);
+    assert.ok(/^[1-9][0-9]{0,19}$/.test(identity.creationTime));
+    const script = `$p=Get-Process -Id ${identity.pid} -ErrorAction SilentlyContinue; if (!$p) { exit 3 }; if ($p.Path -ne $env:HAN_PROOF_IMAGE -or $p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString() -ne $env:HAN_PROOF_TIME) { exit 3 }; ${kill ? 'Stop-Process -InputObject $p -Force -ErrorAction Stop' : ''}`;
+    const child = Bun.spawn([powershell, '-NoProfile', '-NonInteractive', '-Command', script], {
+      cwd: root,
+      env: { ...env, HAN_PROOF_IMAGE: image, HAN_PROOF_TIME: identity.creationTime },
+      stdout: 'ignore',
+      stderr: 'ignore',
+    });
     const code = await child.exited;
     if (code === 3) return false;
-    if (code !== 0)
-      throw new Error(`Owned process check failed (${code}): ${await err}`);
+    if (code !== 0) throw new ProofCommandError(code, '');
     return true;
   };
-  let current: Descriptor | undefined;
-  try {
-    assert.match(
-      await command('coordinator', 'status'),
-      /Coordinator: not running/
-    );
-    assert.equal(readDescriptor(data), undefined);
-    await command('coordinator', 'start');
-    current = await waitFor('started descriptor', () => readDescriptor(data));
-    assert.ok(await ownedProcess(current.pid, coordinator, false));
-    assert.ok(await ownedProcess(current.supervisor!.pid, cli, false));
-    await live(current);
-    assert.match(
-      await command('coordinator', 'status'),
-      /Coordinator: running/
-    );
-
-    const beforeCrash = current;
-    assert.ok(await ownedProcess(beforeCrash.pid, coordinator, true));
-    current = await waitFor('supervisor crash recovery', () => {
-      const d = readDescriptor(data);
-      return d && d.instanceId !== beforeCrash.instanceId ? d : undefined;
+  const register = (d: Descriptor) => {
+    const claim = JSON.parse(readFileSync(reservation, 'utf8')) as { process: Identity };
+    assert.ok(d.supervisor && claim.process.pid === d.supervisor.pid);
+    owned.push({ identity: d.process, image: coordinator }, { identity: claim.process, image: cli });
+    return claim.process;
+  };
+  const started = async (previous?: Descriptor) => {
+    const d = await waitFor('new descriptor', () => {
+      const next = readDescriptor(data);
+      return next && (!previous || next.instanceId !== previous.instanceId) ? next : undefined;
     });
-    assert.equal(current.supervisor?.pid, beforeCrash.supervisor?.pid);
-    assert.notEqual(
-      current.supervisor?.generationId,
-      beforeCrash.supervisor?.generationId
-    );
-    assert.notEqual(current.bearerToken, beforeCrash.bearerToken);
-    assert.ok(await ownedProcess(current.pid, coordinator, false));
-    await live(current);
-    assert.equal(
-      (
-        await request(
-          current,
-          current.httpsPort,
-          '/health',
-          beforeCrash.bearerToken
-        )
-      ).status,
-      401
-    );
+    const supervisor = register(d);
+    assert.ok(await ownedProcess(d.process, coordinator, false));
+    assert.ok(await ownedProcess(supervisor, cli, false));
+    await live(d);
+    return d;
+  };
+  const stop = async (d: Descriptor) => {
+    const supervisor = register(d);
+    await command('coordinator', 'stop');
+    await waitFor('descriptor withdrawal', () => !readDescriptor(data) ? true : undefined);
+    await waitFor('supervisor exit', async () => !(await ownedProcess(supervisor, cli, false)) ? true : undefined);
+    await waitFor('coordinator exit', async () => !(await ownedProcess(d.process, coordinator, false)) ? true : undefined);
+  };
+  const killPair = async (d: Descriptor) => {
+    const supervisor = register(d);
+    assert.ok(await ownedProcess(supervisor, cli, true));
+    await waitFor('supervisor exit', async () => !(await ownedProcess(supervisor, cli, false)) ? true : undefined);
+    assert.ok(await ownedProcess(d.process, coordinator, true));
+    await waitFor('coordinator exit', async () => !(await ownedProcess(d.process, coordinator, false)) ? true : undefined);
+  };
 
+  try {
+    assert.ok(/Coordinator: not running/.test(await command('coordinator', 'status')));
+    assert.equal(readDescriptor(data), undefined);
+    phase = 'initial-start';
+    await command('coordinator', 'start');
+    let current = await started();
+    assert.ok(/Coordinator: running/.test(await command('coordinator', 'status')));
+
+    phase = 'crash-recovery';
+    const beforeCrash = current;
+    assert.ok(await ownedProcess(beforeCrash.process, coordinator, true));
+    current = await started(beforeCrash);
+    assert.equal(current.supervisor?.pid, beforeCrash.supervisor?.pid);
+    assert.ok(current.supervisor?.generationId !== beforeCrash.supervisor?.generationId);
+    assert.ok(current.bearerToken !== beforeCrash.bearerToken);
+    assert.equal((await request(current, current.httpsPort, '/health', beforeCrash.bearerToken)).status, 401);
+
+    phase = 'restart';
     const beforeRestart = current;
     await command('coordinator', 'restart');
-    current = await waitFor('restarted descriptor', () => {
-      const d = readDescriptor(data);
-      return d && d.instanceId !== beforeRestart.instanceId ? d : undefined;
+    current = await started(beforeRestart);
+    assert.ok(current.bearerToken !== beforeRestart.bearerToken);
+    assert.ok(current.certificatePem !== beforeRestart.certificatePem);
+    phase = 'stop';
+    await stop(current);
+    assert.ok(/Coordinator: not running/.test(await command('coordinator', 'status')));
+
+    phase = 'missing-lock-status';
+    rmSync(lock);
+    await run([cli, 'coordinator', 'status'], root, env, true);
+    assert.ok(!existsSync(lock));
+    phase = 'missing-lock-start';
+    await command('coordinator', 'start');
+    current = await started(beforeRestart);
+    assert.ok(existsSync(lock));
+
+    phase = 'partial-claim-status';
+    const beforePartial = current;
+    await killPair(beforePartial);
+    rmSync(pidFile);
+    const reservationBytes = readFileSync(reservation);
+    const ownerBytes = readFileSync(owner);
+    assert.ok(/Coordinator: not running/.test(await command('coordinator', 'status')));
+    assert.ok(reservationBytes.equals(readFileSync(reservation)));
+    assert.ok(ownerBytes.equals(readFileSync(owner)));
+    assert.ok(!existsSync(pidFile));
+    phase = 'partial-claim-start';
+    await command('coordinator', 'start');
+    current = await started(beforePartial);
+    assert.ok(current.supervisor?.generationId !== beforePartial.supervisor?.generationId);
+    assert.ok(current.supervisor?.nonce !== beforePartial.supervisor?.nonce);
+
+    phase = 'modeled-pid-reuse';
+    const beforeReuse = current;
+    await killPair(beforeReuse);
+    await assertListenerUnbound(beforeReuse.httpsPort);
+    await assertListenerUnbound(beforeReuse.grpcPort);
+    fixture = Bun.spawn([powershell, '-NoProfile', '-NonInteractive', '-Command', 'Start-Sleep -Seconds 300'], {
+      cwd: root, env, stdout: 'ignore', stderr: 'ignore',
     });
-    assert.notEqual(current.bearerToken, beforeRestart.bearerToken);
-    assert.notEqual(current.certificatePem, beforeRestart.certificatePem);
-    assert.ok(await ownedProcess(current.pid, coordinator, false));
-    await live(current);
-    await command('coordinator', 'stop');
-    await waitFor('descriptor withdrawal', () =>
-      !readDescriptor(data) ? true : undefined
-    );
-    await waitFor('supervisor exit', async () =>
-      !(await ownedProcess(current!.supervisor!.pid, cli, false))
-        ? true
-        : undefined
-    );
-    await waitFor('coordinator exit', async () =>
-      !(await ownedProcess(current!.pid, coordinator, false)) ? true : undefined
-    );
-    current = undefined;
-    assert.match(
-      await command('coordinator', 'status'),
-      /Coordinator: not running/
-    );
-    console.log(
-      'Installed Windows CLI: start, authenticated HTTPS and gRPC, crash recovery, restart and stop passed'
-    );
+    assert.ok(fixture.pid > 0);
+    const stale = { ...beforeReuse, pid: fixture.pid, process: { ...beforeReuse.process, pid: fixture.pid } };
+    assert.ok(!(await ownedProcess(stale.process, powershell, false)));
+    writeFileSync(join(runtime, 'coordinator.json'), JSON.stringify(stale));
+    await command('coordinator', 'start');
+    current = await started(beforeReuse);
+    assert.ok(current.supervisor?.generationId !== beforeReuse.supervisor?.generationId);
+    assert.equal(fixture.exitCode, null);
+    await stop(current);
   } catch (error) {
-    console.error('Installed Windows proof failed before cleanup:', error);
-    throw error;
+    failed = true;
+    console.error(`Installed Windows proof failure: ${safeProofFailure(phase, error)}`);
   } finally {
-    if (current || existsSync(join(data, 'runtime', 'coordinator.json'))) {
-      // Ask the actual installed CLI to shut down its own processes, even on failure.
-      await command('coordinator', 'stop');
+    if (fixture && fixture.exitCode === null) {
+      try { fixture.kill(); await fixture.exited; } catch { cleanupFailed = true; }
     }
-    rmSync(root, {
-      recursive: true,
-      force: true,
-      maxRetries: 10,
-      retryDelay: 300,
-    });
+    if (existsSync(join(runtime, 'coordinator.json'))) {
+      try { await command('coordinator', 'stop'); } catch { cleanupFailed = true; }
+    }
+    for (const { identity, image } of owned) {
+      try {
+        if (await ownedProcess(identity, image, false)) {
+          await ownedProcess(identity, image, true);
+          await waitFor('owned process exit', async () => !(await ownedProcess(identity, image, false)) ? true : undefined);
+        }
+      } catch { cleanupFailed = true; }
+    }
+    try {
+      rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
+    } catch { cleanupFailed = true; }
+    if (cleanupFailed) console.error(`Installed Windows proof failure: ${safeProofFailure('cleanup', undefined)}`);
+  }
+  if (failed || cleanupFailed) {
+    // The primary phase has already been reported; never print the thrown object.
+    process.exitCode = 1;
+  } else {
+    console.log('Installed Windows CLI: authenticated transport, crash recovery, restart, stop, missing lock, partial claim, and modeled PID reuse passed');
   }
 }
 
-await main();
+await main().catch((error: unknown) => {
+  console.error(`Installed Windows proof failure: ${safeProofFailure('setup', error)}`);
+  process.exitCode = 1;
+});
