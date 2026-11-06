@@ -525,11 +525,49 @@ async function intentionalStopAndRestart(): Promise<void> {
   }
 }
 
+async function standaloneStopPreservesUnrelatedMarker(): Promise<void> {
+  const dir = directory();
+  const child = Bun.spawn(
+    [
+      binary,
+      '--foreground',
+      '--port',
+      '0',
+      '--grpc-port',
+      '0',
+      '--no-watcher',
+      '--data-dir',
+      dir,
+    ],
+    { env: environment(dir), stdout: 'pipe', stderr: 'pipe' }
+  );
+  children.push(child);
+  try {
+    const descriptor = await ready(dir, child);
+    assert.equal(descriptor.pid, child.pid);
+    assert.equal(descriptor.supervisor, null);
+    const pidPath = join(dir, 'coordinator.pid');
+    writeFileSync(pidPath, String(process.pid));
+    await cliCommand(dir, 'stop');
+    await waitFor('standalone coordinator stop', () =>
+      child.exitCode !== null ? child.exitCode : undefined
+    );
+    assert.equal(child.exitCode, 0);
+    assert.equal(readFileSync(pidPath, 'utf8'), String(process.pid));
+    assert.equal(existsSync(join(dir, 'runtime/coordinator.json')), false);
+    console.log('standalone stop preserved unrelated supervisor marker');
+  } finally {
+    if (child.exitCode === null) child.kill();
+    await child.exited;
+  }
+}
+
 try {
   await supervisorRecovery();
   await replacementSurvivesOldOwner();
   await replacementWinsStartupRace();
   await intentionalStopAndRestart();
+  await standaloneStopPreservesUnrelatedMarker();
 } finally {
   for (const child of children) if (child.exitCode === null) child.kill();
   await Promise.all(children.map((child) => child.exited));
