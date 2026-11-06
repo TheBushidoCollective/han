@@ -47,7 +47,7 @@ export function getCoordinatorPort(): number {
   const envPort = process.env.HAN_COORDINATOR_PORT;
   if (envPort) {
     const port = parseInt(envPort, 10);
-    if (!Number.isNaN(port) && port > 0 && port < 65536) {
+    if (!Number.isNaN(port) && port >= 0 && port < 65536) {
       return port;
     }
   }

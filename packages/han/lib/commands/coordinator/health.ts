@@ -35,7 +35,7 @@ export async function checkHealth(
 ): Promise<HealthCheckResponse | null> {
   try {
     const descriptor = readCoordinatorDescriptor();
-    if (port !== undefined && port !== descriptor.httpsPort)
+    if (port !== undefined && port !== 0 && port !== descriptor.httpsPort)
       throw new CoordinatorSecurityError(
         'Coordinator descriptor port does not match requested port'
       );

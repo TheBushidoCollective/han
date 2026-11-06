@@ -237,7 +237,7 @@ export async function getStatus(port?: number): Promise<CoordinatorStatus> {
     return {
       running: true,
       pid: health.pid,
-      port: effectivePort,
+      port: readCoordinatorDescriptor().httpsPort,
       uptime: health.uptime,
     };
   }

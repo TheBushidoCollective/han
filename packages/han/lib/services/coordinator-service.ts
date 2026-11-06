@@ -75,7 +75,8 @@ const state: CoordinatorState = {
  * Reads HAN_COORDINATOR_PORT at call time (set by server.ts before startup).
  */
 function getEffectivePort(): number {
-  return parseInt(process.env.HAN_COORDINATOR_PORT || '', 10) || state.port;
+  const port = Number.parseInt(process.env.HAN_COORDINATOR_PORT ?? '', 10);
+  return Number.isNaN(port) ? state.port : port;
 }
 
 // ============================================================================
