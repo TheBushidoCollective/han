@@ -160,6 +160,44 @@ jobs:
           path: ${{ runner.temp }}/han-installed-evidence/installed-coordinator.json
           if-no-files-found: error
 
+  browser-transport:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Build coordinator
+        working-directory: packages/han-rs
+        run: cargo build --locked --release -p han-coordinator
+      - name: Install Han dependencies
+        working-directory: packages/han
+        run: bun install --frozen-lockfile
+      - name: Install browse dependencies
+        working-directory: packages/browse-client
+        run: bun install --frozen-lockfile
+      - name: Install headless Chromium
+        working-directory: packages/browse-client
+        run: bunx playwright install --with-deps chromium
+      - name: Prove real browser transport and subscriptions
+        working-directory: packages/browse-client
+        run: bunx playwright test --config playwright.transport.config.ts
+      - name: Record sanitized proof result
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/han-browser-evidence"
+          printf '{"revision":"%s","proof":"real browser transport and subscriptions","result":"passed"}\n' \
+            "$GITHUB_SHA" > "$RUNNER_TEMP/han-browser-evidence/result.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: browser-transport-proof
+          path: ${{ runner.temp }}/han-browser-evidence/result.json
+          if-no-files-found: error
+
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
