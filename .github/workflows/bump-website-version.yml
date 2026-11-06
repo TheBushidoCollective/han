@@ -74,62 +74,9 @@ jobs:
             echo "No significant website changes"
           fi
 
-      - name: Bump version
+      - name: Bump website version and publish
         if: steps.check-changes.outputs.has_changes == 'true'
-        id: bump-version
-        working-directory: ./website
-        run: |
-          CURRENT_VERSION=$(bun -e "console.log(require('./package.json').version)")
-          echo "Current version: $CURRENT_VERSION"
-
-          # Parse version components
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
-
-          # Bump based on type
-          case "${{ steps.bump-type.outputs.type }}" in
-            major)
-              NEW_VERSION="$((MAJOR + 1)).0.0"
-              ;;
-            minor)
-              NEW_VERSION="${MAJOR}.$((MINOR + 1)).0"
-              ;;
-            patch)
-              NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
-              ;;
-          esac
-
-          echo "New version: $NEW_VERSION"
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "old_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-
-          # Update package.json
-          bun -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            pkg.version = '$NEW_VERSION';
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, '\t') + '\n');
-          "
-
-      - name: Generate changelog
-        if: steps.check-changes.outputs.has_changes == 'true'
-        run: |
-          chmod +x .github/scripts/generate-changelog.sh
-          .github/scripts/generate-changelog.sh website ${{ steps.bump-version.outputs.new_version }} ${{ steps.bump-version.outputs.old_version }}
-
-      - name: Commit version bump
-        if: steps.check-changes.outputs.has_changes == 'true'
-        run: |
-          # Check if there are any changes to commit
-          if git diff --quiet; then
-            echo "No version changes to commit"
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Commit locally first, then rebase on remote
-          git add website/package.json website/CHANGELOG.md
-          git commit -m "chore(website): bump version to ${{ steps.bump-version.outputs.new_version }} [skip ci]"
-          git pull --rebase origin main
-          git push origin main
+        env:
+          BUMP_TYPE: ${{ steps.bump-type.outputs.type }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: bash .github/scripts/bump-website-version.sh
