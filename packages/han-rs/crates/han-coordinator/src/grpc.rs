@@ -47,6 +47,8 @@ pub struct CoordinatorState {
     pub hook_engine: Arc<Mutex<HookEngine>>,
     pub slots: Arc<RwLock<HashMap<String, SlotEntry>>>,
     pub shutdown: tokio::sync::broadcast::Sender<()>,
+    pub shutdown_context: Option<crate::runtime::ShutdownContext>,
+    pub shutdown_committed: std::sync::Mutex<bool>,
 }
 
 // ============================================================================
@@ -76,6 +78,20 @@ impl CoordinatorServiceTrait for CoordinatorServiceImpl {
             req.timeout_seconds
         );
 
+        let mut committed = self.state.shutdown_committed.lock()
+            .map_err(|_| Status::internal("shutdown state unavailable"))?;
+        if *committed {
+            return Ok(Response::new(Empty {}));
+        }
+        if let Some(context) = &self.state.shutdown_context {
+            if context.descriptor.supervisor.is_some() {
+                context.withdraw().map_err(|error| {
+                    tracing::warn!("Could not withdraw coordinator descriptor: {}", error);
+                    Status::failed_precondition("coordinator descriptor withdrawal failed")
+                })?;
+            }
+        }
+
         let shutdown = self.state.shutdown.clone();
         tokio::spawn(async move {
             if req.graceful && req.timeout_seconds > 0 {
@@ -83,6 +99,7 @@ impl CoordinatorServiceTrait for CoordinatorServiceImpl {
             }
             let _ = shutdown.send(());
         });
+        *committed = true;
 
         Ok(Response::new(Empty {}))
     }
@@ -511,6 +528,8 @@ mod tests {
             hook_engine: Arc::new(Mutex::new(HookEngine::new(None))),
             slots: Arc::new(RwLock::new(HashMap::new())),
             shutdown: tokio::sync::broadcast::channel(1).0,
+            shutdown_context: None,
+            shutdown_committed: std::sync::Mutex::new(false),
         })
     }
 
