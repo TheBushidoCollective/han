@@ -1,8 +1,8 @@
 //! Windows handle primitives for the secure local transport.
 //!
-//! This module is deliberately not wired into the coordinator.  The primitives
-//! here do not establish an ACL or a trusted directory tree by themselves.
-//! They must not be used as a replacement for the fail-closed Windows backend.
+//! Cooperating readers serialize with publication. Raw filesystem reads can
+//! see absence between retirement and installation, including after a crash.
+//! Absence is not evidence of process death or permission to steal a claim.
 
 #![cfg(windows)]
 
@@ -55,12 +55,12 @@ pub(crate) struct FileIdentity {
 
 
 /// An opened local data directory whose entire ancestor chain remains pinned.
-struct PinnedDirectory {
+pub(crate) struct PinnedDirectory {
     handles: Vec<OwnedHandle>,
 }
 
 impl PinnedDirectory {
-    fn open_data_directory(path: &Path) -> io::Result<Self> {
+    pub(crate) fn open_data_directory(path: &Path) -> io::Result<Self> {
         let mut parts = path.components();
         let drive = match parts.next() {
             Some(Component::Prefix(prefix)) => match prefix.kind() {
@@ -78,13 +78,14 @@ impl PinnedDirectory {
             return Err(invalid("unsupported Windows drive type"));
         }
         let raw = unsafe {
-            CreateFileW(root.as_ptr(), FILE_READ_ATTRIBUTES | FILE_TRAVERSE,
+            CreateFileW(root.as_ptr(), FILE_READ_ATTRIBUTES | FILE_TRAVERSE | READ_CONTROL,
                 FILE_SHARE_READ | FILE_SHARE_WRITE, null(), OPEN_EXISTING,
                 FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, null_mut())
         };
         if raw == INVALID_HANDLE_VALUE { return Err(io::Error::last_os_error()); }
         let root_handle = unsafe { OwnedHandle::from_raw_handle(raw as _) };
         reject_reparse(&root_handle)?;
+        verify_ancestor_acl(&root_handle)?;
         let mut flags = 0u32;
         let mut filesystem = [0u16; 32];
         if unsafe {
@@ -113,6 +114,7 @@ impl PinnedDirectory {
                     | windows_sys::Win32::Storage::FileSystem::FILE_ADD_SUBDIRECTORY;
             }
             let next = open_child(handles.last().unwrap(), name, true, access)?;
+            if parts.peek().is_some() { verify_ancestor_acl(&next)?; }
             handles.push(next);
         }
         if handles.len() == 1 { return Err(invalid("drive root is not a private data directory")); }
@@ -126,18 +128,25 @@ impl PinnedDirectory {
 
     /// Open an existing private child, or create it securely if explicitly
     /// requested. All ancestors remain pinned until the returned value drops.
-    fn open_private_child(mut self, name: &OsStr, create: bool) -> io::Result<Self> {
+    pub(crate) fn open_private_child(mut self, name: &OsStr, create: bool) -> io::Result<Self> {
         let access = FILE_READ_ATTRIBUTES | FILE_TRAVERSE | READ_CONTROL
             | windows_sys::Win32::Storage::FileSystem::FILE_ADD_FILE
             | windows_sys::Win32::Storage::FileSystem::FILE_ADD_SUBDIRECTORY;
-        let child = match open_child(self.handle(), name, true, access) {
-            Ok(handle) => handle,
+        let (child, created) = match open_child(self.handle(), name, true, access) {
+            Ok(handle) => (handle, false),
             Err(error) if create && error.kind() == io::ErrorKind::NotFound =>
-                create_private_child(self.handle(), name, true, access)?,
+                (create_private_child(self.handle(), name, true, access)?, true),
             Err(error) => return Err(error),
         };
         verify_private_acl(&child)?;
         self.handles.push(child);
+        if created {
+            use windows_sys::Win32::Storage::FileSystem::{FILE_READ_DATA, FILE_WRITE_DATA};
+            let access = FILE_READ_ATTRIBUTES | FILE_READ_DATA | FILE_WRITE_DATA | READ_CONTROL;
+            let lock = create_private_child_with_share(self.handle(), OsStr::new("descriptor-publication.lock"),
+                false, access, FILE_SHARE_READ | FILE_SHARE_WRITE)?;
+            regular_file_identity(&lock)?;
+        }
         Ok(self)
     }
 }
@@ -214,6 +223,11 @@ fn open_child_with_share(parent: &OwnedHandle, name: &OsStr, directory: bool, ac
 /// Create a new child with a protected DACL applied by the kernel at creation.
 /// The parent must already be validated and held without delete sharing.
 fn create_private_child(parent: &OwnedHandle, name: &OsStr, directory: bool, access: u32) -> io::Result<OwnedHandle> {
+    let share = if directory { FILE_SHARE_READ | FILE_SHARE_WRITE } else { 0 };
+    create_private_child_with_share(parent, name, directory, access, share)
+}
+
+fn create_private_child_with_share(parent: &OwnedHandle, name: &OsStr, directory: bool, access: u32, share: u32) -> io::Result<OwnedHandle> {
     let mut token_handle = null_mut();
     if unsafe { OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token_handle) } == 0 {
         return Err(io::Error::last_os_error());
@@ -264,7 +278,7 @@ fn create_private_child(parent: &OwnedHandle, name: &OsStr, directory: bool, acc
     let mut status: IO_STATUS_BLOCK = unsafe { zeroed() };
     let result = unsafe { NtCreateFile(
         &mut handle, access | SYNCHRONIZE, &attributes, &mut status, null(), 0,
-        if directory { FILE_SHARE_READ | FILE_SHARE_WRITE } else { FILE_SHARE_READ }, FILE_CREATE,
+        share, FILE_CREATE,
         FILE_OPEN_REPARSE_POINT | FILE_SYNCHRONOUS_IO_NONALERT |
             if directory { FILE_DIRECTORY_FILE } else { FILE_NON_DIRECTORY_FILE }, null(), 0,
     ) };
@@ -291,10 +305,18 @@ impl Drop for LocalAllocation {
 /// Private objects allow only explicit user and LocalSystem grants. A data
 /// directory may also grant administrators rights and others read-only rights.
 fn verify_private_acl(handle: &OwnedHandle) -> io::Result<()> {
-    verify_acl(handle, true)
+    verify_acl_mode(handle, true, false)
+}
+
+fn verify_ancestor_acl(handle: &OwnedHandle) -> io::Result<()> {
+    verify_acl_mode(handle, false, true)
 }
 
 fn verify_acl(handle: &OwnedHandle, private: bool) -> io::Result<()> {
+    verify_acl_mode(handle, private, false)
+}
+
+fn verify_acl_mode(handle: &OwnedHandle, private: bool, ancestor: bool) -> io::Result<()> {
     let mut raw_token = null_mut();
     if unsafe { OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut raw_token) } == 0 {
         return Err(io::Error::last_os_error());
@@ -328,7 +350,10 @@ fn verify_acl(handle: &OwnedHandle, private: bool) -> io::Result<()> {
         return Err(io::Error::from_raw_os_error(status as i32));
     }
     let _descriptor = LocalAllocation(descriptor);
-    if owner.is_null() || unsafe { IsValidSid(owner) } == 0 || unsafe { EqualSid(owner, user) } == 0 {
+    if owner.is_null() || unsafe { IsValidSid(owner) } == 0
+        || (unsafe { EqualSid(owner, user) } == 0
+            && !(ancestor && (unsafe { IsWellKnownSid(owner, WinLocalSystemSid) } != 0
+                || unsafe { IsWellKnownSid(owner, WinBuiltinAdministratorsSid) } != 0))) {
         return Err(invalid("protected object has unexpected owner"));
     }
     let mut control = 0u16;
@@ -378,11 +403,21 @@ fn verify_acl(handle: &OwnedHandle, private: bool) -> io::Result<()> {
         } else if private {
             return Err(invalid("untrusted private DACL grant"));
         } else if unsafe { IsWellKnownSid(sid, WinBuiltinAdministratorsSid) } == 0 {
-            use windows_sys::Win32::Storage::FileSystem::{FILE_GENERIC_EXECUTE, FILE_GENERIC_READ};
-            use windows_sys::Win32::Foundation::{GENERIC_EXECUTE, GENERIC_READ};
-            let read_only = FILE_GENERIC_READ | FILE_GENERIC_EXECUTE | GENERIC_READ | GENERIC_EXECUTE;
-            if ace.Mask & !read_only != 0 {
-                return Err(invalid("untrusted data directory mutation grant"));
+            if ancestor {
+                // DELETE_CHILD, DELETE, WRITE_DAC, WRITE_OWNER, GENERIC_WRITE,
+                // and GENERIC_ALL can remove or replace a descendant.
+                const MUTATION: u32 = 0x40 | 0x0001_0000 | 0x0004_0000
+                    | 0x0008_0000 | 0x4000_0000 | 0x1000_0000;
+                if ace.Mask & MUTATION != 0 {
+                    return Err(invalid("untrusted ancestor deletion grant"));
+                }
+            } else {
+                use windows_sys::Win32::Storage::FileSystem::{FILE_GENERIC_EXECUTE, FILE_GENERIC_READ};
+                use windows_sys::Win32::Foundation::{GENERIC_EXECUTE, GENERIC_READ};
+                let read_only = FILE_GENERIC_READ | FILE_GENERIC_EXECUTE | GENERIC_READ | GENERIC_EXECUTE;
+                if ace.Mask & !read_only != 0 {
+                    return Err(invalid("untrusted data directory mutation grant"));
+                }
             }
         }
     }
@@ -485,7 +520,7 @@ impl<'a> PublicationGuard<'a> {
         let handle = match opened() {
             Ok(handle) => handle,
             Err(error) if create && error.kind() == io::ErrorKind::NotFound => {
-                match create_private_child(directory.handle(), name, false, access) {
+                match create_private_child_with_share(directory.handle(), name, false, access, FILE_SHARE_READ | FILE_SHARE_WRITE) {
                     Ok(created) => drop(created),
                     Err(error) if error.kind() == io::ErrorKind::AlreadyExists => (),
                     Err(error) => return Err(error),
@@ -650,8 +685,107 @@ mod tests {
         assert_eq!(record.read().unwrap(), b"payload");
         assert!(PrivateRecord::create_temp(&pinned, &vec![0; PrivateRecord::LIMIT + 1]).is_err());
         drop(record);
-        let mut reopened = PrivateRecord::open(&pinned, OsStr::new(&name)).unwrap();
+        let mut reopened = PrivateRecord::open(&pinned, OsStr::new(&name), false).unwrap();
         assert_eq!(reopened.read().unwrap(), b"payload");
+    }
+
+    #[test]
+    fn lifetime_and_publication_ranges_are_distinct() {
+        let temp = tempfile::tempdir().unwrap();
+        let parent = dir(temp.path());
+        let access = FILE_READ_ATTRIBUTES | FILE_TRAVERSE | FILE_ADD_FILE | FILE_ADD_SUBDIRECTORY | READ_CONTROL;
+        let private = create_private_child(&parent, OsStr::new("private"), true, access).unwrap();
+        let pinned = PinnedDirectory { handles: vec![parent, private] };
+        drop(PublicationGuard::open(&pinned, true).unwrap());
+        let lease = CoordinatorLease::acquire(&pinned).unwrap();
+        assert!(CoordinatorLease::acquire(&pinned).is_err());
+        drop(lease.guard().unwrap());
+        drop(lease);
+        assert!(CoordinatorLease::acquire(&pinned).is_ok());
+    }
+
+    #[test]
+    fn exact_generation_controls_publication_withdrawal_and_cleanup() {
+        let temp = tempfile::tempdir().unwrap();
+        let parent = dir(temp.path());
+        let access = FILE_READ_ATTRIBUTES | FILE_TRAVERSE | FILE_ADD_FILE | FILE_ADD_SUBDIRECTORY | READ_CONTROL;
+        let private = create_private_child(&parent, OsStr::new("private"), true, access).unwrap();
+        let pinned = PinnedDirectory { handles: vec![parent, private] };
+        drop(PublicationGuard::open(&pinned, true).unwrap());
+        let lease = CoordinatorLease::acquire(&pinned).unwrap();
+        let guard = lease.guard().unwrap();
+        let (_, binding_record) = PrivateRecord::create_temp(&pinned, b"binding").unwrap();
+        let binding_id = binding_record.identity;
+        let binding_handle: OwnedHandle = binding_record.file.into();
+        rename_opened_no_replace(&binding_handle, binding_id, pinned.handle(), OsStr::new("binding")).unwrap();
+        drop(binding_handle);
+        let binding = guard.read(OsStr::new("binding")).unwrap().unwrap();
+        drop(guard);
+        let first = lease.publish(OsStr::new("binding"), &binding, OsStr::new("coordinator.json"), None, b"first").unwrap();
+        assert!(first.retirement_cleanup_error.is_none());
+        let mut wrong = first.snapshot.clone();
+        wrong.bytes = b"forged".to_vec();
+        assert!(lease.publish(OsStr::new("binding"), &binding, OsStr::new("coordinator.json"), Some(&wrong), b"wrong").is_err());
+        let second = lease.publish(OsStr::new("binding"), &binding, OsStr::new("coordinator.json"), Some(&first.snapshot), b"second").unwrap();
+        assert!(second.retirement_cleanup_error.is_none());
+        let guard = lease.guard().unwrap();
+        assert!(guard.remove(OsStr::new("coordinator.json"), &first.snapshot).is_err());
+        assert!(guard.withdraw(OsStr::new("coordinator.json"), &first.snapshot, OsStr::new("stopping")).is_err());
+        assert_eq!(guard.read(OsStr::new("coordinator.json")).unwrap(), Some(second.snapshot.clone()));
+        guard.withdraw(OsStr::new("coordinator.json"), &second.snapshot, OsStr::new("stopping")).unwrap();
+        assert!(guard.read(OsStr::new("coordinator.json")).unwrap().is_none());
+        guard.remove(OsStr::new("stopping"), &second.snapshot).unwrap();
+    }
+
+    #[test]
+    fn no_replace_install_and_stopping_collision_leave_occupants_intact() {
+        let temp = tempfile::tempdir().unwrap();
+        let parent = dir(temp.path());
+        let access = FILE_READ_ATTRIBUTES | FILE_TRAVERSE | FILE_ADD_FILE | FILE_ADD_SUBDIRECTORY | READ_CONTROL;
+        let private = create_private_child(&parent, OsStr::new("private"), true, access).unwrap();
+        let pinned = PinnedDirectory { handles: vec![parent, private] };
+        drop(PublicationGuard::open(&pinned, true).unwrap());
+        let guard = RecordGuard::open(&pinned).unwrap();
+        let active = guard.create_if_absent(OsStr::new("active"), b"active").unwrap();
+        let occupant = guard.create_if_absent(OsStr::new("stopping"), b"occupant").unwrap();
+        assert!(guard.create_if_absent(OsStr::new("active"), b"replacement").is_err());
+        assert!(guard.withdraw(OsStr::new("active"), &active, OsStr::new("stopping")).is_err());
+        assert_eq!(guard.read(OsStr::new("active")).unwrap(), Some(active));
+        assert_eq!(guard.read(OsStr::new("stopping")).unwrap(), Some(occupant));
+    }
+
+    #[test]
+    fn missing_permanent_lock_is_not_recreated_by_reader_or_lease() {
+        let temp = tempfile::tempdir().unwrap();
+        let parent = dir(temp.path());
+        let access = FILE_READ_ATTRIBUTES | FILE_TRAVERSE | FILE_ADD_FILE | FILE_ADD_SUBDIRECTORY | READ_CONTROL;
+        let private = create_private_child(&parent, OsStr::new("private"), true, access).unwrap();
+        let pinned = PinnedDirectory { handles: vec![parent, private] };
+        assert!(RecordGuard::open(&pinned).is_err());
+        assert!(CoordinatorLease::acquire(&pinned).is_err());
+        assert!(!temp.path().join("private").join("descriptor-publication.lock").exists());
+    }
+
+    #[test]
+    fn interrupted_retirement_is_absence_not_authority_to_replace() {
+        let temp = tempfile::tempdir().unwrap();
+        let parent = dir(temp.path());
+        let access = FILE_READ_ATTRIBUTES | FILE_TRAVERSE | FILE_ADD_FILE | FILE_ADD_SUBDIRECTORY | READ_CONTROL;
+        let private = create_private_child(&parent, OsStr::new("private"), true, access).unwrap();
+        let pinned = PinnedDirectory { handles: vec![parent, private] };
+        drop(PublicationGuard::open(&pinned, true).unwrap());
+        let guard = RecordGuard::open(&pinned).unwrap();
+        let old = guard.create_if_absent(OsStr::new("active"), b"old").unwrap();
+        let record = guard.checked(OsStr::new("active"), &old).unwrap();
+        let handle: OwnedHandle = record.file.into();
+        rename_opened_no_replace(&handle, old.identity, pinned.handle(), OsStr::new(".han-retired-test.tmp")).unwrap();
+        drop(handle);
+        drop(guard);
+        let guard = RecordGuard::open(&pinned).unwrap();
+        assert!(guard.read(OsStr::new("active")).unwrap().is_none());
+        let new = guard.create_if_absent(OsStr::new("active"), b"new").unwrap();
+        assert!(guard.withdraw(OsStr::new(".han-retired-test.tmp"), &old, OsStr::new("active")).is_err());
+        assert_eq!(guard.read(OsStr::new("active")).unwrap(), Some(new));
     }
 }
 
@@ -665,10 +799,11 @@ struct PrivateRecord {
 impl PrivateRecord {
     const LIMIT: usize = 64 * 1024;
 
-    fn open(directory: &PinnedDirectory, name: &OsStr) -> io::Result<Self> {
+    fn open(directory: &PinnedDirectory, name: &OsStr, mutate: bool) -> io::Result<Self> {
         use windows_sys::Win32::Storage::FileSystem::{FILE_READ_DATA, DELETE};
-        let handle = open_child(directory.handle(), name, false,
-            FILE_READ_ATTRIBUTES | FILE_READ_DATA | READ_CONTROL | DELETE)?;
+        let access = FILE_READ_ATTRIBUTES | FILE_READ_DATA | READ_CONTROL | if mutate { DELETE } else { 0 };
+        let share = if mutate { 0 } else { FILE_SHARE_READ };
+        let handle = open_child_with_share(directory.handle(), name, false, access, share)?;
         verify_private_acl(&handle)?;
         let identity = regular_file_identity(&handle)?;
         Ok(Self { file: handle.into(), identity })
@@ -698,5 +833,169 @@ impl PrivateRecord {
             return Err(write_error);
         }
         Ok((name, Self { file, identity }))
+    }
+}
+
+/// Snapshot of the complete validated record and its native file identity.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct RecordSnapshot {
+    pub(crate) identity: FileIdentity,
+    pub(crate) bytes: Vec<u8>,
+}
+
+/// Holds byte 1 until coordinator teardown. Never acquired under byte 0.
+pub(crate) struct CoordinatorLease<'a> {
+    directory: &'a PinnedDirectory,
+    handle: OwnedHandle,
+}
+
+impl<'a> CoordinatorLease<'a> {
+    pub(crate) fn acquire(directory: &'a PinnedDirectory) -> io::Result<Self> {
+        use windows_sys::Win32::Storage::FileSystem::{FILE_READ_DATA, FILE_WRITE_DATA, LOCKFILE_FAIL_IMMEDIATELY};
+        let access = FILE_READ_ATTRIBUTES | FILE_READ_DATA | FILE_WRITE_DATA | READ_CONTROL;
+        let handle = open_child_with_share(directory.handle(), OsStr::new("descriptor-publication.lock"),
+            false, access, FILE_SHARE_READ | FILE_SHARE_WRITE)?;
+        regular_file_identity(&handle)?;
+        verify_private_acl(&handle)?;
+        let mut offset: OVERLAPPED = unsafe { zeroed() };
+        unsafe { offset.Anonymous.Anonymous.Offset = 1; }
+        if unsafe { LockFileEx(handle.as_raw_handle() as _, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY,
+            0, 1, 0, &mut offset) } == 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(Self { directory, handle })
+    }
+
+    /// Caller must validate the current ownership binding while holding this
+    /// guard, then publish before dropping it. The lease alone is not ownership.
+    pub(crate) fn guard(&self) -> io::Result<RecordGuard<'_>> {
+        RecordGuard::open(self.directory)
+    }
+}
+
+impl Drop for CoordinatorLease<'_> {
+    fn drop(&mut self) {
+        let mut offset: OVERLAPPED = unsafe { zeroed() };
+        unsafe {
+            offset.Anonymous.Anonymous.Offset = 1;
+            UnlockFileEx(self.handle.as_raw_handle() as _, 0, 1, 0, &mut offset);
+        }
+    }
+}
+
+/// Exclusive byte-0 guard. Record handles never escape its lifetime.
+pub(crate) struct RecordGuard<'a> {
+    guard: PublicationGuard<'a>,
+}
+
+impl<'a> RecordGuard<'a> {
+    pub(crate) fn open(directory: &'a PinnedDirectory) -> io::Result<Self> {
+        Ok(Self { guard: PublicationGuard::open(directory, false)? })
+    }
+
+    pub(crate) fn read(&self, name: &OsStr) -> io::Result<Option<RecordSnapshot>> {
+        let mut record = match PrivateRecord::open(self.guard._directory, name, false) {
+            Ok(record) => record,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(error),
+        };
+        Ok(Some(RecordSnapshot { identity: record.identity, bytes: record.read()? }))
+    }
+
+    /// Install a complete record only if its leaf is unoccupied.
+    pub(crate) fn create_if_absent(&self, name: &OsStr, bytes: &[u8]) -> io::Result<RecordSnapshot> {
+        let (_, record) = PrivateRecord::create_temp(self.guard._directory, bytes)?;
+        let identity = record.identity;
+        let handle: OwnedHandle = record.file.into();
+        if let Err(error) = rename_opened_no_replace(&handle, identity, self.guard._directory.handle(), name) {
+            if let Err(cleanup) = delete_opened(&handle, identity) {
+                return Err(io::Error::other(format!("installation failed: {error}; temporary cleanup failed: {cleanup}")));
+            }
+            return Err(error);
+        }
+        Ok(RecordSnapshot { identity, bytes: bytes.to_vec() })
+    }
+
+    fn checked(&self, name: &OsStr, expected: &RecordSnapshot) -> io::Result<PrivateRecord> {
+        let mut record = PrivateRecord::open(self.guard._directory, name, true)?;
+        if record.identity != expected.identity || record.read()? != expected.bytes {
+            return Err(invalid("record identity or contents changed"));
+        }
+        Ok(record)
+    }
+
+    /// Checks complete binding bytes and identity under the guard. The guard
+    /// must remain held through the subsequent operation.
+    pub(crate) fn matches(&self, name: &OsStr, expected: &RecordSnapshot) -> io::Result<bool> {
+        Ok(self.read(name)?.as_ref() == Some(expected))
+    }
+
+    /// Rename a validated record to a generation-specific destination, never
+    /// replacing an existing stopping intent or another generation's file.
+    pub(crate) fn withdraw(&self, name: &OsStr, expected: &RecordSnapshot, stopping: &OsStr) -> io::Result<()> {
+        let record = self.checked(name, expected)?;
+        let handle: OwnedHandle = record.file.into();
+        rename_opened_no_replace(&handle, record.identity, self.guard._directory.handle(), stopping)
+    }
+
+    /// Remove only the exact opened generation, including during delayed cleanup.
+    pub(crate) fn remove(&self, name: &OsStr, expected: &RecordSnapshot) -> io::Result<()> {
+        let record = self.checked(name, expected)?;
+        let handle: OwnedHandle = record.file.into();
+        delete_opened(&handle, record.identity)
+    }
+}
+
+/// A successful installation can leave a private retired orphan if cleanup
+/// fails. This result cannot be confused with a failed installation.
+pub(crate) struct Publication {
+    pub(crate) snapshot: RecordSnapshot,
+    pub(crate) retirement_cleanup_error: Option<io::Error>,
+}
+
+impl CoordinatorLease<'_> {
+    /// Verify the binding and exact predecessor before retiring the old handle.
+    /// None means the active leaf must be absent, not that a PID is dead.
+    pub(crate) fn publish(&self, binding_name: &OsStr, binding: &RecordSnapshot,
+        active_name: &OsStr, predecessor: Option<&RecordSnapshot>, bytes: &[u8]) -> io::Result<Publication> {
+        let guard = self.guard()?;
+        if !guard.matches(binding_name, binding)? {
+            return Err(invalid("publisher binding changed"));
+        }
+        let (_, temporary) = PrivateRecord::create_temp(self.directory, bytes)?;
+        let temp_id = temporary.identity;
+        let temp_handle: OwnedHandle = temporary.file.into();
+        let old = match predecessor {
+            Some(expected) => match guard.checked(active_name, expected) {
+                Ok(record) => Some(record),
+                Err(error) => {
+                    delete_opened(&temp_handle, temp_id)?;
+                    return Err(error);
+                }
+            },
+            None => None,
+        };
+        let retired = if let Some(record) = old {
+            let id = record.identity;
+            let handle: OwnedHandle = record.file.into();
+            let retirement = format!(".han-retired-{}.tmp", uuid::Uuid::new_v4());
+            if let Err(error) = rename_opened_no_replace(&handle, id, self.directory.handle(), OsStr::new(&retirement)) {
+                delete_opened(&temp_handle, temp_id)?;
+                return Err(error);
+            }
+            Some((handle, id))
+        } else { None };
+        if let Err(error) = rename_opened_no_replace(&temp_handle, temp_id, self.directory.handle(), active_name) {
+            let cleanup = delete_opened(&temp_handle, temp_id);
+            if let Err(cleanup_error) = cleanup {
+                return Err(io::Error::other(format!("publication failed: {error}; temporary cleanup failed: {cleanup_error}")));
+            }
+            return Err(error);
+        }
+        let cleanup_error = retired.and_then(|(handle, id)| delete_opened(&handle, id).err());
+        Ok(Publication {
+            snapshot: RecordSnapshot { identity: temp_id, bytes: bytes.to_vec() },
+            retirement_cleanup_error: cleanup_error,
+        })
     }
 }
