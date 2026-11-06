@@ -1,5 +1,7 @@
-import { beforeEach, expect, mock, test } from 'bun:test';
+import { afterAll, beforeEach, expect, mock, test } from 'bun:test';
+import { spawnSync as realSpawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
+import { findCoordinatorBinary as realFindCoordinatorBinary } from '../lib/coordinator/binary.ts';
 
 let binary: string | null = 'native-helper';
 let output: unknown = null;
@@ -32,6 +34,12 @@ mock.module('node:child_process', () => ({
     };
   },
 }));
+afterAll(() => {
+  mock.module('node:child_process', () => ({ spawnSync: realSpawnSync }));
+  mock.module('../lib/coordinator/binary.ts', () => ({
+    findCoordinatorBinary: realFindCoordinatorBinary,
+  }));
+});
 // Install the fake native boundary before loading the bridge.
 const bridge = await import('../lib/coordinator/windows-runtime.ts');
 const dir = resolve('bridge-test-data');
