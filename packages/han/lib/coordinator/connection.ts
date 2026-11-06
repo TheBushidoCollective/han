@@ -113,12 +113,19 @@ export async function coordinatorFetch(
     throw new CoordinatorSecurityError('Invalid coordinator request path');
   const headers = new Headers(init.headers);
   headers.set('Authorization', `Bearer ${descriptor.bearerToken}`);
-  const response = await fetch(`https://127.0.0.1:${port}${path}`, {
-    ...init,
-    headers,
-    redirect: 'error',
-    tls: { ca: descriptor.certificatePem, rejectUnauthorized: true },
-  } as RequestInit);
+  let response: Response;
+  try {
+    response = await fetch(`https://127.0.0.1:${port}${path}`, {
+      ...init,
+      headers,
+      redirect: 'error',
+      tls: { ca: descriptor.certificatePem, rejectUnauthorized: true },
+    } as RequestInit);
+  } catch (error) {
+    throw new CoordinatorSecurityError(
+      `Coordinator connection failed: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
   if (
     response.status === 401 ||
     response.status === 403 ||
