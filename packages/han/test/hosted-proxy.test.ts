@@ -251,7 +251,7 @@ describe('local dashboard gateway', () => {
       }
       if (buffer.length >= 4 && (buffer[0] & 0x0f) === 8) {
         const code = buffer.readUInt16BE(2);
-        socket.end();
+        socket.destroy();
         resolve(code);
       }
     });
