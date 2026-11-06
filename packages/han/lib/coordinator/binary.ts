@@ -1,5 +1,5 @@
 import { existsSync, realpathSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 
 /** Locate the coordinator, preferring the installed sibling of the running executable. */
 export function findCoordinatorBinary(): string | null {
@@ -10,15 +10,24 @@ export function findCoordinatorBinary(): string | null {
     if (existsSync(sibling)) return sibling;
   } catch {}
   const mainFile = process.argv[1] || '';
-  if (mainFile.endsWith('.ts') || mainFile.endsWith('.tsx')) {
-    const pkgRoot = resolve(import.meta.dir, '..', '..', '..');
-    for (const profile of ['release', 'debug']) {
-      const localBin = join(pkgRoot, 'han-rs', 'target', profile, binaryName);
-      if (existsSync(localBin)) return localBin;
-    }
+  if ((mainFile.endsWith('.ts') || mainFile.endsWith('.tsx')) &&
+      (process.platform !== 'win32' || isAbsolute(import.meta.dir))) {
+    try {
+      const moduleDir = process.platform === 'win32' ? realpathSync(import.meta.dir) : import.meta.dir;
+      const pkgRoot = resolve(moduleDir, '..', '..', '..');
+      for (const profile of ['release', 'debug']) {
+        const localBin = join(pkgRoot, 'han-rs', 'target', profile, binaryName);
+        if (existsSync(localBin)) return localBin;
+      }
+    } catch {}
   }
-  const hanBin = join(home, '.han', 'bin', binaryName);
+  const hanBin = process.platform !== 'win32' || isAbsolute(home) ? join(home, '.han', 'bin', binaryName) : '';
   if (existsSync(hanBin)) return hanBin;
+  // Windows local-runtime requests carry privileged data. `where` searches the
+  // working directory, and package resolution can also depend on the caller's
+  // environment. Installed Windows packages put the native binary beside the
+  // executable; do not fall back to either search mechanism there.
+  if (process.platform === 'win32') return null;
   try {
     const pkgName = `@thebushidocollective/han-${process.platform}-${process.arch}`;
     const pkgJsonPath = require.resolve(`${pkgName}/package.json`);
