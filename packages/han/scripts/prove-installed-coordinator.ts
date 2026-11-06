@@ -427,6 +427,30 @@ async function main(): Promise<void> {
       join(npmHome, 'package.json'),
       '{"name":"han-proof","version":"1.0.0","private":true}'
     );
+    const npmPath = `${dirname(node)}:/usr/bin:/bin`;
+    for (const work of [wrapperWork, packageWork]) {
+      await command(
+        [
+          npm,
+          'pack',
+          '--offline',
+          '--ignore-scripts',
+          '--pack-destination',
+          work,
+          join(work, 'package'),
+        ],
+        npmHome,
+        { ...npmEnv, PATH: npmPath, npm_config_cache: join(npmHome, 'cache') }
+      );
+    }
+    const packed = (work: string): string => {
+      const tarballs = readdirSync(work).filter((name) =>
+        name.endsWith('.tgz')
+      );
+      if (tarballs.length !== 1)
+        throw new Error(`Expected one npm package in ${work}`);
+      return join(work, tarballs[0]);
+    };
     await command(
       [
         npm,
@@ -435,9 +459,8 @@ async function main(): Promise<void> {
         '--ignore-scripts',
         '--no-audit',
         '--no-fund',
-        '--omit=optional',
-        join(wrapperWork, 'package'),
-        join(packageWork, 'package'),
+        packed(wrapperWork),
+        packed(packageWork),
       ],
       npmHome,
       {
