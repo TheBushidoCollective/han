@@ -14,7 +14,7 @@ import {
   mock,
   test,
 } from 'bun:test';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { Code, ConnectError } from '@connectrpc/connect';
 import { getHanDataDir } from '../lib/config/claude-settings.ts';
 import { realGrpcClient } from './setup.ts';
@@ -671,11 +671,6 @@ describe('stopCoordinatorService ownership', () => {
 
   test('startup catch does not suppress pinned-health security failure when shutdown intent appears', async () => {
     mockHealth.mockResolvedValueOnce(false);
-    mockHealth.mockRejectedValueOnce(
-      new realConnection.CoordinatorSecurityError(
-        'Coordinator rejected authenticated request (401)'
-      )
-    );
     const supervisor = {
       pid: process.pid,
       nonce: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -683,30 +678,46 @@ describe('stopCoordinatorService ownership', () => {
     };
     const child = { pid: 4242, exitCode: null, unref: mock(), kill: mock() };
     mockBunSpawn.mockImplementationOnce(() => child as never);
+    mockDescriptor.mockImplementation(() => ({
+      transportVersion: 1,
+      instanceId: 'owned',
+      pid: child.pid,
+      httpsPort: 41957,
+      grpcPort: 41958,
+      certificatePem: '-----BEGIN CERTIFICATE-----\ntest',
+      bearerToken: 'a'.repeat(43),
+      supervisor,
+    }));
     const intentPath = join(
       getHanDataDir(),
       'runtime',
       `coordinator.stopping.${supervisor.nonce}.${supervisor.generationId}.json`
     );
-    realFs.mkdirSync(dirname(intentPath), { recursive: true });
-    realFs.writeFileSync(
-      intentPath,
-      JSON.stringify({
-        transportVersion: 1,
-        instanceId: 'owned',
-        pid: child.pid,
-        httpsPort: 41957,
-        grpcPort: 41958,
-        certificatePem: 'certificate',
-        bearerToken: 'token'.repeat(9).slice(0, 43),
-        supervisor,
-      }),
-      { mode: 0o600 }
-    );
+    mockHealth.mockImplementationOnce(() => {
+      realFs.mkdirSync(dirname(intentPath), { recursive: true });
+      realFs.writeFileSync(
+        intentPath,
+        JSON.stringify({
+          transportVersion: 1,
+          instanceId: 'owned',
+          pid: child.pid,
+          httpsPort: 41957,
+          grpcPort: 41958,
+          certificatePem: '-----BEGIN CERTIFICATE-----\ntest',
+          bearerToken: 'a'.repeat(43),
+          supervisor,
+        }),
+        { mode: 0o600 }
+      );
+      throw new realConnection.CoordinatorSecurityError(
+        'Coordinator rejected authenticated request (401)'
+      );
+    });
     try {
       await expect(cs.startCoordinatorService({ supervisor })).rejects.toThrow(
         'Coordinator rejected authenticated request'
       );
+      expect(mockHealth).toHaveBeenCalledTimes(1);
     } finally {
       realFs.rmSync(intentPath, { force: true });
     }
