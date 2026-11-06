@@ -148,11 +148,42 @@ fn remove_records(guard: &RecordGuard<'_>, kind: &str, r: &Records) -> io::Resul
     guard.remove(OsStr::new(owner), &r.owner_file)?;
     guard.remove(OsStr::new(reservation), &r.reservation)
 }
+/// Recover only an interrupted claim whose published reservation names a
+/// verified dead process identity. Partial or conflicting metadata is never
+/// treated as permission to reclaim without that anchor.
+fn recover_incomplete(guard: &RecordGuard<'_>, kind: &str) -> io::Result<Option<u32>> {
+    let (reservation_name, owner_name, pid_name) = names(kind);
+    let reservation = guard.read(OsStr::new(reservation_name))?;
+    let owner_file = guard.read(OsStr::new(owner_name))?;
+    let pid_file = guard.read(OsStr::new(pid_name))?;
+    let count = [reservation.is_some(), owner_file.is_some(), pid_file.is_some()].into_iter().filter(|present| *present).count();
+    if count == 0 || count == 3 { return Ok(None); }
+    let reservation = reservation.ok_or_else(invalid)?;
+    let owner: Owner = serde_json::from_slice(&reservation.bytes).map_err(|_| invalid())?;
+    if owner.version != 1 || !uuid(&owner.nonce) { return Err(invalid()); }
+    if owner_file.as_ref().is_some_and(|file| file.bytes != reservation.bytes)
+        || pid_file.as_ref().is_some_and(|file| file.bytes != owner.process.pid.to_string().as_bytes()) {
+        return Err(invalid());
+    }
+    match processes::liveness(&owner.process)? {
+        Liveness::Alive => return Ok(Some(owner.process.pid)),
+        Liveness::Unknown => return Err(invalid()),
+        Liveness::Gone => {}
+    }
+    if let Some(file) = pid_file { guard.remove(OsStr::new(pid_name), &file)?; }
+    if let Some(file) = owner_file { guard.remove(OsStr::new(owner_name), &file)?; }
+    guard.remove(OsStr::new(reservation_name), &reservation)?;
+    Ok(None)
+}
+
 fn acquire(path: &Path, kind: &str) -> io::Result<Value> {
     let parent = processes::own_parent_identity()?;
     if parent.user_sid != processes::current_identity()?.user_sid { return Err(invalid()); }
     let dir = directory(path, true)?;
     let guard = RecordGuard::open(&dir)?;
+    if let Some(owner_pid) = recover_incomplete(&guard, kind)? {
+        return Ok(json!({"status":"blocked", "ownerPid":owner_pid}));
+    }
     if let Some(existing) = records(&guard, kind)? {
         match processes::liveness(&existing.owner.process)? {
             Liveness::Alive => return Ok(json!({"status":"blocked", "ownerPid":existing.owner.process.pid})),
@@ -338,5 +369,26 @@ mod tests {
         assert!(wire.validate().is_ok());
         assert!(wire.matches(id));
         assert!(!WireFileIdentity { volume_serial: "0".into(), file_id: wire.file_id }.matches(id));
+    }
+    #[test]
+    fn incomplete_claim_requires_an_exact_dead_owner_before_recovery() {
+        let temp = tempfile::tempdir().unwrap();
+        let data = temp.path().join("private-data");
+        let dir = directory(&data, true).unwrap();
+        let guard = RecordGuard::open(&dir).unwrap();
+        let mut identity = processes::current_identity().unwrap();
+        let owner = Owner { version: 1, nonce: uuid::Uuid::new_v4().to_string(), process: identity.clone() };
+        let bytes = serde_json::to_vec(&owner).unwrap();
+        let name = OsStr::new(names("supervisor").0);
+        let live = guard.create_if_absent(name, &bytes).unwrap();
+        assert_eq!(recover_incomplete(&guard, "supervisor").unwrap(), Some(identity.pid));
+        assert!(guard.read(name).unwrap().is_some());
+        guard.remove(name, &live).unwrap();
+        let creation: u64 = identity.creation_time.parse().unwrap();
+        identity.creation_time = creation.saturating_add(1).to_string();
+        let stale = Owner { process: identity, ..owner };
+        guard.create_if_absent(name, &serde_json::to_vec(&stale).unwrap()).unwrap();
+        assert_eq!(recover_incomplete(&guard, "supervisor").unwrap(), None);
+        assert!(guard.read(name).unwrap().is_none());
     }
 }

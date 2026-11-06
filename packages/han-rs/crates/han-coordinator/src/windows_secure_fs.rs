@@ -22,7 +22,7 @@ use windows_sys::Wdk::Storage::FileSystem::{
 };
 use windows_sys::Win32::Foundation::{RtlNtStatusToDosError, INVALID_HANDLE_VALUE, OBJ_CASE_INSENSITIVE, UNICODE_STRING};
 use windows_sys::Win32::Storage::FileSystem::{
-    CreateFileW, ReOpenFile, GetDriveTypeW, GetFileInformationByHandleEx, GetVolumeInformationByHandleW,
+    CreateFileW, GetDriveTypeW, GetFileInformationByHandleEx, GetVolumeInformationByHandleW,
     LockFileEx, SetFileInformationByHandle, UnlockFileEx, FileAttributeTagInfo,
     FileDispositionInfo, FileIdInfo, FileStandardInfo,
     FILE_ATTRIBUTE_REPARSE_POINT, FILE_ATTRIBUTE_TAG_INFO, FILE_DISPOSITION_INFO,
@@ -87,11 +87,17 @@ impl PinnedDirectory {
         if unsafe { GetDriveTypeW(root.as_ptr()) } != 3 {
             return Err(invalid("unsupported Windows drive type"));
         }
-        let raw = unsafe {
-            CreateFileW(root.as_ptr(), FILE_READ_ATTRIBUTES | FILE_TRAVERSE | READ_CONTROL,
-                FILE_SHARE_READ | FILE_SHARE_WRITE, null(), OPEN_EXISTING,
-                FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, null_mut())
+        let root_access = FILE_READ_ATTRIBUTES | FILE_TRAVERSE | READ_CONTROL;
+        let open_root = |access| unsafe {
+            CreateFileW(root.as_ptr(), access, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                null(), OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, null_mut())
         };
+        let mut raw = if create {
+            open_root(root_access | windows_sys::Win32::Storage::FileSystem::FILE_ADD_SUBDIRECTORY)
+        } else { open_root(root_access) };
+        if raw == INVALID_HANDLE_VALUE && create && io::Error::last_os_error().kind() == io::ErrorKind::PermissionDenied {
+            raw = open_root(root_access);
+        }
         if raw == INVALID_HANDLE_VALUE { return Err(io::Error::last_os_error()); }
         let root_handle = unsafe { OwnedHandle::from_raw_handle(raw as _) };
         reject_reparse(&root_handle)?;
@@ -124,31 +130,24 @@ impl PinnedDirectory {
                     | windows_sys::Win32::Storage::FileSystem::FILE_ADD_SUBDIRECTORY;
             }
             let parent = handles.last().unwrap();
-            let next = match open_child(parent, name, true, access) {
+            // Keep creation access on each held ancestor when available. An
+            // existing read-only ancestor is still traversable; trying to
+            // create beneath it fails without reopening any checked path.
+            let requested = if create {
+                access | windows_sys::Win32::Storage::FileSystem::FILE_ADD_SUBDIRECTORY
+            } else { access };
+            let opened = match open_child(parent, name, true, requested) {
+                Err(error) if requested != access && error.kind() == io::ErrorKind::PermissionDenied =>
+                    open_child(parent, name, true, access),
+                other => other,
+            };
+            let next = match opened {
                 Ok(next) => next,
                 Err(error) if create && error.kind() == io::ErrorKind::NotFound => {
-                    // Reopen the already-pinned parent by handle, never by
-                    // pathname, to request creation rights only where needed.
-                    let raw = unsafe { ReOpenFile(parent.as_raw_handle() as _,
-                        FILE_READ_ATTRIBUTES | FILE_TRAVERSE | READ_CONTROL
-                            | windows_sys::Win32::Storage::FileSystem::FILE_ADD_SUBDIRECTORY,
-                        FILE_SHARE_READ | FILE_SHARE_WRITE,
-                        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT) };
-                    if raw == INVALID_HANDLE_VALUE {
-                        let error = io::Error::last_os_error();
-                        return Err(io::Error::new(error.kind(), format!("reopen pinned parent: {error}")));
-                    }
-                    let creation_parent = unsafe { OwnedHandle::from_raw_handle(raw as _) };
-                    let pinned_id: FILE_ID_INFO = file_info(parent, FileIdInfo)?;
-                    let reopened_id: FILE_ID_INFO = file_info(&creation_parent, FileIdInfo)?;
-                    if pinned_id.VolumeSerialNumber != reopened_id.VolumeSerialNumber
-                        || pinned_id.FileId.Identifier != reopened_id.FileId.Identifier {
-                        return Err(invalid("reopened parent identity changed"));
-                    }
-                    match create_private_child(&creation_parent, name, true, access) {
+                    match create_private_child(parent, name, true, requested) {
                         Ok(next) => next,
                         Err(error) if error.kind() == io::ErrorKind::AlreadyExists =>
-                            open_child(parent, name, true, access)?,
+                            open_child(parent, name, true, requested)?,
                         Err(error) => return Err(io::Error::new(error.kind(), format!("create private directory component: {error}"))),
                     }
                 }
