@@ -283,6 +283,16 @@ mod tests {
     }
 
     #[test]
+    fn test_read_page_unbounded_from_nonzero_offset() {
+        let f = write_temp_jsonl(&[r#"{"line":0}"#, r#"{"line":1}"#, r#"{"line":2}"#]);
+        let result = jsonl_read_page(f.path(), 2, u32::MAX).unwrap();
+        assert_eq!(result.lines.len(), 1);
+        assert_eq!(result.lines[0].line_number, 2);
+        assert_eq!(result.next_offset, u32::MAX);
+        assert!(!result.has_more);
+    }
+
+    #[test]
     fn test_read_page_empty() {
         let f = NamedTempFile::new().unwrap();
         let result = jsonl_read_page(f.path(), 0, 10).unwrap();

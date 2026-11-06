@@ -96,6 +96,9 @@ jobs:
       - name: Test coordinator
         working-directory: packages/han-rs
         run: cargo test --locked -p han-coordinator
+      - name: Test indexer pagination
+        working-directory: packages/han-rs
+        run: cargo test --locked -p han-indexer test_read_page_unbounded_from_nonzero_offset
       - name: Install CLI dependencies
         working-directory: packages/han
         run: bun install --frozen-lockfile
