@@ -668,7 +668,7 @@ async function dispatchHooks(
 
   // Try gRPC delegation to coordinator first.
   // The coordinator discovers all plugin hooks for this event and executes them.
-  const coordinatorHealthy = await isCoordinatorHealthy().catch(() => false);
+  const coordinatorHealthy = await isCoordinatorHealthy();
   if (coordinatorHealthy) {
     if (isDebugMode()) {
       console.error(
@@ -695,12 +695,9 @@ async function dispatchHooks(
       }
       return; // gRPC handled it — skip local execution
     } catch (error) {
-      if (isDebugMode()) {
-        console.error(
-          `[dispatch] gRPC execution failed, falling back to local: ${error}`
-        );
-      }
-      // Fall through to local execution
+      throw new Error(
+        `Coordinator hook execution outcome is unknown; refusing local retry: ${error}`
+      );
     }
   }
 

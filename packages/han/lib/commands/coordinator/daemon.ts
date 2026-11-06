@@ -329,9 +329,9 @@ export async function startDaemon(
   if (configuredBinary && configuredBinary !== 'han') {
     // hanBinary is set (e.g., `bun "/path/to/main.ts"`)
     // Use shell to handle the full command string
-    spawnCommand = '/bin/bash';
+    spawnCommand = process.platform === 'win32' ? 'cmd.exe' : '/bin/bash';
     spawnArgs = [
-      '-c',
+      process.platform === 'win32' ? '/c' : '-c',
       `${configuredBinary} coordinator start --foreground --port ${port}`,
     ];
   } else {
@@ -381,95 +381,15 @@ export async function startDaemon(
   return newStatus;
 }
 
-/**
- * Find PID of process listening on a port (fallback when health check has no PID).
- */
-function findPidOnPort(port: number): number | null {
-  try {
-    const result = Bun.spawnSync(['lsof', '-ti', `tcp:${port}`], {
-      stdout: 'pipe',
-      stderr: 'ignore',
-    });
-    if (result.exitCode === 0) {
-      const pids = result.stdout
-        .toString()
-        .trim()
-        .split('\n')
-        .map((s) => parseInt(s, 10))
-        .filter((n) => !Number.isNaN(n) && n > 0);
-      return pids[0] ?? null;
-    }
-  } catch {
-    // lsof not available
-  }
-  return null;
-}
-
-/**
- * Kill a process by PID with graceful shutdown and forced kill fallback.
- */
-async function killProcess(pid: number): Promise<void> {
-  try {
-    process.kill(pid, 'SIGTERM');
-
-    // Wait for process to stop
-    let attempts = 0;
-    while (attempts < 50 && isProcessRunning(pid)) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      attempts++;
-    }
-
-    // Force kill if still running
-    if (isProcessRunning(pid)) {
-      console.log('[coordinator] Force killing...');
-      process.kill(pid, 'SIGKILL');
-    }
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') {
-      throw error;
-    }
-  }
-}
-
-/**
- * Stop coordinator daemon
- */
+/** Stop only a coordinator authenticated by its runtime descriptor. */
 export async function stopDaemon(port?: number): Promise<void> {
-  const effectivePort = port ?? getCoordinatorPort();
-  const status = await getStatus(effectivePort);
-
-  if (!status.running && !status.pid) {
-    console.log('[coordinator] Not running');
-    removePidFile();
-    return;
-  }
-
-  // Resolve the PID: prefer health response, then PID file, then port scan
-  const pid = status.pid ?? readPid() ?? findPidOnPort(effectivePort);
-
-  if (pid) {
-    console.log(`[coordinator] Stopping (PID: ${pid})...`);
-    await killProcess(pid);
-  } else if (status.running) {
-    // Health check says running but we can't find the PID at all
-    console.warn(
-      '[coordinator] Running but PID unknown. Trying port-based kill...'
-    );
-    const portPid = findPidOnPort(effectivePort);
-    if (portPid) {
-      await killProcess(portPid);
-    } else {
-      console.error(
-        `[coordinator] Could not find process on port ${effectivePort}. ` +
-          `Try: lsof -ti tcp:${effectivePort} | xargs kill -9`
-      );
-    }
-  }
-
-  // The supervisor this named has just been killed, so its file is ours to
-  // clear even though we never owned it.
-  removePidFile(true);
-  console.log('[coordinator] Stopped');
+  const status = await getStatus(port);
+  if (!status.running) return;
+  const { createCoordinatorClients } = await import('../../grpc/client.ts');
+  await createCoordinatorClients().coordinator.shutdown({
+    graceful: true,
+    timeoutSeconds: 5,
+  });
 }
 
 // Constants for auto-restart
@@ -560,6 +480,15 @@ async function runForeground(port: number): Promise<void> {
         const { promise, resolve } = Promise.withResolvers<void>();
         setTimeout(resolve, 1000);
         await promise;
+        try {
+          if (!(await checkHealth(port))) {
+            removePidFile();
+            return;
+          }
+        } catch {
+          removePidFile();
+          return;
+        }
       }
     } catch (error) {
       if (shuttingDown) break;

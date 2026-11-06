@@ -1,19 +1,11 @@
-/**
- * Health Check for Coordinator Daemon
- *
- * Provides utilities to check if the coordinator is running
- * and healthy by making HTTPS requests to the health endpoint.
- */
-
+import { connect } from 'node:net';
 import {
-  COORDINATOR_HOST,
-  COORDINATOR_TLS_FETCH_OPTIONS,
-  getCoordinatorPort,
-} from './types.ts';
+  coordinatorRequest,
+  CoordinatorSecurityError,
+  readCoordinatorDescriptor,
+} from '../../coordinator/connection.ts';
+import { getCoordinatorPort } from './types.ts';
 
-/**
- * Health check response
- */
 export interface HealthCheckResponse {
   status: 'ok' | 'error';
   pid?: number;
@@ -21,99 +13,77 @@ export interface HealthCheckResponse {
   version?: string;
 }
 
-/**
- * Check if the coordinator daemon is running and healthy
- * Uses HTTPS with the coordinator FQDN
- */
+async function portOccupied(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = connect({ host: '127.0.0.1', port });
+    socket.setTimeout(500);
+    socket.once('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once('error', () => resolve(false));
+    socket.once('timeout', () => {
+      socket.destroy();
+      resolve(false);
+    });
+  });
+}
+
 export async function checkHealth(
-  port?: number
+  port?: number,
+  starting = false
 ): Promise<HealthCheckResponse | null> {
-  const effectivePort = port ?? getCoordinatorPort();
-
   try {
-    const response = await fetch(
-      `https://${COORDINATOR_HOST}:${effectivePort}/health`,
-      {
-        signal: AbortSignal.timeout(2000),
-        ...COORDINATOR_TLS_FETCH_OPTIONS,
-      }
-    );
-
-    if (response.ok) {
-      return (await response.json()) as HealthCheckResponse;
+    const descriptor = readCoordinatorDescriptor();
+    if (port !== undefined && port !== descriptor.httpsPort)
+      throw new CoordinatorSecurityError(
+        'Coordinator descriptor port does not match requested port'
+      );
+    const response = await coordinatorRequest('/health', {
+      signal: AbortSignal.timeout(2000),
+    });
+    if (!response.ok)
+      throw new CoordinatorSecurityError(
+        `Coordinator health rejected (${response.status})`
+      );
+    return (await response.json()) as HealthCheckResponse;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if (!starting && (await portOccupied(port ?? getCoordinatorPort())))
+        throw new CoordinatorSecurityError(
+          'UPGRADE_REQUIRED: occupied coordinator port has no compatible descriptor; identify and stop its owner'
+        );
+      return null;
     }
-    return null;
-  } catch {
-    return null;
+    if (error instanceof CoordinatorSecurityError) throw error;
+    throw new CoordinatorSecurityError(
+      `Coordinator TLS or authentication failed: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }
 
-/**
- * Check if the coordinator is running with HTTPS/TLS enabled
- * Returns the protocol and host if successful
- */
 export async function checkHealthHttps(port?: number): Promise<{
   protocol: 'https';
   host: string;
   health: HealthCheckResponse;
 } | null> {
-  const effectivePort = port ?? getCoordinatorPort();
-
-  try {
-    const response = await fetch(
-      `https://${COORDINATOR_HOST}:${effectivePort}/health`,
-      {
-        signal: AbortSignal.timeout(2000),
-        ...COORDINATOR_TLS_FETCH_OPTIONS,
-      }
-    );
-
-    if (response.ok) {
-      const health = (await response.json()) as HealthCheckResponse;
-      return {
-        protocol: 'https',
-        host: COORDINATOR_HOST,
-        health,
-      };
-    }
-    return null;
-  } catch {
-    return null;
-  }
+  const health = await checkHealth(port);
+  return health ? { protocol: 'https', host: '127.0.0.1', health } : null;
 }
 
-/**
- * Wait for the coordinator to become healthy
- *
- * @param port - Port to check
- * @param timeoutMs - Maximum time to wait
- * @param intervalMs - Time between checks
- * @returns True if coordinator became healthy, false if timed out
- */
 export async function waitForHealth(
   port?: number,
-  timeoutMs: number = 10000,
-  intervalMs: number = 200
+  timeoutMs = 10000,
+  intervalMs = 200
 ): Promise<boolean> {
-  const effectivePort = port ?? getCoordinatorPort();
-  const startTime = Date.now();
-
-  while (Date.now() - startTime < timeoutMs) {
-    const health = await checkHealth(effectivePort);
-    if (health?.status === 'ok') {
-      return true;
-    }
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if ((await checkHealth(port, true))?.status === 'ok') return true;
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
-
   return false;
 }
 
-/**
- * Check if coordinator is running (quick check)
- */
 export async function isCoordinatorRunning(port?: number): Promise<boolean> {
-  const effectivePort = port ?? getCoordinatorPort();
-  const health = await checkHealth(effectivePort);
-  return health?.status === 'ok';
+  return (await checkHealth(port))?.status === 'ok';
 }
