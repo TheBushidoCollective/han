@@ -20,6 +20,7 @@ import {
 	type SubscribeFunction,
 } from "relay-runtime";
 import { getGraphQLEndpoints } from "../config/urls.ts";
+import { dashboardAuthorization } from "../bootstrap.ts";
 
 /**
  * Parse a multipart/mixed response for @defer support
@@ -194,6 +195,7 @@ const fetchFn: FetchFunction = (
 				const response = await fetch(endpoints.http, {
 					method: "POST",
 					headers: {
+						...dashboardAuthorization(),
 						"Content-Type": "application/json",
 						// Request multipart format for @defer support
 						Accept: "multipart/mixed;deferSpec=20220824,application/json",
@@ -261,6 +263,9 @@ function getWsClient(): Client {
 		const endpoints = getGraphQLEndpoints();
 		wsClient = createClient({
 			url: endpoints.ws,
+			connectionParams: () => ({
+				authorization: dashboardAuthorization().Authorization,
+			}),
 			retryAttempts: 5,
 			shouldRetry: () => true,
 		});

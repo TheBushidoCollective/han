@@ -15,6 +15,7 @@ import {
 	useState,
 } from "react";
 import type { Org, TeamMember, User } from "../types/auth.ts";
+import { isLocalDashboard } from "../bootstrap.ts";
 
 /**
  * Application mode - local for han browse, hosted for team dashboard
@@ -43,24 +44,7 @@ const ModeContext = createContext<ModeContextValue | null>(null);
  * Hosted mode uses dashboard.local.han.guru or similar hosted domains
  */
 function detectMode(): AppMode {
-	if (typeof window === "undefined") {
-		return "local";
-	}
-
-	const hostname = window.location.hostname;
-
-	// Hosted dashboard domains
-	if (
-		hostname === "dashboard.local.han.guru" ||
-		hostname.endsWith(".han.guru") ||
-		hostname === "dashboard.han.dev" ||
-		hostname.endsWith(".han.dev")
-	) {
-		return "hosted";
-	}
-
-	// Local development on localhost or 127.0.0.1
-	return "local";
+	return isLocalDashboard ? "local" : "hosted";
 }
 
 interface ModeProviderProps {

@@ -5,15 +5,58 @@
  * Ports the Bun build plugins (relay, pages, rnw-compat) to Vite format.
  */
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { readdirSync, statSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import { parse, print } from "graphql";
+import type { PluginContext } from "rollup";
+import type { ViteDevServer } from "vite";
 import { defineConfig } from "vite";
 
 const projectRoot = resolve(import.meta.dirname);
 const srcDir = join(projectRoot, "src");
 const pagesDir = join(srcDir, "pages");
+const manifest = JSON.stringify({
+	kind: "local-dashboard",
+	transportVersion: 1,
+	sourceRevision: execFileSync("git", ["rev-parse", "HEAD"], {
+		cwd: projectRoot,
+		encoding: "utf8",
+	}).trim(),
+});
+
+function dashboardManifestPlugin() {
+	return {
+		name: "han-dashboard-manifest",
+		configureServer(server: ViteDevServer) {
+			server.middlewares.use("/han-dashboard-manifest.json", (_req, res) => {
+				res.setHeader("Content-Type", "application/json");
+				res.end(manifest);
+			});
+			server.middlewares.use("/_han/react-preamble.js", (_req, res) => {
+				res.setHeader("Content-Type", "text/javascript");
+				res.end(react.preambleCode.replace("__BASE__", "/"));
+			});
+		},
+		transformIndexHtml: {
+			order: "post" as const,
+			handler(html: string) {
+				return html.replace(
+					/<script type="module">[\s\S]*?\/@react-refresh[\s\S]*?<\/script>/,
+					'<script type="module" src="/_han/react-preamble.js"></script>',
+				);
+			},
+		},
+		generateBundle(this: PluginContext) {
+			this.emitFile({
+				type: "asset",
+				fileName: "han-dashboard-manifest.json",
+				source: manifest,
+			});
+		},
+	};
+}
 
 // =============================================================================
 // Relay Plugin (Vite)
@@ -289,6 +332,7 @@ export default defineConfig({
 	appType: "spa",
 	plugins: [
 		react(),
+		dashboardManifestPlugin(),
 		viteRelayPlugin(),
 		vitePagesPlugin(),
 		viteRnwCompatPlugin(),
@@ -302,9 +346,14 @@ export default defineConfig({
 	},
 	define: {
 		global: "globalThis",
+		__HAN_BUILD_TARGET__: JSON.stringify("local-dashboard"),
 	},
 	server: {
 		port: 3000,
-		host: true,
+		host: "127.0.0.1",
+		hmr: {
+			path: "/_han/vite-hmr",
+			clientPort: Number(process.env.HAN_GATEWAY_PORT) || undefined,
+		},
 	},
 });

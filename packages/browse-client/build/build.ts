@@ -15,6 +15,19 @@ import { rnwCompatPlugin } from "./rnw-compat-plugin";
 const projectRoot = dirname(import.meta.dir);
 const outDir = join(projectRoot, "out");
 const pagesDir = join(projectRoot, "src", "pages");
+const buildTarget = process.env.HAN_BUILD_TARGET ?? "local-dashboard";
+if (buildTarget !== "local-dashboard" && buildTarget !== "team-app") {
+	throw new Error(`Unknown dashboard build target: ${buildTarget}`);
+}
+if (buildTarget === "team-app" && !process.env.GRAPHQL_URL) {
+	throw new Error("GRAPHQL_URL is required for the team dashboard build");
+}
+const revision = Bun.spawnSync(["git", "rev-parse", "HEAD"], {
+	cwd: projectRoot,
+});
+if (revision.exitCode !== 0)
+	throw new Error("Cannot determine dashboard source revision");
+const sourceRevision = revision.stdout.toString().trim();
 
 // Clean output directory
 try {
@@ -47,8 +60,9 @@ const result = await Bun.build({
 		"import.meta.env.MODE": JSON.stringify("production"),
 		"import.meta.env.PROD": "true",
 		"import.meta.env.DEV": "false",
+		__HAN_BUILD_TARGET__: JSON.stringify(buildTarget),
 		global: "globalThis",
-		...(process.env.GRAPHQL_URL
+		...(buildTarget === "team-app" && process.env.GRAPHQL_URL
 			? {
 					__GRAPHQL_URL__: JSON.stringify(process.env.GRAPHQL_URL),
 					__GRAPHQL_WS_URL__: JSON.stringify(
@@ -97,6 +111,16 @@ const html = template.replace(
 	`<script type="module" crossorigin src="${entryFilename}"></script>`,
 );
 writeFileSync(join(outDir, "index.html"), html);
+if (buildTarget === "local-dashboard") {
+	writeFileSync(
+		join(outDir, "han-dashboard-manifest.json"),
+		JSON.stringify({
+			kind: "local-dashboard",
+			transportVersion: 1,
+			sourceRevision,
+		}),
+	);
+}
 
 // Report build artifacts
 console.log("\nBuild complete:");
