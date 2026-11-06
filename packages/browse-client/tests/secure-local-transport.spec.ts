@@ -745,14 +745,24 @@ test("real launcher, gateway and live GraphQL subscriptions with security contro
 			).length;
 			const withheld = `transport withheld ${randomUUID()}`;
 			await appendFile(transcript, line(id, withheld));
-			await until(
-				() =>
-					observed.events.filter(
-						(event) =>
-							event.field === "sessionMessageAdded" && event.sessionId === id,
-					).length > priorEvents,
-				"negative-control message delivered to the connected browser",
-			);
+			try {
+				await until(
+					() =>
+						observed.events.filter(
+							(event) =>
+								event.field === "sessionMessageAdded" && event.sessionId === id,
+						).length > priorEvents,
+					"negative-control message delivered to the connected browser",
+				);
+			} catch (error) {
+				const indexed = [
+					...coordinatorOutput.matchAll(/Indexed (\d+) messages for session/g),
+				].map((match) => Number(match[1]));
+				throw new Error(
+					`Live update stalled: priorEvents=${priorEvents}, connectedSocketClosed=${observed.closed()}, coordinatorExit=${coordinator.exitCode}, indexed=${JSON.stringify(indexed)}, indexErrors=${(coordinatorOutput.match(/Error handling file event/g) ?? []).length}`,
+					{ cause: error },
+				);
+			}
 			await expect(page.getByText(withheld, { exact: false })).toBeVisible();
 			await sleep(3_000);
 			await expect(
