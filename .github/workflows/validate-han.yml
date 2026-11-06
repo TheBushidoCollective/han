@@ -32,12 +32,31 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
       - uses: dtolnay/rust-toolchain@stable
       - name: Install protoc
         run: choco install protoc --no-progress -y
       - name: Test native security primitives
         working-directory: packages/han-rs
         run: cargo test --locked -p han-coordinator windows_
+      - name: Prove distinct-user isolation
+        shell: pwsh
+        run: ./packages/han-rs/crates/han-coordinator/tests/windows_cross_user.ps1 -Coordinator ./packages/han-rs/target/debug/han-coordinator.exe
+      - name: Install CLI dependencies
+        working-directory: packages/han
+        run: bun install --frozen-lockfile
+      - name: Compile Windows CLI for acceptance
+        working-directory: packages/han
+        run: bun scripts/build-bundle.js bun-windows-x64
+      - name: Prove installed Windows pair
+        shell: pwsh
+        run: |
+          $cli = @(Get-ChildItem packages/han/dist/binaries/han-windows-x64*)
+          if ($cli.Count -ne 1) { throw "Expected exactly one Windows CLI binary" }
+          bun packages/han/scripts/prove-installed-windows-coordinator.ts $cli[0].FullName packages/han-rs/target/debug/han-coordinator.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   gateway-runtime-comparison:
     if: github.ref != 'refs/heads/integrate/windows-local-transport-wip'
