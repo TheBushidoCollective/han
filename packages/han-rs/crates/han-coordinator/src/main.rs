@@ -29,6 +29,8 @@ use hooks::HookEngine;
 use lock::CoordinatorLock;
 use sea_orm_migration::MigratorTrait;
 use std::collections::HashMap;
+#[cfg(unix)]
+use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
@@ -151,18 +153,27 @@ impl axum::serve::Listener for TlsListener {
         self.inner.local_addr()
     }
 }
+#[cfg(unix)]
+fn shutdown_signal() -> impl Future<Output = ()> {
+    let mut terminate = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+        .expect("install SIGTERM handler");
+    async move {
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {},
+            _ = terminate.recv() => {},
+        }
+    }
+}
 
-/// Resolve the database path.
-fn resolve_db_path(cli_path: Option<&str>) -> String {
-    if let Some(path) = cli_path {
-        return path.to_string();
-    }
-    if let Some(home) = dirs::home_dir() {
-        let han_dir = home.join(".han");
-        let _ = std::fs::create_dir_all(&han_dir);
-        return han_dir.join("han.db").to_string_lossy().to_string();
-    }
-    "han.db".to_string()
+#[cfg(not(unix))]
+async fn shutdown_signal() {
+    let _ = tokio::signal::ctrl_c().await;
+}
+
+
+fn resolve_db_path(cli_path: Option<&str>, data_dir: &std::path::Path) -> String {
+    cli_path.map(str::to_owned)
+        .unwrap_or_else(|| data_dir.join("han.db").to_string_lossy().into_owned())
 }
 
 #[tokio::main]
@@ -186,7 +197,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Daemon mode: fork if not --foreground
     if !cli.foreground {
         tracing::info!("Daemonizing...");
-        daemonize(&cli)?;
+        daemonize(&cli).await?;
         return Ok(());
     }
 
@@ -253,7 +264,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // Initialize database
-    let db_path = cli.db_path.clone().unwrap_or_else(|| data_dir.join("han.db").to_string_lossy().into_owned());
+    let db_path = resolve_db_path(cli.db_path.as_deref(), &data_dir);
     tracing::info!("Database: {}", db_path);
 
     let db = establish_connection(DbConfig::Sqlite {
@@ -310,15 +321,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         bearer_token: bearer.clone(),
     };
     let router = server::build_router(schema.clone(), coordinator_state.start_time, https_port, bearer.clone());
-    let grpc_tls = tonic::transport::ServerTlsConfig::new().identity(
-        tonic::transport::Identity::from_pem(&certs.cert_pem, &certs.key_pem)
-    );
     let tls_config = tls::build_tls_config(&certs)?;
     let acceptor = TlsAcceptor::from(Arc::new(tls_config));
+    let grpc_acceptor = acceptor.clone();
 
     tracing::info!("HTTPS server listening on {}", server_addr);
 
-    let server_handle = tokio::spawn(async move {
+    let mut server_handle = tokio::spawn(async move {
         let listener = TlsListener {
             inner: tls_listener,
             acceptor,
@@ -330,12 +339,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // Start gRPC server
-    let grpc_handle = if let Some(grpc_listener) = grpc_listener {
+    let mut grpc_handle = if let Some(grpc_listener) = grpc_listener {
         let state = coordinator_state.clone();
-        let rpc_guard = rpc_guard::GuardLayer { port: grpc_port.expect("bound port"), bearer };
-        let server = TonicServer::builder().tls_config(grpc_tls)?;
+        let rpc_guard = rpc_guard::GuardLayer::new(grpc_port.expect("bound port"), &bearer);
+        let server = TonicServer::builder();
         tracing::info!("gRPC server listening on 127.0.0.1:{}", grpc_port.expect("bound port"));
         Some(tokio::spawn(async move {
+            let listener = TlsListener {
+                inner: grpc_listener,
+                acceptor: grpc_acceptor,
+                handshakes: tokio::task::JoinSet::new(),
+            };
+            let incoming = futures_util::stream::unfold(listener, |mut listener| async move {
+                let (stream, _) = axum::serve::Listener::accept(&mut listener).await;
+                Some((Ok::<_, std::io::Error>(stream), listener))
+            });
             server.accept_http1(true)
                 .layer(rpc_guard)
                 .layer(tonic_web::GrpcWebLayer::new())
@@ -357,14 +375,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .add_service(MemoryServiceServer::new(MemoryServiceImpl {
                     state: state.clone(),
                 }))
-                .serve_with_incoming(tokio_stream::wrappers::TcpListenerStream::new(grpc_listener))
+                .serve_with_incoming(incoming)
                 .await
                 .unwrap();
         }))
     } else {
         None
     };
-    let _descriptor = runtime::PublishedDescriptor::publish(&runtime_dir, &descriptor)?;
+    let shutdown = shutdown_signal();
+    tokio::pin!(shutdown);
+    let published_descriptor = runtime::PublishedDescriptor::publish(&runtime_dir, &descriptor)?;
 
     // Write PID file
     if let Some(pid_path) = &cli.pid_file {
@@ -414,15 +434,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
-    // Setup signal handling
-    let shutdown = tokio::signal::ctrl_c();
-
     tokio::select! {
-        _ = shutdown => {
+        _ = &mut shutdown => {
             tracing::info!("Received shutdown signal");
         }
-        _ = server_handle => {
+        _ = &mut server_handle => {
             tracing::info!("Server stopped");
+        }
+        _ = async {
+            match grpc_handle.as_mut() {
+                Some(handle) => { let _ = handle.await; }
+                None => std::future::pending::<()>().await,
+            }
+        } => {
+            tracing::error!("gRPC server stopped");
         }
         _ = shutdown_rx.recv() => {
             tracing::info!("Received authenticated shutdown request");
@@ -434,6 +459,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Cleanup
     tracing::info!("Shutting down...");
+    server_handle.abort();
     if let Some(handle) = watcher_handle {
         handle.abort();
     }
@@ -443,6 +469,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(pid_path) = &cli.pid_file {
         let _ = std::fs::remove_file(pid_path);
     }
+    drop(published_descriptor);
     lock.release()?;
 
     tracing::info!("Coordinator stopped");
@@ -450,7 +477,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// Daemonize by forking and waiting for the child to be healthy.
-fn daemonize(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
+async fn daemonize(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     use std::process::Command;
 
     let exe = std::env::current_exe()?;
@@ -459,6 +486,10 @@ fn daemonize(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     args.push(cli.port.to_string());
     args.push("--grpc-port".to_string());
     args.push(cli.grpc_port.to_string());
+    let data_dir = runtime::data_dir(cli.data_dir.as_deref())?;
+    let runtime_dir = runtime::prepare(&data_dir)?;
+    args.push("--data-dir".to_string());
+    args.push(data_dir.to_string_lossy().into_owned());
 
     if let Some(ref db) = cli.db_path {
         args.push("--db-path".to_string());
@@ -478,21 +509,12 @@ fn daemonize(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
         args.push("--scan-on-start".to_string());
     }
 
-    // Write PID file for daemon tracking
-    let pid_path = if let Some(home) = dirs::home_dir() {
-        let han_dir = home.join(".han");
-        let _ = std::fs::create_dir_all(&han_dir);
-        han_dir
-            .join("coordinator.pid")
-            .to_string_lossy()
-            .to_string()
-    } else {
-        "coordinator.pid".to_string()
-    };
-    args.push("--pid-file".to_string());
-    args.push(pid_path.clone());
+    if let Some(pid_path) = &cli.pid_file {
+        args.push("--pid-file".to_string());
+        args.push(pid_path.clone());
+    }
 
-    let child = Command::new(exe)
+    let mut child = Command::new(exe)
         .args(&args)
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
@@ -501,28 +523,44 @@ fn daemonize(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("Daemon started with PID {}", child.id());
 
-    // Wait a bit and check health
-    std::thread::sleep(std::time::Duration::from_secs(2));
-
-    let health_url = format!("https://coordinator.local.han.guru:{}/health", cli.port);
-    match std::process::Command::new("curl")
-        .args(["-sk", "-o", "/dev/null", "-w", "%{http_code}", &health_url])
-        .output()
-    {
-        Ok(output) => {
-            let status = String::from_utf8_lossy(&output.stdout);
-            if status.trim() == "200" {
+    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(30);
+    loop {
+        if let Some(status) = child.try_wait()? {
+            return Err(format!("coordinator exited before readiness: {status}").into());
+        }
+        match runtime::read_descriptor(&runtime_dir) {
+            Ok(descriptor) if descriptor.pid == child.id() => {
+                if descriptor.transport_version != runtime::LOCAL_TRANSPORT_VERSION {
+                    return Err("unsupported coordinator transport version".into());
+                }
+                let cert = reqwest::Certificate::from_pem(descriptor.certificate_pem.as_bytes())?;
+                let client = reqwest::Client::builder()
+                    .tls_built_in_root_certs(false)
+                    .add_root_certificate(cert)
+                    .no_proxy()
+                    .timeout(std::time::Duration::from_secs(3))
+                    .build()?;
+                let response = client.get(format!("https://127.0.0.1:{}/health", descriptor.https_port))
+                    .bearer_auth(&descriptor.bearer_token).send().await?;
+                if !response.status().is_success() {
+                    return Err(format!("coordinator health rejected: {}", response.status()).into());
+                }
+                let health: serde_json::Value = response.json().await?;
+                if health.get("pid").and_then(|v| v.as_u64()) != Some(child.id() as u64) {
+                    return Err("coordinator health PID does not match spawned process".into());
+                }
                 tracing::info!("Daemon is healthy");
-            } else {
-                tracing::warn!("Daemon health check returned: {}", status);
+                return Ok(());
             }
+            Ok(_) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e.into()),
         }
-        Err(_) => {
-            tracing::warn!("Could not check daemon health (curl not available)");
+        if tokio::time::Instant::now() >= deadline {
+            return Err("coordinator did not publish its descriptor before the startup deadline".into());
         }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     }
-
-    Ok(())
 }
 
 #[cfg(test)]
@@ -530,14 +568,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_resolve_db_path_explicit() {
-        assert_eq!(resolve_db_path(Some("/tmp/test.db")), "/tmp/test.db");
-    }
-
-    #[test]
-    fn test_resolve_db_path_default() {
-        let path = resolve_db_path(None);
-        assert!(path.ends_with("han.db"));
+    fn test_resolve_db_path() {
+        let data = std::path::Path::new("/tmp/isolated-han");
+        assert_eq!(resolve_db_path(Some("./custom.db"), data), "./custom.db");
+        assert_eq!(resolve_db_path(None, data), "/tmp/isolated-han/han.db");
     }
 
     #[test]
@@ -566,41 +600,4 @@ mod tests {
         assert_eq!(cli.db_path, Some("/tmp/test.db".to_string()));
     }
 
-    #[test]
-    fn test_resolve_db_path_explicit_absolute() {
-        assert_eq!(
-            resolve_db_path(Some("/custom/path/data.db")),
-            "/custom/path/data.db"
-        );
-    }
-
-    #[test]
-    fn test_resolve_db_path_explicit_relative() {
-        assert_eq!(resolve_db_path(Some("./local.db")), "./local.db");
-    }
-
-    #[test]
-    fn test_resolve_db_path_none_falls_back() {
-        // When no explicit path is given, should resolve to something ending in han.db
-        let path = resolve_db_path(None);
-        assert!(
-            path.ends_with("han.db"),
-            "Expected path ending with han.db, got: {}",
-            path
-        );
-        // On a system with a home dir, it should contain .han directory
-        if dirs::home_dir().is_some() {
-            assert!(
-                path.contains(".han"),
-                "Expected path containing .han, got: {}",
-                path
-            );
-        }
-    }
-
-    #[test]
-    fn test_resolve_db_path_explicit_empty_string() {
-        // An empty string is still an explicit path
-        assert_eq!(resolve_db_path(Some("")), "");
-    }
 }

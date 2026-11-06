@@ -24,9 +24,8 @@ tokio = { version = "1", features = ["full"] }
 tokio-stream = { version = "0.1", features = ["sync", "net"] }
 
 # Web server (0.8 to match async-graphql-axum v7.2+)
-axum = { version = "0.8", features = ["ws"] }
-tower = { version = "0.5", features = ["timeout"] }
-tower-http = { version = "0.6", features = ["cors"] }
+axum = { version = "0.8", features = ["ws", "http2"] }
+tower = { version = "0.5", features = ["timeout", "util"] }
 
 # GraphQL
 async-graphql = { version = "7", features = ["dataloader", "chrono", "uuid"] }
@@ -41,6 +40,7 @@ prost = "0.13"
 rcgen = "0.13"
 rustls = { version = "0.23", default-features = false, features = ["ring", "logging", "std", "tls12"] }
 rustls-pemfile = "2"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "http2"] }
 tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "logging", "tls12"] }
 time = "0.3"
 
@@ -77,5 +77,5 @@ libc = "0.2"
 [dev-dependencies]
 tempfile = "3"
 tokio = { version = "1", features = ["test-util", "macros"] }
-reqwest = { version = "0.12", features = ["json"] }
+tokio-tungstenite = "0.28"
 futures = "0.3"
