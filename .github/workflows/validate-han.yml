@@ -26,6 +26,19 @@ on:
   workflow_dispatch:
 
 jobs:
+  windows-native-primitives:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/integrate/windows-local-transport-wip'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install protoc
+        run: choco install protoc --no-progress -y
+      - name: Test native security primitives
+        working-directory: packages/han-rs
+        run: cargo test --locked -p han-coordinator windows_
+
   gateway-runtime-comparison:
     runs-on: ubuntu-latest
     strategy:

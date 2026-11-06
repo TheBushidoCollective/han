@@ -11,6 +11,10 @@ mod rpc_guard;
 mod server;
 mod tls;
 mod watcher_bridge;
+#[cfg(windows)]
+mod windows_process_identity;
+#[cfg(windows)]
+mod windows_secure_fs;
 
 use clap::Parser;
 use grpc::{
