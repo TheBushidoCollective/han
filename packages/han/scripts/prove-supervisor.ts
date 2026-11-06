@@ -1,5 +1,11 @@
 import { strict as assert } from 'node:assert';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -237,9 +243,88 @@ async function replacementSurvivesOldOwner(): Promise<void> {
     await owner.exited;
   }
 }
+async function replacementWinsStartupRace(): Promise<void> {
+  const dir = directory();
+  const paused = join(dir, 'spawn-paused');
+  const resume = join(dir, 'spawn-resume');
+  const readyFlag = join(dir, 'owner-ready');
+  const finish = join(dir, 'owner-finish');
+  const script = `
+    const fs = await import('node:fs');
+    const original = Bun.spawn;
+    Bun.spawn = (args, options) => {
+      if (Array.isArray(args) && args[0] === ${JSON.stringify(binary)}) {
+        fs.writeFileSync(${JSON.stringify(paused)}, 'paused');
+        while (!fs.existsSync(${JSON.stringify(resume)})) Bun.sleepSync(10);
+      }
+      return original(args, options);
+    };
+    const { startCoordinatorService, stopCoordinatorService } = await import(${JSON.stringify(service)});
+    await startCoordinatorService();
+    fs.writeFileSync(${JSON.stringify(readyFlag)}, 'ready');
+    while (!fs.existsSync(${JSON.stringify(finish)})) await Bun.sleep(50);
+    await stopCoordinatorService();
+  `;
+  const owner = Bun.spawn([process.execPath, '-e', script], {
+    env: environment(dir),
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  children.push(owner);
+  let replacement: Bun.Subprocess | undefined;
+  try {
+    await waitFor('owned spawn barrier', () => {
+      if (owner.exitCode !== null)
+        throw new Error(`Owner exited before spawn barrier: ${owner.exitCode}`);
+      return existsSync(paused) ? true : undefined;
+    });
+    replacement = Bun.spawn(
+      [
+        binary,
+        '--foreground',
+        '--port',
+        '0',
+        '--grpc-port',
+        '0',
+        '--no-watcher',
+        '--data-dir',
+        dir,
+      ],
+      { env: environment(dir), stdout: 'pipe', stderr: 'pipe' }
+    );
+    children.push(replacement);
+    const current = await ready(dir, replacement);
+    assert.equal(current.pid, replacement.pid);
+    writeFileSync(resume, 'resume');
+    await waitFor('losing owner attached', () => {
+      if (owner.exitCode !== null)
+        throw new Error(`Owner exited during startup: ${owner.exitCode}`);
+      return existsSync(readyFlag) ? true : undefined;
+    });
+    writeFileSync(finish, 'finish');
+    await waitFor('losing owner shutdown', () =>
+      owner.exitCode !== null ? owner.exitCode : undefined
+    );
+    assert.equal(owner.exitCode, 0);
+    assert.equal(replacement.exitCode, null);
+    assert.equal(
+      await healthy(current),
+      true,
+      'startup winner was stopped by losing owner'
+    );
+    console.log('healthy startup winner survived its losing owner cleanup');
+  } finally {
+    if (replacement && replacement.exitCode === null) replacement.kill();
+    if (replacement) await replacement.exited;
+    if (owner.exitCode === null) owner.kill();
+    await owner.exited;
+  }
+}
+
 try {
   await supervisorRecovery();
   await replacementSurvivesOldOwner();
+  await replacementWinsStartupRace();
 } finally {
   for (const child of children) if (child.exitCode === null) child.kill();
   await Promise.all(children.map((child) => child.exited));
