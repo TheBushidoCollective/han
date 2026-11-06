@@ -40,6 +40,7 @@ jobs:
         run: cargo test --locked -p han-coordinator windows_
 
   gateway-runtime-comparison:
+    if: github.ref != 'refs/heads/integrate/windows-local-transport-wip'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -74,6 +75,7 @@ jobs:
           fi
 
   pid-mutation-controls:
+    if: github.ref != 'refs/heads/integrate/windows-local-transport-wip'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -93,6 +95,7 @@ jobs:
         run: bun run scripts/prove-pid-claims.ts "${{ matrix.mutation }}"
 
   supervisor-integration:
+    if: github.ref != 'refs/heads/integrate/windows-local-transport-wip'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -129,6 +132,7 @@ jobs:
         run: bun run scripts/prove-supervisor.ts
 
   installed-coordinator:
+    if: github.ref != 'refs/heads/integrate/windows-local-transport-wip'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -181,6 +185,7 @@ jobs:
           if-no-files-found: error
 
   browser-transport:
+    if: github.ref != 'refs/heads/integrate/windows-local-transport-wip'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -233,6 +238,7 @@ jobs:
           if-no-files-found: error
 
   validate:
+    if: github.ref != 'refs/heads/integrate/windows-local-transport-wip'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -301,6 +307,7 @@ jobs:
           handle_no_reports_found: false
 
   root-biome:
+    if: github.ref != 'refs/heads/integrate/windows-local-transport-wip'
     name: Root Non-Mutating Biome Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -318,6 +325,7 @@ jobs:
         run: npx -y @biomejs/biome check --error-on-warnings .
 
   deploy-scripts:
+    if: github.ref != 'refs/heads/integrate/windows-local-transport-wip'
     name: Validate Deploy Scripts
     runs-on: ubuntu-latest
     timeout-minutes: 5

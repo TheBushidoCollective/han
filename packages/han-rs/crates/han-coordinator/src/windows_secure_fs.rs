@@ -17,17 +17,17 @@ use std::ptr::{null, null_mut};
 
 use windows_sys::Wdk::Foundation::OBJECT_ATTRIBUTES;
 use windows_sys::Wdk::Storage::FileSystem::{
-    NtCreateFile, FILE_CREATE, FILE_DIRECTORY_FILE, FILE_NON_DIRECTORY_FILE, FILE_OPEN,
-    FILE_OPEN_REPARSE_POINT, FILE_SYNCHRONOUS_IO_NONALERT,
+    NtCreateFile, NtSetInformationFile, FILE_CREATE, FILE_DIRECTORY_FILE, FILE_NON_DIRECTORY_FILE, FILE_OPEN,
+    FILE_OPEN_REPARSE_POINT, FILE_SYNCHRONOUS_IO_NONALERT, FILE_RENAME_INFORMATION, FileRenameInformation,
 };
 use windows_sys::Win32::Foundation::{RtlNtStatusToDosError, INVALID_HANDLE_VALUE, OBJ_CASE_INSENSITIVE, UNICODE_STRING};
 use windows_sys::Win32::Storage::FileSystem::{
     CreateFileW, GetDriveTypeW, GetFileInformationByHandleEx, GetVolumeInformationByHandleW,
     LockFileEx, SetFileInformationByHandle, UnlockFileEx, FileAttributeTagInfo,
-    FileDispositionInfo, FileIdInfo, FileRenameInfo, FileStandardInfo,
+    FileDispositionInfo, FileIdInfo, FileStandardInfo,
     FILE_ATTRIBUTE_REPARSE_POINT, FILE_ATTRIBUTE_TAG_INFO, FILE_DISPOSITION_INFO,
     FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT, FILE_ID_INFO, FILE_READ_ATTRIBUTES,
-    FILE_RENAME_INFO, FILE_SHARE_READ, FILE_SHARE_WRITE, FILE_STANDARD_INFO, FILE_TRAVERSE,
+    FILE_SHARE_READ, FILE_SHARE_WRITE, FILE_STANDARD_INFO, FILE_TRAVERSE,
     LOCKFILE_EXCLUSIVE_LOCK, OPEN_EXISTING, READ_CONTROL, SYNCHRONIZE,
 };
 
@@ -354,6 +354,16 @@ fn verify_acl_mode(handle: &OwnedHandle, private: bool, ancestor: bool) -> io::R
         || (unsafe { EqualSid(owner, user) } == 0
             && !(ancestor && (unsafe { IsWellKnownSid(owner, WinLocalSystemSid) } != 0
                 || unsafe { IsWellKnownSid(owner, WinBuiltinAdministratorsSid) } != 0))) {
+        let mut text = null_mut();
+        if !owner.is_null() && unsafe { IsValidSid(owner) } != 0
+            && unsafe { ConvertSidToStringSidW(owner, &mut text) } != 0
+        {
+            let _text = LocalAllocation(text as _);
+            let mut len = 0usize;
+            while len < 184 && unsafe { *text.add(len) } != 0 { len += 1; }
+            let sid = String::from_utf16_lossy(unsafe { std::slice::from_raw_parts(text, len) });
+            return Err(io::Error::new(io::ErrorKind::InvalidData, format!("protected object has unexpected owner {sid}, ancestor={ancestor}")));
+        }
         return Err(invalid("protected object has unexpected owner"));
     }
     let mut control = 0u16;
@@ -485,19 +495,21 @@ fn rename_opened_no_replace(handle: &OwnedHandle, expected: FileIdentity,
     }
     let name = component(name)?;
     // Vec<usize> ensures the structure's native pointer alignment.
-    let offset = std::mem::offset_of!(FILE_RENAME_INFO, FileName);
+    let offset = std::mem::offset_of!(FILE_RENAME_INFORMATION, FileName);
     let bytes = offset.checked_add(name.len() * 2).ok_or_else(|| invalid("name too long"))?
-        .max(size_of::<FILE_RENAME_INFO>());
+        .max(size_of::<FILE_RENAME_INFORMATION>());
     let mut storage = vec![0usize; (bytes + size_of::<usize>() - 1) / size_of::<usize>()];
-    let info = storage.as_mut_ptr() as *mut FILE_RENAME_INFO;
+    let info = storage.as_mut_ptr() as *mut FILE_RENAME_INFORMATION;
     unsafe {
         (*info).Anonymous.ReplaceIfExists = false;
         (*info).RootDirectory = directory.as_raw_handle() as _;
         (*info).FileNameLength = (name.len() * 2) as u32;
         std::ptr::copy_nonoverlapping(name.as_ptr(), (*info).FileName.as_mut_ptr(), name.len());
-        if SetFileInformationByHandle(handle.as_raw_handle() as _, FileRenameInfo,
-            info as _, bytes as u32) == 0 {
-            return Err(io::Error::last_os_error());
+        let mut status_block: IO_STATUS_BLOCK = zeroed();
+        let status = NtSetInformationFile(handle.as_raw_handle() as _, &mut status_block,
+            info as _, bytes as u32, FileRenameInformation);
+        if status < 0 {
+            return Err(io::Error::from_raw_os_error(RtlNtStatusToDosError(status) as i32));
         }
     }
     Ok(())
