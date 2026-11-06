@@ -23,7 +23,7 @@ const processIdentity = { pid: process.pid, creationTime: '133000000000000000', 
 const nonce = '00000000-0000-4000-8000-000000000001';
 const binding = { pid: process.pid, nonce, generationId: '00000000-0000-4000-8000-000000000002' };
 const claim = { nonce, process: processIdentity, reservation: file, ownerFile: file, pidFile: file };
-const descriptor = { transportVersion: 1 as const, instanceId: 'instance', pid: 42, httpsPort: 1234, grpcPort: null, certificatePem: '-----BEGIN CERTIFICATE-----', bearerToken: 'a'.repeat(43), supervisor: binding };
+const descriptor = { transportVersion: 1 as const, instanceId: 'instance', pid: 42, process: { ...processIdentity, pid: 42 }, httpsPort: 1234, grpcPort: null, certificatePem: '-----BEGIN CERTIFICATE-----', bearerToken: 'a'.repeat(43), supervisor: binding };
 const launcher = { name: 'launcher-abc.html', path: join(dir, 'runtime', 'launcher-abc.html'), identity: file };
 const sent = () => JSON.parse(invocation!.options.input);
 
@@ -89,9 +89,13 @@ test('acquisition and conditional release use complete claims and reject changed
 });
 
 test('supervisor identity and process state reject PID reuse and uncertainty', () => {
-  output = { pid: process.pid, nonce, process: processIdentity };
+  output = { status: 'present', pid: process.pid, nonce, process: processIdentity };
   expect(bridge.windowsReadSupervisor(dir)).toEqual(output);
-  output = { pid: process.pid + 1, nonce, process: processIdentity };
+  for (const status of ['absent', 'recoverable']) {
+    output = { status };
+    expect(bridge.windowsReadSupervisor(dir)).toEqual(output);
+  }
+  output = { status: 'present', pid: process.pid + 1, nonce, process: processIdentity };
   expect(() => bridge.windowsReadSupervisor(dir)).toThrow(bridge.CoordinatorSecurityError);
   for (const status of ['alive', 'gone'] as const) {
     output = { status };
@@ -128,4 +132,60 @@ test('launcher creation and removal stay bound to the returned file identity', (
   expect(sent()).toEqual({ version: 1, dataDir: dir, op: 'launcher.remove', name: launcher.name, identity: file });
   output = { status: 'absent' };
   bridge.windowsRemoveLauncher(dir, launcher);
+});
+
+test('preparation and supervisor variants validate exact helper responses', () => {
+  output = { status: 'prepared' };
+  bridge.windowsPrepareRuntime(dir);
+  expect(sent()).toEqual({ version: 1, dataDir: dir, op: 'runtime.prepare' });
+  for (const bad of [null, {}, { status: 'prepared', extra: true }, { status: 'absent', pid: 42 }, { status: 'recoverable', process: processIdentity }]) {
+    output = bad;
+    if ((bad as {status?: string} | null)?.status === 'prepared') expect(() => bridge.windowsPrepareRuntime(dir)).toThrow(bridge.CoordinatorSecurityError);
+    else expect(() => bridge.windowsReadSupervisor(dir)).toThrow(bridge.CoordinatorSecurityError);
+  }
+  output = { identity: file, descriptor: { ...descriptor, process: undefined } };
+  expect(() => bridge.windowsReadDescriptor(dir, { kind: 'active' })).toThrow(bridge.CoordinatorSecurityError);
+  output = { identity: file, descriptor: { ...descriptor, process: { ...processIdentity, pid: 43 } } };
+  expect(() => bridge.windowsReadDescriptor(dir, { kind: 'active' })).toThrow(bridge.CoordinatorSecurityError);
+});
+
+test('diagnostics allow only bounded native metadata and never copy secrets', () => {
+  const secret = 'SENTINEL_SECRET_DO_NOT_PRINT';
+  const readError = () => {
+    try { bridge.windowsReadSupervisor(dir); } catch (error) { return String(error); }
+    throw new Error('Expected helper failure');
+  };
+  failure = Object.assign(new Error(secret), { code: secret });
+  expect(readError()).toContain('"spawnCode":"other"');
+  expect(readError()).not.toContain(secret);
+  failure = undefined;
+  exitStatus = 17;
+  rawOutput = JSON.stringify({ version: 1, ok: false, error: { stage: 'runtime_directory', kind: 'permission_denied', win32Code: 5 } });
+  expect(readError()).toContain('"stage":"runtime_directory"');
+  rawOutput = JSON.stringify({ version: 1, ok: false, error: { stage: secret, kind: 'other', win32Code: 5 } });
+  expect(readError()).not.toContain(secret);
+  rawOutput = secret;
+  expect(readError()).not.toContain(secret);
+  exitStatus = 0;
+  expect(readError()).not.toContain(secret);
+});
+
+test.skipIf(process.platform !== 'win32')('strict supervisor adapters reject recoverable records rather than reporting shutdown', async () => {
+  const old = process.env.HAN_DATA_DIR;
+  process.env.HAN_DATA_DIR = dir;
+  try {
+    // Load the consumer after installing the fake native boundary above.
+    const { readSupervisorPid, readSupervisorIdentity, SupervisorReservationBusyError } = await import('../lib/commands/coordinator/pid-claim.ts');
+    const path = join(dir, 'coordinator.pid');
+    output = { status: 'recoverable' };
+    expect(() => readSupervisorPid(path)).toThrow(SupervisorReservationBusyError);
+    expect(() => readSupervisorIdentity(path)).toThrow(SupervisorReservationBusyError);
+    output = { status: 'absent' };
+    expect(readSupervisorPid(path)).toBeNull();
+    output = { status: 'present', pid: process.pid, nonce, process: processIdentity };
+    expect(readSupervisorPid(path)).toBe(process.pid);
+  } finally {
+    if (old === undefined) delete process.env.HAN_DATA_DIR;
+    else process.env.HAN_DATA_DIR = old;
+  }
 });

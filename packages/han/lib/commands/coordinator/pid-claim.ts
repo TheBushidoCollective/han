@@ -94,7 +94,7 @@ function pidValue(text: string): number {
   return pid;
 }
 export function readSupervisorPid(path: string): number | null {
-  if (process.platform === 'win32') return windowsReadSupervisor(windowsDataDir(path))?.pid ?? null;
+  if (process.platform === 'win32') return readSupervisorIdentity(path)?.pid ?? null;
   try {
     return pidValue(protectedFile(path, true).text);
   } catch (e) {
@@ -130,7 +130,12 @@ export class SupervisorReservationBusyError extends Error {}
 export function readSupervisorIdentity(
   path: string
 ): { pid: number; nonce: string; process?: WindowsProcessIdentity } | null {
-  if (process.platform === 'win32') return windowsReadSupervisor(windowsDataDir(path));
+  if (process.platform === 'win32') {
+    const result = windowsReadSupervisor(windowsDataDir(path));
+    if (result.status === 'recoverable') throw new SupervisorReservationBusyError('Supervisor reservation is incomplete');
+    if (result.status === 'absent') return null;
+    return { pid: result.pid, nonce: result.nonce, process: result.process };
+  }
   const pidPath = resolve(path);
   const reservation = `${pidPath}.takeover`;
   try {

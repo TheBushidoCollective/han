@@ -16,6 +16,8 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import type { Command } from 'commander';
 import { isDevMode } from '../../shared.ts';
+import { getCoordinatorDataDir } from '../../coordinator/connection.ts';
+import { windowsPrepareRuntime } from '../../coordinator/windows-runtime.ts';
 import {
   ensureCoordinator,
   getLogFilePath,
@@ -188,6 +190,7 @@ export function registerCoordinatorCommands(program: Command): void {
           : getCoordinatorPort();
 
         if (options.background) {
+          if (process.platform === 'win32') windowsPrepareRuntime(getCoordinatorDataDir());
           // Non-blocking: start daemon and return immediately
           // Used by SessionStart hook to not block session startup
           const status = await getStatus(port);

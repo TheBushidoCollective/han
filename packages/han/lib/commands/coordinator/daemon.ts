@@ -27,7 +27,7 @@ import {
   sameCoordinator,
 } from '../../coordinator/connection.ts';
 import { getCoordinatorDataDir } from '../../coordinator/connection.ts';
-import { windowsProcessState, type WindowsProcessIdentity } from '../../coordinator/windows-runtime.ts';
+import { windowsPrepareRuntime, windowsProcessState, windowsReadSupervisor, type WindowsProcessIdentity } from '../../coordinator/windows-runtime.ts';
 import { createCoordinatorClients } from '../../grpc/client.ts';
 import { checkHealth, waitForHealth } from './health.ts';
 import {
@@ -51,14 +51,14 @@ import {
  * Get the log file path (~/.han/coordinator.log)
  */
 export function getLogFilePath(): string {
-  return join(getHanDataDir(), 'coordinator.log');
+  return join(process.platform === 'win32' ? getCoordinatorDataDir() : getHanDataDir(), 'coordinator.log');
 }
 
 /**
  * Get the PID file path (~/.han/coordinator.pid)
  */
 function getPidFilePath(): string {
-  return join(getHanDataDir(), 'coordinator.pid');
+  return join(process.platform === 'win32' ? getCoordinatorDataDir() : getHanDataDir(), 'coordinator.pid');
 }
 
 /**
@@ -152,10 +152,10 @@ export async function getStatus(port?: number): Promise<CoordinatorStatus> {
   // A supervisor PID file is not proof of daemon identity.
 
   // Check if PID file exists with a running process
-  const supervisor = process.platform === 'win32' ? readSupervisorIdentity(getPidFilePath()) : null;
-  const pid = process.platform === 'win32' ? supervisor?.pid ?? null : readPid();
+  const supervisor = process.platform === 'win32' ? windowsReadSupervisor(getCoordinatorDataDir()) : null;
+  const pid = supervisor?.status === 'present' ? supervisor.pid : process.platform === 'win32' ? null : readPid();
   if (pid && (process.platform === 'win32'
-    ? !!supervisor?.process && windowsProcessState(getCoordinatorDataDir(), supervisor.process) === 'alive'
+    ? supervisor?.status === 'present' && windowsProcessState(getCoordinatorDataDir(), supervisor.process) === 'alive'
     : isProcessRunning(pid))) {
     return {
       running: false, // Not responding but process exists
@@ -176,6 +176,7 @@ export async function getStatus(port?: number): Promise<CoordinatorStatus> {
 export async function startDaemon(
   options: CoordinatorOptions = {}
 ): Promise<CoordinatorStatus> {
+  if (process.platform === 'win32') windowsPrepareRuntime(getCoordinatorDataDir());
   const port = options.port ?? getCoordinatorPort();
   console.log(`[coordinator] Using port: ${port}`);
 
@@ -510,6 +511,7 @@ async function runForeground(port: number): Promise<void> {
 export async function ensureCoordinator(
   port?: number
 ): Promise<CoordinatorStatus> {
+  if (process.platform === 'win32') windowsPrepareRuntime(getCoordinatorDataDir());
   const effectivePort = port ?? getCoordinatorPort();
   const status = await getStatus(effectivePort);
 
