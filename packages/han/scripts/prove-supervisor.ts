@@ -226,6 +226,8 @@ async function replacementSurvivesOldOwner(): Promise<void> {
     const { startCoordinatorService, stopCoordinatorService } = await import(${JSON.stringify(service)});
     await startCoordinatorService();
     while (!existsSync(${JSON.stringify(flag)})) await Bun.sleep(50);
+    const result = await startCoordinatorService();
+    if (result.kind !== 'attached') throw new Error('cached owner claimed a replacement');
     await stopCoordinatorService();
   `;
   const owner = Bun.spawn([process.execPath, '-e', script], {
@@ -363,6 +365,73 @@ async function replacementWinsStartupRace(): Promise<void> {
     if (replacement) await replacement.exited;
     if (owner.exitCode === null) owner.kill();
     await owner.exited;
+  }
+}
+
+async function replacementWinsSupervisorRetry(): Promise<void> {
+  const dir = directory();
+  const supervisor = Bun.spawn(
+    [
+      process.execPath,
+      cli,
+      'coordinator',
+      'start',
+      '--foreground',
+      '--port',
+      '0',
+    ],
+    { env: environment(dir), stdout: 'pipe', stderr: 'pipe' }
+  );
+  children.push(supervisor);
+  let ownedPid: number | undefined;
+  let replacement: Bun.Subprocess | undefined;
+  let paused = false;
+  try {
+    const original = await ready(dir, supervisor);
+    ownedPid = original.pid;
+    assertChild(original.pid, supervisor.pid);
+    supervisor.kill('SIGSTOP');
+    paused = true;
+    killChild(original.pid, supervisor.pid);
+    ownedPid = undefined;
+    replacement = Bun.spawn(
+      [
+        binary,
+        '--foreground',
+        '--port',
+        '0',
+        '--grpc-port',
+        '0',
+        '--no-watcher',
+        '--data-dir',
+        dir,
+      ],
+      { env: environment(dir), stdout: 'pipe', stderr: 'pipe' }
+    );
+    children.push(replacement);
+    const current = await ready(dir, replacement, original.instanceId);
+    assert.equal(current.pid, replacement.pid);
+    supervisor.kill('SIGCONT');
+    paused = false;
+    await waitFor('old supervisor to attach and exit', () =>
+      supervisor.exitCode !== null ? supervisor.exitCode : undefined
+    );
+    assert.equal(supervisor.exitCode, 0);
+    assert.equal(existsSync(join(dir, 'coordinator.pid')), false);
+    assert.equal(existsSync(join(dir, 'coordinator.pid.takeover')), false);
+    assert.equal(replacement.exitCode, null);
+    assert.equal(await healthy(current), true);
+    console.log(
+      'retrying supervisor attached to the replacement and released its claim'
+    );
+  } finally {
+    if (paused && supervisor.exitCode === null) supervisor.kill('SIGCONT');
+    if (ownedPid !== undefined && supervisor.exitCode === null)
+      killChild(ownedPid, supervisor.pid);
+    if (supervisor.exitCode === null) supervisor.kill();
+    await supervisor.exited;
+    if (replacement && replacement.exitCode === null) replacement.kill();
+    if (replacement) await replacement.exited;
   }
 }
 
@@ -900,6 +969,7 @@ try {
   await supervisorRecovery();
   await replacementSurvivesOldOwner();
   await replacementWinsStartupRace();
+  await replacementWinsSupervisorRetry();
   await standaloneStopPreservesUnrelatedMarker();
   await committedStopSurvivesFailure('child');
   await committedStopSurvivesFailure('requester');

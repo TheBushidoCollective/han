@@ -385,12 +385,26 @@ export async function startCoordinatorService(
   options: { supervisor?: SupervisorBinding } = {}
 ): Promise<CoordinatorStartResult> {
   if (state.isRunning && (await isCoordinatorServing(state.port))) {
-    if (state.ownsProcess && state.process && state.ownedDescriptor)
-      return {
-        kind: 'owned',
-        child: state.process,
-        descriptor: state.ownedDescriptor,
-      };
+    if (state.ownsProcess && state.process && state.ownedDescriptor) {
+      const current = readCoordinatorDescriptor();
+      if (
+        state.process.exitCode === null &&
+        sameCoordinator(current, state.ownedDescriptor) &&
+        sameSupervisor(current.supervisor, options.supervisor ?? null)
+      ) {
+        return {
+          kind: 'owned',
+          child: state.process,
+          descriptor: state.ownedDescriptor,
+        };
+      }
+      // The healthy instance is not this generation's child. Relinquish the
+      // old handle without signalling either process.
+      if (state.process.exitCode === null) state.process.unref();
+      state.process = null;
+      state.ownsProcess = false;
+      state.ownedDescriptor = null;
+    }
     return { kind: 'attached' };
   }
   state.isRunning = false;

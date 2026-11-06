@@ -350,6 +350,34 @@ describe('stopCoordinatorService ownership', () => {
     expect(child.unref).not.toHaveBeenCalled();
   });
 
+  test('attaches to a replacement instead of returning a cached dead child', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = {
+      pid: 4242,
+      exitCode: null as number | null,
+      unref: mock(),
+      kill: mock(),
+    };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    expect((await cs.startCoordinatorService()).kind).toBe('owned');
+    child.exitCode = 1;
+    mockDescriptor.mockReturnValue({
+      transportVersion: 1,
+      instanceId: 'replacement',
+      pid: 9999,
+      httpsPort: 41957,
+      grpcPort: 41958,
+      certificatePem: 'replacement',
+      bearerToken: 'replacement',
+      supervisor: null,
+    });
+    expect((await cs.startCoordinatorService()).kind).toBe('attached');
+    await cs.stopCoordinatorService();
+    expect(mockShutdown).not.toHaveBeenCalled();
+    expect(child.kill).not.toHaveBeenCalled();
+  });
+
   test('a coordinator this process actually spawned still gets a graceful shutdown', async () => {
     mockHealth.mockReset();
     mockHealth.mockResolvedValueOnce(false); // not already running
