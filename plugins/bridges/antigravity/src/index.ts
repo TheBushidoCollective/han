@@ -196,10 +196,11 @@ export async function createHanMcpServer(projectDir: string) {
               };
             }
 
+            const skillName = args.skill;
             const skill = skillsByName.get(args.skill);
             if (!skill) {
               const matches = allSkills.filter((s) =>
-                s.name.toLowerCase().includes(args.skill!.toLowerCase())
+                s.name.toLowerCase().includes(skillName.toLowerCase())
               );
               if (matches.length === 1) {
                 return {
@@ -623,7 +624,7 @@ async function main() {
             },
           },
         };
-        process.stdout.write(JSON.stringify(response) + '\n');
+        process.stdout.write(`${JSON.stringify(response)}\n`);
         return;
       }
 
@@ -638,7 +639,7 @@ async function main() {
           id: request.id,
           result: { tools: toolList },
         };
-        process.stdout.write(JSON.stringify(response) + '\n');
+        process.stdout.write(`${JSON.stringify(response)}\n`);
         return;
       }
 
@@ -651,7 +652,7 @@ async function main() {
             id: request.id,
             error: { code: -32601, message: `Unknown tool: ${name}` },
           };
-          process.stdout.write(JSON.stringify(response) + '\n');
+          process.stdout.write(`${JSON.stringify(response)}\n`);
           return;
         }
 

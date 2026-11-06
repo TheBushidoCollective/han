@@ -50,7 +50,7 @@ export function executeHook(
   let command = hook.command.replace(/\$\{HAN_FILES\}/g, filesArg);
   command = command.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, hook.pluginRoot);
 
-  if (hook.command.includes('${HAN_FILES}') && filePaths.length === 0) {
+  if (hook.command.includes(`\${HAN_FILES}`) && filePaths.length === 0) {
     return Promise.resolve({
       hook,
       exitCode: 0,
