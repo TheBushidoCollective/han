@@ -29,17 +29,12 @@ jobs:
         run: bun install --frozen-lockfile
         working-directory: ./website
 
-      - name: Setup Biome
-        uses: biomejs/setup-biome@v2
-        with:
-          version: latest
-
       - name: Run Biome format check
-        run: biome format --files-ignore-unknown=true .
+        run: ./node_modules/.bin/biome format --files-ignore-unknown=true .
         working-directory: ./website
 
       - name: Run Biome lint
-        run: biome lint --files-ignore-unknown=true .
+        run: ./node_modules/.bin/biome lint --files-ignore-unknown=true .
         working-directory: ./website
 
       - name: TypeScript type check

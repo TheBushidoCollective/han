@@ -34,7 +34,7 @@
     "blueprints@han": true,
     "bun@han": true,
     "bushido@han": true,
-    "claude-agent-sdk@han": true,
+    "agent-sdk@han": true,
     "content@han": true,
     "core@han": true,
     "documentation@han": true,
