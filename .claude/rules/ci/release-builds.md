@@ -4,7 +4,8 @@
 
 - ALWAYS cross-compile for all platforms from Linux runners
 - NEVER use macOS runners (macos-*) - they are paid and unnecessary
-- NEVER use Windows runners (windows-*) - cross-compile instead
+- NEVER use Windows runners to build release artifacts; cross-compile instead.
+- Native Windows runners are allowed for security and acceptance tests that must execute Windows behavior. They do not publish release artifacts.
 
 ## Build Tools
 
