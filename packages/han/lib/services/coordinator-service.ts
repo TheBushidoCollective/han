@@ -20,9 +20,9 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { checkHealth } from '../commands/coordinator/health.ts';
 import { getHanDataDir } from '../config/claude-settings.ts';
 import { createCoordinatorClients } from '../grpc/client.ts';
-import { checkHealth } from '../commands/coordinator/health.ts';
 import { getCoordinatorDataDir } from '../coordinator/connection.ts';
 
 async function isCoordinatorServing(port: number): Promise<boolean> {

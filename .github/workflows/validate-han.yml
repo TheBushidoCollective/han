@@ -5,6 +5,11 @@ on:
     paths:
       - "packages/han/**"
       - "packages/han-rs/**"
+      - "packages/browse-client/**"
+      - "plugins/**"
+      - "biome.json"
+      - "deploy/scripts/**"
+      - ".mcp.json"
       - ".github/workflows/validate-han.yml"
   push:
     branches:
@@ -12,6 +17,11 @@ on:
     paths:
       - "packages/han/**"
       - "packages/han-rs/**"
+      - "packages/browse-client/**"
+      - "plugins/**"
+      - "biome.json"
+      - ".mcp.json"
+      - "deploy/scripts/**"
       - ".github/workflows/validate-han.yml"
   workflow_dispatch:
 
@@ -112,3 +122,37 @@ jobs:
           valColorRange: ${{ steps.coverage.outputs.percentage }}
           maxColorRange: 100
           minColorRange: 0
+
+  root-biome:
+    name: Root Non-Mutating Biome Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run root Biome check
+        run: npx -y @biomejs/biome check --error-on-warnings .
+
+  deploy-scripts:
+    name: Validate Deploy Scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        run: |
+          which shellcheck || (sudo apt-get update && sudo apt-get install -y shellcheck)
+          shellcheck deploy/scripts/backup.sh deploy/scripts/restore.sh
+
+      - name: Run isolated backup and restore fixture tests
+        run: bash deploy/scripts/test-backup-restore.sh

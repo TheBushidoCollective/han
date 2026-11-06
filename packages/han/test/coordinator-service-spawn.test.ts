@@ -13,9 +13,9 @@ import {
   mock,
   test,
 } from 'bun:test';
-import { realGrpcClient } from './setup.ts';
 import { join } from 'node:path';
 import { getHanDataDir } from '../lib/config/claude-settings.ts';
+import { realGrpcClient } from './setup.ts';
 
 // ============================================================================
 // Mock infrastructure — existsSync returns true to simulate binary found

@@ -70,6 +70,12 @@ interface VirtualListProps<T> {
   initialRenderIndex?: number;
 }
 
+const LoadingIndicator = () => (
+	<Center style={{ padding: theme.spacing.lg }}>
+		<Spinner />
+	</Center>
+);
+
 function VirtualListInner<T>(
   {
     data,
@@ -168,62 +174,54 @@ function VirtualListInner<T>(
     [onTailStateChange, inverted, tailThreshold]
   );
 
-  // Effective initial scroll index (handle deprecated prop)
-  const effectiveInitialScrollIndex = initialScrollIndex ?? initialRenderIndex;
+	// Effective initial scroll index (handle deprecated prop)
+	const effectiveInitialScrollIndex = initialScrollIndex ?? initialRenderIndex;
 
-  return (
-    <View
-      style={{
-        width: typeof width === 'number' ? width : '100%',
-        height: typeof height === 'number' ? height : '100%',
-        flex: 1,
-        ...(style as object),
-      }}
-    >
-      <FlatList
-        ref={listRef}
-        data={data}
-        renderItem={flatListRenderItem}
-        keyExtractor={flatListKeyExtractor}
-        getItemLayout={
-          typeof itemHeight === 'number' ? getItemLayout : undefined
-        }
-        // Use FlatList's built-in inverted prop for chat UX
-        inverted={inverted}
-        onEndReached={onEndReached}
-        onEndReachedThreshold={endReachedThreshold}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        initialScrollIndex={effectiveInitialScrollIndex}
-        ListEmptyComponent={ListEmptyComponent as React.ReactElement}
-        ListHeaderComponent={
-          <>
-            {ListHeaderComponent}
-            {isLoadingPrev && (
-              <Center style={{ padding: theme.spacing.lg }}>
-                <Spinner />
-              </Center>
-            )}
-          </>
-        }
-        ListFooterComponent={
-          <>
-            {isLoadingMore && (
-              <Center style={{ padding: theme.spacing.lg }}>
-                <Spinner />
-              </Center>
-            )}
-            {ListFooterComponent}
-          </>
-        }
-        // Performance optimizations
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={20}
-        windowSize={20}
-        initialNumToRender={20}
-      />
-    </View>
-  );
+	return (
+		<View
+			style={{
+				width: typeof width === "number" ? width : "100%",
+				height: typeof height === "number" ? height : "100%",
+				flex: 1,
+				...(style as object),
+			}}
+		>
+			<FlatList
+				ref={listRef}
+				data={data}
+				renderItem={flatListRenderItem}
+				keyExtractor={flatListKeyExtractor}
+				getItemLayout={
+					typeof itemHeight === "number" ? getItemLayout : undefined
+				}
+				// Use FlatList's built-in inverted prop for chat UX
+				inverted={inverted}
+				onEndReached={onEndReached}
+				onEndReachedThreshold={endReachedThreshold}
+				onScroll={handleScroll}
+				scrollEventThrottle={16}
+				initialScrollIndex={effectiveInitialScrollIndex}
+				ListEmptyComponent={ListEmptyComponent as React.ReactElement}
+				ListHeaderComponent={
+					<>
+						{ListHeaderComponent}
+						{isLoadingPrev && <LoadingIndicator />}
+					</>
+				}
+				ListFooterComponent={
+					<>
+						{isLoadingMore && <LoadingIndicator />}
+						{ListFooterComponent}
+					</>
+				}
+				// Performance optimizations
+				removeClippedSubviews={true}
+				maxToRenderPerBatch={20}
+				windowSize={20}
+				initialNumToRender={20}
+			/>
+		</View>
+	);
 }
 
 // Forward ref with generics support

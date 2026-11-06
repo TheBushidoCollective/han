@@ -27,6 +27,7 @@ import {
   getCoordinatorDataDir,
 } from '../../coordinator/connection.ts';
 
+
 export const HOSTED_DASHBOARD_ORIGIN = 'https://dashboard.local.han.guru';
 const TOKEN_LIFETIME = 120_000;
 const INIT_TIMEOUT = 5_000;
