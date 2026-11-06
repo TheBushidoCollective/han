@@ -153,11 +153,18 @@ jobs:
             --bun-version 1.4.4 \
             --bun-revision "$(bun -p 'Bun.revision')" \
             --evidence-dir "$RUNNER_TEMP/han-installed-evidence"
+      - name: Record installed proof source revision
+        shell: bash
+        env:
+          PROOF_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          printf '{"revision":"%s","checkout":"%s"}\n' \
+            "$PROOF_HEAD_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/han-installed-evidence/revision.json"
       - name: Upload installed proof
         uses: actions/upload-artifact@v4
         with:
           name: installed-coordinator-proof
-          path: ${{ runner.temp }}/han-installed-evidence/installed-coordinator.json
+          path: ${{ runner.temp }}/han-installed-evidence/*.json
           if-no-files-found: error
 
   browser-transport:
@@ -177,6 +184,18 @@ jobs:
       - name: Install Han dependencies
         working-directory: packages/han
         run: bun install --frozen-lockfile
+      - name: Generate CLI build metadata
+        working-directory: packages/han
+        run: |
+          cat > lib/build-info.generated.ts << 'EOF'
+          export const HAN_VERSION = "0.0.0-ci";
+          export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
+          export const version = "0.0.0-ci";
+          export const gitCommit = "ci";
+          export const buildDate = new Date().toISOString();
+          export const platform = "linux";
+          export const arch = "x64";
+          EOF
       - name: Install browse dependencies
         working-directory: packages/browse-client
         run: bun install --frozen-lockfile
@@ -188,10 +207,12 @@ jobs:
         run: bunx playwright test --config playwright.transport.config.ts
       - name: Record sanitized proof result
         shell: bash
+        env:
+          PROOF_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           mkdir -p "$RUNNER_TEMP/han-browser-evidence"
-          printf '{"revision":"%s","proof":"real browser transport and subscriptions","result":"passed"}\n' \
-            "$GITHUB_SHA" > "$RUNNER_TEMP/han-browser-evidence/result.json"
+          printf '{"revision":"%s","checkout":"%s","proof":"real browser transport and subscriptions","result":"passed"}\n' \
+            "$PROOF_HEAD_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/han-browser-evidence/result.json"
       - uses: actions/upload-artifact@v4
         with:
           name: browser-transport-proof

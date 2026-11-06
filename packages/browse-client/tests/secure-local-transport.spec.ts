@@ -78,8 +78,10 @@ async function launch(env: NodeJS.ProcessEnv): Promise<Gateway> {
 	child.stdout?.on("data", (chunk) => {
 		output += chunk.toString();
 	});
-	// Drain stderr without exposing local paths, credentials, or frames in reports.
-	child.stderr?.on("data", () => {});
+	let diagnostic = "";
+	child.stderr?.on("data", (chunk) => {
+		diagnostic = `${diagnostic}${chunk.toString()}`.slice(-4000);
+	});
 	let failure: Error | undefined;
 	child.once("error", (error) => {
 		failure = error;
@@ -87,8 +89,15 @@ async function launch(env: NodeJS.ProcessEnv): Promise<Gateway> {
 	try {
 		await until(
 			() => {
-				if (failure || child.exitCode !== null)
-					throw new Error("Browse CLI exited before publishing its launcher");
+				if (failure || child.exitCode !== null) {
+					const safe = diagnostic
+						.replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
+						.replace(/launchToken=[^\s"'&]+/gi, "launchToken=[redacted]")
+						.replace(/[A-Za-z0-9_-]{32,}/g, "[redacted]");
+					throw new Error(
+						`Browse CLI exited before publishing its launcher: ${safe}`,
+					);
+				}
 				return (
 					/Launcher: (file:\/\/\S+)/.test(output) &&
 					/gateway listening at (http:\/\/127\.0\.0\.1:\d+)/.test(output)
