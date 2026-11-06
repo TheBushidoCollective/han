@@ -317,19 +317,21 @@ test('delayed stale reclaimer cannot delete a successor reservation', async () =
   expect(winner.exitCode).toBeNull();
 }, 30_000);
 
-test('a published reservation blocks contenders before PID publication', async () => {
-  const path = join(dataDir, 'coordinator.pid');
-  const reservation = `${path}.takeover`;
-  const resume = join(dataDir, 'resume');
-  const modulePath = join(
-    import.meta.dir,
-    '..',
-    'lib',
-    'commands',
-    'coordinator',
-    'pid-claim.ts'
-  );
-  const script = `
+test.each([true, false])(
+  'reclaims an owner stopped before PID publication: %s',
+  async (crashBeforePublication) => {
+    const path = join(dataDir, 'coordinator.pid');
+    const reservation = `${path}.takeover`;
+    const resume = join(dataDir, 'resume');
+    const modulePath = join(
+      import.meta.dir,
+      '..',
+      'lib',
+      'commands',
+      'coordinator',
+      'pid-claim.ts'
+    );
+    const script = `
     const fs = await import('node:fs');
     const real = { ...fs };
     const { mock } = await import('bun:test');
@@ -345,21 +347,36 @@ test('a published reservation blocks contenders before PID publication', async (
     console.log(result.kind === 'owned' ? 'WON' : 'BLOCKED:' + result.pid);
     await Promise.withResolvers().promise;
   `;
-  const owner = Bun.spawn([process.execPath, '-e', script], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  children.push(owner);
-  const reader = (owner.stdout as ReadableStream<Uint8Array>).getReader();
-  const decoder = new TextDecoder();
-  const carry = { text: '' };
-  expect(await readLine(reader, decoder, carry)).toBe('RESERVED');
-  expect(claimSupervisorPid(path)).toEqual({ kind: 'blocked', pid: owner.pid });
-  writeFileSync(resume, 'go');
-  expect(await readLine(reader, decoder, carry)).toBe('WON');
-  expect(readFileSync(path, 'utf8')).toBe(String(owner.pid));
-  expect(owner.exitCode).toBeNull();
-}, 30_000);
+    const owner = Bun.spawn([process.execPath, '-e', script], {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    children.push(owner);
+    const reader = (owner.stdout as ReadableStream<Uint8Array>).getReader();
+    const decoder = new TextDecoder();
+    const carry = { text: '' };
+    expect(await readLine(reader, decoder, carry)).toBe('RESERVED');
+    expect(claimSupervisorPid(path)).toEqual({
+      kind: 'blocked',
+      pid: owner.pid,
+    });
+    if (!crashBeforePublication) {
+      writeFileSync(resume, 'go');
+      expect(await readLine(reader, decoder, carry)).toBe('WON');
+      expect(readFileSync(path, 'utf8')).toBe(String(owner.pid));
+    }
+    expect(owner.exitCode).toBeNull();
+    owner.kill();
+    await owner.exited;
+    children.splice(children.indexOf(owner), 1);
+    const successor = claimSupervisorPid(path);
+    if (successor.kind !== 'owned')
+      throw new Error('Dead owner was not reclaimed');
+    expect(readFileSync(path, 'utf8')).toBe(String(process.pid));
+    releaseSupervisorPid(successor.claim);
+  },
+  30_000
+);
 
 test('uncertain liveness cannot reclaim a reservation', () => {
   const path = join(dataDir, 'coordinator.pid');
