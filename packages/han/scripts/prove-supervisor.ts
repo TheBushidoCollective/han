@@ -804,6 +804,97 @@ async function preDispatchFailure(
   }
 }
 
+async function stopDuringStartup(): Promise<void> {
+  const dir = directory();
+  const barrier = join(dir, 'startup-held');
+  const release = join(dir, 'startup-release');
+  const health = resolve(
+    import.meta.dir,
+    '../lib/commands/coordinator/health.ts'
+  );
+  const daemon = resolve(
+    import.meta.dir,
+    '../lib/commands/coordinator/daemon.ts'
+  );
+  const script = `
+    const fs = await import('node:fs');
+    const { mock } = await import('bun:test');
+    const original = await import(${JSON.stringify(health)});
+    const check = original.checkHealth;
+    mock.module(${JSON.stringify(health)}, () => ({
+      ...original,
+      async checkHealth(port, starting) {
+        const result = await check(port, starting);
+        if (starting && result) {
+          fs.writeFileSync(${JSON.stringify(barrier)}, 'held');
+          while (!fs.existsSync(${JSON.stringify(release)})) await Bun.sleep(20);
+        }
+        return result;
+      },
+    }));
+    const { startDaemon } = await import(${JSON.stringify(daemon)});
+    try { await startDaemon({ port: 0, foreground: true }); } catch (e) { console.error(e); process.exitCode = 1; }
+  `;
+  const supervisor = Bun.spawn([process.execPath, '-e', script], {
+    env: environment(dir),
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  children.push(supervisor);
+  let ownedPid: number | undefined;
+  let requester: Bun.Subprocess | undefined;
+  try {
+    const descriptor = await ready(dir, supervisor);
+    ownedPid = descriptor.pid;
+    assertChild(descriptor.pid, supervisor.pid);
+    assert.ok(descriptor.supervisor);
+    await waitFor('startup health barrier', () =>
+      existsSync(barrier) ? true : undefined
+    );
+    requester = Bun.spawn(
+      [process.execPath, cli, 'coordinator', 'stop', '--port', '0'],
+      {
+        env: environment(dir),
+        stdout: 'pipe',
+        stderr: 'pipe',
+      }
+    );
+    children.push(requester);
+    const marker = join(
+      dir,
+      'runtime',
+      `coordinator.stopping.${descriptor.supervisor.nonce}.${descriptor.supervisor.generationId}.json`
+    );
+    await waitFor('startup shutdown intent', () => {
+      if (requester?.exitCode !== null)
+        throw new Error('requester exited before startup intent');
+      return existsSync(marker) ? true : undefined;
+    });
+    writeFileSync(release, 'release');
+    await waitFor('startup supervisor stop', () =>
+      supervisor.exitCode !== null ? supervisor.exitCode : undefined
+    );
+    await waitFor('startup stop request', () =>
+      requester?.exitCode !== null ? requester?.exitCode : undefined
+    );
+    assert.equal(supervisor.exitCode, 0);
+    assert.equal(requester.exitCode, 0);
+    await waitFor('startup child stop', () =>
+      !existsSync(`/proc/${descriptor.pid}`) ? true : undefined
+    );
+    ownedPid = undefined;
+    assertStoppedRecords(dir);
+    console.log('shutdown committed during startup did not trigger recovery');
+  } finally {
+    if (requester && requester.exitCode === null) requester.kill();
+    if (requester) await requester.exited;
+    if (ownedPid !== undefined && supervisor.exitCode === null)
+      killChild(ownedPid, supervisor.pid);
+    if (supervisor.exitCode === null) supervisor.kill();
+    await supervisor.exited;
+  }
+}
+
 try {
   await intentionalStopAndRestart();
   await supervisorRecovery();
@@ -814,6 +905,7 @@ try {
   await committedStopSurvivesFailure('requester');
   await preDispatchFailure('stale-request');
   await preDispatchFailure('dead-requester');
+  await stopDuringStartup();
 } finally {
   for (const child of children) if (child.exitCode === null) child.kill();
   await Promise.all(children.map((child) => child.exited));
