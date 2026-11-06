@@ -9,5 +9,12 @@
   "homepage": "https://github.com/yylo-dev/yylo-skills",
   "repository": "https://github.com/yylo-dev/yylo-skills",
   "license": "MIT",
-  "keywords": ["kanban", "task-management", "yylo", "agile", "workflow", "planning"]
+  "keywords": [
+    "kanban",
+    "task-management",
+    "yylo",
+    "agile",
+    "workflow",
+    "planning"
+  ]
 }

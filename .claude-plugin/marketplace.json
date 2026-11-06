@@ -761,7 +761,14 @@
       "description": "Kanban task and dependency management for AI coding agents using the YYLO Ledger CLI.",
       "source": "./plugins/patterns/kanban",
       "category": "Pattern",
-      "keywords": ["kanban", "task-management", "yylo", "agile", "workflow", "planning"]
+      "keywords": [
+        "kanban",
+        "task-management",
+        "yylo",
+        "agile",
+        "workflow",
+        "planning"
+      ]
     },
     {
       "name": "kotlin",
