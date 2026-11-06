@@ -16,7 +16,7 @@ import {
   rmSync,
   statSync,
 } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, win32 } from 'node:path';
 import { getHanDataDir } from '../../config/claude-settings.ts';
 import { getHanBinary } from '../../config/han-settings.ts';
 import {
@@ -26,6 +26,8 @@ import {
   type SupervisorBinding,
   sameCoordinator,
 } from '../../coordinator/connection.ts';
+import { getCoordinatorDataDir } from '../../coordinator/connection.ts';
+import { windowsPrepareRuntime, windowsProcessState, windowsReadSupervisor, type WindowsProcessIdentity } from '../../coordinator/windows-runtime.ts';
 import { createCoordinatorClients } from '../../grpc/client.ts';
 import { checkHealth, waitForHealth } from './health.ts';
 import {
@@ -45,18 +47,31 @@ import {
   getCoordinatorPort,
 } from './types.ts';
 
+/** Resolve cmd.exe without searching the caller cwd or PATH. */
+export function trustedWindowsCommandInterpreter(
+  systemRoot = process.env.SystemRoot,
+): string {
+  // Drive-letter only: a relative, UNC, or cwd-relative root must not select cmd.exe.
+  if (!systemRoot || !/^[A-Za-z]:\\[^/]*$/.test(systemRoot) || systemRoot.includes('..')) {
+    throw new CoordinatorSecurityError(
+      'Windows command interpreter is not in a trusted location',
+    );
+  }
+  return win32.join(systemRoot, 'System32', 'cmd.exe');
+}
+
 /**
  * Get the log file path (~/.han/coordinator.log)
  */
 export function getLogFilePath(): string {
-  return join(getHanDataDir(), 'coordinator.log');
+  return join(process.platform === 'win32' ? getCoordinatorDataDir() : getHanDataDir(), 'coordinator.log');
 }
 
 /**
  * Get the PID file path (~/.han/coordinator.pid)
  */
 function getPidFilePath(): string {
-  return join(getHanDataDir(), 'coordinator.pid');
+  return join(process.platform === 'win32' ? getCoordinatorDataDir() : getHanDataDir(), 'coordinator.pid');
 }
 
 /**
@@ -150,8 +165,11 @@ export async function getStatus(port?: number): Promise<CoordinatorStatus> {
   // A supervisor PID file is not proof of daemon identity.
 
   // Check if PID file exists with a running process
-  const pid = readPid();
-  if (pid && isProcessRunning(pid)) {
+  const supervisor = process.platform === 'win32' ? windowsReadSupervisor(getCoordinatorDataDir()) : null;
+  const pid = supervisor?.status === 'present' ? supervisor.pid : process.platform === 'win32' ? null : readPid();
+  if (pid && (process.platform === 'win32'
+    ? supervisor?.status === 'present' && windowsProcessState(getCoordinatorDataDir(), supervisor.process) === 'alive'
+    : isProcessRunning(pid))) {
     return {
       running: false, // Not responding but process exists
       pid,
@@ -171,6 +189,7 @@ export async function getStatus(port?: number): Promise<CoordinatorStatus> {
 export async function startDaemon(
   options: CoordinatorOptions = {}
 ): Promise<CoordinatorStatus> {
+  if (process.platform === 'win32') windowsPrepareRuntime(getCoordinatorDataDir());
   const port = options.port ?? getCoordinatorPort();
   console.log(`[coordinator] Using port: ${port}`);
 
@@ -211,7 +230,7 @@ export async function startDaemon(
   if (configuredBinary && configuredBinary !== 'han') {
     // hanBinary is set (e.g., `bun "/path/to/main.ts"`)
     // Use shell to handle the full command string
-    spawnCommand = process.platform === 'win32' ? 'cmd.exe' : '/bin/bash';
+    spawnCommand = process.platform === 'win32' ? trustedWindowsCommandInterpreter() : '/bin/bash';
     spawnArgs = [
       process.platform === 'win32' ? '/c' : '-c',
       `${configuredBinary} coordinator start --foreground --port ${port}`,
@@ -277,6 +296,7 @@ export async function stopDaemon(_port?: number): Promise<void> {
     return;
   }
   const binding = descriptor.supervisor;
+  let supervisorProcess: WindowsProcessIdentity | undefined;
   if (binding) {
     const identity = readSupervisorIdentity(getPidFilePath());
     if (
@@ -287,6 +307,10 @@ export async function stopDaemon(_port?: number): Promise<void> {
       throw new CoordinatorSecurityError(
         'Coordinator supervisor claim does not match descriptor'
       );
+    if (process.platform === 'win32') {
+      if (!identity.process) throw new CoordinatorSecurityError('Missing Windows supervisor process identity');
+      supervisorProcess = identity.process;
+    }
   }
   await createCoordinatorClients(
     descriptor.httpsPort,
@@ -310,7 +334,7 @@ export async function stopDaemon(_port?: number): Promise<void> {
     if (!binding) {
       if (descriptorGone) return;
     } else {
-      let identity: { pid: number; nonce: string } | null;
+      let identity: { pid: number; nonce: string; process?: WindowsProcessIdentity } | null;
       try {
         identity = readSupervisorIdentity(getPidFilePath());
       } catch (error) {
@@ -319,8 +343,11 @@ export async function stopDaemon(_port?: number): Promise<void> {
         continue;
       }
       if (
-        identity &&
-        (identity.pid !== binding.pid || identity.nonce !== binding.nonce)
+        identity && (identity.pid !== binding.pid || identity.nonce !== binding.nonce ||
+          (process.platform === 'win32' && (!identity.process || !supervisorProcess ||
+            identity.process.pid !== supervisorProcess.pid ||
+            identity.process.creationTime !== supervisorProcess.creationTime ||
+            identity.process.userSid !== supervisorProcess.userSid)))
       )
         throw new Error('A different supervisor appeared during shutdown');
       const intent = readShutdownIntent(binding, descriptor.pid, descriptor);
@@ -328,7 +355,9 @@ export async function stopDaemon(_port?: number): Promise<void> {
         descriptorGone &&
         !identity &&
         !intent &&
-        !isProcessRunning(binding.pid)
+        (process.platform === 'win32'
+          ? !!supervisorProcess && windowsProcessState(getCoordinatorDataDir(), supervisorProcess) === 'gone'
+          : !isProcessRunning(binding.pid))
       )
         return;
     }
@@ -440,8 +469,20 @@ async function runForeground(port: number): Promise<void> {
         if (error instanceof CoordinatorSecurityError) throw error;
         if (child && child.exitCode === null) {
           if (observeIntent()) break;
-          child.kill();
-          await child.exited;
+          if (process.platform === 'win32') {
+            // The descriptor-bound RPC is the only permitted stop mechanism.
+            // A failed RPC leaves the child alone and aborts restart.
+            if (!owned) throw new CoordinatorSecurityError('Cannot authenticate Windows coordinator shutdown');
+            await stopServer();
+            if (observeIntent()) break;
+            await Promise.race([child.exited, Bun.sleep(10000)]);
+            if (observeIntent()) break;
+            if (child.exitCode === null)
+              throw new CoordinatorSecurityError('Windows coordinator did not exit after authenticated shutdown');
+          } else {
+            child.kill();
+            await child.exited;
+          }
           if (observeIntent()) break;
         }
         restartAttempts++;
@@ -483,6 +524,7 @@ async function runForeground(port: number): Promise<void> {
 export async function ensureCoordinator(
   port?: number
 ): Promise<CoordinatorStatus> {
+  if (process.platform === 'win32') windowsPrepareRuntime(getCoordinatorDataDir());
   const effectivePort = port ?? getCoordinatorPort();
   const status = await getStatus(effectivePort);
 

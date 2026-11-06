@@ -10,6 +10,8 @@ import {
   sameSupervisor,
   validSupervisorBinding,
 } from '../../coordinator/connection.ts';
+import { windowsReadDescriptor, windowsRemoveIntent } from '../../coordinator/windows-runtime.ts';
+import { validateCoordinatorDescriptor } from '../../coordinator/connection.ts';
 
 function intentPath(binding: SupervisorBinding): string {
   if (!validSupervisorBinding(binding))
@@ -26,8 +28,13 @@ export function readShutdownIntent(
   childPid: number,
   expected?: LocalCoordinatorDescriptor
 ): LocalCoordinatorDescriptor | null {
+  if (!validSupervisorBinding(binding)) throw new CoordinatorSecurityError('Invalid supervisor binding');
   try {
-    const descriptor = readCoordinatorDescriptor(intentPath(binding));
+    const descriptor = process.platform === 'win32'
+      ? windowsReadDescriptor(getCoordinatorDataDir(), {kind:'stopping', binding})
+      : readCoordinatorDescriptor(intentPath(binding));
+    if (!descriptor) return null;
+    validateCoordinatorDescriptor(descriptor);
     if (
       descriptor.pid !== childPid ||
       !sameSupervisor(descriptor.supervisor, binding) ||
@@ -49,6 +56,11 @@ export function removeShutdownIntent(
   childPid: number,
   expected: LocalCoordinatorDescriptor
 ): void {
+  if (process.platform === 'win32') {
+    if (!validSupervisorBinding(binding)) throw new CoordinatorSecurityError('Invalid supervisor binding');
+    windowsRemoveIntent(getCoordinatorDataDir(), binding, childPid, expected);
+    return;
+  }
   if (readShutdownIntent(binding, childPid, expected))
     unlinkSync(intentPath(binding));
 }

@@ -1,0 +1,60 @@
+import { existsSync, realpathSync } from 'node:fs';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
+
+/** Locate the coordinator, preferring the installed sibling of the running executable. */
+export function findCoordinatorBinary(): string | null {
+  const home =
+    process.env.HOME ||
+    process.env.USERPROFILE ||
+    (process.platform === 'win32' ? '' : '/tmp');
+  const binaryName =
+    process.platform === 'win32' ? 'han-coordinator.exe' : 'han-coordinator';
+  try {
+    const sibling = join(dirname(realpathSync(process.execPath)), binaryName);
+    if (existsSync(sibling)) return sibling;
+  } catch {}
+  const mainFile = process.argv[1] || '';
+  if (
+    (mainFile.endsWith('.ts') || mainFile.endsWith('.tsx')) &&
+    (process.platform !== 'win32' || isAbsolute(import.meta.dir))
+  ) {
+    try {
+      const moduleDir =
+        process.platform === 'win32'
+          ? realpathSync(import.meta.dir)
+          : import.meta.dir;
+      const pkgRoot = resolve(moduleDir, '..', '..', '..');
+      for (const profile of ['release', 'debug']) {
+        const localBin = join(pkgRoot, 'han-rs', 'target', profile, binaryName);
+        if (existsSync(localBin)) return localBin;
+      }
+    } catch {}
+  }
+  const hanBin =
+    process.platform !== 'win32' || isAbsolute(home)
+      ? join(home, '.han', 'bin', binaryName)
+      : '';
+  if (existsSync(hanBin)) return hanBin;
+  // Windows local-runtime requests carry privileged data. `where` searches the
+  // working directory, and package resolution can also depend on the caller's
+  // environment. Installed Windows packages put the native binary beside the
+  // executable; do not fall back to either search mechanism there.
+  if (process.platform === 'win32') return null;
+  try {
+    const pkgName = `@thebushidocollective/han-${process.platform}-${process.arch}`;
+    const pkgJsonPath = require.resolve(`${pkgName}/package.json`);
+    const pkgPath = join(dirname(pkgJsonPath), binaryName);
+    if (existsSync(pkgPath)) return pkgPath;
+  } catch {}
+  try {
+    const result = Bun.spawnSync(
+      [process.platform === 'win32' ? 'where' : 'which', binaryName],
+      { stdout: 'pipe', stderr: 'ignore' }
+    );
+    if (result.exitCode === 0) {
+      const path = result.stdout.toString().trim();
+      if (path && existsSync(path)) return path;
+    }
+  } catch {}
+  return null;
+}

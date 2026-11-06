@@ -9,6 +9,8 @@ import {
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import WebSocket from 'ws';
+import { CoordinatorSecurityError, validWindowsProcessIdentity, windowsReadDescriptor, type WindowsProcessIdentity } from './windows-runtime.ts';
+export { CoordinatorSecurityError } from './windows-runtime.ts';
 
 export const LOCAL_TRANSPORT_VERSION = 1;
 export interface SupervisorBinding {
@@ -57,7 +59,12 @@ export function sameCoordinator(
     a.grpcPort === b.grpcPort &&
     a.certificatePem === b.certificatePem &&
     a.bearerToken === b.bearerToken &&
-    sameSupervisor(a.supervisor, b.supervisor)
+    sameSupervisor(a.supervisor, b.supervisor) &&
+    (process.platform !== 'win32' ||
+      (validWindowsProcessIdentity(a.process) && validWindowsProcessIdentity(b.process) &&
+        a.process.pid === b.process.pid &&
+        a.process.creationTime === b.process.creationTime &&
+        a.process.userSid === b.process.userSid))
   );
 }
 
@@ -70,13 +77,22 @@ export interface LocalCoordinatorDescriptor {
   certificatePem: string;
   bearerToken: string;
   supervisor: SupervisorBinding | null;
+  process?: WindowsProcessIdentity;
 }
 
-export class CoordinatorSecurityError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'CoordinatorSecurityError';
-  }
+export function validateCoordinatorDescriptor(d: LocalCoordinatorDescriptor): LocalCoordinatorDescriptor {
+  const validPort = (n: unknown) => Number.isInteger(n) && (n as number) > 0 && (n as number) < 65536;
+  if (!d || d.transportVersion !== LOCAL_TRANSPORT_VERSION)
+    throw new CoordinatorSecurityError('UPGRADE_REQUIRED: unsupported coordinator transport version');
+  if (typeof d.instanceId !== 'string' || !d.instanceId ||
+      !Number.isSafeInteger(d.pid) || d.pid <= 0 || !validPort(d.httpsPort) ||
+      !(d.grpcPort === null || validPort(d.grpcPort)) ||
+      typeof d.certificatePem !== 'string' || !d.certificatePem.includes('-----BEGIN CERTIFICATE-----') ||
+      typeof d.bearerToken !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(d.bearerToken) ||
+      !(d.supervisor === null || validSupervisorBinding(d.supervisor)) ||
+      (process.platform === 'win32' && (!validWindowsProcessIdentity(d.process) || d.process.pid !== d.pid)))
+    throw new CoordinatorSecurityError('Invalid coordinator descriptor');
+  return d;
 }
 
 export function getCoordinatorDataDir(): string {
@@ -92,9 +108,11 @@ export function readCoordinatorDescriptor(
   path = join(getCoordinatorDataDir(), 'runtime', 'coordinator.json')
 ): LocalCoordinatorDescriptor {
   if (process.platform === 'win32') {
-    throw new CoordinatorSecurityError(
-      'Windows coordinator descriptor ACL and reparse-point verification is not available'
-    );
+    if (resolve(path) !== join(getCoordinatorDataDir(), 'runtime', 'coordinator.json'))
+      throw new CoordinatorSecurityError('Invalid Windows descriptor target');
+    const descriptor = windowsReadDescriptor(getCoordinatorDataDir(), {kind: 'active'});
+    if (!descriptor) throw Object.assign(new Error('Coordinator descriptor absent'), {code:'ENOENT'});
+    return validateCoordinatorDescriptor(descriptor);
   }
   const runtime = join(getCoordinatorDataDir(), 'runtime');
   let fd: number | undefined;
@@ -117,27 +135,7 @@ export function readCoordinatorDescriptor(
     const d = JSON.parse(
       readFileSync(fd, 'utf8')
     ) as LocalCoordinatorDescriptor;
-    const validPort = (n: unknown) =>
-      Number.isInteger(n) && (n as number) > 0 && (n as number) < 65536;
-    if (d.transportVersion !== LOCAL_TRANSPORT_VERSION)
-      throw new CoordinatorSecurityError(
-        'UPGRADE_REQUIRED: unsupported coordinator transport version'
-      );
-    if (
-      typeof d.instanceId !== 'string' ||
-      !d.instanceId ||
-      !Number.isSafeInteger(d.pid) ||
-      d.pid <= 0 ||
-      !validPort(d.httpsPort) ||
-      !(d.grpcPort === null || validPort(d.grpcPort)) ||
-      typeof d.certificatePem !== 'string' ||
-      !d.certificatePem.includes('-----BEGIN CERTIFICATE-----') ||
-      typeof d.bearerToken !== 'string' ||
-      !(d.supervisor === null || validSupervisorBinding(d.supervisor)) ||
-      !/^[A-Za-z0-9_-]{43}$/.test(d.bearerToken)
-    )
-      throw new CoordinatorSecurityError('Invalid coordinator descriptor');
-    return d;
+    return validateCoordinatorDescriptor(d);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') throw error;
     if (error instanceof CoordinatorSecurityError) throw error;

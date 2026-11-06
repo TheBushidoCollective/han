@@ -165,7 +165,7 @@ function generateRoutesCode(
 
 		const name = `Page${importCounter++}`;
 		importMap.set(file, name);
-		imports.push(`import ${name} from "${file}";`);
+		imports.push(`import ${name} from ${JSON.stringify(file)};`);
 		return name;
 	}
 
