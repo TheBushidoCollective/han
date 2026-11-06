@@ -222,7 +222,7 @@ async function main(): Promise<void> {
   ): Promise<boolean> => {
     assert.ok(Number.isSafeInteger(identity.pid) && identity.pid > 0);
     assert.ok(/^[1-9][0-9]{0,19}$/.test(identity.creationTime));
-    const script = `$p=Get-Process -Id ${identity.pid} -ErrorAction SilentlyContinue; if (!$p) { exit 3 }; if ($p.Path -ne $env:HAN_PROOF_IMAGE -or $p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString() -ne $env:HAN_PROOF_TIME) { exit 3 }; ${kill ? 'Stop-Process -InputObject $p -Force -ErrorAction Stop' : ''}`;
+    const script = `$p=Get-Process -Id ${identity.pid} -ErrorAction SilentlyContinue; if (!$p) { exit 3 }; $actual=[System.IO.Path]::GetFullPath($p.Path); $expected=[System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $env:HAN_PROOF_IMAGE).Path); if ($actual -ne $expected) { exit 4 }; if ($p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString() -ne $env:HAN_PROOF_TIME) { exit 5 }; ${kill ? 'Stop-Process -InputObject $p -Force -ErrorAction Stop' : ''}`;
     const child = Bun.spawn(
       [powershell, '-NoProfile', '-NonInteractive', '-Command', script],
       {
@@ -237,7 +237,7 @@ async function main(): Promise<void> {
       }
     );
     const code = await child.exited;
-    if (code === 3) return false;
+    if (code === 3 || code === 4 || code === 5) return false;
     if (code !== 0) throw new ProofCommandError(code, '');
     return true;
   };
@@ -260,10 +260,16 @@ async function main(): Promise<void> {
         : undefined;
     });
     if (phase === 'initial-start-descriptor') phase = 'initial-start-identity';
+    if (phase === 'initial-start-identity')
+      phase = 'initial-start-registration';
     const supervisor = register(d);
+    if (phase === 'initial-start-registration')
+      phase = 'initial-start-coordinator';
     assert.ok(await ownedProcess(d.process, coordinator, false));
+    if (phase === 'initial-start-coordinator')
+      phase = 'initial-start-supervisor';
     assert.ok(await ownedProcess(supervisor, cli, false));
-    if (phase === 'initial-start-identity') phase = 'initial-start-health';
+    if (phase === 'initial-start-supervisor') phase = 'initial-start-health';
     await live(d);
     return d;
   };
