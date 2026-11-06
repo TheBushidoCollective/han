@@ -2,6 +2,22 @@
 
 This directory contains scripts used by GitHub Actions workflows for automation.
 
+## Failure-analysis verification
+
+`test-failure-analysis.yml` checks the upstream run against GitHub before
+analysis and again before retrying failed jobs or commenting. The model runs
+with read-only repository permissions; the separate action job validates its
+structured output and retries only attempt 1 at confidence 0.7 or above.
+
+Run the offline negative controls with:
+
+```bash
+python3 -B -m unittest discover -s deploy/firebase/test -p test_failure_analysis_security.py -v
+```
+
+They execute the source gate and action entrypoints against a fake `gh` API,
+including hostile branch names and summaries. No live GitHub writes are made.
+
 ## generate-changelog.sh
 
 Automatically generates `CHANGELOG.md` files based on conventional commit messages.
