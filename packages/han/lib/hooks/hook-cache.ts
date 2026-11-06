@@ -6,8 +6,9 @@ import {
   realpathSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
-import { getGitRemoteUrl, globFilesSync } from '../bun-utils.ts';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import ignore, { type Ignore } from 'ignore';
+import { getGitRemoteUrl, getGitRoot, globFilesSync } from '../bun-utils.ts';
 import { getClaudeConfigDir } from '../config/claude-settings.ts';
 import type { EventLogger } from '../events/logger.ts';
 import {
@@ -215,12 +216,10 @@ export function findFilesWithGlob(
   patterns: string[]
 ): string[] {
   const results: string[] = [];
-  // Build set of gitignore patterns for filtering
-  const ignoredDirs = getGitIgnoredDirs(rootDir);
+  const isIgnored = createGitIgnorePredicate(rootDir);
   for (const pattern of patterns) {
     for (const file of globFilesSync(pattern, rootDir)) {
-      // Filter out files in gitignore'd directories
-      if (!isGitIgnored(file, ignoredDirs)) {
+      if (!isIgnored(file)) {
         results.push(join(rootDir, file));
       }
     }
@@ -229,129 +228,69 @@ export function findFilesWithGlob(
 }
 
 /**
- * Build a map of directory -> ignored patterns from all .gitignore files
- * Maps each directory (relative to rootDir) to its list of ignored patterns
+ * Evaluate each path component before loading the next directory's rules.
+ * Ignored directories cannot contain rules that re-include their descendants.
  */
-function buildGitIgnoreMap(rootDir: string): Map<string, string[]> {
-  const ignoreMap = new Map<string, string[]>();
-  // Scan for all .gitignore files in the directory tree
-  try {
-    // Use Bun.Glob directly with dot: true to find dotfiles like .gitignore
-    const gitignoreGlob = new Bun.Glob('**/.gitignore');
-    const gitignoreFiles = [
-      ...gitignoreGlob.scanSync({ cwd: rootDir, onlyFiles: true, dot: true }),
-    ];
-    // Also check root .gitignore
-    if (existsSync(join(rootDir, '.gitignore'))) {
-      gitignoreFiles.push('.gitignore');
-    }
-    for (const gitignoreRelPath of [...new Set(gitignoreFiles)]) {
-      const gitignorePath = join(rootDir, gitignoreRelPath);
+function createGitIgnorePredicate(rootDir: string): (file: string) => boolean {
+  const scanRoot = realpathSync(rootDir);
+  const projectRoot = getProjectRoot();
+  const within = (parent: string, child: string): boolean => {
+    const path = relative(parent, child);
+    return (
+      path === '' ||
+      (!path.startsWith(`..${sep}`) && path !== '..' && !isAbsolute(path))
+    );
+  };
+  const gitRoot = getGitRoot(scanRoot);
+  const boundary = gitRoot
+    ? realpathSync(gitRoot)
+    : within(projectRoot, scanRoot)
+      ? projectRoot
+      : scanRoot;
+  const matchers = new Map<string, Ignore | null>();
+  const results = new Map<string, boolean>();
+
+  function matcher(dir: string): Ignore | null {
+    if (!matchers.has(dir)) {
+      let rules: Ignore | null = null;
       try {
-        const fileContent = readFileSync(gitignorePath, 'utf-8');
-        const patterns = fileContent
-          .split('\n')
-          .map((line) => line.trim())
-          .filter((line) => line && !line.startsWith('#'))
-          .map((line) => line.replace(/\/$/, '')); // Remove trailing slash
-        // Store relative to the directory containing the .gitignore
-        const gitignoreDir =
-          gitignoreRelPath === '.gitignore'
-            ? ''
-            : gitignoreRelPath.replace('/.gitignore', '');
-        ignoreMap.set(gitignoreDir, patterns);
+        rules = ignore({ ignorecase: false }).add(
+          readFileSync(join(dir, '.gitignore'), 'utf8')
+        );
       } catch {
-        // Skip unreadable files
+        // Missing or unreadable ignore files contribute no rules.
       }
+      matchers.set(dir, rules);
     }
-  } catch {
-    // If glob fails, try just root .gitignore
-    try {
-      const gitignorePath = join(rootDir, '.gitignore');
-      if (existsSync(gitignorePath)) {
-        const fileContent = readFileSync(gitignorePath, 'utf-8');
-        const patterns = fileContent
-          .split('\n')
-          .map((line) => line.trim())
-          .filter((line) => line && !line.startsWith('#'))
-          .map((line) => line.replace(/\/$/, ''));
-        ignoreMap.set('', patterns);
-      }
-    } catch {
-      // ignore
-    }
+    return matchers.get(dir) ?? null;
   }
-  return ignoreMap;
-}
 
-/**
- * Get directories listed in .gitignore for filtering purposes
- * Returns a set of directory patterns to exclude
- * @deprecated Use buildGitIgnoreMap for nested support
- */
-function getGitIgnoredDirs(rootDir: string): string[] {
-  const ignoreMap = buildGitIgnoreMap(rootDir);
-  // Flatten all patterns for backwards compat
-  const patterns: string[] = [];
-  for (const [dir, pats] of ignoreMap) {
-    if (dir === '') {
-      patterns.push(...pats);
-    }
-  }
-  return patterns;
-}
-
-/**
- * Check if a relative file path should be ignored based on all gitignore rules
- * Supports nested .gitignore files
- */
-function isGitIgnoredWithMap(
-  filePath: string,
-  ignoreMap: Map<string, string[]>
-): boolean {
-  for (const [dir, patterns] of ignoreMap) {
-    // Check if this file is under the gitignore's directory
-    const prefix = dir === '' ? '' : `${dir}/`;
-    if (dir !== '' && !filePath.startsWith(prefix)) {
-      continue; // This .gitignore doesn't apply to this path
-    }
-    // Get the path relative to the gitignore's directory
-    const relPath = dir === '' ? filePath : filePath.slice(prefix.length);
-    for (const pattern of patterns) {
-      const parts = relPath.split('/');
-      // Check each path component
-      for (const part of parts) {
-        if (part === pattern) {
-          return true;
+  return (file: string): boolean => {
+    const target = resolve(scanRoot, file);
+    const parts = relative(boundary, target).split(sep);
+    const active: Array<{ dir: string; rules: Ignore }> = [];
+    let current = boundary;
+    for (let i = 0; i < parts.length; i++) {
+      const rules = matcher(current);
+      if (rules) active.push({ dir: current, rules });
+      current = join(current, parts[i]);
+      const directory = i < parts.length - 1;
+      const key = `${current}${directory ? '/' : ''}`;
+      let ignored = results.get(key);
+      if (ignored === undefined) {
+        ignored = false;
+        for (const entry of active) {
+          const path = relative(entry.dir, current).split(sep).join('/');
+          const result = entry.rules.test(`${path}${directory ? '/' : ''}`);
+          if (result.ignored) ignored = true;
+          else if (result.unignored) ignored = false;
         }
+        results.set(key, ignored);
       }
-      // Check if path starts with pattern
-      if (relPath.startsWith(`${pattern}/`) || relPath === pattern) {
-        return true;
-      }
+      if (ignored) return true;
     }
-  }
-  return false;
-}
-
-/**
- * Check if a relative file path should be ignored based on gitignore patterns
- */
-function isGitIgnored(filePath: string, ignoredPatterns: string[]): boolean {
-  const parts = filePath.split('/');
-  for (const pattern of ignoredPatterns) {
-    // Check if any directory in the path matches the pattern
-    for (const part of parts) {
-      if (part === pattern) {
-        return true;
-      }
-    }
-    // Check if the path starts with the pattern
-    if (filePath.startsWith(`${pattern}/`) || filePath === pattern) {
-      return true;
-    }
-  }
-  return false;
+    return false;
+  };
 }
 
 /**
@@ -736,8 +675,7 @@ export function findDirectoriesWithMarkers(
   markerPatterns: string[]
 ): string[] {
   const dirs = new Set<string>();
-  // Build gitignore map for filtering (supports nested .gitignore files)
-  const ignoreMap = buildGitIgnoreMap(rootDir);
+  const isIgnored = createGitIgnorePredicate(rootDir);
   for (const pattern of markerPatterns) {
     // Ensure patterns are recursive by prepending **/ if not already a glob pattern
     const recursivePattern =
@@ -745,8 +683,7 @@ export function findDirectoriesWithMarkers(
         ? pattern
         : `**/${pattern}`;
     for (const file of globFilesSync(recursivePattern, rootDir)) {
-      // Filter out files in gitignore'd directories
-      if (!isGitIgnoredWithMap(file, ignoreMap)) {
+      if (!isIgnored(file)) {
         dirs.add(dirname(join(rootDir, file)));
       }
     }
