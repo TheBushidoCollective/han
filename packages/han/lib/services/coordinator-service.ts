@@ -421,6 +421,11 @@ export async function startCoordinatorService(
 
     // The daemon creates an ephemeral certificate and publishes its public descriptor.
     state.ownedDescriptor = null;
+    let stopping:
+      | ((
+          expectedCandidate?: LocalCoordinatorDescriptor
+        ) => Promise<LocalCoordinatorDescriptor | null>)
+      | null = null;
     try {
       // Keep the actual daemon as our child so ownership and shutdown remain reliable.
       state.process = Bun.spawn(
@@ -492,12 +497,10 @@ export async function startCoordinatorService(
           getCoordinatorDataDir(),
           expected.process
         );
-        return allowExited ? state !== 'unknown' : state === 'alive';
+        return allowExited || state === 'alive';
       };
       let delay = 100;
-      const stopping = async (
-        expectedCandidate?: LocalCoordinatorDescriptor
-      ) => {
+      stopping = async (expectedCandidate?: LocalCoordinatorDescriptor) => {
         if (!options.supervisor) return null;
         const expected =
           process.platform === 'win32'
@@ -580,7 +583,7 @@ export async function startCoordinatorService(
       }
       throw new Error(buildHealthFailureMessage(port, budgetMs));
     } catch (error) {
-      if (options.supervisor && state.process) {
+      if (options.supervisor && state.process && stopping) {
         try {
           const intent = await stopping();
           if (intent)

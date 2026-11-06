@@ -6,13 +6,14 @@ import {
 import type { LocalCoordinatorDescriptor } from '../lib/coordinator/connection.ts';
 
 const sampleDescriptor: LocalCoordinatorDescriptor = {
+  transportVersion: 1,
   instanceId: '11111111-1111-4111-8111-111111111111',
   pid: 1234,
   httpsPort: 41957,
   grpcPort: 41958,
   certificatePem:
     '-----BEGIN CERTIFICATE-----\nTEST\n-----END CERTIFICATE-----',
-  bearerToken: 'test-token',
+  bearerToken: 'a'.repeat(43),
   supervisor: {
     pid: 5678,
     nonce: '22222222-2222-4222-8222-222222222222',
@@ -130,7 +131,7 @@ test('receipt with mismatched child PID fails closed', async () => {
     ...sampleDescriptor,
     pid: 9999,
     process: {
-      ...sampleDescriptor.process!,
+      ...sampleDescriptor.process,
       pid: 9999,
     },
   };

@@ -337,8 +337,10 @@ fn acquire(path: &Path, kind: &str) -> io::Result<Value> {
             stopping_descriptors.push(d);
         }
         let auth_list = authorities::list_authorities(&guard)?;
-        let partial_claim = incomplete(&guard, kind)?;
-        let full_claim = records(&guard, kind)?;
+        let (partial_claim, full_claim) = match incomplete(&guard, kind)? {
+            Some(partial) => (Some(partial), None),
+            None => (None, records(&guard, kind)?),
+        };
         let claim_owner = full_claim.as_ref().map(|r| &r.owner).or_else(|| partial_claim.as_ref().map(|p| &p.owner));
 
         // 1. Verify descriptors have resolvable supervisor authority and dead processes BEFORE any deletion
@@ -402,8 +404,7 @@ fn acquire(path: &Path, kind: &str) -> io::Result<Value> {
                 return Ok(json!({"status":"blocked", "ownerPid":partial.owner.process.pid}));
             }
             remove_incomplete(&guard, kind, &partial)?;
-        }
-        if let Some(existing) = records(&guard, kind)? {
+        } else if let Some(existing) = records(&guard, kind)? {
             match processes::liveness(&existing.owner.process)? {
                 Liveness::Alive => return Ok(json!({"status":"blocked", "ownerPid":existing.owner.process.pid})),
                 Liveness::Unknown => return Err(invalid()),
@@ -1146,5 +1147,70 @@ mod tests {
         assert!(acquire(&data, "supervisor").is_err());
         let guard = RecordGuard::open(&dir).unwrap();
         assert_eq!(guard.read(OsStr::new("supervisor.reservation.json")).unwrap(), Some(repl_snap));
+    }
+    #[test]
+    fn windows_acquisition_recovers_from_dead_anchored_partial_claim() {
+        let temp = tempfile::tempdir().unwrap();
+        let data = temp.path().join("data");
+        let dir = directory(&data, true).unwrap();
+        let guard = RecordGuard::open(&dir).unwrap();
+        let mut dead_process = processes::current_identity().unwrap();
+        let creation: u64 = dead_process.creation_time.parse().unwrap();
+        dead_process.creation_time = creation.saturating_add(1).to_string();
+        let dead_nonce = uuid::Uuid::new_v4().to_string();
+        let dead_owner = Owner { version: 1, nonce: dead_nonce, process: dead_process };
+        let dead_bytes = serde_json::to_vec(&dead_owner).unwrap();
+        guard.create_if_absent(OsStr::new("supervisor.reservation.json"), &dead_bytes).unwrap();
+        drop(guard);
+        let result = acquire(&data, "supervisor").unwrap();
+        assert_eq!(result["status"], "owned");
+        let guard = RecordGuard::open(&dir).unwrap();
+        let full = records(&guard, "supervisor").unwrap().unwrap();
+        assert_ne!(full.owner.nonce, dead_owner.nonce);
+    }
+
+    #[test]
+    fn windows_acquisition_blocks_on_live_anchored_partial_claim() {
+        let temp = tempfile::tempdir().unwrap();
+        let data = temp.path().join("data");
+        let dir = directory(&data, true).unwrap();
+        let guard = RecordGuard::open(&dir).unwrap();
+        let live_process = processes::current_identity().unwrap();
+        let live_nonce = uuid::Uuid::new_v4().to_string();
+        let live_owner = Owner { version: 1, nonce: live_nonce, process: live_process.clone() };
+        let live_bytes = serde_json::to_vec(&live_owner).unwrap();
+        let snap = guard.create_if_absent(OsStr::new("supervisor.reservation.json"), &live_bytes).unwrap();
+        drop(guard);
+        let result = acquire(&data, "supervisor").unwrap();
+        assert_eq!(result["status"], "blocked");
+        assert_eq!(result["ownerPid"], live_process.pid);
+        let guard = RecordGuard::open(&dir).unwrap();
+        assert_eq!(guard.read(OsStr::new("supervisor.reservation.json")).unwrap(), Some(snap));
+    }
+
+    #[test]
+    fn windows_acquisition_preserves_authority_from_dead_anchored_partial_claim() {
+        let temp = tempfile::tempdir().unwrap();
+        let data = temp.path().join("data");
+        let dir = directory(&data, true).unwrap();
+        let guard = RecordGuard::open(&dir).unwrap();
+        let mut dead_process = processes::current_identity().unwrap();
+        let creation: u64 = dead_process.creation_time.parse().unwrap();
+        dead_process.creation_time = creation.saturating_add(1).to_string();
+        let dead_nonce = uuid::Uuid::new_v4().to_string();
+        let dead_owner = Owner { version: 1, nonce: dead_nonce.clone(), process: dead_process.clone() };
+        let dead_bytes = serde_json::to_vec(&dead_owner).unwrap();
+        guard.create_if_absent(OsStr::new("supervisor.reservation.json"), &dead_bytes).unwrap();
+        let binding = SupervisorBinding { pid: dead_process.pid, nonce: dead_nonce.clone(), generation_id: uuid::Uuid::new_v4().to_string() };
+        let d = test_descriptor(12345, Some(binding));
+        guard.create_if_absent(OsStr::new("coordinator.json"), &serde_json::to_vec(&d).unwrap()).unwrap();
+        drop(guard);
+        let result = acquire(&data, "supervisor").unwrap();
+        assert_eq!(result["status"], "owned");
+        let guard = RecordGuard::open(&dir).unwrap();
+        let auth_name = authorities::authority_name(&dead_nonce).unwrap();
+        let auth_record = guard.read(OsStr::new(&auth_name)).unwrap().unwrap();
+        let parsed = authorities::parse_owner(&auth_record.bytes).unwrap();
+        assert_eq!(parsed, dead_owner);
     }
 }

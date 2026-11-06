@@ -548,17 +548,106 @@ async function main(): Promise<void> {
     await stop(current);
 
     phase = 'fast-exit-receipt';
-    // Exercise child shutdown and exit immediately after publication and receipt emission
-    await command('coordinator', 'start');
-    current = await started(beforeReuse);
-    const fastExitChild = current;
-    await command('coordinator', 'stop');
-    await waitFor('fast exit coordinator stop', async () =>
-      !(await ownedProcess(fastExitChild.process, coordinator, false))
-        ? true
-        : undefined
+    // Deterministic supervisor path: Start the supervisor, hold receipt delivery
+    // until the child has received authenticated shutdown, committed intent, and exited.
+    // This exercises accepting shutdown-requested when child is already gone.
+    const fastExitData = join(root, 'fast-exit-data');
+    mkdirSync(fastExitData);
+    const fastExitEnv = {
+      ...env,
+      HAN_DATA_DIR: fastExitData,
+    };
+    const receiptHoldBarrier = join(fastExitData, 'receipt-held');
+    const receiptReleaseSignal = join(fastExitData, 'receipt-release');
+    const runtimeModPath = resolve(
+      import.meta.dir,
+      '../lib/coordinator/windows-runtime.ts'
     );
-    assert.equal(readDescriptor(data), undefined);
+    const daemonModPath = resolve(
+      import.meta.dir,
+      '../lib/commands/coordinator/daemon.ts'
+    );
+    const fastExitSupervisorScript = `
+      const fs = await import('node:fs');
+      const { mock } = await import('bun:test');
+      const realRuntime = await import(${JSON.stringify(runtimeModPath)});
+      const origRead = realRuntime.readWindowsChildDescriptor;
+      mock.module(${JSON.stringify(runtimeModPath)}, () => ({
+        ...realRuntime,
+        async readWindowsChildDescriptor(...args) {
+          const result = await origRead(...args);
+          if (result) {
+            fs.writeFileSync(${JSON.stringify(receiptHoldBarrier)}, JSON.stringify(result));
+            while (!fs.existsSync(${JSON.stringify(receiptReleaseSignal)})) {
+              await Bun.sleep(20);
+            }
+          }
+          return result;
+        },
+      }));
+      const { startDaemon } = await import(${JSON.stringify(daemonModPath)});
+      try {
+        await startDaemon({ port: 0, foreground: true });
+      } catch (e) {
+        console.error(e);
+        process.exitCode = 1;
+      }
+    `;
+    const fastExitSupervisorFile = join(
+      fastExitData,
+      'fast-exit-supervisor.ts'
+    );
+    writeFileSync(fastExitSupervisorFile, fastExitSupervisorScript);
+    const feSupervisor = Bun.spawn([process.execPath, fastExitSupervisorFile], {
+      env: fastExitEnv,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    try {
+      // Wait for child to publish and receipt to be captured & held
+      const capturedReceiptJson = await waitFor('receipt captured', () => {
+        if (!existsSync(receiptHoldBarrier)) return undefined;
+        try {
+          return JSON.parse(
+            readFileSync(receiptHoldBarrier, 'utf8')
+          ) as Descriptor;
+        } catch {
+          return undefined;
+        }
+      });
+      const feChildIdentity = capturedReceiptJson.process;
+      assert.ok(feChildIdentity && feChildIdentity.pid > 0);
+      owned.push({ identity: feChildIdentity, image: coordinator });
+      assert.ok(await ownedProcess(feChildIdentity, coordinator, false));
+
+      // Send authenticated shutdown to the child while receipt delivery to startDaemon is held
+      await command('coordinator', 'stop');
+
+      // Wait for child to fully exit
+      await waitFor('child exit before receipt release', async () =>
+        !(await ownedProcess(feChildIdentity, coordinator, false))
+          ? true
+          : undefined
+      );
+
+      // Now release the held receipt to startDaemon; it must safely accept shutdown-requested
+      // from the committed intent and matching receipt without failing or restarting a successor
+      writeFileSync(receiptReleaseSignal, 'release');
+
+      await waitFor('supervisor exit after fast-exit', () =>
+        feSupervisor.exitCode !== null ? feSupervisor.exitCode : undefined
+      );
+      assert.equal(feSupervisor.exitCode, 0);
+      assert.equal(readDescriptor(fastExitData), undefined);
+      assert.ok(
+        !existsSync(join(fastExitData, 'runtime/supervisor.reservation.json'))
+      );
+    } finally {
+      if (feSupervisor.exitCode === null) {
+        feSupervisor.kill();
+        await feSupervisor.exited;
+      }
+    }
   } catch (error) {
     failed = true;
     console.error(
