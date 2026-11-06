@@ -71,22 +71,10 @@ mock.module('node:fs', () => ({ ...realFs, existsSync: () => true }));
 // on any machine, while still exercising the "spawn attempted, then
 // failed" path these tests are about.
 const originalBunSpawn = Bun.spawn;
-const mockBunSpawn = mock(() => {
+const mockBunSpawn = mock((_args: string[]) => {
   throw new Error('ENOENT: no such file or directory (test double)');
 });
 Bun.spawn = mockBunSpawn as unknown as typeof Bun.spawn;
-
-// The spawn path fetches TLS certificates before launching the binary. Left
-// real, these tests would hit certs.han.guru and write into the developer's
-// ~/.claude/han/certs.
-const mockEnsureCertificates = mock(async () => ({
-  cert: '-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----',
-  key: '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
-}));
-
-mock.module('../lib/commands/coordinator/tls.ts', () => ({
-  ensureCertificates: mockEnsureCertificates,
-}));
 
 // Keep waitForHealthy short so tests don't time out while polling a
 // non-existent coordinator (production default is 30s).
@@ -100,6 +88,7 @@ let originalError: typeof console.error;
 
 beforeEach(() => {
   mockHealth.mockReset();
+  mockBunSpawn.mockClear();
   mockShutdown.mockReset();
   consoleOutput = [];
   originalLog = console.log;
@@ -135,19 +124,12 @@ afterAll(() => {
 // ============================================================================
 
 describe('startCoordinatorService with binary found', () => {
-  test("when already running state, logs 'Already running'", async () => {
-    // First make it think it's running
+  test('rechecks health when already attached', async () => {
     mockHealth.mockResolvedValue(true);
     await cs.startCoordinatorService();
-    consoleOutput = [];
-
-    // Call again — should hit the isRunning early return
+    mockHealth.mockClear();
     await cs.startCoordinatorService();
-
-    const hasAlreadyRunning = consoleOutput.some((msg) =>
-      msg.includes('Already running')
-    );
-    expect(hasAlreadyRunning).toBe(true);
+    expect(mockHealth).toHaveBeenCalled();
   });
 
   test('attempts to spawn binary when not healthy and binary found', async () => {
@@ -156,31 +138,12 @@ describe('startCoordinatorService with binary found', () => {
     mockHealth.mockReset();
     mockHealth.mockResolvedValue(false);
 
-    await cs.startCoordinatorService();
-
-    // Should attempt to start (binary "found" due to existsSync mock)
-    // Either it tried to spawn (and potentially failed) or logged something
-    const hasStartMsg = consoleOutput.some(
-      (msg) =>
-        msg.includes('Starting') ||
-        msg.includes('failed') ||
-        msg.includes('Failed')
-    );
-    expect(hasStartMsg).toBe(true);
-  });
-
-  // han-coordinator only reads the cert cache; it never fills it. If this step
-  // is skipped the daemon self-signs, and the dashboard's browser then refuses
-  // the connection and sits on "Connecting to Han Coordinator..." forever.
-  test('fetches TLS certificates before spawning the binary', async () => {
-    mockEnsureCertificates.mockClear();
-    await cs.stopCoordinatorService();
-    mockHealth.mockReset();
-    mockHealth.mockResolvedValue(false);
-
-    await cs.startCoordinatorService();
-
-    expect(mockEnsureCertificates).toHaveBeenCalled();
+    await expect(cs.startCoordinatorService()).rejects.toThrow('test double');
+    expect(mockBunSpawn).toHaveBeenCalled();
+    const args = mockBunSpawn.mock.calls[0][0] as string[];
+    expect(args).toContain('--foreground');
+    expect(args).toContain('--data-dir');
+    expect(args[args.indexOf('--data-dir') + 1]).toBe(getHanDataDir());
   });
 
   test('handles spawn failure gracefully', async () => {
@@ -189,11 +152,7 @@ describe('startCoordinatorService with binary found', () => {
     // Not healthy — so it will try to find and spawn binary
     mockHealth.mockResolvedValue(false);
 
-    // This should not throw even if Bun.spawn fails
-    await cs.startCoordinatorService();
-
-    // Should have error output
-    expect(consoleOutput.length).toBeGreaterThan(0);
+    await expect(cs.startCoordinatorService()).rejects.toThrow('test double');
   });
 });
 
@@ -234,19 +193,18 @@ describe('cross-process spawn guard', () => {
     }
   });
 
-  test('a live, fresh guard blocks spawning: no cert fetch, no spawn attempt', async () => {
+  test('a live, fresh guard blocks spawning', async () => {
     const otherPid = process.ppid;
     realFs.writeFileSync(
       spawnGuardPath(),
       JSON.stringify({ pid: otherPid, timestamp: new Date().toISOString() })
     );
-    mockEnsureCertificates.mockClear();
 
-    await cs.startCoordinatorService();
+    await expect(cs.startCoordinatorService()).rejects.toThrow(
+      'failed its health check'
+    );
 
-    // ensureCertificates() only runs once a call has claimed the guard and
-    // is about to spawn. Blocked means it never gets there.
-    expect(mockEnsureCertificates).not.toHaveBeenCalled();
+    expect(mockBunSpawn).not.toHaveBeenCalled();
     // The guard is untouched — we neither took it over nor released a
     // claim that isn't ours.
     const guard = JSON.parse(realFs.readFileSync(spawnGuardPath(), 'utf-8'));
@@ -261,14 +219,9 @@ describe('cross-process spawn guard', () => {
       spawnGuardPath(),
       JSON.stringify({ pid: deadPid, timestamp: new Date().toISOString() })
     );
-    mockEnsureCertificates.mockClear();
 
-    await cs.startCoordinatorService();
-
-    // Taken over: this call claimed the guard and reached the spawn
-    // attempt (proven by the certificate fetch), then released it again in
-    // its finally block once Bun.spawn threw (no real binary in this test).
-    expect(mockEnsureCertificates).toHaveBeenCalled();
+    await expect(cs.startCoordinatorService()).rejects.toThrow('test double');
+    expect(mockBunSpawn).toHaveBeenCalled();
     expect(realFs.existsSync(spawnGuardPath())).toBe(false);
   });
 
@@ -278,31 +231,24 @@ describe('cross-process spawn guard', () => {
       spawnGuardPath(),
       JSON.stringify({ pid: process.ppid, timestamp: staleTimestamp })
     );
-    mockEnsureCertificates.mockClear();
 
-    await cs.startCoordinatorService();
-
-    expect(mockEnsureCertificates).toHaveBeenCalled();
+    await expect(cs.startCoordinatorService()).rejects.toThrow('test double');
+    expect(mockBunSpawn).toHaveBeenCalled();
     expect(realFs.existsSync(spawnGuardPath())).toBe(false);
   });
 
   test('release only unlinks the guard if this process still owns it', async () => {
     const otherPid = process.ppid;
-    // Simulate another process taking over the guard while this call is
-    // mid-flight (between its own claim and its own release): once
-    // ensureCertificates resolves, the guard file no longer names us.
-    mockEnsureCertificates.mockImplementationOnce(async () => {
+    // Replace the guard during spawn, after it was acquired.
+    mockBunSpawn.mockImplementationOnce(() => {
       realFs.writeFileSync(
         spawnGuardPath(),
         JSON.stringify({ pid: otherPid, timestamp: new Date().toISOString() })
       );
-      return {
-        cert: '-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----',
-        key: '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
-      };
+      throw new Error('test double');
     });
 
-    await cs.startCoordinatorService();
+    await expect(cs.startCoordinatorService()).rejects.toThrow('test double');
 
     // Our own release must not have deleted a file that, by the time it
     // ran, no longer named our pid.

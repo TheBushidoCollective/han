@@ -21,6 +21,8 @@ import {
 import { dirname, join } from 'node:path';
 import { getHanDataDir } from '../../config/claude-settings.ts';
 import { getHanBinary } from '../../config/han-settings.ts';
+import { readCoordinatorDescriptor } from '../../coordinator/connection.ts';
+import { createCoordinatorClients } from '../../grpc/client.ts';
 import { checkHealth, waitForHealth } from './health.ts';
 import { startServer, stopServer } from './server.ts';
 import {
@@ -235,26 +237,12 @@ export async function getStatus(port?: number): Promise<CoordinatorStatus> {
     return {
       running: true,
       pid: health.pid,
-      port: effectivePort,
+      port: readCoordinatorDescriptor().httpsPort,
       uptime: health.uptime,
     };
   }
 
-  // Health check failed - try to clean up stale locks
-  try {
-    await import('../../grpc/data-access.ts');
-    // In gRPC architecture, stale lock cleanup is handled by the Rust coordinator
-    removePidFile();
-    return {
-      running: false,
-      port: effectivePort,
-    };
-  } catch (error) {
-    // gRPC data access not available or error - fall back to PID check
-    if (process.env.HAN_DEBUG) {
-      console.error('[coordinator] Failed to cleanup stale lock:', error);
-    }
-  }
+  // A supervisor PID file is not proof of daemon identity.
 
   // Check if PID file exists with a running process
   const pid = readPid();
@@ -329,9 +317,9 @@ export async function startDaemon(
   if (configuredBinary && configuredBinary !== 'han') {
     // hanBinary is set (e.g., `bun "/path/to/main.ts"`)
     // Use shell to handle the full command string
-    spawnCommand = '/bin/bash';
+    spawnCommand = process.platform === 'win32' ? 'cmd.exe' : '/bin/bash';
     spawnArgs = [
-      '-c',
+      process.platform === 'win32' ? '/c' : '-c',
       `${configuredBinary} coordinator start --foreground --port ${port}`,
     ];
   } else {
@@ -381,95 +369,39 @@ export async function startDaemon(
   return newStatus;
 }
 
-/**
- * Find PID of process listening on a port (fallback when health check has no PID).
- */
-function findPidOnPort(port: number): number | null {
-  try {
-    const result = Bun.spawnSync(['lsof', '-ti', `tcp:${port}`], {
-      stdout: 'pipe',
-      stderr: 'ignore',
-    });
-    if (result.exitCode === 0) {
-      const pids = result.stdout
-        .toString()
-        .trim()
-        .split('\n')
-        .map((s) => parseInt(s, 10))
-        .filter((n) => !Number.isNaN(n) && n > 0);
-      return pids[0] ?? null;
-    }
-  } catch {
-    // lsof not available
-  }
-  return null;
-}
-
-/**
- * Kill a process by PID with graceful shutdown and forced kill fallback.
- */
-async function killProcess(pid: number): Promise<void> {
-  try {
-    process.kill(pid, 'SIGTERM');
-
-    // Wait for process to stop
-    let attempts = 0;
-    while (attempts < 50 && isProcessRunning(pid)) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      attempts++;
-    }
-
-    // Force kill if still running
-    if (isProcessRunning(pid)) {
-      console.log('[coordinator] Force killing...');
-      process.kill(pid, 'SIGKILL');
-    }
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') {
-      throw error;
-    }
-  }
-}
-
-/**
- * Stop coordinator daemon
- */
+/** Stop only a coordinator authenticated by its runtime descriptor. */
 export async function stopDaemon(port?: number): Promise<void> {
-  const effectivePort = port ?? getCoordinatorPort();
-  const status = await getStatus(effectivePort);
-
-  if (!status.running && !status.pid) {
-    console.log('[coordinator] Not running');
-    removePidFile();
-    return;
-  }
-
-  // Resolve the PID: prefer health response, then PID file, then port scan
-  const pid = status.pid ?? readPid() ?? findPidOnPort(effectivePort);
-
-  if (pid) {
-    console.log(`[coordinator] Stopping (PID: ${pid})...`);
-    await killProcess(pid);
-  } else if (status.running) {
-    // Health check says running but we can't find the PID at all
-    console.warn(
-      '[coordinator] Running but PID unknown. Trying port-based kill...'
-    );
-    const portPid = findPidOnPort(effectivePort);
-    if (portPid) {
-      await killProcess(portPid);
-    } else {
-      console.error(
-        `[coordinator] Could not find process on port ${effectivePort}. ` +
-          `Try: lsof -ti tcp:${effectivePort} | xargs kill -9`
-      );
+  const status = await getStatus(port);
+  if (!status.running) return;
+  const descriptor = readCoordinatorDescriptor();
+  const supervisorPid = readPid();
+  await createCoordinatorClients().coordinator.shutdown({
+    graceful: true,
+    timeoutSeconds: 5,
+  });
+  const deadline = Date.now() + 10000;
+  while (Date.now() < deadline) {
+    let descriptorGone = false;
+    try {
+      const current = readCoordinatorDescriptor();
+      if (current.instanceId !== descriptor.instanceId) {
+        throw new Error('A different coordinator appeared during shutdown');
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT')
+        descriptorGone = true;
+      else throw error;
     }
+    const supervisorGone =
+      !supervisorPid ||
+      readPid() !== supervisorPid ||
+      !isProcessRunning(supervisorPid);
+    if (descriptorGone && supervisorGone) return;
+    await Bun.sleep(100);
   }
-
-  // The supervisor this named has just been killed, so its file is ours to
-  // clear even though we never owned it.
-  removePidFile(true);
-  console.log('[coordinator] Stopped');
+  throw new Error(
+    'Coordinator shutdown did not release its descriptor and supervisor'
+  );
 }
 
 // Constants for auto-restart
@@ -560,6 +492,15 @@ async function runForeground(port: number): Promise<void> {
         const { promise, resolve } = Promise.withResolvers<void>();
         setTimeout(resolve, 1000);
         await promise;
+        try {
+          if (!(await checkHealth(port))) {
+            removePidFile();
+            return;
+          }
+        } catch {
+          removePidFile();
+          return;
+        }
       }
     } catch (error) {
       if (shuttingDown) break;

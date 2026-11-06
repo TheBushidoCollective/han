@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, renameSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 /**
  * Marketplace source configuration
@@ -82,14 +82,14 @@ export function getHanDataDir(): string {
   if (_hanDataDir) return _hanDataDir;
 
   if (process.env.HAN_DATA_DIR) {
-    _hanDataDir = process.env.HAN_DATA_DIR;
+    _hanDataDir = resolve(process.env.HAN_DATA_DIR);
     return _hanDataDir;
   }
 
   // When CLAUDE_CONFIG_DIR is explicitly set (testing/CI), use it
   // to preserve test isolation — tests set CLAUDE_CONFIG_DIR to a temp dir
   if (process.env.CLAUDE_CONFIG_DIR) {
-    _hanDataDir = join(process.env.CLAUDE_CONFIG_DIR, 'han');
+    _hanDataDir = resolve(process.env.CLAUDE_CONFIG_DIR, 'han');
     return _hanDataDir;
   }
 
@@ -117,13 +117,9 @@ export function getHanDataDir(): string {
       return _hanDataDir;
     } catch {
       // Migration failed (permissions, cross-device, coordinator holding lock, etc.)
-      // Fall back to old path — next restart will retry
-      console.error(
-        `[han] Could not migrate ${oldDir} → ${newDir}, using old path. ` +
-          `Stop the coordinator and retry, or move manually.`
+      throw new Error(
+        `Could not migrate ${oldDir} to ${newDir}; stop the coordinator and retry.`
       );
-      _hanDataDir = oldDir;
-      return _hanDataDir;
     }
   }
 

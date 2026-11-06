@@ -22,21 +22,8 @@ import { dirname, join, resolve } from 'node:path';
 import { getHanDataDir } from '../config/claude-settings.ts';
 import { createCoordinatorClients } from '../grpc/client.ts';
 import { checkHealth } from '../commands/coordinator/health.ts';
-import { ensureCertificates } from '../commands/coordinator/tls.ts';
+import { getCoordinatorDataDir } from '../coordinator/connection.ts';
 
-/**
- * Is a coordinator serving on this port?
- *
- * Asks the HTTPS `/health` route, which the Rust coordinator actually
- * mounts (see han-rs/crates/han-coordinator/src/server.rs: `/health`,
- * `/graphql`, `/graphiql`). It deliberately does not use the gRPC client's
- * `isCoordinatorHealthy`: that sends a Connect RPC to
- * `https://coordinator.local.han.guru:<https-port>/han.coordinator.CoordinatorService/Health`,
- * which the HTTPS router has no route for and answers 404, while the real
- * RPC surface is plain h2c gRPC on the separate gRPC port. So that probe
- * returned false against a perfectly healthy coordinator, every time, and
- * every han invocation concluded there was none and spawned another one.
- */
 async function isCoordinatorServing(port: number): Promise<boolean> {
   return (await checkHealth(port)) !== null;
 }
@@ -88,7 +75,8 @@ const state: CoordinatorState = {
  * Reads HAN_COORDINATOR_PORT at call time (set by server.ts before startup).
  */
 function getEffectivePort(): number {
-  return parseInt(process.env.HAN_COORDINATOR_PORT || '', 10) || state.port;
+  const port = Number.parseInt(process.env.HAN_COORDINATOR_PORT ?? '', 10);
+  return Number.isNaN(port) ? state.port : port;
 }
 
 // ============================================================================
@@ -105,6 +93,10 @@ function getEffectivePort(): number {
  */
 function findCoordinatorBinary(): string | null {
   const home = process.env.HOME || process.env.USERPROFILE || '/tmp';
+  const binaryName =
+    process.platform === 'win32' ? 'han-coordinator.exe' : 'han-coordinator';
+  const sibling = join(dirname(process.execPath), binaryName);
+  if (existsSync(sibling)) return sibling;
 
   // 0. Local Rust build (dev mode: running from .ts source)
   const mainFile = process.argv[1] || '';
@@ -112,19 +104,13 @@ function findCoordinatorBinary(): string | null {
     // packages/han/lib/services/ -> packages/han-rs/target/
     const pkgRoot = resolve(import.meta.dir, '..', '..', '..');
     for (const profile of ['release', 'debug']) {
-      const localBin = join(
-        pkgRoot,
-        'han-rs',
-        'target',
-        profile,
-        'han-coordinator'
-      );
+      const localBin = join(pkgRoot, 'han-rs', 'target', profile, binaryName);
       if (existsSync(localBin)) return localBin;
     }
   }
 
   // 1. ~/.han/bin/han-coordinator
-  const hanBin = join(home, '.han', 'bin', 'han-coordinator');
+  const hanBin = join(home, '.han', 'bin', binaryName);
   if (existsSync(hanBin)) return hanBin;
 
   // 2. npm platform package
@@ -135,7 +121,7 @@ function findCoordinatorBinary(): string | null {
   try {
     const pkgName = `@thebushidocollective/han-${platform}-${arch}`;
     const pkgJsonPath = require.resolve(`${pkgName}/package.json`);
-    const pkgPath = join(dirname(pkgJsonPath), 'han-coordinator');
+    const pkgPath = join(dirname(pkgJsonPath), binaryName);
     if (existsSync(pkgPath)) return pkgPath;
   } catch {
     // Package not installed
@@ -144,7 +130,7 @@ function findCoordinatorBinary(): string | null {
   // 3. PATH lookup via which/where
   try {
     const result = Bun.spawnSync(
-      [process.platform === 'win32' ? 'where' : 'which', 'han-coordinator'],
+      [process.platform === 'win32' ? 'where' : 'which', binaryName],
       { stdout: 'pipe', stderr: 'ignore' }
     );
     if (result.exitCode === 0) {
@@ -189,7 +175,7 @@ async function waitForHealthy(
   const deadline = Date.now() + budgetMs;
   let delay = 100;
   while (Date.now() < deadline) {
-    if (await isCoordinatorServing(port)) {
+    if (await checkHealth(port, true)) {
       return true;
     }
     await Bun.sleep(Math.min(delay, deadline - Date.now()));
@@ -366,10 +352,8 @@ function buildHealthFailureMessage(port: number, budgetMs: number): string {
  * verifies connectivity. Otherwise, spawns the Rust binary as a daemon.
  */
 export async function startCoordinatorService(): Promise<void> {
-  if (state.isRunning) {
-    console.log('[coordinator] Already running');
-    return;
-  }
+  if (state.isRunning && (await isCoordinatorServing(state.port))) return;
+  state.isRunning = false;
 
   const port = getEffectivePort();
 
@@ -385,11 +369,7 @@ export async function startCoordinatorService(): Promise<void> {
   // Find the binary
   const binaryPath = findCoordinatorBinary();
   if (!binaryPath) {
-    console.error(
-      '[coordinator] han-coordinator binary not found. ' +
-        'Install via: curl -fsSL https://han.guru/install.sh | bash'
-    );
-    return;
+    throw new Error('[coordinator] han-coordinator binary not found');
   }
 
   // Cross-process spawn guard. An unhealthy coordinator doesn't mean no one
@@ -410,7 +390,7 @@ export async function startCoordinatorService(): Promise<void> {
       state.ownsProcess = false;
       console.log('[coordinator] Coordinator started and healthy');
     } else {
-      console.error(buildHealthFailureMessage(port, budgetMs));
+      throw new Error(buildHealthFailureMessage(port, budgetMs));
     }
     return;
   }
@@ -418,23 +398,19 @@ export async function startCoordinatorService(): Promise<void> {
   try {
     console.log(`[coordinator] Starting ${binaryPath} on port ${port}`);
 
-    // Cache real Let's Encrypt certificates before the Rust binary reads them.
-    // han-coordinator only *reads* ~/.claude/han/certs and self-signs when that
-    // cache is empty, and a self-signed cert is one the dashboard's browser
-    // refuses, leaving it stuck on "Connecting to Han Coordinator...". Fetching
-    // is best-effort: on failure the coordinator still starts, just self-signed.
-    const credentials = await ensureCertificates();
-    if (!credentials) {
-      console.error(
-        '[coordinator] No trusted certificate available; the dashboard may not ' +
-          'be able to connect. Falling back to a self-signed certificate.'
-      );
-    }
-
+    // The daemon creates an ephemeral certificate and publishes its public descriptor.
     try {
-      // Spawn Rust coordinator binary (daemonizes by default, no --daemon flag)
+      // Keep the actual daemon as our child so ownership and shutdown remain reliable.
       state.process = Bun.spawn(
-        [binaryPath, '--port', String(port), '--scan-on-start'],
+        [
+          binaryPath,
+          '--foreground',
+          '--port',
+          String(port),
+          '--data-dir',
+          getCoordinatorDataDir(),
+          '--scan-on-start',
+        ],
         {
           stdout: 'ignore',
           stderr: 'ignore',
@@ -459,14 +435,21 @@ export async function startCoordinatorService(): Promise<void> {
         } catch {
           // Best-effort — process may have already exited.
         }
-        console.error(buildHealthFailureMessage(port, budgetMs));
         state.process = null;
         state.ownsProcess = false;
+        throw new Error(buildHealthFailureMessage(port, budgetMs));
       }
     } catch (error) {
-      console.error('[coordinator] Failed to start coordinator:', error);
+      if (state.ownsProcess && state.process) {
+        try {
+          state.process.kill();
+        } catch {
+          /* Child already exited. */
+        }
+      }
       state.process = null;
       state.ownsProcess = false;
+      throw error;
     }
   } finally {
     releaseSpawnGuard();

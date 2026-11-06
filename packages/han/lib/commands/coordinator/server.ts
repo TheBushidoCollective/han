@@ -19,7 +19,7 @@ import type { CoordinatorOptions } from './types.ts';
 export async function startServer(
   options: CoordinatorOptions = {}
 ): Promise<void> {
-  if (options.port) {
+  if (options.port !== undefined) {
     process.env.HAN_COORDINATOR_PORT = String(options.port);
   }
   await startCoordinatorService();

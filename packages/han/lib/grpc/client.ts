@@ -6,7 +6,13 @@
  */
 
 import { type Client, createClient } from '@connectrpc/connect';
-import { createConnectTransport } from '@connectrpc/connect-web';
+import { createGrpcWebTransport } from '@connectrpc/connect-web';
+import { checkHealth } from '../commands/coordinator/health.ts';
+import {
+  coordinatorFetch,
+  readCoordinatorDescriptor,
+  CoordinatorSecurityError,
+} from '../coordinator/connection.ts';
 import {
   CoordinatorService,
   HookService,
@@ -26,17 +32,37 @@ export type CoordinatorClients = {
 };
 
 const DEFAULT_PORT = 41957;
-const COORDINATOR_HOST = 'coordinator.local.han.guru';
 
 /**
  * Create typed gRPC clients for all coordinator services.
  */
 export function createCoordinatorClients(
-  port = DEFAULT_PORT
+  _port = DEFAULT_PORT
 ): CoordinatorClients {
-  const transport = createConnectTransport({
-    baseUrl: `https://${COORDINATOR_HOST}:${port}`,
+  const descriptor = readCoordinatorDescriptor();
+  if (descriptor.grpcPort === null)
+    throw new CoordinatorSecurityError('Coordinator gRPC listener is disabled');
+  const grpcPort = descriptor.grpcPort;
+  const transport = createGrpcWebTransport({
+    baseUrl: `https://127.0.0.1:${grpcPort}`,
     useBinaryFormat: true,
+    fetch: (input, init) => {
+      const url = new URL(
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url
+      );
+      if (url.origin !== `https://127.0.0.1:${grpcPort}`)
+        throw new CoordinatorSecurityError('Invalid gRPC destination');
+      return coordinatorFetch(
+        descriptor,
+        grpcPort,
+        `${url.pathname}${url.search}`,
+        init
+      );
+    },
   });
 
   return {
@@ -50,7 +76,6 @@ export function createCoordinatorClients(
 }
 
 // Lazy singleton — auto-starts coordinator on first use
-let _clients: CoordinatorClients | null = null;
 let _port = DEFAULT_PORT;
 
 /**
@@ -58,9 +83,6 @@ let _port = DEFAULT_PORT;
  * Must be called before getCoordinatorClients() if non-default port is needed.
  */
 export function setCoordinatorPort(port: number): void {
-  if (_clients && _port !== port) {
-    _clients = null;
-  }
   _port = port;
 }
 
@@ -71,10 +93,7 @@ export function setCoordinatorPort(port: number): void {
  * (see coordinator-service.ts for lifecycle management).
  */
 export function getCoordinatorClients(): CoordinatorClients {
-  if (!_clients) {
-    _clients = createCoordinatorClients(_port);
-  }
-  return _clients;
+  return createCoordinatorClients(_port);
 }
 
 /**
@@ -82,16 +101,15 @@ export function getCoordinatorClients(): CoordinatorClients {
  * Returns true if healthy, false on any error.
  */
 export async function isCoordinatorHealthy(
-  port = DEFAULT_PORT,
+  port?: number,
   timeoutMs = 2000
 ): Promise<boolean> {
-  try {
-    const clients = createCoordinatorClients(port);
-    const response = await clients.coordinator.health({}, { timeoutMs });
-    return response.healthy;
-  } catch {
-    return false;
-  }
+  if (!(await checkHealth(port))) return false;
+  const response = await createCoordinatorClients(port).coordinator.health(
+    {},
+    { timeoutMs }
+  );
+  return response.healthy;
 }
 
 // Re-export generated types for convenience
