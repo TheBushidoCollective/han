@@ -59,7 +59,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.4.4
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
