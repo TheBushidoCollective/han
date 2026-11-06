@@ -4,7 +4,7 @@
   "description": "Notion integration providing workspace search, page management, database operations, and AI-optimized content access via Notion's hosted MCP server.",
   "author": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",

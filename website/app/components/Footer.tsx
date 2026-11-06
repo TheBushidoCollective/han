@@ -31,7 +31,7 @@ export default function Footer() {
 							</li>
 							<li>
 								<a
-									href="https://thebushido.co"
+									href="https://withbushido.ai"
 									className="text-gray-400 hover:text-white"
 								>
 									The Bushido Collective

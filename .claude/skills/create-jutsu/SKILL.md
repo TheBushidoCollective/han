@@ -54,7 +54,7 @@ Create `.claude-plugin/plugin.json`:
   "description": "Validation and quality enforcement for {Technology Name} projects.",
   "author": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",
