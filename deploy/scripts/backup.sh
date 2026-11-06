@@ -32,7 +32,7 @@ if [ ! -s "${BACKUP_DIR}/${BACKUP_FILE}" ]; then
   exit 1
 fi
 
-BACKUP_SIZE=$(ls -lh "${BACKUP_DIR}/${BACKUP_FILE}" | awk '{print $5}')
+BACKUP_SIZE=$(find "${BACKUP_DIR}/${BACKUP_FILE}" -prune -exec ls -lh {} \; | awk '{print $5}')
 echo "Backup completed successfully: ${BACKUP_SIZE}"
 
 # Upload to S3 if bucket specified
@@ -44,7 +44,7 @@ fi
 
 # Cleanup old local backups
 echo "Cleaning up backups older than ${RETENTION_DAYS} days..."
-find "$BACKUP_DIR" -name "han_team_*.sql.gz" -mtime +${RETENTION_DAYS} -delete
+find "$BACKUP_DIR" -name "han_team_*.sql.gz" -mtime +"${RETENTION_DAYS}" -delete
 
 # Cleanup old S3 backups
 if [ -n "$S3_BUCKET" ]; then
@@ -54,7 +54,7 @@ if [ -n "$S3_BUCKET" ]; then
     FILE_NAME=$(echo "$line" | awk '{print $4}')
     if [ -n "$FILE_NAME" ]; then
       AGE_DAYS=$(( ($(date +%s) - $(date -d "$FILE_DATE" +%s)) / 86400 ))
-      if [ $AGE_DAYS -gt $RETENTION_DAYS ]; then
+      if [ "$AGE_DAYS" -gt "$RETENTION_DAYS" ]; then
         echo "Deleting old backup: $FILE_NAME"
         aws s3 rm "s3://${S3_BUCKET}/backups/${FILE_NAME}"
       fi
@@ -67,4 +67,4 @@ echo "Backup completed at $(date)"
 # List recent backups
 echo ""
 echo "Recent backups:"
-ls -lht "$BACKUP_DIR" | head -10
+find "$BACKUP_DIR" -prune -exec ls -lht {} \; | head -10
