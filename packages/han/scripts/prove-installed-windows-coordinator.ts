@@ -563,6 +563,10 @@ async function main(): Promise<void> {
       import.meta.dir,
       '../lib/coordinator/windows-runtime.ts'
     );
+    const helperModPath = resolve(
+      import.meta.dir,
+      '../lib/coordinator/windows-helper.ts'
+    );
     const daemonModPath = resolve(
       import.meta.dir,
       '../lib/commands/coordinator/daemon.ts'
@@ -570,6 +574,11 @@ async function main(): Promise<void> {
     const fastExitSupervisorScript = `
       const fs = await import('node:fs');
       const { mock } = await import('bun:test');
+      const realHelper = await import(${JSON.stringify(helperModPath)});
+      mock.module(${JSON.stringify(helperModPath)}, () => ({
+        ...realHelper,
+        findCoordinatorBinary: () => ${JSON.stringify(coordinator)},
+      }));
       const realRuntime = await import(${JSON.stringify(runtimeModPath)});
       const origRead = realRuntime.readWindowsChildDescriptor;
       mock.module(${JSON.stringify(runtimeModPath)}, () => ({
@@ -620,10 +629,16 @@ async function main(): Promise<void> {
       owned.push({ identity: feChildIdentity, image: coordinator });
       assert.ok(await ownedProcess(feChildIdentity, coordinator, false));
 
-      // Send authenticated shutdown to the child while receipt delivery to startDaemon is held
-      await command('coordinator', 'stop');
+      // Initiate authenticated shutdown to the child in fastExitEnv without awaiting completion,
+      // because stopDaemon waits for the supervisor claim to clear while the supervisor is held
+      const stopRequester = Bun.spawn([cli, 'coordinator', 'stop'], {
+        cwd: root,
+        env: fastExitEnv,
+        stdout: 'pipe',
+        stderr: 'pipe',
+      });
 
-      // Wait for child to fully exit
+      // Wait for child to receive shutdown and fully exit before releasing receipt
       await waitFor('child exit before receipt release', async () =>
         !(await ownedProcess(feChildIdentity, coordinator, false))
           ? true
@@ -634,6 +649,14 @@ async function main(): Promise<void> {
       // from the committed intent and matching receipt without failing or restarting a successor
       writeFileSync(receiptReleaseSignal, 'release');
 
+      // Await successful completion of the stop requester
+      const stopCode = await stopRequester.exited;
+      if (stopCode !== 0) {
+        const err = await new Response(
+          stopRequester.stderr as ReadableStream
+        ).text();
+        throw new Error(`fast-exit stop failed with code ${stopCode}: ${err}`);
+      }
       await waitFor('supervisor exit after fast-exit', () =>
         feSupervisor.exitCode !== null ? feSupervisor.exitCode : undefined
       );
