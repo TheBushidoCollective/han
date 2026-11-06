@@ -86,12 +86,14 @@ export function createCoordinatorClients(
 
 // Lazy singleton — auto-starts coordinator on first use
 let _port = DEFAULT_PORT;
+let clients: CoordinatorClients | undefined;
 
 /**
  * Set the coordinator port for the singleton client.
  * Must be called before getCoordinatorClients() if non-default port is needed.
  */
 export function setCoordinatorPort(port: number): void {
+  if (_port !== port) clients = undefined;
   _port = port;
 }
 
@@ -102,7 +104,8 @@ export function setCoordinatorPort(port: number): void {
  * (see coordinator-service.ts for lifecycle management).
  */
 export function getCoordinatorClients(): CoordinatorClients {
-  return createCoordinatorClients(_port);
+  clients ??= createCoordinatorClients(_port);
+  return clients;
 }
 
 /**

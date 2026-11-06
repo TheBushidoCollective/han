@@ -352,3 +352,37 @@ test('a published reservation blocks contenders before PID publication', async (
   expect(readFileSync(path, 'utf8')).toBe(String(owner.pid));
   expect(owner.exitCode).toBeNull();
 }, 30_000);
+
+test('uncertain liveness cannot reclaim a reservation', () => {
+  const path = join(dataDir, 'coordinator.pid');
+  const reservation = `${path}.takeover`;
+  const nonce = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const otherPid = 2147483000;
+  mkdirSync(reservation, { mode: 0o700 });
+  writeFileSync(
+    join(reservation, `owner.${nonce}.json`),
+    JSON.stringify({ version: 1, pid: otherPid, nonce }),
+    { mode: 0o600 }
+  );
+  const original = process.kill;
+  try {
+    process.kill = ((pid: number, signal?: NodeJS.Signals | number) => {
+      if (pid === otherPid)
+        throw Object.assign(new Error('denied'), { code: 'EPERM' });
+      return original(pid, signal);
+    }) as typeof process.kill;
+    expect(claimSupervisorPid(path)).toEqual({
+      kind: 'blocked',
+      pid: otherPid,
+    });
+    process.kill = ((pid: number, signal?: NodeJS.Signals | number) => {
+      if (pid === otherPid)
+        throw Object.assign(new Error('probe failed'), { code: 'EIO' });
+      return original(pid, signal);
+    }) as typeof process.kill;
+    expect(() => claimSupervisorPid(path)).toThrow('probe failed');
+    expect(readdirSync(reservation)).toEqual([`owner.${nonce}.json`]);
+  } finally {
+    process.kill = original;
+  }
+});
