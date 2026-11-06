@@ -31,6 +31,14 @@ The descriptor and token protect the local transport from other users and browse
 
 `packages/han/lib/commands/browse/hosted-proxy.ts` starts a loopback proxy and forwards GraphQL HTTP and WebSocket traffic to the authenticated coordinator. The browser does not receive the coordinator bearer token or connect directly using a public coordinator DNS name. The browse command can use hosted dashboard assets or local assets through that proxy.
 
+The public root shell accepts a cross-site top-level document navigation only
+for a literal `GET /` with no Origin or upgrade and matching browser navigation
+metadata. This permits the file launcher but does not identify the request as
+coming from that launcher. Session exchange, GraphQL, and WebSocket upgrades
+retain their authority, Origin, fetch metadata, and capability checks. The
+launch capability is in the owner-protected launcher and session exchange, not
+the HTTP navigation target. The shell's CSP continues to forbid framing.
+
 CLI and gRPC clients obtain the runtime descriptor through `connection.ts`. An occupied port without a compatible descriptor fails closed instead of being treated as a trusted coordinator.
 
 ## Startup and ownership

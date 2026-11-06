@@ -103,10 +103,20 @@ function guard(
   ])
     if (header(req, name) === null) return 400;
   const site = header(req, 'sec-fetch-site');
-  if (site && site !== 'same-origin' && site !== 'none') return 403;
-  if (originRequired && site && site !== 'same-origin') return 403;
   const mode = header(req, 'sec-fetch-mode');
   const dest = header(req, 'sec-fetch-dest');
+  const publicRootNavigation =
+    !originRequired &&
+    req.method === 'GET' &&
+    req.url === '/' &&
+    req.headers.upgrade === undefined &&
+    origin === undefined &&
+    site === 'cross-site' &&
+    mode === 'navigate' &&
+    dest === 'document';
+  if (site && site !== 'same-origin' && site !== 'none' && !publicRootNavigation)
+    return 403;
+  if (originRequired && site && site !== 'same-origin') return 403;
   if (originRequired && dest && dest !== 'empty') return 403;
   if (req.headers.upgrade && mode && mode !== 'websocket') return 403;
   if (
