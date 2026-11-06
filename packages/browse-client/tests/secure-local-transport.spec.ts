@@ -671,7 +671,10 @@ test("real launcher, gateway and live GraphQL subscriptions with security contro
 		const session = page.locator(`a[href="/sessions/${id}"]`);
 		await expect(session).toBeVisible();
 		expect(navigations).toBe(0);
-		await session.click();
+		{
+			await session.click();
+			await page.getByRole("button", { name: /^Messages(?: \(\d+\))?$/ }).click();
+		}
 		await until(
 			() => observed.subscriptions.has("messages"),
 			"detail subscription",
