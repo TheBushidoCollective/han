@@ -77,7 +77,20 @@ async function setup() {
     port: 0,
     origin: `http://127.0.0.1:${upstream.port}`,
   });
-  cleanups.push(() => proxy.close());
+  cleanups.push(async () => {
+    const diagnostic = setTimeout(() => {
+      proxy.server.getConnections((error, count) => {
+        console.error(
+          `Gateway close pending: listening=${proxy.server.listening}, connections=${count}, error=${error?.message ?? 'none'}`
+        );
+      });
+    }, 2000);
+    try {
+      await proxy.close();
+    } finally {
+      clearTimeout(diagnostic);
+    }
+  });
   const html = readFileSync(fileURLToPath(proxy.launcherUrl), 'utf8');
   const launchToken = html.match(/#launchToken=([A-Za-z0-9_-]+)/)?.[1];
   if (!launchToken) throw new Error('Launcher has no capability');
