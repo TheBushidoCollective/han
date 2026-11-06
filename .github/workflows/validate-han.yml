@@ -26,6 +26,40 @@ on:
   workflow_dispatch:
 
 jobs:
+  gateway-runtime-comparison:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        bun: ["1.2.23", "1.4.4"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ matrix.bun }}
+      - name: Install dependencies
+        working-directory: packages/han
+        run: bun install --frozen-lockfile
+      - name: Compare identical gateway fixture
+        working-directory: packages/han
+        env:
+          EXPECT_OLD_FAILURE: ${{ matrix.bun == '1.2.23' }}
+        shell: bash
+        run: |
+          set -o pipefail
+          bun --version
+          set +e
+          bun test test/hosted-proxy.test.ts 2>&1 | tee "$RUNNER_TEMP/gateway-test.log"
+          result=${PIPESTATUS[0]}
+          set -e
+          if [ "$EXPECT_OLD_FAILURE" = true ]; then
+            test "$result" -ne 0
+            grep -F 'Gateway cleanup 0 timed out' "$RUNNER_TEMP/gateway-test.log"
+            grep -F '(fail) local dashboard gateway > closes websocket before upstream connection when token is invalid' "$RUNNER_TEMP/gateway-test.log"
+          else
+            test "$result" -eq 0
+          fi
+
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
