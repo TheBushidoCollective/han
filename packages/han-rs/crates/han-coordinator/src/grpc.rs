@@ -46,6 +46,7 @@ pub struct CoordinatorState {
     pub start_time: Instant,
     pub hook_engine: Arc<Mutex<HookEngine>>,
     pub slots: Arc<RwLock<HashMap<String, SlotEntry>>>,
+    pub shutdown: tokio::sync::broadcast::Sender<()>,
 }
 
 // ============================================================================
@@ -75,12 +76,12 @@ impl CoordinatorServiceTrait for CoordinatorServiceImpl {
             req.timeout_seconds
         );
 
+        let shutdown = self.state.shutdown.clone();
         tokio::spawn(async move {
             if req.graceful && req.timeout_seconds > 0 {
-                tokio::time::sleep(std::time::Duration::from_secs(req.timeout_seconds as u64))
-                    .await;
+                tokio::time::sleep(std::time::Duration::from_secs(req.timeout_seconds as u64)).await;
             }
-            std::process::exit(0);
+            let _ = shutdown.send(());
         });
 
         Ok(Response::new(Empty {}))
@@ -509,6 +510,7 @@ mod tests {
             start_time: Instant::now(),
             hook_engine: Arc::new(Mutex::new(HookEngine::new(None))),
             slots: Arc::new(RwLock::new(HashMap::new())),
+            shutdown: tokio::sync::broadcast::channel(1).0,
         })
     }
 
