@@ -26,6 +26,7 @@ import {
   coordinatorWebSocket,
   getCoordinatorDataDir,
 } from '../../coordinator/connection.ts';
+import { windowsCreateLauncher, windowsRemoveLauncher, type WindowsLauncher } from '../../coordinator/windows-runtime.ts';
 
 export const HOSTED_DASHBOARD_ORIGIN = 'https://dashboard.local.han.guru';
 const TOKEN_LIFETIME = 120_000;
@@ -193,10 +194,6 @@ function localAsset(dir: string, path: string): Response {
   }
 }
 function launcher(runtime: string, url: string, launchToken: string): string {
-  if (process.platform === 'win32')
-    throw new Error(
-      'Secure dashboard launcher requires Windows ACL and reparse-point protection'
-    );
   const st = lstatSync(runtime);
   if (
     !st.isDirectory() ||
@@ -295,6 +292,15 @@ export async function startHostedDashboardProxy(
   let authority = '';
   let launchToken: string | null = token();
   let launchPath = '';
+  let nativeLauncher: WindowsLauncher | null = null;
+  const removeLauncher = () => {
+    if (process.platform === 'win32') {
+      if (!nativeLauncher) throw new CoordinatorSecurityError('Missing Windows launcher identity');
+      windowsRemoveLauncher(getCoordinatorDataDir(), nativeLauncher);
+    } else {
+      try { unlinkSync(launchPath); } catch { /* Already removed. */ }
+    }
+  };
   const expires = Date.now() + TOKEN_LIFETIME;
   const accessTokens = new Set<string>();
   const sockets = new Set<WebSocket>();
@@ -346,9 +352,10 @@ export async function startHostedDashboardProxy(
       }
       launchToken = null;
       try {
-        unlinkSync(launchPath);
+        removeLauncher();
       } catch {
-        /* Already removed. */
+        res.writeHead(500).end();
+        return;
       }
       const accessToken = token();
       accessTokens.add(accessToken);
@@ -629,21 +636,20 @@ export async function startHostedDashboardProxy(
   authority = `127.0.0.1:${address.port}`;
   const url = `http://${authority}`;
   try {
-    launchPath = launcher(
-      join(getCoordinatorDataDir(), 'runtime'),
-      url,
-      launchToken
-    );
+    if (process.platform === 'win32') {
+      nativeLauncher = windowsCreateLauncher(getCoordinatorDataDir(), url, launchToken);
+      launchPath = nativeLauncher.path;
+    } else {
+      launchPath = launcher(join(getCoordinatorDataDir(), 'runtime'), url, launchToken);
+    }
   } catch (error) {
     server.close();
     throw error;
   }
   const expiryTimer = setTimeout(() => {
     launchToken = null;
-    try {
-      unlinkSync(launchPath);
-    } catch {
-      /* Already consumed. */
+    try { removeLauncher(); } catch (error) {
+      console.error('Failed to remove dashboard launcher:', error);
     }
   }, TOKEN_LIFETIME);
   expiryTimer.unref();
@@ -657,11 +663,8 @@ export async function startHostedDashboardProxy(
       clearTimeout(expiryTimer);
       launchToken = null;
       accessTokens.clear();
-      try {
-        unlinkSync(launchPath);
-      } catch {
-        /* Already consumed. */
-      }
+      let cleanupError: unknown;
+      try { removeLauncher(); } catch (error) { cleanupError = error; }
       for (const socket of sockets) socket.terminate();
       for (const connection of connections) connection.destroy();
       websocket.close();
@@ -669,6 +672,7 @@ export async function startHostedDashboardProxy(
       await new Promise<void>((resolveClose) =>
         server.close(() => resolveClose())
       );
+      if (cleanupError) throw cleanupError;
     },
   };
 }

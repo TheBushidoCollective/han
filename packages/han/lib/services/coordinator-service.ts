@@ -12,14 +12,12 @@
  */
 
 import {
-  existsSync,
   mkdirSync,
   readFileSync,
-  realpathSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { Code, ConnectError } from '@connectrpc/connect';
 import { checkHealth } from '../commands/coordinator/health.ts';
 import { readShutdownIntent } from '../commands/coordinator/shutdown-intent.ts';
@@ -34,6 +32,8 @@ import {
   sameSupervisor,
 } from '../coordinator/connection.ts';
 import { createCoordinatorClients } from '../grpc/client.ts';
+import { findCoordinatorBinary } from '../coordinator/binary.ts';
+import { windowsAcquire, windowsRelease, type WindowsClaim } from '../coordinator/windows-runtime.ts';
 
 async function isCoordinatorServing(port: number): Promise<boolean> {
   return Boolean(await checkHealth(port));
@@ -105,74 +105,6 @@ function getEffectivePort(): number {
   return Number.isNaN(port) ? state.port : port;
 }
 
-// ============================================================================
-// Binary Discovery
-// ============================================================================
-
-/**
- * Find the han-coordinator binary.
- * Search order:
- * 0. Local Rust build output (dev mode only)
- * 1. ~/.han/bin/han-coordinator
- * 2. npm platform package bundled binary
- * 3. PATH
- */
-function findCoordinatorBinary(): string | null {
-  const home = process.env.HOME || process.env.USERPROFILE || '/tmp';
-  const binaryName =
-    process.platform === 'win32' ? 'han-coordinator.exe' : 'han-coordinator';
-  try {
-    const sibling = join(dirname(realpathSync(process.execPath)), binaryName);
-    if (existsSync(sibling)) return sibling;
-  } catch {
-    // Executable path not resolvable
-  }
-
-  // 0. Local Rust build (dev mode: running from .ts source)
-  const mainFile = process.argv[1] || '';
-  if (mainFile.endsWith('.ts') || mainFile.endsWith('.tsx')) {
-    // packages/han/lib/services/ -> packages/han-rs/target/
-    const pkgRoot = resolve(import.meta.dir, '..', '..', '..');
-    for (const profile of ['release', 'debug']) {
-      const localBin = join(pkgRoot, 'han-rs', 'target', profile, binaryName);
-      if (existsSync(localBin)) return localBin;
-    }
-  }
-
-  // 1. ~/.han/bin/han-coordinator
-  const hanBin = join(home, '.han', 'bin', binaryName);
-  if (existsSync(hanBin)) return hanBin;
-
-  // 2. npm platform package
-  // Resolve via package.json since the binary has no extension and
-  // can't be loaded as a sub-path module via require.resolve directly.
-  const arch = process.arch;
-  const platform = process.platform;
-  try {
-    const pkgName = `@thebushidocollective/han-${platform}-${arch}`;
-    const pkgJsonPath = require.resolve(`${pkgName}/package.json`);
-    const pkgPath = join(dirname(pkgJsonPath), binaryName);
-    if (existsSync(pkgPath)) return pkgPath;
-  } catch {
-    // Package not installed
-  }
-
-  // 3. PATH lookup via which/where
-  try {
-    const result = Bun.spawnSync(
-      [process.platform === 'win32' ? 'where' : 'which', binaryName],
-      { stdout: 'pipe', stderr: 'ignore' }
-    );
-    if (result.exitCode === 0) {
-      const path = result.stdout.toString().trim();
-      if (path && existsSync(path)) return path;
-    }
-  } catch {
-    // Not in PATH
-  }
-
-  return null;
-}
 
 // ============================================================================
 // Health Check with Retry
@@ -233,6 +165,7 @@ interface SpawnGuardInfo {
   pid: number;
   timestamp: string;
 }
+let windowsSpawnClaim: WindowsClaim | null = null;
 
 function isPidAlive(pid: number): boolean {
   try {
@@ -295,6 +228,12 @@ function writeSpawnGuard(guardPath: string): boolean {
  * waitForHealthy instead. Returns true if this call now owns the guard.
  */
 function claimSpawnGuard(): boolean {
+  if (process.platform === 'win32') {
+    const result = windowsAcquire(getCoordinatorDataDir(), 'spawn');
+    if (result.status === 'blocked') return false;
+    windowsSpawnClaim = result.claim;
+    return true;
+  }
   const guardPath = join(getHanDataDir(), SPAWN_GUARD_FILENAME);
   try {
     mkdirSync(dirname(guardPath), { recursive: true });
@@ -328,6 +267,13 @@ function claimSpawnGuard(): boolean {
  * them.
  */
 function releaseSpawnGuard(): void {
+  if (process.platform === 'win32') {
+    if (windowsSpawnClaim) {
+      windowsRelease(getCoordinatorDataDir(), 'spawn', windowsSpawnClaim);
+      windowsSpawnClaim = null;
+    }
+    return;
+  }
   const guardPath = join(getHanDataDir(), SPAWN_GUARD_FILENAME);
   const existing = readSpawnGuard(guardPath);
   if (existing?.pid === process.pid) {
@@ -529,7 +475,10 @@ export async function startCoordinatorService(
         if (healthy) {
           const descriptor = readCoordinatorDescriptor();
           if (descriptor.pid !== child.pid) {
-            if (child.exitCode === null) child.kill();
+            if (child.exitCode === null) {
+              if (process.platform === 'win32') throw new CoordinatorSecurityError('Cannot signal a Windows coordinator by PID');
+              child.kill();
+            }
             await child.exited;
             state.process = null;
             state.ownsProcess = false;
@@ -585,6 +534,8 @@ export async function startCoordinatorService(
         throw error;
       if (state.ownsProcess && state.process) {
         const child = state.process;
+        if (process.platform === 'win32' && child.exitCode === null)
+          throw new CoordinatorSecurityError('Cannot signal a Windows coordinator by PID');
         try {
           if (child.exitCode === null) child.kill();
           await child.exited;
@@ -684,6 +635,7 @@ export async function stopCoordinatorService(): Promise<void> {
         ? readShutdownIntent(owned.supervisor, state.process.pid, owned)
         : null;
     if (!committed && state.process) {
+      if (process.platform === 'win32') throw new CoordinatorSecurityError('Cannot signal a Windows coordinator by PID');
       state.process.kill();
       console.log('[coordinator] Process killed');
     }
