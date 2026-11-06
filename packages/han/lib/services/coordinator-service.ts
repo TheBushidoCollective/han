@@ -472,13 +472,19 @@ export async function startCoordinatorService(options: { supervisor?: Supervisor
         if (intent) return { kind: 'shutdown-requested', child, descriptor: intent };
         if (healthy) {
           const descriptor = readCoordinatorDescriptor();
-          if (descriptor.pid !== child.pid || child.exitCode !== null) {
+          if (descriptor.pid !== child.pid) {
             if (child.exitCode === null) child.kill();
+            await child.exited;
             state.process = null;
             state.ownsProcess = false;
             state.isRunning = true;
             state.port = port;
             return { kind: 'attached' };
+          }
+          if (child.exitCode !== null) {
+            intent = stopping();
+            if (intent) return { kind: 'shutdown-requested', child, descriptor: intent };
+            throw new Error('Coordinator child exited during startup');
           }
           if (!sameSupervisor(descriptor.supervisor, options.supervisor ?? null))
             throw new CoordinatorSecurityError('Coordinator supervisor binding mismatch');
