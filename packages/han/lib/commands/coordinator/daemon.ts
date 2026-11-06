@@ -21,6 +21,8 @@ import {
 import { dirname, join } from 'node:path';
 import { getHanDataDir } from '../../config/claude-settings.ts';
 import { getHanBinary } from '../../config/han-settings.ts';
+import { readCoordinatorDescriptor } from '../../coordinator/connection.ts';
+import { createCoordinatorClients } from '../../grpc/client.ts';
 import { checkHealth, waitForHealth } from './health.ts';
 import { startServer, stopServer } from './server.ts';
 import {
@@ -240,21 +242,7 @@ export async function getStatus(port?: number): Promise<CoordinatorStatus> {
     };
   }
 
-  // Health check failed - try to clean up stale locks
-  try {
-    await import('../../grpc/data-access.ts');
-    // In gRPC architecture, stale lock cleanup is handled by the Rust coordinator
-    removePidFile();
-    return {
-      running: false,
-      port: effectivePort,
-    };
-  } catch (error) {
-    // gRPC data access not available or error - fall back to PID check
-    if (process.env.HAN_DEBUG) {
-      console.error('[coordinator] Failed to cleanup stale lock:', error);
-    }
-  }
+  // A supervisor PID file is not proof of daemon identity.
 
   // Check if PID file exists with a running process
   const pid = readPid();
@@ -385,11 +373,35 @@ export async function startDaemon(
 export async function stopDaemon(port?: number): Promise<void> {
   const status = await getStatus(port);
   if (!status.running) return;
-  const { createCoordinatorClients } = await import('../../grpc/client.ts');
+  const descriptor = readCoordinatorDescriptor();
+  const supervisorPid = readPid();
   await createCoordinatorClients().coordinator.shutdown({
     graceful: true,
     timeoutSeconds: 5,
   });
+  const deadline = Date.now() + 10000;
+  while (Date.now() < deadline) {
+    let descriptorGone = false;
+    try {
+      const current = readCoordinatorDescriptor();
+      if (current.instanceId !== descriptor.instanceId) {
+        throw new Error('A different coordinator appeared during shutdown');
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT')
+        descriptorGone = true;
+      else throw error;
+    }
+    const supervisorGone =
+      !supervisorPid ||
+      readPid() !== supervisorPid ||
+      !isProcessRunning(supervisorPid);
+    if (descriptorGone && supervisorGone) return;
+    await Bun.sleep(100);
+  }
+  throw new Error(
+    'Coordinator shutdown did not release its descriptor and supervisor'
+  );
 }
 
 // Constants for auto-restart

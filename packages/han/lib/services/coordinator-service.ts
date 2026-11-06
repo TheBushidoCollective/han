@@ -368,11 +368,7 @@ export async function startCoordinatorService(): Promise<void> {
   // Find the binary
   const binaryPath = findCoordinatorBinary();
   if (!binaryPath) {
-    console.error(
-      '[coordinator] han-coordinator binary not found. ' +
-        'Install via: curl -fsSL https://han.guru/install.sh | bash'
-    );
-    return;
+    throw new Error('[coordinator] han-coordinator binary not found');
   }
 
   // Cross-process spawn guard. An unhealthy coordinator doesn't mean no one
@@ -393,7 +389,7 @@ export async function startCoordinatorService(): Promise<void> {
       state.ownsProcess = false;
       console.log('[coordinator] Coordinator started and healthy');
     } else {
-      console.error(buildHealthFailureMessage(port, budgetMs));
+      throw new Error(buildHealthFailureMessage(port, budgetMs));
     }
     return;
   }
@@ -437,11 +433,18 @@ export async function startCoordinatorService(): Promise<void> {
         } catch {
           // Best-effort — process may have already exited.
         }
-        console.error(buildHealthFailureMessage(port, budgetMs));
         state.process = null;
         state.ownsProcess = false;
+        throw new Error(buildHealthFailureMessage(port, budgetMs));
       }
     } catch (error) {
+      if (state.ownsProcess && state.process) {
+        try {
+          state.process.kill();
+        } catch {
+          /* Child already exited. */
+        }
+      }
       state.process = null;
       state.ownsProcess = false;
       throw error;
