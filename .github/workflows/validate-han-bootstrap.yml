@@ -7,6 +7,8 @@ on:
       - 'deploy/firebase/test/test_bootstrap.py'
       - 'deploy/firebase/test/test_bootstrap_execution.py'
       - 'deploy/firebase/test/test_auto_fix_security.py'
+      - 'deploy/firebase/test/test_failure_analysis_security.py'
+      - '.github/workflows/test-failure-analysis.yml'
       - '.github/workflows/auto-fix-ci.yml'
       - '.github/workflows/han-bootstrap.yml'
       - '.github/workflows/validate-han-bootstrap.yml'
@@ -17,6 +19,8 @@ on:
       - 'deploy/firebase/test/test_bootstrap.py'
       - 'deploy/firebase/test/test_bootstrap_execution.py'
       - 'deploy/firebase/test/test_auto_fix_security.py'
+      - 'deploy/firebase/test/test_failure_analysis_security.py'
+      - '.github/workflows/test-failure-analysis.yml'
       - '.github/workflows/auto-fix-ci.yml'
       - '.github/workflows/han-bootstrap.yml'
       - '.github/workflows/validate-han-bootstrap.yml'
@@ -55,6 +59,8 @@ jobs:
         run: python3 -B -m unittest discover -s deploy/firebase/test -p test_bootstrap_execution.py -v
       - name: Authenticate auto-fix sources
         run: python3 -B -m unittest discover -s deploy/firebase/test -p test_auto_fix_security.py -v
+      - name: Authenticate failure-analysis sources and retries
+        run: python3 -B -m unittest discover -s deploy/firebase/test -p test_failure_analysis_security.py -v
       - name: Publish bootstrap plan for review
         run: python3 -I -B deploy/firebase/bootstrap/bootstrap.py --plan-file bootstrap-plan.txt
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
