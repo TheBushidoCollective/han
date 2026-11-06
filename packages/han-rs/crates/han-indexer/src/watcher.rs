@@ -128,7 +128,7 @@ impl WatcherService {
         let path = if let Some(p) = watch_path {
             p
         } else {
-            default_watch_path().ok_or(WatcherError::NoHomeDir)?
+            Self::default_watch_path().ok_or(WatcherError::NoHomeDir)?
         };
 
         if !path.exists() {
