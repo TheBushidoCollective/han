@@ -53,6 +53,13 @@ struct Cli {
     #[arg(long)]
     foreground: bool,
 
+    #[arg(long, hide = true)]
+    supervisor_pid: Option<u32>,
+    #[arg(long, hide = true)]
+    supervisor_nonce: Option<String>,
+    #[arg(long, hide = true)]
+    supervisor_generation: Option<String>,
+
     /// Database file path.
     #[arg(long)]
     db_path: Option<String>,
@@ -180,6 +187,21 @@ fn resolve_db_path(cli_path: Option<&str>, data_dir: &std::path::Path) -> String
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse CLI args
     let cli = Cli::parse();
+    let supervisor = match (&cli.supervisor_pid, &cli.supervisor_nonce, &cli.supervisor_generation) {
+        (None, None, None) => None,
+        (Some(&pid), Some(nonce), Some(generation)) if cli.foreground => {
+            let binding = runtime::SupervisorBinding::validate(pid, nonce.clone(), generation.clone())?;
+            #[cfg(unix)]
+            if unsafe { libc::getppid() } as u32 != pid {
+                return Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "supervisor is not the parent process").into());
+            }
+            #[cfg(not(unix))]
+            return Err(std::io::Error::new(std::io::ErrorKind::Unsupported, "supervisor verification unavailable").into());
+            #[cfg(unix)]
+            Some(binding)
+        }
+        _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "supervisor arguments must be supplied together with --foreground").into()),
+    };
 
     // Initialize tracing
     tracing_subscriber::fmt()
@@ -298,15 +320,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let project_path = cli.project_path.map(std::path::PathBuf::from);
     let hook_engine = Arc::new(Mutex::new(HookEngine::new(project_path)));
 
-    // Shared gRPC state
     let (shutdown_tx, mut shutdown_rx) = broadcast::channel(1);
-    let coordinator_state = Arc::new(CoordinatorState {
-        db: db.clone(),
-        start_time: Instant::now(),
-        hook_engine: hook_engine.clone(),
-        slots: Arc::new(RwLock::new(HashMap::new())),
-        shutdown: shutdown_tx,
-    });
 
     // Serve on the listener claimed at startup, above.
     let certs = tls::generate_identity()?;
@@ -319,7 +333,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         grpc_port,
         certificate_pem: certs.cert_pem.clone(),
         bearer_token: bearer.clone(),
+        supervisor,
     };
+    let published_descriptor = runtime::PublishedDescriptor::publish(&runtime_dir, &descriptor)?;
+    let coordinator_state = Arc::new(CoordinatorState {
+        db: db.clone(),
+        start_time: Instant::now(),
+        hook_engine: hook_engine.clone(),
+        slots: Arc::new(RwLock::new(HashMap::new())),
+        shutdown: shutdown_tx,
+        shutdown_context: Some(runtime::ShutdownContext { runtime: runtime_dir.clone(), descriptor: descriptor.clone() }),
+        shutdown_committed: std::sync::Mutex::new(false),
+    });
     let router = server::build_router(schema.clone(), coordinator_state.start_time, https_port, bearer.clone());
     let tls_config = tls::build_tls_config(&certs)?;
     let acceptor = TlsAcceptor::from(Arc::new(tls_config));
@@ -384,7 +409,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let shutdown = shutdown_signal();
     tokio::pin!(shutdown);
-    let published_descriptor = runtime::PublishedDescriptor::publish(&runtime_dir, &descriptor)?;
 
     // Write PID file
     if let Some(pid_path) = &cli.pid_file {

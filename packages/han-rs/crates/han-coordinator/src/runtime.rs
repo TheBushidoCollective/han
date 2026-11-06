@@ -6,7 +6,7 @@ use std::{fs, io::{self, Read, Write}, path::{Path, PathBuf}};
 
 pub const LOCAL_TRANSPORT_VERSION: u32 = 1;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Descriptor {
     pub transport_version: u32,
@@ -16,6 +16,97 @@ pub struct Descriptor {
     pub grpc_port: Option<u16>,
     pub certificate_pem: String,
     pub bearer_token: String,
+    #[serde(deserialize_with = "deserialize_supervisor")]
+    pub supervisor: Option<SupervisorBinding>,
+}
+
+fn deserialize_supervisor<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<Option<SupervisorBinding>, D::Error> {
+    Option::<SupervisorBinding>::deserialize(deserializer)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SupervisorBinding {
+    pub pid: u32,
+    pub nonce: String,
+    pub generation_id: String,
+}
+
+impl SupervisorBinding {
+    pub fn validate(pid: u32, nonce: String, generation_id: String) -> io::Result<Self> {
+        let canonical_uuid = |s: &str| uuid::Uuid::parse_str(s)
+            .is_ok_and(|id| id.hyphenated().to_string() == s);
+        if pid == 0 || pid > i32::MAX as u32 || !canonical_uuid(&nonce) || !canonical_uuid(&generation_id) {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid supervisor binding"));
+        }
+        Ok(Self { pid, nonce, generation_id })
+    }
+}
+
+#[cfg(unix)]
+struct PublicationGuard(fs::File);
+
+#[cfg(unix)]
+impl PublicationGuard {
+    fn acquire(runtime: &Path) -> io::Result<Self> {
+        use std::os::unix::{fs::{MetadataExt, OpenOptionsExt, PermissionsExt}, io::AsRawFd};
+        let file = fs::OpenOptions::new().read(true).write(true).create(true)
+            .mode(0o600).custom_flags(libc::O_NOFOLLOW)
+            .open(runtime.join("descriptor-publication.lock"))?;
+        let metadata = file.metadata()?;
+        if !metadata.is_file() || metadata.uid() != unsafe { libc::geteuid() }
+            || metadata.permissions().mode() & 0o077 != 0
+        {
+            return Err(io::Error::new(io::ErrorKind::PermissionDenied, "insecure descriptor publication lock"));
+        }
+        loop {
+            if unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX) } == 0 {
+                return Ok(Self(file));
+            }
+            let error = io::Error::last_os_error();
+            if error.kind() != io::ErrorKind::Interrupted { return Err(error); }
+        }
+    }
+}
+
+#[cfg(unix)]
+impl Drop for PublicationGuard {
+    fn drop(&mut self) {
+        use std::os::unix::io::AsRawFd;
+        unsafe { libc::flock(self.0.as_raw_fd(), libc::LOCK_UN); }
+    }
+}
+
+#[derive(Clone)]
+pub struct ShutdownContext {
+    pub runtime: PathBuf,
+    pub descriptor: Descriptor,
+}
+
+impl ShutdownContext {
+    #[cfg(unix)]
+    pub fn withdraw(&self) -> io::Result<()> {
+        let binding = self.descriptor.supervisor.as_ref().ok_or_else(||
+            io::Error::new(io::ErrorKind::InvalidInput, "supervisor binding required"))?;
+        // Revalidate before using either value as a pathname component.
+        SupervisorBinding::validate(binding.pid, binding.nonce.clone(), binding.generation_id.clone())?;
+        let _guard = PublicationGuard::acquire(&self.runtime)?;
+        if read_descriptor(&self.runtime)? != self.descriptor {
+            return Err(io::Error::new(io::ErrorKind::PermissionDenied, "coordinator descriptor ownership changed"));
+        }
+        let stopping = self.runtime.join(format!("coordinator.stopping.{}.{}.json", binding.nonce, binding.generation_id));
+        match fs::symlink_metadata(&stopping) {
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {},
+            Err(e) => return Err(e),
+            Ok(_) => return Err(io::Error::new(io::ErrorKind::AlreadyExists, "shutdown intent already exists")),
+        }
+        fs::rename(self.runtime.join("coordinator.json"), stopping)
+    }
+
+    #[cfg(not(unix))]
+    pub fn withdraw(&self) -> io::Result<()> {
+        Err(io::Error::new(io::ErrorKind::Unsupported, "secure descriptor ACL support is required on this platform"))
+    }
 }
 
 pub fn random_token() -> String {
@@ -83,11 +174,12 @@ pub fn read_descriptor(_runtime: &Path) -> io::Result<Descriptor> {
 }
 
 
-pub struct PublishedDescriptor { path: PathBuf, instance_id: String }
+pub struct PublishedDescriptor { runtime: PathBuf, descriptor: Descriptor }
 impl PublishedDescriptor {
     #[cfg(unix)]
     pub fn publish(runtime: &Path, descriptor: &Descriptor) -> io::Result<Self> {
         use std::os::unix::fs::OpenOptionsExt;
+        let _guard = PublicationGuard::acquire(runtime)?;
         let path = runtime.join("coordinator.json");
         let temp = runtime.join(format!(".coordinator.{}.tmp", descriptor.instance_id));
         let result = (|| {
@@ -96,7 +188,7 @@ impl PublishedDescriptor {
             file.write_all(b"\n")?;
             file.sync_all()?;
             fs::rename(&temp, &path)?;
-            Ok(Self { path, instance_id: descriptor.instance_id.clone() })
+            Ok(Self { runtime: runtime.to_path_buf(), descriptor: descriptor.clone() })
         })();
         if result.is_err() { let _ = fs::remove_file(&temp); }
         result
@@ -107,11 +199,15 @@ impl PublishedDescriptor {
     }
 }
 impl Drop for PublishedDescriptor {
+    #[cfg(unix)]
     fn drop(&mut self) {
-        if self.path.parent().and_then(|parent| read_descriptor(parent).ok()).is_some_and(|d| d.instance_id == self.instance_id) {
-            let _ = fs::remove_file(&self.path);
+        let Ok(_guard) = PublicationGuard::acquire(&self.runtime) else { return };
+        if read_descriptor(&self.runtime).is_ok_and(|d| d == self.descriptor) {
+            let _ = fs::remove_file(self.runtime.join("coordinator.json"));
         }
     }
+    #[cfg(not(unix))]
+    fn drop(&mut self) {}
 }
 
 #[cfg(test)]
@@ -123,13 +219,106 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
         let temp = tempfile::tempdir().unwrap();
         let runtime = prepare(temp.path()).unwrap();
-        let mut descriptor = Descriptor { transport_version: 1, instance_id: random_token(), pid: std::process::id(), https_port: 1234, grpc_port: None, certificate_pem: "public".into(), bearer_token: random_token() };
+        let mut descriptor = Descriptor { transport_version: 1, instance_id: random_token(), pid: std::process::id(), https_port: 1234, grpc_port: None, certificate_pem: "public".into(), bearer_token: random_token(), supervisor: None };
         let published = PublishedDescriptor::publish(&runtime, &descriptor).unwrap();
         assert_eq!(fs::metadata(runtime.join("coordinator.json")).unwrap().permissions().mode() & 0o777, 0o600);
         descriptor.instance_id = random_token();
         fs::write(runtime.join("coordinator.json"), serde_json::to_vec(&descriptor).unwrap()).unwrap();
         drop(published);
         assert!(runtime.join("coordinator.json").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn withdrawal_and_drop_never_touch_replacement() {
+        let temp = tempfile::tempdir().unwrap();
+        let runtime = prepare(temp.path()).unwrap();
+        let binding = SupervisorBinding::validate(123, uuid::Uuid::new_v4().to_string(), uuid::Uuid::new_v4().to_string()).unwrap();
+        let descriptor = Descriptor { transport_version: 1, instance_id: random_token(), pid: 1, https_port: 1234, grpc_port: None, certificate_pem: "cert".into(), bearer_token: random_token(), supervisor: Some(binding.clone()) };
+        let old = PublishedDescriptor::publish(&runtime, &descriptor).unwrap();
+        let mut replacement = descriptor.clone();
+        replacement.bearer_token = random_token();
+        let new = PublishedDescriptor::publish(&runtime, &replacement).unwrap();
+        let context = ShutdownContext { runtime: runtime.clone(), descriptor };
+        assert_eq!(context.withdraw().unwrap_err().kind(), io::ErrorKind::PermissionDenied);
+        drop(old);
+        assert_eq!(read_descriptor(&runtime).unwrap(), replacement);
+        assert!(!runtime.join(format!("coordinator.stopping.{}.{}.json", binding.nonce, binding.generation_id)).exists());
+        drop(new);
+        assert!(!runtime.join("coordinator.json").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn withdrawal_commits_exact_private_descriptor_and_preserves_it_on_drop() {
+        use std::os::unix::fs::PermissionsExt;
+        let temp = tempfile::tempdir().unwrap();
+        let runtime = prepare(temp.path()).unwrap();
+        let binding = SupervisorBinding::validate(123, uuid::Uuid::new_v4().to_string(), uuid::Uuid::new_v4().to_string()).unwrap();
+        let descriptor = Descriptor { transport_version: 1, instance_id: random_token(), pid: 1, https_port: 1234, grpc_port: None, certificate_pem: "cert".into(), bearer_token: random_token(), supervisor: Some(binding.clone()) };
+        let published = PublishedDescriptor::publish(&runtime, &descriptor).unwrap();
+        ShutdownContext { runtime: runtime.clone(), descriptor: descriptor.clone() }.withdraw().unwrap();
+        drop(published);
+        let path = runtime.join(format!("coordinator.stopping.{}.{}.json", binding.nonce, binding.generation_id));
+        assert!(!runtime.join("coordinator.json").exists());
+        assert_eq!(fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
+        assert_eq!(serde_json::from_slice::<Descriptor>(&fs::read(path).unwrap()).unwrap(), descriptor);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn publication_lock_rejects_symlink_and_public_file() {
+        use std::os::unix::fs::PermissionsExt;
+        let temp = tempfile::tempdir().unwrap();
+        let runtime = prepare(temp.path()).unwrap();
+        let lock = runtime.join("descriptor-publication.lock");
+        let target = temp.path().join("target");
+        fs::write(&target, "").unwrap();
+        std::os::unix::fs::symlink(&target, &lock).unwrap();
+        assert!(PublicationGuard::acquire(&runtime).is_err());
+        fs::remove_file(&lock).unwrap();
+        fs::write(&lock, "").unwrap();
+        fs::set_permissions(&lock, fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(PublicationGuard::acquire(&runtime).is_err());
+    }
+
+    #[test]
+    fn supervisor_binding_rejects_invalid_path_components() {
+        let uuid = "abcdefab-cdef-4abc-8def-abcdefabcdef".to_string();
+        assert!(SupervisorBinding::validate(0, uuid.clone(), uuid.clone()).is_err());
+        assert!(SupervisorBinding::validate(1, "../escape".into(), uuid.clone()).is_err());
+        assert!(SupervisorBinding::validate(1, uuid.to_uppercase(), uuid.clone()).is_err());
+        assert!(SupervisorBinding::validate(1, uuid.clone(), uuid).is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn waiting_withdrawal_observes_replacement_published_under_guard() {
+        let temp = tempfile::tempdir().unwrap();
+        let runtime = prepare(temp.path()).unwrap();
+        let binding = SupervisorBinding::validate(123, uuid::Uuid::new_v4().to_string(), uuid::Uuid::new_v4().to_string()).unwrap();
+        let descriptor = Descriptor { transport_version: 1, instance_id: random_token(), pid: 1, https_port: 1234, grpc_port: None, certificate_pem: "cert".into(), bearer_token: random_token(), supervisor: Some(binding.clone()) };
+        let old = PublishedDescriptor::publish(&runtime, &descriptor).unwrap();
+        let guard = PublicationGuard::acquire(&runtime).unwrap();
+        let context = ShutdownContext { runtime: runtime.clone(), descriptor: descriptor.clone() };
+        let (tx, rx) = std::sync::mpsc::channel();
+        let thread = std::thread::spawn(move || {
+            tx.send(()).unwrap();
+            context.withdraw()
+        });
+        rx.recv().unwrap();
+        let mut replacement = descriptor;
+        replacement.instance_id = random_token();
+        let temporary = runtime.join("replacement.tmp");
+        fs::write(&temporary, serde_json::to_vec(&replacement).unwrap()).unwrap();
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&temporary, fs::Permissions::from_mode(0o600)).unwrap();
+        fs::rename(temporary, runtime.join("coordinator.json")).unwrap();
+        drop(guard);
+        assert_eq!(thread.join().unwrap().unwrap_err().kind(), io::ErrorKind::PermissionDenied);
+        drop(old);
+        assert_eq!(read_descriptor(&runtime).unwrap(), replacement);
+        assert!(!runtime.join(format!("coordinator.stopping.{}.{}.json", binding.nonce, binding.generation_id)).exists());
     }
     #[cfg(unix)]
     #[test]
