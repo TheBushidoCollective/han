@@ -6,6 +6,8 @@
 mod grpc;
 mod hooks;
 mod lock;
+mod runtime;
+mod rpc_guard;
 mod server;
 mod tls;
 mod watcher_bridge;
@@ -52,6 +54,9 @@ struct Cli {
     /// Database file path.
     #[arg(long)]
     db_path: Option<String>,
+    /// Shared Han data directory (locks, database and runtime descriptor).
+    #[arg(long)]
+    data_dir: Option<std::path::PathBuf>,
 
     /// Project path for hook discovery.
     #[arg(long)]
@@ -196,18 +201,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // coordinator that actually owns the port with no record on disk. It
     // also opens the database and runs migrations before finding out it was
     // never needed.
-    let server_addr: SocketAddr = ([0, 0, 0, 0], cli.port).into();
-    let tls_listener = match tokio::net::TcpListener::bind(server_addr).await {
-        Ok(listener) => listener,
-        Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
-            tracing::info!(
-                "Another process is already serving on {}; exiting",
-                server_addr
-            );
-            return Ok(());
-        }
-        Err(e) => return Err(e.into()),
+    let server_addr: SocketAddr = ([127, 0, 0, 1], cli.port).into();
+    let tls_listener = tokio::net::TcpListener::bind(server_addr).await?;
+    let https_port = tls_listener.local_addr()?.port();
+    let grpc_listener = if cli.no_grpc {
+        None
+    } else {
+        Some(tokio::net::TcpListener::bind(([127, 0, 0, 1], cli.grpc_port)).await?)
     };
+    let grpc_port = grpc_listener.as_ref().map(|listener| listener.local_addr().map(|addr| addr.port())).transpose()?;
+    let data_dir = runtime::data_dir(cli.data_dir.as_deref())?;
+    let runtime_dir = runtime::prepare(&data_dir)?;
 
     // Acquire coordinator lock. Another live coordinator already holding it
     // is not an error: exit cleanly (status 0) so the TypeScript supervisor's
@@ -215,8 +219,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Nothing has been published at this point, so an exit here leaves no
     // trace: the listener drops and releasing a lock we never owned is a
     // no-op.
-    let lock = CoordinatorLock::new()?;
-    match lock.acquire(Some(cli.port)) {
+    let lock = CoordinatorLock::with_path(runtime_dir.join("coordinator.lock"));
+    match lock.acquire(Some(https_port)) {
         Ok(()) => {}
         Err(lock::LockError::AlreadyLocked { pid, port }) => {
             tracing::info!(
@@ -249,7 +253,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // Initialize database
-    let db_path = resolve_db_path(cli.db_path.as_deref());
+    let db_path = cli.db_path.clone().unwrap_or_else(|| data_dir.join("han.db").to_string_lossy().into_owned());
     tracing::info!("Database: {}", db_path);
 
     let db = establish_connection(DbConfig::Sqlite {
@@ -284,17 +288,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let hook_engine = Arc::new(Mutex::new(HookEngine::new(project_path)));
 
     // Shared gRPC state
+    let (shutdown_tx, mut shutdown_rx) = broadcast::channel(1);
     let coordinator_state = Arc::new(CoordinatorState {
         db: db.clone(),
         start_time: Instant::now(),
         hook_engine: hook_engine.clone(),
         slots: Arc::new(RwLock::new(HashMap::new())),
+        shutdown: shutdown_tx,
     });
 
     // Serve on the listener claimed at startup, above.
-    let router = server::build_router(schema.clone(), coordinator_state.start_time);
-
-    let certs = tls::ensure_certificates()?;
+    let certs = tls::generate_identity()?;
+    let bearer = runtime::random_token();
+    let descriptor = runtime::Descriptor {
+        transport_version: runtime::LOCAL_TRANSPORT_VERSION,
+        instance_id: runtime::random_token(),
+        pid: std::process::id(),
+        https_port,
+        grpc_port,
+        certificate_pem: certs.cert_pem.clone(),
+        bearer_token: bearer.clone(),
+    };
+    let router = server::build_router(schema.clone(), coordinator_state.start_time, https_port, bearer.clone());
+    let grpc_tls = tonic::transport::ServerTlsConfig::new().identity(
+        tonic::transport::Identity::from_pem(&certs.cert_pem, &certs.key_pem)
+    );
     let tls_config = tls::build_tls_config(&certs)?;
     let acceptor = TlsAcceptor::from(Arc::new(tls_config));
 
@@ -312,13 +330,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // Start gRPC server
-    let grpc_handle = if !cli.no_grpc {
-        let grpc_addr: SocketAddr = ([0, 0, 0, 0], cli.grpc_port).into();
+    let grpc_handle = if let Some(grpc_listener) = grpc_listener {
         let state = coordinator_state.clone();
-
-        tracing::info!("gRPC server listening on {}", grpc_addr);
+        let rpc_guard = rpc_guard::GuardLayer { port: grpc_port.expect("bound port"), bearer };
+        let server = TonicServer::builder().tls_config(grpc_tls)?;
+        tracing::info!("gRPC server listening on 127.0.0.1:{}", grpc_port.expect("bound port"));
         Some(tokio::spawn(async move {
-            TonicServer::builder()
+            server.accept_http1(true)
+                .layer(rpc_guard)
+                .layer(tonic_web::GrpcWebLayer::new())
                 .add_service(CoordinatorServiceServer::new(CoordinatorServiceImpl {
                     state: state.clone(),
                 }))
@@ -337,13 +357,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .add_service(MemoryServiceServer::new(MemoryServiceImpl {
                     state: state.clone(),
                 }))
-                .serve(grpc_addr)
+                .serve_with_incoming(tokio_stream::wrappers::TcpListenerStream::new(grpc_listener))
                 .await
                 .unwrap();
         }))
     } else {
         None
     };
+    let _descriptor = runtime::PublishedDescriptor::publish(&runtime_dir, &descriptor)?;
 
     // Write PID file
     if let Some(pid_path) = &cli.pid_file {
@@ -402,6 +423,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         _ = server_handle => {
             tracing::info!("Server stopped");
+        }
+        _ = shutdown_rx.recv() => {
+            tracing::info!("Received authenticated shutdown request");
+        }
+        _ = tokio::time::sleep(std::time::Duration::from_secs(23 * 60 * 60)) => {
+            tracing::info!("Rotating coordinator identity before certificate expiry");
         }
     }
 
