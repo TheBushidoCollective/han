@@ -146,7 +146,10 @@ afterAll(() => {
   mock.module('node:fs', () => realFs);
   mock.module('../lib/grpc/client.ts', () => realGrpcClient);
   mock.module('../lib/commands/coordinator/health.ts', () => realHealthModule);
-  mock.module('../lib/coordinator/connection.ts', () => realConnection);
+  mock.module('../lib/coordinator/connection.ts', () => ({
+    ...realConnection,
+    readCoordinatorDescriptor: readActualDescriptor,
+  }));
   Bun.spawn = originalBunSpawn;
 });
 

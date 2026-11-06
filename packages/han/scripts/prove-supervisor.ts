@@ -670,10 +670,10 @@ async function committedStopSurvivesFailure(
 }
 
 try {
+  await intentionalStopAndRestart();
   await supervisorRecovery();
   await replacementSurvivesOldOwner();
   await replacementWinsStartupRace();
-  await intentionalStopAndRestart();
   await standaloneStopPreservesUnrelatedMarker();
   await committedStopSurvivesFailure('child');
   await committedStopSurvivesFailure('requester');
