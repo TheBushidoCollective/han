@@ -1,0 +1,152 @@
+import { afterEach, describe, expect, test } from 'bun:test';
+import { createHash } from 'node:crypto';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { handleRequest } from '../../../cert-server/server.ts';
+
+const root = resolve(import.meta.dir, '../../..');
+const scratch: string[] = [];
+function temp(): string {
+  const path = mkdtempSync(join(tmpdir(), 'han-distribution-test-'));
+  scratch.push(path);
+  return path;
+}
+afterEach(() => {
+  for (const path of scratch.splice(0))
+    rmSync(path, { recursive: true, force: true });
+});
+
+describe('distribution', () => {
+  test.each([
+    ['linux-x64', 'han-linux-x64', ''],
+    ['linux-arm64', 'han-linux-arm64', ''],
+    ['darwin-x64', 'han-darwin-x64', ''],
+    ['darwin-arm64', 'han-darwin-arm64', ''],
+    ['win32-x64', 'han-windows-x64', '.exe'],
+  ])(
+    'npm packages require the matching pair for %s',
+    (platform, artifact, suffix) => {
+      const dir = temp();
+      mkdirSync(join(dir, 'artifact'));
+      writeFileSync(join(dir, 'artifact', `${artifact}${suffix}`), 'cli');
+      const run = () =>
+        Bun.spawnSync(
+          [
+            'bash',
+            join(root, '.github/scripts/create-npm-platform-package.sh'),
+            'v9.8.7',
+            platform,
+            artifact,
+          ],
+          { cwd: dir }
+        );
+      expect(run().exitCode).not.toBe(0);
+      writeFileSync(
+        join(dir, 'artifact', `han-coordinator-${artifact.slice(4)}${suffix}`),
+        'coordinator'
+      );
+      expect(run().exitCode).toBe(0);
+      expect(readFileSync(join(dir, 'package', `han${suffix}`), 'utf8')).toBe(
+        'cli'
+      );
+      expect(
+        readFileSync(join(dir, 'package', `han-coordinator${suffix}`), 'utf8')
+      ).toBe('coordinator');
+    }
+  );
+
+  test.skipIf(process.platform === 'win32')(
+    'installer requires both checksummed assets before replacing an existing pair',
+    () => {
+      const dir = temp();
+      const bin = join(dir, 'bin');
+      const fixtures = join(dir, 'fixtures');
+      const fakeBin = join(dir, 'fake-bin');
+      mkdirSync(bin);
+      mkdirSync(fixtures);
+      mkdirSync(fakeBin);
+      const platform = `${process.platform}-${process.arch === 'arm64' ? 'arm64' : 'x64'}`;
+      for (const [name, content] of [
+        [`han-${platform}`, 'new cli'],
+        [`han-coordinator-${platform}`, 'new coordinator'],
+      ]) {
+        writeFileSync(join(fixtures, name), content);
+        writeFileSync(
+          join(fixtures, `${name}.sha256`),
+          `${createHash('sha256').update(content).digest('hex')}  ${name}\n`
+        );
+      }
+      const curl = join(fakeBin, 'curl');
+      writeFileSync(
+        curl,
+        '#!/bin/sh\nwhile [ "$#" -gt 0 ]; do case "$1" in -o) dest="$2"; shift 2;; http*) url="$1"; shift;; *) shift;; esac; done\ncp "$FIXTURES/$(basename "$url")" "$dest"\n'
+      );
+      chmodSync(curl, 0o755);
+      writeFileSync(join(bin, 'han'), 'old cli');
+      writeFileSync(join(bin, 'han-coordinator'), 'old coordinator');
+      const run = () =>
+        Bun.spawnSync(['bash', join(root, 'website/public/install.sh')], {
+          env: {
+            ...process.env,
+            PATH: `${fakeBin}:/usr/bin:/bin`,
+            HOME: dir,
+            FIXTURES: fixtures,
+            HAN_VERSION: '9.8.7',
+            HAN_INSTALL_DIR: bin,
+          },
+        });
+      writeFileSync(
+        join(fixtures, `han-coordinator-${platform}.sha256`),
+        `${'0'.repeat(64)}\n`
+      );
+      expect(run().exitCode).not.toBe(0);
+      expect(readFileSync(join(bin, 'han'), 'utf8')).toBe('old cli');
+      expect(readFileSync(join(bin, 'han-coordinator'), 'utf8')).toBe(
+        'old coordinator'
+      );
+      const coordinator = readFileSync(
+        join(fixtures, `han-coordinator-${platform}`)
+      );
+      writeFileSync(
+        join(fixtures, `han-coordinator-${platform}.sha256`),
+        `${createHash('sha256').update(coordinator).digest('hex')}\n`
+      );
+      expect(run().exitCode).toBe(0);
+      expect(readFileSync(join(bin, 'han'), 'utf8')).toBe('new cli');
+      expect(readFileSync(join(bin, 'han-coordinator'), 'utf8')).toBe(
+        'new coordinator'
+      );
+      expect(existsSync(join(bin, 'han'))).toBe(true);
+    }
+  );
+
+  test('retired HTTP endpoint never returns key material', async () => {
+    const server = Bun.serve({
+      hostname: '127.0.0.1',
+      port: 0,
+      fetch: handleRequest,
+    });
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/coordinator/latest`
+      );
+      expect(response.status).toBe(410);
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      const body = await response.json();
+      expect(body.error).toBe('UPGRADE_REQUIRED');
+      expect(body.key).toBeUndefined();
+      expect(body.cert).toBeUndefined();
+    } finally {
+      server.stop(true);
+    }
+  });
+});

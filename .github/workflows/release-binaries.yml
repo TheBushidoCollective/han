@@ -144,14 +144,18 @@ jobs:
           echo "Built binary:"
           ls -la dist/binaries/
 
-      - name: Create checksum
+      - name: Name and checksum release binaries
+        shell: bash
         working-directory: ./packages/han/dist/binaries
         run: |
-          if [ -f "${{ matrix.binary_name }}.exe" ]; then
-            sha256sum ${{ matrix.binary_name }}.exe > ${{ matrix.binary_name }}.exe.sha256
-          else
-            sha256sum ${{ matrix.binary_name }} > ${{ matrix.binary_name }}.sha256
-          fi
+          set -euo pipefail
+          suffix=""
+          if [[ "${{ matrix.target }}" == *windows* ]]; then suffix=".exe"; fi
+          binary="${{ matrix.binary_name }}"
+          coordinator="han-coordinator-${binary#han-}${suffix}"
+          mv "${{ matrix.coordinator_binary }}" "$coordinator"
+          sha256sum "${{ matrix.binary_name }}${suffix}" > "${{ matrix.binary_name }}${suffix}.sha256"
+          sha256sum "$coordinator" > "$coordinator.sha256"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -203,6 +207,7 @@ jobs:
       - name: Checkout han repo for scripts
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.client_payload.tag || github.ref }}
           path: han
 
       - name: Update formula
@@ -245,6 +250,8 @@ jobs:
     steps:
       - name: Checkout for scripts
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.client_payload.tag || github.ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -281,6 +288,8 @@ jobs:
     steps:
       - name: Checkout for scripts
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.client_payload.tag || github.ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
