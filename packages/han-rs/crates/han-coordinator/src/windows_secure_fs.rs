@@ -171,20 +171,21 @@ impl PinnedDirectory {
         let access = FILE_READ_ATTRIBUTES | FILE_TRAVERSE | READ_CONTROL
             | windows_sys::Win32::Storage::FileSystem::FILE_ADD_FILE
             | windows_sys::Win32::Storage::FileSystem::FILE_ADD_SUBDIRECTORY;
-        let (child, created) = match open_child(self.handle(), name, true, access) {
-            Ok(handle) => (handle, false),
+        let child = match open_child(self.handle(), name, true, access) {
+            Ok(handle) => handle,
             Err(error) if create && error.kind() == io::ErrorKind::NotFound =>
-                (create_private_child(self.handle(), name, true, access)?, true),
+                match create_private_child(self.handle(), name, true, access) {
+                    Ok(handle) => handle,
+                    Err(error) if error.kind() == io::ErrorKind::AlreadyExists =>
+                        open_child(self.handle(), name, true, access)?,
+                    Err(error) => return Err(error),
+                },
             Err(error) => return Err(error),
         };
         verify_private_acl(&child)?;
         self.handles.push(child);
-        if created {
-            use windows_sys::Win32::Storage::FileSystem::{FILE_READ_DATA, FILE_WRITE_DATA};
-            let access = FILE_READ_ATTRIBUTES | FILE_READ_DATA | FILE_WRITE_DATA | READ_CONTROL;
-            let lock = create_private_child_with_share(self.handle(), OsStr::new("descriptor-publication.lock"),
-                false, access, FILE_SHARE_READ | FILE_SHARE_WRITE)?;
-            regular_file_identity(&lock)?;
+        if create {
+            drop(PublicationGuard::open(&self, true)?);
         }
         Ok(self)
     }
@@ -860,6 +861,50 @@ mod tests {
         assert!(RecordGuard::open(&pinned).is_err());
         assert!(CoordinatorLease::acquire(&pinned).is_err());
         assert!(!temp.path().join("private").join("descriptor-publication.lock").exists());
+    }
+
+    #[test]
+    fn preparation_repairs_missing_lock_and_rejects_invalid_occupant() {
+        let temp = tempfile::tempdir().unwrap();
+        let parent = dir(temp.path());
+        let access = FILE_READ_ATTRIBUTES | FILE_TRAVERSE | FILE_ADD_FILE | FILE_ADD_SUBDIRECTORY | READ_CONTROL;
+        let private = create_private_child(&parent, OsStr::new("runtime"), true, access).unwrap();
+        drop(private);
+        let runtime = temp.path().join("runtime");
+        let pinned = PinnedDirectory { handles: vec![parent] }.open_private_child(OsStr::new("runtime"), false).unwrap();
+        assert!(RecordGuard::open(&pinned).is_err());
+        assert!(CoordinatorLease::acquire(&pinned).is_err());
+        drop(pinned);
+        let pinned = PinnedDirectory { handles: vec![dir(temp.path())] }.open_private_child(OsStr::new("runtime"), true).unwrap();
+        assert!(RecordGuard::open(&pinned).is_ok());
+        assert!(CoordinatorLease::acquire(&pinned).is_ok());
+        drop(pinned);
+        fs::remove_file(runtime.join("descriptor-publication.lock")).unwrap();
+        fs::create_dir(runtime.join("descriptor-publication.lock")).unwrap();
+        assert!(PinnedDirectory { handles: vec![dir(temp.path())] }.open_private_child(OsStr::new("runtime"), true).is_err());
+        assert!(runtime.join("descriptor-publication.lock").is_dir());
+    }
+
+    #[test]
+    fn concurrent_cold_preparation_shares_permanent_lock() {
+        let temp = tempfile::tempdir().unwrap();
+        let data = temp.path().join("data");
+        let barrier = std::sync::Arc::new(std::sync::Barrier::new(2));
+        let threads: Vec<_> = (0..2).map(|_| {
+            let data = data.clone();
+            let barrier = barrier.clone();
+            std::thread::spawn(move || {
+                barrier.wait();
+                let root = PinnedDirectory::prepare_data_directory(&data)?;
+                let runtime = root.open_private_child(OsStr::new("runtime"), true)?;
+                let guard = RecordGuard::open(&runtime)?;
+                drop(guard);
+                Ok::<_, io::Error>(())
+            })
+        }).collect();
+        for thread in threads { assert!(thread.join().unwrap().is_ok()); }
+        let runtime = PinnedDirectory::open_data_directory(&data).unwrap().open_private_child(OsStr::new("runtime"), true).unwrap();
+        assert!(RecordGuard::open(&runtime).is_ok());
     }
 
     #[test]

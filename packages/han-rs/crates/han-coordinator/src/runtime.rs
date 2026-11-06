@@ -12,6 +12,8 @@ pub struct Descriptor {
     pub transport_version: u32,
     pub instance_id: String,
     pub pid: u32,
+    #[cfg(windows)]
+    pub(crate) process: crate::windows_process_identity::ProcessIdentity,
     pub https_port: u16,
     pub grpc_port: Option<u16>,
     pub certificate_pem: String,

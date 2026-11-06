@@ -100,7 +100,7 @@ fn sid_string(sid: *mut core::ffi::c_void) -> io::Result<String> {
         .map_err(|_| invalid("invalid SID text"))
 }
 
-fn validate_identity(identity: &ProcessIdentity) -> io::Result<()> {
+pub(crate) fn validate_identity(identity: &ProcessIdentity) -> io::Result<()> {
     if identity.pid == 0 || identity.creation_time.is_empty() || identity.creation_time.len() > 20 {
         return Err(invalid("invalid process identity"));
     }

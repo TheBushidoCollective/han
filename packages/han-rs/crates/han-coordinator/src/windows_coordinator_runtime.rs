@@ -50,11 +50,11 @@ pub(crate) fn prepare(data: &Path) -> io::Result<PathBuf> {
 
 // A predecessor is eligible only after the lifetime lease has been acquired.
 // Validate the whole public schema before allowing its exact snapshot to retire.
-fn parse_descriptor(bytes: &[u8]) -> io::Result<Descriptor> {
+pub(crate) fn parse_descriptor(bytes: &[u8]) -> io::Result<Descriptor> {
     let value: serde_json::Value = serde_json::from_slice(bytes)
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
     let object = value.as_object().ok_or_else(|| invalid("descriptor is not an object"))?;
-    const FIELDS: &[&str] = &["transportVersion", "instanceId", "pid", "httpsPort",
+    const FIELDS: &[&str] = &["transportVersion", "instanceId", "pid", "process", "httpsPort",
         "grpcPort", "certificatePem", "bearerToken", "supervisor"];
     if object.len() != FIELDS.len() || FIELDS.iter().any(|field| !object.contains_key(*field)) {
         return Err(invalid("invalid descriptor fields"));
@@ -78,6 +78,10 @@ fn parse_descriptor(bytes: &[u8]) -> io::Result<Descriptor> {
     {
         return Err(invalid("invalid descriptor contents"));
     }
+    if descriptor.process.pid != descriptor.pid {
+        return Err(invalid("descriptor process PID disagrees"));
+    }
+    windows_process_identity::validate_identity(&descriptor.process)?;
     if let Some(binding) = &descriptor.supervisor {
         SupervisorBinding::validate(binding.pid, binding.nonce.clone(), binding.generation_id.clone())
             .map_err(|_| invalid("invalid descriptor supervisor binding"))?;
@@ -206,6 +210,7 @@ mod tests {
             transport_version: crate::runtime::LOCAL_TRANSPORT_VERSION,
             instance_id: crate::runtime::random_token(),
             pid: std::process::id(),
+            process: windows_process_identity::current_identity().unwrap(),
             https_port: 1234,
             grpc_port: None,
             certificate_pem: "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----".into(),
@@ -219,6 +224,22 @@ mod tests {
         let runtime = prepare(&temp.path().join("han")).unwrap();
         let directory = Arc::new(open_runtime(&runtime, false).unwrap());
         (temp, directory)
+    }
+
+    #[test]
+    fn descriptor_requires_matching_valid_process_identity() {
+        let value = serde_json::to_value(descriptor()).unwrap();
+        assert!(parse_descriptor(&serde_json::to_vec(&value).unwrap()).is_ok());
+        for change in 0..4 {
+            let mut invalid = value.clone();
+            match change {
+                0 => { invalid.as_object_mut().unwrap().remove("process"); }
+                1 => invalid["process"]["creationTime"] = "0".into(),
+                2 => invalid["process"]["pid"] = (std::process::id() + 1).into(),
+                _ => invalid["process"]["userSid"] = "not-a-sid".into(),
+            }
+            assert!(parse_descriptor(&serde_json::to_vec(&invalid).unwrap()).is_err());
+        }
     }
 
     #[test]
@@ -240,8 +261,8 @@ mod tests {
         first.cleanup();
         let guard = lease.guard().unwrap();
         let current = guard.read(OsStr::new(ACTIVE)).unwrap().unwrap();
-        assert_eq!(current, second.snapshot);
-        assert_eq!(parse_descriptor(&current.bytes).unwrap(), replacement);
+        assert!(current == second.snapshot);
+        assert!(parse_descriptor(&current.bytes).unwrap() == replacement);
         drop(guard);
         second.cleanup();
         assert!(lease.guard().unwrap().read(OsStr::new(ACTIVE)).unwrap().is_none());

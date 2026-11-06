@@ -364,6 +364,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         transport_version: runtime::LOCAL_TRANSPORT_VERSION,
         instance_id: runtime::random_token(),
         pid: std::process::id(),
+        #[cfg(windows)]
+        process: windows_process_identity::current_identity()?,
         https_port,
         grpc_port,
         certificate_pem: certs.cert_pem.clone(),

@@ -13,6 +13,31 @@ const MAX_MESSAGE: usize = 128 * 1024;
 
 fn invalid() -> io::Error { io::Error::new(io::ErrorKind::InvalidData, "invalid local-runtime request or record") }
 
+thread_local! {
+    static STAGE: std::cell::Cell<&'static str> = const { std::cell::Cell::new("input_read") };
+}
+
+fn stage(value: &'static str) { STAGE.with(|current| current.set(value)); }
+
+fn error_kind(error: &io::Error) -> &'static str {
+    match error.kind() {
+        io::ErrorKind::InvalidData | io::ErrorKind::InvalidInput => "invalid_data",
+        io::ErrorKind::NotFound => "not_found",
+        io::ErrorKind::PermissionDenied => "permission_denied",
+        io::ErrorKind::AlreadyExists => "already_exists",
+        io::ErrorKind::TimedOut => "timed_out",
+        _ => "other",
+    }
+}
+
+fn failure(error: &io::Error) -> Value {
+    json!({"version":1, "ok":false, "error":{
+        "stage":STAGE.with(|current| current.get()),
+        "kind":error_kind(error),
+        "win32Code":error.raw_os_error()
+    }})
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Request {
@@ -83,6 +108,8 @@ fn descriptor(d: &Descriptor) -> io::Result<()> {
         d.grpc_port == Some(0) || !d.certificate_pem.contains("-----BEGIN CERTIFICATE-----") || !token(&d.bearer_token) {
         return Err(invalid());
     }
+    if d.process.pid != d.pid { return Err(invalid()); }
+    processes::validate_identity(&d.process)?;
     if let Some(b) = &d.supervisor { binding(b)?; }
     Ok(())
 }
@@ -95,11 +122,13 @@ fn valid_claim(c: &Claim) -> io::Result<()> {
 }
 
 fn directory(path: &Path, create: bool) -> io::Result<PinnedDirectory> {
+    stage("data_directory");
     let data = if create {
         PinnedDirectory::prepare_data_directory(path)?
     } else {
         PinnedDirectory::open_data_directory(path)?
     };
+    stage("runtime_directory");
     data.open_private_child(OsStr::new("runtime"), create)
 }
 fn read_directory(path: &Path) -> io::Result<Option<PinnedDirectory>> {
@@ -148,10 +177,16 @@ fn remove_records(guard: &RecordGuard<'_>, kind: &str, r: &Records) -> io::Resul
     guard.remove(OsStr::new(owner), &r.owner_file)?;
     guard.remove(OsStr::new(reservation), &r.reservation)
 }
-/// Recover only an interrupted claim whose published reservation names a
-/// verified dead process identity. Partial or conflicting metadata is never
-/// treated as permission to reclaim without that anchor.
-fn recover_incomplete(guard: &RecordGuard<'_>, kind: &str) -> io::Result<Option<u32>> {
+struct PartialRecords {
+    reservation: RecordSnapshot,
+    owner_file: Option<RecordSnapshot>,
+    pid_file: Option<RecordSnapshot>,
+    owner: Owner,
+    liveness: Liveness,
+}
+
+// Inspection never mutates. The reservation is the required authority anchor.
+fn incomplete(guard: &RecordGuard<'_>, kind: &str) -> io::Result<Option<PartialRecords>> {
     let (reservation_name, owner_name, pid_name) = names(kind);
     let reservation = guard.read(OsStr::new(reservation_name))?;
     let owner_file = guard.read(OsStr::new(owner_name))?;
@@ -165,24 +200,31 @@ fn recover_incomplete(guard: &RecordGuard<'_>, kind: &str) -> io::Result<Option<
         || pid_file.as_ref().is_some_and(|file| file.bytes != owner.process.pid.to_string().as_bytes()) {
         return Err(invalid());
     }
-    match processes::liveness(&owner.process)? {
-        Liveness::Alive => return Ok(Some(owner.process.pid)),
-        Liveness::Unknown => return Err(invalid()),
-        Liveness::Gone => {}
-    }
-    if let Some(file) = pid_file { guard.remove(OsStr::new(pid_name), &file)?; }
-    if let Some(file) = owner_file { guard.remove(OsStr::new(owner_name), &file)?; }
-    guard.remove(OsStr::new(reservation_name), &reservation)?;
-    Ok(None)
+    let liveness = processes::liveness(&owner.process)?;
+    if liveness == Liveness::Unknown { return Err(invalid()); }
+    Ok(Some(PartialRecords { reservation, owner_file, pid_file, owner, liveness }))
+}
+
+fn remove_incomplete(guard: &RecordGuard<'_>, kind: &str, partial: &PartialRecords) -> io::Result<()> {
+    let (reservation, owner, pid) = names(kind);
+    if let Some(file) = &partial.pid_file { guard.remove(OsStr::new(pid), file)?; }
+    if let Some(file) = &partial.owner_file { guard.remove(OsStr::new(owner), file)?; }
+    guard.remove(OsStr::new(reservation), &partial.reservation)
 }
 
 fn acquire(path: &Path, kind: &str) -> io::Result<Value> {
+    stage("parent_identity");
     let parent = processes::own_parent_identity()?;
     if parent.user_sid != processes::current_identity()?.user_sid { return Err(invalid()); }
     let dir = directory(path, true)?;
+    stage("publication_lock");
     let guard = RecordGuard::open(&dir)?;
-    if let Some(owner_pid) = recover_incomplete(&guard, kind)? {
-        return Ok(json!({"status":"blocked", "ownerPid":owner_pid}));
+    stage("claim_acquisition");
+    if let Some(partial) = incomplete(&guard, kind)? {
+        if partial.liveness == Liveness::Alive {
+            return Ok(json!({"status":"blocked", "ownerPid":partial.owner.process.pid}));
+        }
+        remove_incomplete(&guard, kind, &partial)?;
     }
     if let Some(existing) = records(&guard, kind)? {
         match processes::liveness(&existing.owner.process)? {
@@ -225,9 +267,11 @@ fn target_name(target: &Target) -> io::Result<String> {
 fn read_descriptor(path: &Path, target: &Target) -> io::Result<Value> {
     let name = target_name(target)?;
     let Some(dir) = read_directory(path)? else { return Ok(Value::Null); };
+    stage("publication_lock");
     let guard = RecordGuard::open(&dir)?;
+    stage("descriptor_read");
     let Some(record) = guard.read(OsStr::new(&name))? else { return Ok(Value::Null); };
-    let d: Descriptor = serde_json::from_slice(&record.bytes).map_err(|_| invalid())?;
+    let d = crate::windows_coordinator_runtime::parse_descriptor(&record.bytes)?;
     descriptor(&d)?;
     if let Target::Stopping { binding: b } = target {
         if d.supervisor.as_ref() != Some(b) { return Err(invalid()); }
@@ -246,7 +290,7 @@ fn remove_intent(path: &Path, b: &SupervisorBinding, child_pid: u32, expected: &
     let Some(owner) = records(&guard, "supervisor")? else { return Err(invalid()); };
     if owner.owner.nonce != b.nonce || owner.owner.process != parent { return Err(invalid()); }
     let Some(record) = guard.read(OsStr::new(&name))? else { return Ok(json!({"status":"absent"})); };
-    let actual: Descriptor = serde_json::from_slice(&record.bytes).map_err(|_| invalid())?;
+    let actual = crate::windows_coordinator_runtime::parse_descriptor(&record.bytes)?;
     descriptor(&actual)?;
     if &actual != expected { return Ok(json!({"status":"changed"})); }
     guard.remove(OsStr::new(&name), &record)?;
@@ -288,15 +332,29 @@ fn dispatch(r: Request) -> io::Result<Value> {
         r.descriptor.is_some(), r.origin.is_some(), r.token.is_some(), r.name.is_some(), r.identity.is_some(), r.process.is_some()];
     let count = fields.iter().filter(|&&v| v).count();
     match r.op.as_str() {
-        "descriptor.read" if count == 1 && r.target.is_some() => read_descriptor(&r.data_dir, r.target.as_ref().unwrap()),
+        "runtime.prepare" if count == 0 => {
+            directory(&r.data_dir, true)?;
+            Ok(json!({"status":"prepared"}))
+        }
+        "descriptor.read" if count == 1 && r.target.is_some() => {
+            stage("descriptor_read");
+            read_descriptor(&r.data_dir, r.target.as_ref().unwrap())
+        },
         "supervisor.acquire" if count == 0 => acquire(&r.data_dir, "supervisor"),
         "spawn.acquire" if count == 0 => acquire(&r.data_dir, "spawn"),
         "supervisor.read" if count == 0 => {
-            let Some(dir) = read_directory(&r.data_dir)? else { return Ok(Value::Null); };
+            let Some(dir) = read_directory(&r.data_dir)? else { return Ok(json!({"status":"absent"})); };
+            stage("publication_lock");
             let guard = RecordGuard::open(&dir)?;
+            stage("claim_inspection");
+            if let Some(partial) = incomplete(&guard, "supervisor")? {
+                return if partial.liveness == Liveness::Gone {
+                    Ok(json!({"status":"recoverable"}))
+                } else { Err(invalid()) };
+            }
             match records(&guard, "supervisor")? {
-                None => Ok(Value::Null),
-                Some(r) => Ok(json!({"pid":r.owner.process.pid, "nonce":r.owner.nonce, "process":r.owner.process})),
+                None => Ok(json!({"status":"absent"})),
+                Some(r) => Ok(json!({"status":"present", "pid":r.owner.process.pid, "nonce":r.owner.nonce, "process":r.owner.process})),
             }
         }
         "supervisor.check" if count == 1 && r.claim.is_some() => claim_operation(&r.data_dir, "supervisor", r.claim.as_ref().unwrap(), false),
@@ -307,6 +365,7 @@ fn dispatch(r: Request) -> io::Result<Value> {
         "launcher.create" if count == 2 && r.origin.is_some() && r.token.is_some() => launcher(&r.data_dir, r.origin.as_deref().unwrap(), r.token.as_deref().unwrap()),
         "launcher.remove" if count == 2 && r.name.is_some() && r.identity.is_some() => remove_launcher(&r.data_dir, r.name.as_deref().unwrap(), r.identity.as_ref().unwrap()),
         "process.state" if count == 1 && r.process.is_some() => {
+            stage("process_state");
             let state = match processes::liveness(r.process.as_ref().unwrap())? { Liveness::Alive => "alive", Liveness::Gone => "gone", Liveness::Unknown => "unknown" };
             Ok(json!({"status":state}))
         }
@@ -314,16 +373,17 @@ fn dispatch(r: Request) -> io::Result<Value> {
     }
 }
 
-pub(crate) fn run() -> io::Result<()> {
+fn run_request() -> io::Result<()> {
     let mut input = Vec::new();
     io::stdin().lock().take((MAX_MESSAGE + 1) as u64).read_to_end(&mut input)?;
+    stage("input_validation");
     if input.len() > MAX_MESSAGE { return Err(invalid()); }
     let raw: Value = serde_json::from_slice(&input).map_err(|_| invalid())?;
     let object = raw.as_object().ok_or_else(invalid)?;
     let op = object.get("op").and_then(Value::as_str).ok_or_else(invalid)?;
     let extras: &[&str] = match op {
         "descriptor.read" => &["target"],
-        "supervisor.acquire" | "supervisor.read" | "spawn.acquire" => &[],
+        "runtime.prepare" | "supervisor.acquire" | "supervisor.read" | "spawn.acquire" => &[],
         "supervisor.check" | "supervisor.release" | "spawn.release" => &["claim"],
         "intent.remove" => &["binding", "childPid", "descriptor"],
         "launcher.create" => &["origin", "token"],
@@ -339,11 +399,80 @@ pub(crate) fn run() -> io::Result<()> {
     let result = dispatch(request)?;
     let response = serde_json::to_vec(&json!({"version":1, "ok":true, "result":result})).map_err(|_| invalid())?;
     if response.len() > MAX_MESSAGE { return Err(invalid()); }
+    stage("response_write");
     io::stdout().lock().write_all(&response)
+}
+
+pub(crate) fn run() -> io::Result<()> {
+    stage("input_read");
+    if let Err(error) = run_request() {
+        let envelope = failure(&error);
+        if let Ok(bytes) = serde_json::to_vec(&envelope) {
+            let _ = io::stdout().lock().write_all(&bytes);
+        }
+        return Err(io::Error::new(io::ErrorKind::Other, "local-runtime request failed"));
+    }
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn diagnostic_never_serializes_error_messages() {
+        stage("claim_inspection");
+        let rendered = failure(&io::Error::new(io::ErrorKind::PermissionDenied, "secret-sentinel")).to_string();
+        assert!(!rendered.contains("secret-sentinel"));
+        assert!(rendered.contains("claim_inspection"));
+        assert!(rendered.contains("permission_denied"));
+    }
+
+    #[test]
+    fn all_anchored_dead_partial_shapes_are_read_only_until_removed() {
+        for shape in 0..3 {
+            let temp = tempfile::tempdir().unwrap();
+            let dir = directory(&temp.path().join("data"), true).unwrap();
+            let guard = RecordGuard::open(&dir).unwrap();
+            let mut process = processes::current_identity().unwrap();
+            process.creation_time = (process.creation_time.parse::<u64>().unwrap() + 1).to_string();
+            let owner = Owner { version: 1, nonce: uuid::Uuid::new_v4().to_string(), process };
+            let bytes = serde_json::to_vec(&owner).unwrap();
+            let (r, o, p) = names("supervisor");
+            guard.create_if_absent(OsStr::new(r), &bytes).unwrap();
+            if shape == 1 { guard.create_if_absent(OsStr::new(o), &bytes).unwrap(); }
+            if shape == 2 { guard.create_if_absent(OsStr::new(p), owner.process.pid.to_string().as_bytes()).unwrap(); }
+            let partial = incomplete(&guard, "supervisor").unwrap().unwrap();
+            assert_eq!(partial.liveness, Liveness::Gone);
+            assert!(guard.read(OsStr::new(r)).unwrap().is_some());
+            remove_incomplete(&guard, "supervisor", &partial).unwrap();
+            assert!(guard.read(OsStr::new(r)).unwrap().is_none());
+        }
+    }
+
+    #[test]
+    fn unanchored_malformed_and_conflicting_partials_are_preserved() {
+        for shape in 0..3 {
+            let temp = tempfile::tempdir().unwrap();
+            let dir = directory(&temp.path().join("data"), true).unwrap();
+            let guard = RecordGuard::open(&dir).unwrap();
+            let owner = Owner { version: 1, nonce: uuid::Uuid::new_v4().to_string(), process: processes::current_identity().unwrap() };
+            let bytes = serde_json::to_vec(&owner).unwrap();
+            let (r, o, _) = names("supervisor");
+            match shape {
+                0 => { guard.create_if_absent(OsStr::new(o), &bytes).unwrap(); }
+                1 => { guard.create_if_absent(OsStr::new(r), b"{").unwrap(); }
+                _ => {
+                    guard.create_if_absent(OsStr::new(r), &bytes).unwrap();
+                    guard.create_if_absent(OsStr::new(o), b"conflict").unwrap();
+                }
+            }
+            let before_r = guard.read(OsStr::new(r)).unwrap();
+            let before_o = guard.read(OsStr::new(o)).unwrap();
+            assert!(incomplete(&guard, "supervisor").is_err());
+            assert!(guard.read(OsStr::new(r)).unwrap() == before_r);
+            assert!(guard.read(OsStr::new(o)).unwrap() == before_o);
+        }
+    }
     use super::*;
 
     #[test]
@@ -381,14 +510,18 @@ mod tests {
         let bytes = serde_json::to_vec(&owner).unwrap();
         let name = OsStr::new(names("supervisor").0);
         let live = guard.create_if_absent(name, &bytes).unwrap();
-        assert_eq!(recover_incomplete(&guard, "supervisor").unwrap(), Some(identity.pid));
+        let partial = incomplete(&guard, "supervisor").unwrap().unwrap();
+        assert_eq!(partial.liveness, Liveness::Alive);
         assert!(guard.read(name).unwrap().is_some());
         guard.remove(name, &live).unwrap();
         let creation: u64 = identity.creation_time.parse().unwrap();
         identity.creation_time = creation.saturating_add(1).to_string();
         let stale = Owner { process: identity, ..owner };
         guard.create_if_absent(name, &serde_json::to_vec(&stale).unwrap()).unwrap();
-        assert_eq!(recover_incomplete(&guard, "supervisor").unwrap(), None);
+        let partial = incomplete(&guard, "supervisor").unwrap().unwrap();
+        assert_eq!(partial.liveness, Liveness::Gone);
+        assert!(guard.read(name).unwrap().is_some());
+        remove_incomplete(&guard, "supervisor", &partial).unwrap();
         assert!(guard.read(name).unwrap().is_none());
     }
 }
