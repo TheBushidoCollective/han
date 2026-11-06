@@ -166,7 +166,19 @@ test('Stop dispatch selects real workspace projects, ignores dependencies, and d
       `npx|${join(project, 'biome')}|-y @biomejs/biome check --error-on-warnings .`,
     ].sort()
   );
-  expect(dispatch.stdout).toContain('Hook `biome/lint` failed');
+  const dispatchFailure = dispatch.stdout.match(
+    /Hook `biome\/[^`]+` failed\. Output: ([^\r\n]+)/
+  );
+  if (!dispatchFailure)
+    throw new Error(`Missing Biome dispatch failure: ${dispatch.stdout}`);
+  const runnerError = readFileSync(dispatchFailure[1], 'utf8');
+  expect(runnerError).toContain('biome');
+  const diagnosticFile = runnerError.match(/Output: ([^\r\n]+)/);
+  if (!diagnosticFile)
+    throw new Error(`Missing validation output path: ${runnerError}`);
+  const diagnostic = readFileSync(diagnosticFile[1], 'utf8');
+  expect(diagnostic).toContain('example.js');
+  expect(diagnostic).toMatch(/format/i);
   assertUnchanged();
   const direct = run(['hook', 'run', 'biome', 'lint', '--async', '--no-cache']);
   expect(direct.error).toBeUndefined();
