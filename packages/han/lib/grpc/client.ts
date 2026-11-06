@@ -46,23 +46,32 @@ export function createCoordinatorClients(
   const transport = createGrpcWebTransport({
     baseUrl: `https://127.0.0.1:${grpcPort}`,
     useBinaryFormat: true,
-    fetch: (input, init) => {
-      const url = new URL(
-        typeof input === 'string'
-          ? input
-          : input instanceof URL
-            ? input.href
-            : input.url
-      );
-      if (url.origin !== `https://127.0.0.1:${grpcPort}`)
-        throw new CoordinatorSecurityError('Invalid gRPC destination');
-      return coordinatorFetch(
-        descriptor,
-        grpcPort,
-        `${url.pathname}${url.search}`,
-        init
-      );
-    },
+    fetch: Object.assign(
+      (input: string | URL | Request, init?: RequestInit) => {
+        const url = new URL(
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.href
+              : input.url
+        );
+        if (url.origin !== `https://127.0.0.1:${grpcPort}`)
+          throw new CoordinatorSecurityError('Invalid gRPC destination');
+        return coordinatorFetch(
+          descriptor,
+          grpcPort,
+          `${url.pathname}${url.search}`,
+          init
+        );
+      },
+      {
+        preconnect: () => {
+          throw new CoordinatorSecurityError(
+            'Unpinned gRPC preconnect is not supported'
+          );
+        },
+      }
+    ),
   });
 
   return {

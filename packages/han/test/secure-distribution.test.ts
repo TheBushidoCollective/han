@@ -12,7 +12,6 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { handleRequest } from '../../../cert-server/server.ts';
 
 const root = resolve(import.meta.dir, '../../..');
 const scratch: string[] = [];
@@ -146,6 +145,8 @@ describe('distribution', () => {
   );
 
   test('retired HTTP endpoint never returns key material', async () => {
+    // Exercise the separately deployed certificate server's module boundary.
+    const { handleRequest } = await import(join(root, 'cert-server/server.ts'));
     const server = Bun.serve({
       hostname: '127.0.0.1',
       port: 0,
@@ -157,7 +158,7 @@ describe('distribution', () => {
       );
       expect(response.status).toBe(410);
       expect(response.headers.get('cache-control')).toBe('no-store');
-      const body = await response.json();
+      const body = (await response.json()) as Record<string, unknown>;
       expect(body.error).toBe('UPGRADE_REQUIRED');
       expect(body.key).toBeUndefined();
       expect(body.cert).toBeUndefined();

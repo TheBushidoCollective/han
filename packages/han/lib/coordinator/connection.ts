@@ -52,20 +52,13 @@ export function readCoordinatorDescriptor(): LocalCoordinatorDescriptor {
       throw new CoordinatorSecurityError(
         'Invalid coordinator runtime directory'
       );
-    if (
-      process.platform !== 'win32' &&
-      (directory.mode & 0o077 || directory.uid !== process.getuid?.())
-    )
+    if (directory.mode & 0o077 || directory.uid !== process.getuid?.())
       throw new CoordinatorSecurityError(
         'Coordinator runtime directory is not owner-protected'
       );
     fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW || 0));
     const stat = fstatSync(fd);
-    if (
-      !stat.isFile() ||
-      (process.platform !== 'win32' &&
-        (stat.mode & 0o077 || stat.uid !== process.getuid?.()))
-    )
+    if (!stat.isFile() || stat.mode & 0o077 || stat.uid !== process.getuid?.())
       throw new CoordinatorSecurityError(
         'Coordinator descriptor is not owner-protected'
       );
