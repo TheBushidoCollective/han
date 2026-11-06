@@ -16,7 +16,7 @@ import {
   rmSync,
   statSync,
 } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, win32 } from 'node:path';
 import { getHanDataDir } from '../../config/claude-settings.ts';
 import { getHanBinary } from '../../config/han-settings.ts';
 import {
@@ -46,6 +46,19 @@ import {
   type CoordinatorStatus,
   getCoordinatorPort,
 } from './types.ts';
+
+/** Resolve cmd.exe without searching the caller cwd or PATH. */
+export function trustedWindowsCommandInterpreter(
+  systemRoot = process.env.SystemRoot,
+): string {
+  // Drive-letter only: a relative, UNC, or cwd-relative root must not select cmd.exe.
+  if (!systemRoot || !/^[A-Za-z]:\\[^/]*$/.test(systemRoot) || systemRoot.includes('..')) {
+    throw new CoordinatorSecurityError(
+      'Windows command interpreter is not in a trusted location',
+    );
+  }
+  return win32.join(systemRoot, 'System32', 'cmd.exe');
+}
 
 /**
  * Get the log file path (~/.han/coordinator.log)
@@ -217,7 +230,7 @@ export async function startDaemon(
   if (configuredBinary && configuredBinary !== 'han') {
     // hanBinary is set (e.g., `bun "/path/to/main.ts"`)
     // Use shell to handle the full command string
-    spawnCommand = process.platform === 'win32' ? 'cmd.exe' : '/bin/bash';
+    spawnCommand = process.platform === 'win32' ? trustedWindowsCommandInterpreter() : '/bin/bash';
     spawnArgs = [
       process.platform === 'win32' ? '/c' : '-c',
       `${configuredBinary} coordinator start --foreground --port ${port}`,

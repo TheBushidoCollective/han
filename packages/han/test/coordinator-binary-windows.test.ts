@@ -137,3 +137,26 @@ test.skipIf(process.platform !== 'win32')(
     }
   }
 );
+
+test('configured Windows startup resolves cmd.exe from a drive-letter SystemRoot', async () => {
+  const { trustedWindowsCommandInterpreter } = await import(
+    '../lib/commands/coordinator/daemon.ts'
+  );
+  const { CoordinatorSecurityError } = await import(
+    '../lib/coordinator/connection.ts'
+  );
+  expect(trustedWindowsCommandInterpreter('C:\\Windows')).toBe(
+    'C:\\Windows\\System32\\cmd.exe'
+  );
+  for (const root of [
+    '',
+    'Windows',
+    '.\\Windows',
+    '\\\\server\\share',
+    'C:\\Windows\\..\\evil',
+  ]) {
+    expect(() => trustedWindowsCommandInterpreter(root)).toThrow(
+      CoordinatorSecurityError
+    );
+  }
+});
