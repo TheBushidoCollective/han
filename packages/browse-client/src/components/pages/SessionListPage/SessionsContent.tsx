@@ -299,9 +299,7 @@ function SortDropdown({
 									padding: theme.spacing.sm,
 									paddingHorizontal: theme.spacing.md,
 									backgroundColor:
-										selected === option
-											? theme.colors.bg.hover
-											: "transparent",
+										selected === option ? theme.colors.bg.hover : "transparent",
 								}}
 							>
 								<Text size="sm">{SORT_LABELS[option]}</Text>

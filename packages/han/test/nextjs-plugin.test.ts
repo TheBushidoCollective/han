@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import {
   chmodSync,
-  mkdtempSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   realpathSync,
   rmSync,

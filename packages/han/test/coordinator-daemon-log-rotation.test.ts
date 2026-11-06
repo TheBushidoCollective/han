@@ -17,12 +17,12 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { resetHanDataDir } from '../lib/config/claude-settings.ts';
 import {
   getLogFilePath,
   LOG_ROTATE_THRESHOLD_BYTES,
   rotateLogIfNeeded,
 } from '../lib/commands/coordinator/daemon.ts';
+import { resetHanDataDir } from '../lib/config/claude-settings.ts';
 
 // Each test gets its own HAN_DATA_DIR (highest-priority override in
 // getHanDataDir()) so rotation never touches the shared CLAUDE_CONFIG_DIR

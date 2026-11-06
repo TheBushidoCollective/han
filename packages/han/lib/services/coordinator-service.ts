@@ -19,10 +19,10 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { getHanDataDir } from '../config/claude-settings.ts';
-import { createCoordinatorClients } from '../grpc/client.ts';
 import { checkHealth } from '../commands/coordinator/health.ts';
 import { ensureCertificates } from '../commands/coordinator/tls.ts';
+import { getHanDataDir } from '../config/claude-settings.ts';
+import { createCoordinatorClients } from '../grpc/client.ts';
 
 /**
  * Is a coordinator serving on this port?
