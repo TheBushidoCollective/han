@@ -8,8 +8,10 @@
 export interface BrowseOptions {
   /** Port to run the server on (0 for random) */
   port?: number;
-  /** Whether to run local dev server with HTTP (true, for offline use) or open remote dashboard (false, default) */
+  /** Serve assets from the local checkout. */
   local?: boolean;
+  /** Whether to open the owner-only launcher in a browser. */
+  open?: boolean;
 }
 
 /**

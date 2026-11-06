@@ -1,137 +1,212 @@
-/**
- * Tests for the loopback dashboard proxy.
- *
- * The point of the proxy is that the page origin becomes loopback, so these
- * assert the bytes survive the hop and that a broken upstream is reported
- * rather than hanging.
- */
 import { afterEach, describe, expect, test } from 'bun:test';
-import { gzipSync } from 'node:zlib';
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+} from 'node:fs';
+import { request } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import WebSocket from 'ws';
 import { startHostedDashboardProxy } from '../lib/commands/browse/hosted-proxy.ts';
 
-interface Upstream {
-  origin: string;
-  stop(): void;
-  requestedPaths: string[];
-}
-
-function startUpstream(
-  handler: (path: string) => Response | Promise<Response>
-): Upstream {
-  const requestedPaths: string[] = [];
-  const server = Bun.serve({
-    port: 0,
-    hostname: '127.0.0.1',
-    async fetch(req) {
-      const path = new URL(req.url).pathname;
-      requestedPaths.push(path);
-      return await handler(path);
-    },
-  });
-  return {
-    origin: `http://127.0.0.1:${server.port}`,
-    stop: () => server.stop(true),
-    requestedPaths,
-  };
-}
-
 const cleanups: Array<() => void | Promise<void>> = [];
-
 afterEach(async () => {
-  for (const cleanup of cleanups.splice(0)) {
-    await cleanup();
-  }
+  for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
 });
 
-async function proxyTo(upstream: Upstream) {
+async function setup() {
+  const dir = mkdtempSync(join(tmpdir(), 'han-gateway-test-'));
+  mkdirSync(join(dir, 'runtime'), { mode: 0o700 });
+  const old = process.env.HAN_DATA_DIR;
+  process.env.HAN_DATA_DIR = dir;
+  cleanups.push(() => {
+    if (old === undefined) delete process.env.HAN_DATA_DIR;
+    else process.env.HAN_DATA_DIR = old;
+    rmSync(dir, { recursive: true, force: true });
+  });
+  const seen: Array<{
+    path: string;
+    authorization: string | null;
+    cookie: string | null;
+  }> = [];
+  const upstream = Bun.serve({
+    hostname: '127.0.0.1',
+    port: 0,
+    fetch(req) {
+      const path = new URL(req.url).pathname;
+      seen.push({
+        path,
+        authorization: req.headers.get('authorization'),
+        cookie: req.headers.get('cookie'),
+      });
+      if (path === '/han-dashboard-manifest.json')
+        return Response.json({
+          kind: 'local-dashboard',
+          transportVersion: 1,
+          sourceRevision: 'a'.repeat(40),
+        });
+      if (path === '/escape')
+        return new Response(null, {
+          status: 302,
+          headers: { location: 'http://example.com/' },
+        });
+      return new Response('dashboard', {
+        headers: { 'set-cookie': 'bad=1', 'content-type': 'text/html' },
+      });
+    },
+  });
+  cleanups.push(() => upstream.stop(true));
   const proxy = await startHostedDashboardProxy({
     port: 0,
-    origin: upstream.origin,
+    origin: `http://127.0.0.1:${upstream.port}`,
   });
   cleanups.push(() => proxy.close());
-  cleanups.push(() => upstream.stop());
-  // port 0 asks the OS to pick one; read back what it chose.
-  const address = proxy.server.address();
-  const port = typeof address === 'object' && address ? address.port : 0;
-  return `http://127.0.0.1:${port}`;
+  const html = readFileSync(fileURLToPath(proxy.launcherUrl), 'utf8');
+  const launchToken = html.match(/#launchToken=([A-Za-z0-9_-]+)/)?.[1];
+  if (!launchToken) throw new Error('Launcher has no capability');
+  return { proxy, seen, launchToken };
+}
+async function exchange(url: string, launchToken: string, origin = url) {
+  return fetch(`${url}/_han/session`, {
+    method: 'POST',
+    headers: { origin, 'content-type': 'application/json' },
+    body: JSON.stringify({ transportVersion: 1, launchToken }),
+  });
 }
 
-describe('hosted dashboard proxy', () => {
-  test('serves the upstream shell from a loopback origin', async () => {
-    const upstream = startUpstream(
-      () =>
-        new Response('<!doctype html><html><body>dash</body></html>', {
-          headers: { 'content-type': 'text/html' },
+describe('local dashboard gateway', () => {
+  test('exchanges a single-use capability and protects private requests', async () => {
+    const { proxy, launchToken } = await setup();
+    const launcherPath = fileURLToPath(proxy.launcherUrl);
+    expect(statSync(launcherPath).mode & 0o777).toBe(0o600);
+    expect(
+      (await exchange(proxy.url, launchToken, 'http://127.0.0.1:1')).status
+    ).toBe(403);
+    const session = await exchange(proxy.url, launchToken);
+    expect(existsSync(launcherPath)).toBe(false);
+    expect(session.status).toBe(200);
+    const { accessToken } = (await session.json()) as { accessToken: string };
+    expect(accessToken).not.toBe(launchToken);
+    expect((await exchange(proxy.url, launchToken)).status).toBe(401);
+    expect(
+      (
+        await fetch(`${proxy.url}/graphql`, {
+          method: 'POST',
+          headers: { origin: proxy.url, 'content-type': 'application/json' },
+          body: '{}',
         })
-    );
-    const base = await proxyTo(upstream);
-
-    const res = await fetch(base);
-
-    expect(res.status).toBe(200);
-    expect(res.headers.get('content-type')).toContain('text/html');
-    expect(await res.text()).toContain('dash');
-    expect(new URL(base).hostname).toBe('127.0.0.1');
-  });
-
-  test('forwards the request path so SPA routes and assets resolve', async () => {
-    const upstream = startUpstream(
-      (path) =>
-        new Response(`served ${path}`, {
-          headers: { 'content-type': 'text/plain' },
-        })
-    );
-    const base = await proxyTo(upstream);
-
-    expect(await (await fetch(`${base}/main-abc123.js`)).text()).toBe(
-      'served /main-abc123.js'
-    );
-    expect(await (await fetch(`${base}/sessions`)).text()).toBe(
-      'served /sessions'
-    );
-  });
-
-  test('does not forward content-encoding, which fetch already decoded', async () => {
-    // A second decode attempt in the browser shows up as a corrupt bundle.
-    const upstream = startUpstream(
-      () =>
-        new Response(gzipSync(Buffer.from('console.log("bundle")')), {
+      ).status
+    ).toBe(401);
+    expect(
+      (
+        await fetch(`${proxy.url}/graphql`, {
+          method: 'POST',
           headers: {
-            'content-type': 'application/javascript',
-            'content-encoding': 'gzip',
+            origin: proxy.url,
+            'content-type': 'text/plain',
+            authorization: `Bearer ${accessToken}`,
           },
+          body: '{}',
         })
-    );
-    const base = await proxyTo(upstream);
-
-    const res = await fetch(`${base}/main.js`);
-
-    expect(res.headers.get('content-encoding')).toBeNull();
-    expect(await res.text()).toBe('console.log("bundle")');
+      ).status
+    ).toBe(415);
+    expect((await fetch(`${proxy.url}/graphql`)).status).toBe(405);
   });
-
-  test('preserves an upstream error status', async () => {
-    const upstream = startUpstream(() => new Response('nope', { status: 404 }));
-    const base = await proxyTo(upstream);
-
-    expect((await fetch(`${base}/missing`)).status).toBe(404);
-  });
-
-  test('reports an unreachable upstream instead of hanging', async () => {
-    // Nothing is listening on this port, so the fetch fails immediately.
-    const proxy = await startHostedDashboardProxy({
-      port: 0,
-      origin: 'http://127.0.0.1:1',
+  test('does not forward browser credentials or upstream cookies', async () => {
+    const { proxy, seen } = await setup();
+    const response = await fetch(`${proxy.url}/`, {
+      headers: { authorization: 'Bearer browser-secret', cookie: 'secret=1' },
     });
-    cleanups.push(() => proxy.close());
-    const address = proxy.server.address();
-    const port = typeof address === 'object' && address ? address.port : 0;
-
-    const res = await fetch(`http://127.0.0.1:${port}/`);
-
-    expect(res.status).toBe(502);
-    const body = await res.text();
-    expect(body).toContain('Could not reach the dashboard bundle');
-    expect(body).toContain('han browse --local');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('set-cookie')).toBeNull();
+    expect(response.headers.get('referrer-policy')).toBe('no-referrer');
+    expect(seen.at(-1)?.authorization).toBeNull();
+    expect(seen.at(-1)?.cookie).toBeNull();
+    expect((await fetch(`${proxy.url}/escape`)).status).toBe(502);
+  });
+  test('rejects an incompatible dashboard before listening', async () => {
+    const upstream = Bun.serve({
+      hostname: '127.0.0.1',
+      port: 0,
+      fetch: () =>
+        Response.json({
+          kind: 'team-app',
+          transportVersion: 1,
+          sourceRevision: 'a'.repeat(40),
+        }),
+    });
+    cleanups.push(() => upstream.stop(true));
+    await expect(
+      startHostedDashboardProxy({
+        port: 0,
+        origin: `http://127.0.0.1:${upstream.port}`,
+      })
+    ).rejects.toThrow('UPGRADE_REQUIRED');
+  });
+  test('an occupied gateway port fails instead of attaching to the incumbent', async () => {
+    const { proxy } = await setup();
+    const occupied = proxy.server.address();
+    if (!occupied || typeof occupied === 'string')
+      throw new Error('No address');
+    const origin = `http://127.0.0.1:${occupied.port}`;
+    await expect(
+      startHostedDashboardProxy({ port: occupied.port, origin })
+    ).rejects.toThrow();
+  });
+  test('rejects network-path and absolute-form asset requests', async () => {
+    const { proxy, seen } = await setup();
+    const target = new URL(proxy.url);
+    for (const path of ['//example.com/steal', 'http://example.com/steal']) {
+      const result = Promise.withResolvers<number>();
+      const req = request(
+        { hostname: target.hostname, port: target.port, path, method: 'GET' },
+        (res) => {
+          res.resume();
+          result.resolve(res.statusCode ?? 0);
+        }
+      );
+      req.on('error', result.reject);
+      req.end();
+      expect(await result.promise).toBe(400);
+    }
+    expect(seen.some((item) => item.path === '/steal')).toBe(false);
+  });
+  test('rejects wrong authority and non-loopback origins', async () => {
+    const { proxy } = await setup();
+    expect(
+      (await fetch(proxy.url, { headers: { host: 'evil.example' } })).status
+    ).toBe(421);
+    expect(
+      (await fetch(proxy.url, { headers: { origin: 'null' } })).status
+    ).toBe(403);
+    expect(
+      (await fetch(proxy.url, { headers: { 'sec-fetch-site': 'cross-site' } }))
+        .status
+    ).toBe(403);
+  });
+  test('closes websocket before upstream connection when token is invalid', async () => {
+    const { proxy } = await setup();
+    const socket = new WebSocket(
+      `${proxy.url.replace('http:', 'ws:')}/graphql`,
+      'graphql-transport-ws',
+      { origin: proxy.url }
+    );
+    const closed = Promise.withResolvers<number>();
+    socket.on('open', () =>
+      socket.send(
+        JSON.stringify({
+          type: 'connection_init',
+          payload: { authorization: 'Bearer incorrect' },
+        })
+      )
+    );
+    socket.on('close', (code) => closed.resolve(code));
+    socket.on('error', closed.reject);
+    expect(await closed.promise).toBe(4401);
   });
 });

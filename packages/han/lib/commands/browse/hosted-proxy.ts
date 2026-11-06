@@ -21,6 +21,7 @@ import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { pathToFileURL } from 'node:url';
 import WebSocket, { WebSocketServer } from 'ws';
 import {
+  CoordinatorSecurityError,
   coordinatorRequest,
   coordinatorWebSocket,
   getCoordinatorDataDir,
@@ -83,6 +84,7 @@ function guard(
 ): number | null {
   const host = header(req, 'host');
   if (host === null || !host) return 400;
+  if (!/^[A-Za-z0-9.:[\]-]+$/.test(host)) return 400;
   if (host !== authority) return 421;
   const origin = header(req, 'origin');
   if (origin === null) return 400;
@@ -91,10 +93,18 @@ function guard(
     (origin !== undefined && origin !== `http://${authority}`)
   )
     return 403;
-  for (const name of ['sec-fetch-site', 'sec-fetch-mode', 'sec-fetch-dest'])
+  for (const name of [
+    'sec-fetch-site',
+    'sec-fetch-mode',
+    'sec-fetch-dest',
+    'authorization',
+    'content-type',
+    'sec-websocket-protocol',
+  ])
     if (header(req, name) === null) return 400;
   const site = header(req, 'sec-fetch-site');
   if (site && site !== 'same-origin' && site !== 'none') return 403;
+  if (originRequired && site && site !== 'same-origin') return 403;
   const mode = header(req, 'sec-fetch-mode');
   const dest = header(req, 'sec-fetch-dest');
   if (originRequired && dest && dest !== 'empty') return 403;
@@ -209,16 +219,26 @@ function launcher(runtime: string, url: string, launchToken: string): string {
       fd,
       `<!doctype html><meta charset="utf-8"><meta name="referrer" content="no-referrer"><script>location.replace(${JSON.stringify(`${url}/#launchToken=${launchToken}`)})</script>`
     );
+  } catch (error) {
+    try {
+      unlinkSync(path);
+    } catch {
+      /* Preserve the original write error. */
+    }
+    throw error;
   } finally {
     closeSync(fd);
   }
   return path;
 }
-async function readJson(req: IncomingMessage): Promise<unknown> {
+async function readJson(
+  req: IncomingMessage,
+  maxBytes = Infinity
+): Promise<unknown> {
   let body = '';
   for await (const chunk of req) {
     body += chunk.toString();
-    if (body.length > 16384) throw new Error('Request too large');
+    if (body.length > maxBytes) throw new Error('Request too large');
   }
   return JSON.parse(body);
 }
@@ -241,6 +261,12 @@ export async function startHostedDashboardProxy(
     origin.hash
   )
     throw new Error('Invalid dashboard origin');
+  if (
+    options.dev &&
+    (origin.protocol !== 'http:' || origin.hostname !== '127.0.0.1')
+  ) {
+    throw new Error('Development assets must use a literal loopback origin');
+  }
   const asset = (path: string, method = 'GET', accept?: string) =>
     options.assetDir
       ? Promise.resolve(localAsset(options.assetDir, path))
@@ -248,10 +274,20 @@ export async function startHostedDashboardProxy(
   const manifest = await asset('/han-dashboard-manifest.json');
   if (!manifest.ok)
     throw new Error('UPGRADE_REQUIRED: dashboard manifest missing');
-  const info = (await manifest.json()) as Record<string, unknown>;
+  let info: unknown;
+  try {
+    info = await manifest.json();
+  } catch {
+    throw new Error('UPGRADE_REQUIRED: malformed dashboard manifest');
+  }
   if (
+    !info ||
+    typeof info !== 'object' ||
+    !('kind' in info) ||
     info.kind !== 'local-dashboard' ||
+    !('transportVersion' in info) ||
     info.transportVersion !== 1 ||
+    !('sourceRevision' in info) ||
     typeof info.sourceRevision !== 'string' ||
     !/^[a-f0-9]{40}$/i.test(info.sourceRevision)
   )
@@ -289,7 +325,7 @@ export async function startHostedDashboardProxy(
       }
       let payload: unknown;
       try {
-        payload = await readJson(req);
+        payload = await readJson(req, 16_384);
       } catch {
         res.writeHead(400).end();
         return;
@@ -365,9 +401,13 @@ export async function startHostedDashboardProxy(
             res
           );
         else res.end();
-      } catch {
+      } catch (error) {
         if (!res.headersSent) res.writeHead(502);
-        res.end();
+        res.end(
+          error instanceof CoordinatorSecurityError
+            ? 'COORDINATOR_SECURITY_ERROR'
+            : 'Coordinator unavailable'
+        );
       }
       return;
     }
@@ -403,9 +443,53 @@ export async function startHostedDashboardProxy(
     handleProtocols: (protocols) =>
       protocols.has('graphql-transport-ws') ? 'graphql-transport-ws' : false,
   });
+  const hmr = new WebSocketServer({
+    noServer: true,
+    handleProtocols: (protocols) =>
+      protocols.has('vite-hmr') ? 'vite-hmr' : false,
+  });
   server.on('upgrade', (req, socket, head) => {
     const failure = guard(req, authority, true);
     const protocol = header(req, 'sec-websocket-protocol');
+    if (
+      !failure &&
+      options.dev &&
+      origin.protocol === 'http:' &&
+      origin.hostname === '127.0.0.1' &&
+      (req.url === '/_han/vite-hmr' ||
+        req.url?.startsWith('/_han/vite-hmr?')) &&
+      protocol
+        ?.split(',')
+        .map((x) => x.trim())
+        .includes('vite-hmr')
+    ) {
+      const target = new URL(req.url, origin);
+      target.protocol = 'ws:';
+      hmr.handleUpgrade(req, socket, head, (client) => {
+        sockets.add(client);
+        const upstream = new WebSocket(target, 'vite-hmr', {
+          origin: origin.origin,
+        });
+        client.on('message', (data, binary) => {
+          if (upstream.readyState === WebSocket.OPEN)
+            upstream.send(data, { binary });
+        });
+        upstream.on('message', (data, binary) => {
+          if (client.readyState === WebSocket.OPEN)
+            client.send(data, { binary });
+        });
+        upstream.on('error', () => client.close(1011));
+        upstream.on('close', () => client.close());
+        client.on('error', () => client.terminate());
+        client.on('close', () => {
+          sockets.delete(client);
+          if (upstream.readyState === WebSocket.CONNECTING)
+            upstream.terminate();
+          else upstream.close();
+        });
+      });
+      return;
+    }
     if (
       failure ||
       req.url !== '/graphql' ||
@@ -423,6 +507,7 @@ export async function startHostedDashboardProxy(
       sockets.add(client);
       let upstream: WebSocket | null = null;
       let initialized = false;
+      let acknowledged = false;
       const timeout = setTimeout(
         () => client.close(4408, 'Connection initialisation timeout'),
         INIT_TIMEOUT
@@ -462,6 +547,17 @@ export async function startHostedDashboardProxy(
               upstream?.send(JSON.stringify({ type: 'connection_init' }))
             );
             upstream.on('message', (value, isBinary) => {
+              if (!isBinary) {
+                try {
+                  const payload = JSON.parse(value.toString()) as {
+                    type?: string;
+                  };
+                  if (payload.type === 'connection_ack') acknowledged = true;
+                } catch {
+                  client.close(1011, 'Invalid coordinator message');
+                  return;
+                }
+              }
               if (client.readyState === WebSocket.OPEN)
                 client.send(value, { binary: isBinary });
             });
@@ -489,7 +585,11 @@ export async function startHostedDashboardProxy(
           client.close(4429, 'Too many initialisation requests');
           return;
         }
-        if (!upstream || upstream.readyState !== WebSocket.OPEN) {
+        if (
+          !acknowledged ||
+          !upstream ||
+          upstream.readyState !== WebSocket.OPEN
+        ) {
           client.close(4401, 'Unauthorized');
           return;
         }
@@ -557,6 +657,7 @@ export async function startHostedDashboardProxy(
       }
       for (const socket of sockets) socket.terminate();
       websocket.close();
+      hmr.close();
       await new Promise<void>((resolveClose) =>
         server.close(() => resolveClose())
       );

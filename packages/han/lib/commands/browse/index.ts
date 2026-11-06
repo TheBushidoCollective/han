@@ -70,7 +70,12 @@ async function freePort(): Promise<number> {
 }
 
 async function waitForVite(origin: string, vite: ChildProcess): Promise<void> {
+  let failure: Error | undefined;
+  vite.once('error', (error) => {
+    failure = error;
+  });
   for (let i = 0; i < 150; i++) {
+    if (failure) throw failure;
     if (vite.exitCode !== null || vite.signalCode !== null)
       throw new Error('Vite exited before becoming ready');
     try {
@@ -104,6 +109,9 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
           cwd: clientDir,
           stdio: 'inherit',
         });
+        relay.on('error', (error) =>
+          console.error('[relay] Failed to start:', error.message)
+        );
         vite = spawn(
           'npx',
           [
@@ -148,7 +156,10 @@ export async function browse(options: BrowseOptions = {}): Promise<void> {
     };
     process.once('SIGINT', shutdown);
     process.once('SIGTERM', shutdown);
-    if (vite) vite.once('exit', shutdown);
+    if (vite) {
+      vite.once('exit', shutdown);
+      if (vite.exitCode !== null || vite.signalCode !== null) shutdown();
+    }
     await stopped.promise;
     process.removeListener('SIGINT', shutdown);
     process.removeListener('SIGTERM', shutdown);
