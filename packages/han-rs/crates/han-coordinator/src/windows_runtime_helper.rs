@@ -95,7 +95,12 @@ fn valid_claim(c: &Claim) -> io::Result<()> {
 }
 
 fn directory(path: &Path, create: bool) -> io::Result<PinnedDirectory> {
-    PinnedDirectory::open_data_directory(path)?.open_private_child(OsStr::new("runtime"), create)
+    let data = if create {
+        PinnedDirectory::prepare_data_directory(path)?
+    } else {
+        PinnedDirectory::open_data_directory(path)?
+    };
+    data.open_private_child(OsStr::new("runtime"), create)
 }
 fn read_directory(path: &Path) -> io::Result<Option<PinnedDirectory>> {
     match directory(path, false) {
