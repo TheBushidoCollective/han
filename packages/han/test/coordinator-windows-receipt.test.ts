@@ -1,9 +1,6 @@
 import { expect, test } from 'bun:test';
-import {
-  type WindowsChildDescriptor,
-  readWindowsChildDescriptor,
-} from '../lib/coordinator/windows-runtime.ts';
 import type { LocalCoordinatorDescriptor } from '../lib/coordinator/connection.ts';
+import { readWindowsChildDescriptor } from '../lib/coordinator/windows-runtime.ts';
 
 const sampleDescriptor: LocalCoordinatorDescriptor = {
   transportVersion: 1,

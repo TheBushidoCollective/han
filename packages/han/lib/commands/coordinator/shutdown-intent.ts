@@ -10,11 +10,11 @@ import {
   validateCoordinatorDescriptor,
   validSupervisorBinding,
 } from '../../coordinator/connection.ts';
+import { removePosixIntent } from '../../coordinator/recovery-runtime.ts';
 import {
   windowsReadDescriptor,
   windowsRemoveIntent,
 } from '../../coordinator/windows-runtime.ts';
-import { removePosixIntent } from '../../coordinator/recovery-runtime.ts';
 import type { SupervisorClaim } from './pid-claim.ts';
 
 function intentPath(binding: SupervisorBinding): string {

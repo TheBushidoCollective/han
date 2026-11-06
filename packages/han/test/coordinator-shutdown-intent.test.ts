@@ -11,6 +11,11 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+  claimSupervisorPid,
+  releaseSupervisorPid,
+  type SupervisorClaim,
+} from '../lib/commands/coordinator/pid-claim.ts';
+import {
   readShutdownIntent,
   removeShutdownIntent,
 } from '../lib/commands/coordinator/shutdown-intent.ts';
@@ -19,11 +24,6 @@ import {
   readCoordinatorDescriptor,
   sameCoordinator,
 } from '../lib/coordinator/connection.ts';
-import {
-  claimSupervisorPid,
-  releaseSupervisorPid,
-  type SupervisorClaim,
-} from '../lib/commands/coordinator/pid-claim.ts';
 
 let dir = '';
 let claim: SupervisorClaim | undefined;
@@ -56,7 +56,8 @@ beforeEach(() => {
   if (acquired.kind !== 'owned')
     throw new Error('Could not acquire test supervisor');
   claim = acquired.claim;
-  binding.nonce = claim.nonce;
+  binding.nonce =
+    claim.nonce as `${string}-${string}-${string}-${string}-${string}`;
   path = join(
     dir,
     'runtime',

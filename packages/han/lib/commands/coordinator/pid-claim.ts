@@ -96,10 +96,20 @@ export function readSupervisorPid(path: string): number | null {
 export function readSupervisorIdentity(
   path: string
 ): { pid: number; nonce: string; process?: WindowsProcessIdentity } | null {
-  const result =
-    process.platform === 'win32'
-      ? windowsReadSupervisor(dataDir(path))
-      : posixReadSupervisor(dataDir(path));
+  if (process.platform === 'win32') {
+    const result = windowsReadSupervisor(dataDir(path));
+    if (result.status === 'recoverable')
+      throw new SupervisorReservationBusyError(
+        'Supervisor reservation is incomplete'
+      );
+    if (result.status === 'absent') return null;
+    return {
+      pid: result.pid,
+      nonce: result.nonce,
+      process: result.process,
+    };
+  }
+  const result = posixReadSupervisor(dataDir(path));
   if (result.status === 'recoverable')
     throw new SupervisorReservationBusyError(
       'Supervisor reservation is incomplete'
@@ -108,7 +118,6 @@ export function readSupervisorIdentity(
   return {
     pid: result.pid,
     nonce: result.nonce,
-    ...('process' in result ? { process: result.process } : {}),
   };
 }
 export function claimStillOwned(claim: SupervisorClaim): boolean {

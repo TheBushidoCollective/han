@@ -34,11 +34,11 @@ import {
   readSupervisorIdentity,
   releaseSupervisorPid,
 } from '../lib/commands/coordinator/pid-claim.ts';
+import { findCoordinatorBinary } from '../lib/coordinator/binary.ts';
 import {
   recoveryInspect,
   recoveryReclaim,
 } from '../lib/coordinator/recovery-runtime.ts';
-import { findCoordinatorBinary } from '../lib/coordinator/binary.ts';
 
 const CLAIMANTS = 8;
 

@@ -471,7 +471,6 @@ export async function readWindowsChildDescriptor(
       if (remainingMs <= 0)
         throw new CoordinatorSecurityError('Startup receipt timed out');
 
-      const readPromise = reader.read();
       const timeout = Promise.withResolvers<never>();
       const timer = setTimeout(() => {
         timeout.reject(
@@ -479,13 +478,12 @@ export async function readWindowsChildDescriptor(
         );
       }, remainingMs);
 
-      let chunk: ReadableStreamReadResult<Uint8Array>;
-      try {
-        chunk = await Promise.race([readPromise, timeout.promise]);
-      } finally {
+      const chunk = await Promise.race([
+        reader.read(),
+        timeout.promise,
+      ]).finally(() => {
         clearTimeout(timer);
-      }
-
+      });
       if (chunk.done) {
         if (totalBytes === 0) return null;
         throw new CoordinatorSecurityError('Incomplete startup receipt frame');

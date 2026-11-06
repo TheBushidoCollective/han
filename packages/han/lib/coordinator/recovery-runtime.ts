@@ -403,7 +403,8 @@ export function posixAcquire(
 export function posixReadSupervisor(
   dataDir: string
 ):
-  | { status: 'absent' | 'recoverable' }
+  | { status: 'absent' }
+  | { status: 'recoverable' }
   | { status: 'present'; pid: number; nonce: string } {
   const v = request(dataDir, 'supervisor.read');
   if (

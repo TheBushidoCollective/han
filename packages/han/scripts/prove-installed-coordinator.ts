@@ -571,7 +571,7 @@ async function main(): Promise<void> {
     mkdirSync(evidence, { recursive: true });
     writeFileSync(
       join(evidence, 'installed-coordinator.json'),
-      JSON.stringify(
+      `${JSON.stringify(
         {
           platform,
           bunVersion: options.bunVersion,
@@ -582,7 +582,7 @@ async function main(): Promise<void> {
         },
         null,
         2
-      ) + '\n'
+      )}\n`
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
