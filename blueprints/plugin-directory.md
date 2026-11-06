@@ -311,7 +311,7 @@ plugins/tools/{tool}/
   "description": "TypeScript compiler validation and type checking for TypeScript projects.",
   "author": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",

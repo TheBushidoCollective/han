@@ -4,7 +4,7 @@
   "description": "Scratch workspace enforcement - ensures temporary files are placed in .claude/.scratch and gitignored.",
   "author": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",

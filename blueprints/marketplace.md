@@ -40,7 +40,7 @@ https://raw.githubusercontent.com/thebushidocollective/han/main/.claude-plugin/m
   "name": "han",
   "owner": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "metadata": {
     "description": "Honor in software development...",
