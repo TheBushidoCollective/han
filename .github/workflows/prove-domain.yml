@@ -1,0 +1,57 @@
+name: Prove domain output
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.claude-plugin/marketplace.json'
+      - 'plugins/**/.claude-plugin/plugin.json'
+      - 'plugins/bridges/**/package.json'
+      - 'website/**'
+      - '.github/workflows/prove-domain.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  prove-domain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.2'
+      - name: Install dependencies
+        working-directory: website
+        run: bun install --frozen-lockfile
+      - name: Install Chromium
+        working-directory: website
+        run: bun run playwright install --with-deps chromium
+      - name: Build website
+        working-directory: website
+        run: bun run build
+      - name: Serve website
+        working-directory: website
+        run: |
+          bun run serve out -l 3000 &
+          for i in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3000/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Prove rendered domain and manifests
+        working-directory: website
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: bun run scripts/prove-domain.ts
+      - name: Preserve footer screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: domain-footer
+          path: website/domain-footer.png
+          if-no-files-found: warn
