@@ -15,6 +15,10 @@ mod watcher_bridge;
 mod windows_process_identity;
 #[cfg(windows)]
 mod windows_secure_fs;
+#[cfg(windows)]
+mod windows_runtime_helper;
+#[cfg(windows)]
+mod windows_coordinator_runtime;
 
 use clap::Parser;
 use grpc::{
@@ -189,6 +193,17 @@ fn resolve_db_path(cli_path: Option<&str>, data_dir: &std::path::Path) -> String
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(windows)]
+    {
+        let mut args = std::env::args_os();
+        let _program = args.next();
+        if args.next().as_deref() == Some(std::ffi::OsStr::new("--local-runtime"))
+            && args.next().is_none()
+        {
+            windows_runtime_helper::run()?;
+            return Ok(());
+        }
+    }
     // Parse CLI args
     let cli = Cli::parse();
     let supervisor = match (&cli.supervisor_pid, &cli.supervisor_nonce, &cli.supervisor_generation) {
@@ -199,13 +214,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if unsafe { libc::getppid() } as u32 != *pid {
                 return Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "supervisor is not the parent process").into());
             }
-            #[cfg(not(unix))]
+            #[cfg(not(any(unix, windows)))]
             return Err(std::io::Error::new(std::io::ErrorKind::Unsupported, "supervisor verification unavailable").into());
-            #[cfg(unix)]
+            #[cfg(any(unix, windows))]
             Some(binding)
         }
         _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "supervisor arguments must be supplied together with --foreground").into()),
     };
+
+    // A path-based PID marker is not an ownership record on Windows.
+    #[cfg(windows)]
+    if cli.pid_file.is_some() {
+        return Err(std::io::Error::new(std::io::ErrorKind::Unsupported, "Windows PID-file publication is unavailable").into());
+    }
 
     // Initialize tracing
     tracing_subscriber::fmt()
@@ -249,6 +270,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let grpc_port = grpc_listener.as_ref().map(|listener| listener.local_addr().map(|addr| addr.port())).transpose()?;
     let data_dir = runtime::data_dir(cli.data_dir.as_deref())?;
     let runtime_dir = runtime::prepare(&data_dir)?;
+    #[cfg(windows)]
+    let windows_directory = windows_coordinator_runtime::retain_directory(&runtime_dir)?;
+    // Keep the pin and lifetime lock through process termination, including
+    // unwinding after server startup. Connection tasks may outlive abort.
+    #[cfg(windows)]
+    let windows_lease = windows_coordinator_runtime::retain_lease(windows_directory)?;
 
     // Acquire coordinator lock. Another live coordinator already holding it
     // is not an error: exit cleanly (status 0) so the TypeScript supervisor's
@@ -256,7 +283,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Nothing has been published at this point, so an exit here leaves no
     // trace: the listener drops and releasing a lock we never owned is a
     // no-op.
+    #[cfg(not(windows))]
     let lock = CoordinatorLock::with_path(runtime_dir.join("coordinator.lock"));
+    #[cfg(not(windows))]
     match lock.acquire(Some(https_port)) {
         Ok(()) => {}
         Err(lock::LockError::AlreadyLocked { pid, port }) => {
@@ -271,7 +300,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Start heartbeat task
+    #[cfg(not(windows))]
     let lock_path = lock.lock_path().to_path_buf();
+    #[cfg(not(windows))]
     tokio::spawn(async move {
         let heartbeat_lock = lock::CoordinatorLock::with_path(lock_path);
         loop {
@@ -339,14 +370,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         bearer_token: bearer.clone(),
         supervisor,
     };
+    #[cfg(not(windows))]
     let published_descriptor = runtime::PublishedDescriptor::publish(&runtime_dir, &descriptor)?;
+    #[cfg(windows)]
+    let published_descriptor = runtime::PublishedDescriptor::publish(&runtime_dir, &descriptor, windows_directory.clone(), windows_lease)?;
+    #[cfg(not(windows))]
+    let shutdown_context = runtime::ShutdownContext { runtime: runtime_dir.clone(), descriptor: descriptor.clone() };
+    #[cfg(windows)]
+    let shutdown_context = published_descriptor.shutdown_context();
     let coordinator_state = Arc::new(CoordinatorState {
         db: db.clone(),
         start_time: Instant::now(),
         hook_engine: hook_engine.clone(),
         slots: Arc::new(RwLock::new(HashMap::new())),
         shutdown: shutdown_tx,
-        shutdown_context: Some(runtime::ShutdownContext { runtime: runtime_dir.clone(), descriptor: descriptor.clone() }),
+        shutdown_context: Some(shutdown_context),
         shutdown_committed: std::sync::Mutex::new(false),
     });
     let router = server::build_router(schema.clone(), coordinator_state.start_time, https_port, bearer.clone());
@@ -462,11 +500,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    #[cfg(windows)]
+    let mut https_finished = false;
+    #[cfg(windows)]
+    let mut grpc_finished = false;
     tokio::select! {
         _ = &mut shutdown => {
             tracing::info!("Received shutdown signal");
         }
         _ = &mut server_handle => {
+            #[cfg(windows)]
+            { https_finished = true; }
             tracing::info!("Server stopped");
         }
         _ = async {
@@ -475,6 +519,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 None => std::future::pending::<()>().await,
             }
         } => {
+            #[cfg(windows)]
+            { grpc_finished = true; }
             tracing::error!("gRPC server stopped");
         }
         _ = shutdown_rx.recv() => {
@@ -488,16 +534,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Cleanup
     tracing::info!("Shutting down...");
     server_handle.abort();
+    #[cfg(windows)]
+    if !https_finished { let _ = (&mut server_handle).await; }
     if let Some(handle) = watcher_handle {
         handle.abort();
     }
-    if let Some(handle) = grpc_handle {
+    if let Some(mut handle) = grpc_handle {
         handle.abort();
+        #[cfg(windows)]
+        if !grpc_finished { let _ = (&mut handle).await; }
     }
     if let Some(pid_path) = &cli.pid_file {
         let _ = std::fs::remove_file(pid_path);
     }
     drop(published_descriptor);
+    #[cfg(not(windows))]
     lock.release()?;
 
     tracing::info!("Coordinator stopped");
