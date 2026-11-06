@@ -121,7 +121,7 @@ test('Stop dispatch selects real workspace projects, ignores dependencies, and d
     for (const [file, contents] of before)
       expect(readFileSync(file)).toEqual(contents);
   };
-  const env = {
+  const env: NodeJS.ProcessEnv = {
     ...process.env,
     HOME: fixture,
     CLAUDE_CONFIG_DIR: config,
