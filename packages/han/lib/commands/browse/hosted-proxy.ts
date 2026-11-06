@@ -80,17 +80,46 @@ export async function startHostedDashboardProxy(
   const origin = options.origin ?? HOSTED_DASHBOARD_ORIGIN;
 
   const server = createServer(async (req, res) => {
-    const target = new URL(req.url || '/', origin);
+    const requestPath = req.url || '/';
+    let target: URL;
+    try {
+      target = new URL(requestPath, origin);
+      // Never let an absolute-form or network-path request turn this loopback
+      // proxy into a fetcher for arbitrary network hosts.
+      if (
+        !requestPath.startsWith('/') ||
+        requestPath.startsWith('//') ||
+        target.origin !== new URL(origin).origin
+      ) {
+        res.writeHead(400).end('Invalid dashboard path');
+        return;
+      }
+    } catch {
+      res.writeHead(400).end('Invalid dashboard path');
+      return;
+    }
 
     try {
-      const upstream = await fetch(target, {
-        headers: {
-          // Upstream serves the SPA shell for unknown paths; pass the accept
-          // header through so it can still content-negotiate assets.
-          ...(req.headers.accept ? { accept: req.headers.accept } : {}),
-        },
-        redirect: 'follow',
-      });
+      let upstream: Response;
+      for (let redirects = 0; ; redirects++) {
+        upstream = await fetch(target, {
+          headers: {
+            // Upstream serves the SPA shell for unknown paths; pass the accept
+            // header through so it can still content-negotiate assets.
+            ...(req.headers.accept ? { accept: req.headers.accept } : {}),
+          },
+          // Redirects must stay on the configured dashboard origin too.
+          redirect: 'manual',
+        });
+        if (![301, 302, 303, 307, 308].includes(upstream.status)) break;
+        const location = upstream.headers.get('location');
+        if (!location || redirects >= 5)
+          throw new Error('Invalid dashboard redirect');
+        const next = new URL(location, target);
+        if (next.origin !== target.origin)
+          throw new Error('Dashboard redirect changed origin');
+        target = next;
+      }
 
       const body = Buffer.from(await upstream.arrayBuffer());
 

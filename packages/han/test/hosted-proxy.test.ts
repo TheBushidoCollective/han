@@ -6,6 +6,7 @@
  * rather than hanging.
  */
 import { afterEach, describe, expect, test } from 'bun:test';
+import { request } from 'node:http';
 import { gzipSync } from 'node:zlib';
 import { startHostedDashboardProxy } from '../lib/commands/browse/hosted-proxy.ts';
 
@@ -115,6 +116,43 @@ describe('hosted dashboard proxy', () => {
     const base = await proxyTo(upstream);
 
     expect((await fetch(`${base}/missing`)).status).toBe(404);
+  });
+
+  test('rejects absolute and network-path request targets', async () => {
+    const upstream = startUpstream(() => new Response('unexpected'));
+    const proxy = await proxyTo(upstream);
+    for (const path of ['http://example.com/secret', '//example.com/secret']) {
+      const { promise, resolve, reject } = Promise.withResolvers<
+        number | undefined
+      >();
+      const req = request(proxy, { path }, (res) => {
+        res.resume();
+        resolve(res.statusCode);
+      });
+      req.on('error', reject);
+      req.end();
+      expect(await promise).toBe(400);
+    }
+    expect(upstream.requestedPaths).toEqual([]);
+  });
+
+  test('follows same-origin redirects but refuses a different origin', async () => {
+    const other = startUpstream(() => new Response('secret'));
+    cleanups.push(() => other.stop());
+    const upstream = startUpstream((path) => {
+      if (path === '/local')
+        return new Response(null, {
+          status: 302,
+          headers: { location: '/final' },
+        });
+      if (path === '/external')
+        return Response.redirect(`${other.origin}/secret`, 302);
+      return new Response('dashboard');
+    });
+    const proxy = await proxyTo(upstream);
+    expect(await (await fetch(`${proxy}/local`)).text()).toBe('dashboard');
+    expect((await fetch(`${proxy}/external`)).status).toBe(502);
+    expect(other.requestedPaths).toEqual([]);
   });
 
   test('reports an unreachable upstream instead of hanging', async () => {
