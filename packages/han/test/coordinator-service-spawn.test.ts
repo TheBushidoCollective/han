@@ -55,6 +55,20 @@ mock.module('../lib/commands/coordinator/health.ts', () => ({
       ? { status: 'ok', pid: 4242, uptime: 1, version: 'test' }
       : null,
 }));
+const realConnection = require('../lib/coordinator/connection.ts');
+const mockDescriptor = mock(() => ({
+  transportVersion: 1,
+  instanceId: 'owned',
+  pid: 4242,
+  httpsPort: 41957,
+  grpcPort: 41958,
+  certificatePem: 'certificate',
+  bearerToken: 'token',
+}));
+mock.module('../lib/coordinator/connection.ts', () => ({
+  ...realConnection,
+  readCoordinatorDescriptor: mockDescriptor,
+}));
 
 // existsSync returns true so findCoordinatorBinary "finds" a binary path.
 // Spread the real fs module (captured before this call) so the spawn
@@ -90,6 +104,16 @@ beforeEach(() => {
   mockHealth.mockReset();
   mockBunSpawn.mockClear();
   mockShutdown.mockReset();
+  mockDescriptor.mockReset();
+  mockDescriptor.mockReturnValue({
+    transportVersion: 1,
+    instanceId: 'owned',
+    pid: 4242,
+    httpsPort: 41957,
+    grpcPort: 41958,
+    certificatePem: 'certificate',
+    bearerToken: 'token',
+  });
   consoleOutput = [];
   originalLog = console.log;
   originalError = console.error;
@@ -116,6 +140,7 @@ afterAll(() => {
   mock.module('node:fs', () => realFs);
   mock.module('../lib/grpc/client.ts', () => realGrpcClient);
   mock.module('../lib/commands/coordinator/health.ts', () => realHealthModule);
+  mock.module('../lib/coordinator/connection.ts', () => realConnection);
   Bun.spawn = originalBunSpawn;
 });
 
@@ -272,7 +297,12 @@ describe('stopCoordinatorService ownership', () => {
     mockHealth.mockResolvedValueOnce(false); // not already running
     mockHealth.mockResolvedValue(true); // healthy once "spawned"
 
-    const fakeSubprocess = { unref: mock(), kill: mock() };
+    const fakeSubprocess = {
+      pid: 4242,
+      exitCode: null,
+      unref: mock(),
+      kill: mock(),
+    };
     mockBunSpawn.mockImplementationOnce(() => fakeSubprocess as never);
 
     await cs.startCoordinatorService();
@@ -292,7 +322,12 @@ describe('stopCoordinatorService ownership', () => {
     mockHealth.mockResolvedValueOnce(false);
     mockHealth.mockResolvedValue(true);
 
-    const fakeSubprocess = { unref: mock(), kill: mock() };
+    const fakeSubprocess = {
+      pid: 4242,
+      exitCode: null,
+      unref: mock(),
+      kill: mock(),
+    };
     mockBunSpawn.mockImplementationOnce(() => fakeSubprocess as never);
 
     await cs.startCoordinatorService();
@@ -302,5 +337,36 @@ describe('stopCoordinatorService ownership', () => {
     await cs.stopCoordinatorService();
 
     expect(fakeSubprocess.kill).toHaveBeenCalled();
+  });
+
+  test('a replacement descriptor is never sent shutdown by an old owner', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = { pid: 4242, exitCode: null, unref: mock(), kill: mock() };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await cs.startCoordinatorService();
+    mockDescriptor.mockReturnValue({
+      transportVersion: 1,
+      instanceId: 'replacement',
+      pid: 4343,
+      httpsPort: 41957,
+      grpcPort: 41958,
+      certificatePem: 'replacement',
+      bearerToken: 'other',
+    });
+    await cs.stopCoordinatorService();
+    expect(mockShutdown).not.toHaveBeenCalled();
+    expect(child.kill).not.toHaveBeenCalled();
+  });
+
+  test('a child that loses startup does not own the healthy replacement', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = { pid: 4241, exitCode: null, unref: mock(), kill: mock() };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await cs.startCoordinatorService();
+    expect(child.kill).toHaveBeenCalledTimes(1);
+    await cs.stopCoordinatorService();
+    expect(mockShutdown).not.toHaveBeenCalled();
   });
 });

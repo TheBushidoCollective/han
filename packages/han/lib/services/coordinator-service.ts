@@ -22,7 +22,11 @@ import {
 import { dirname, join, resolve } from 'node:path';
 import { checkHealth } from '../commands/coordinator/health.ts';
 import { getHanDataDir } from '../config/claude-settings.ts';
-import { getCoordinatorDataDir } from '../coordinator/connection.ts';
+import {
+  getCoordinatorDataDir,
+  type LocalCoordinatorDescriptor,
+  readCoordinatorDescriptor,
+} from '../coordinator/connection.ts';
 import { createCoordinatorClients } from '../grpc/client.ts';
 
 async function isCoordinatorServing(port: number): Promise<boolean> {
@@ -53,6 +57,7 @@ interface CoordinatorState {
   version: string;
   process: Bun.Subprocess | null;
   port: number;
+  ownedDescriptor: LocalCoordinatorDescriptor | null;
   /**
    * True only when *this* process actually spawned the coordinator (the
    * Bun.spawn call succeeded and the resulting process is tracked in
@@ -68,6 +73,7 @@ const state: CoordinatorState = {
   version: COORDINATOR_VERSION,
   process: null,
   port: DEFAULT_PORT,
+  ownedDescriptor: null,
   ownsProcess: false,
 };
 
@@ -368,6 +374,7 @@ export async function startCoordinatorService(): Promise<void> {
     state.isRunning = true;
     state.port = port;
     state.ownsProcess = false;
+    state.ownedDescriptor = null;
     return;
   }
 
@@ -393,6 +400,7 @@ export async function startCoordinatorService(): Promise<void> {
       state.isRunning = true;
       state.port = port;
       state.ownsProcess = false;
+      state.ownedDescriptor = null;
       console.log('[coordinator] Coordinator started and healthy');
     } else {
       throw new Error(buildHealthFailureMessage(port, budgetMs));
@@ -429,6 +437,18 @@ export async function startCoordinatorService(): Promise<void> {
       const budgetMs = getHealthBudgetMs();
       const healthy = await waitForHealthy(port, budgetMs);
       if (healthy) {
+        const descriptor = readCoordinatorDescriptor();
+        if (
+          descriptor.pid !== state.process.pid ||
+          state.process.exitCode !== null
+        ) {
+          if (state.process.exitCode === null) state.process.kill();
+          state.process = null;
+          state.ownsProcess = false;
+          state.ownedDescriptor = null;
+        } else {
+          state.ownedDescriptor = descriptor;
+        }
         state.isRunning = true;
         state.port = port;
         console.log('[coordinator] Coordinator started and healthy');
@@ -477,6 +497,7 @@ export async function stopCoordinatorService(): Promise<void> {
   state.isRunning = false;
 
   if (!state.ownsProcess) {
+    state.ownedDescriptor = null;
     state.process = null;
     console.log(
       '[coordinator] Detached (did not own the coordinator process; leaving it running)'
@@ -484,8 +505,32 @@ export async function stopCoordinatorService(): Promise<void> {
     return;
   }
 
+  const owned = state.ownedDescriptor;
+  let current: LocalCoordinatorDescriptor | null = null;
   try {
-    const clients = createCoordinatorClients(state.port);
+    current = readCoordinatorDescriptor();
+  } catch {
+    // No verified descriptor means there is no safe RPC shutdown target.
+  }
+  if (
+    !owned ||
+    !current ||
+    current.instanceId !== owned.instanceId ||
+    current.pid !== owned.pid ||
+    current.certificatePem !== owned.certificatePem ||
+    current.bearerToken !== owned.bearerToken ||
+    current.grpcPort !== owned.grpcPort ||
+    current.httpsPort !== owned.httpsPort ||
+    !state.process ||
+    state.process.exitCode !== null
+  ) {
+    state.process = null;
+    state.ownsProcess = false;
+    state.ownedDescriptor = null;
+    return;
+  }
+  try {
+    const clients = createCoordinatorClients(state.port, owned);
     await clients.coordinator.shutdown({
       graceful: true,
       timeoutSeconds: 5,
@@ -501,6 +546,7 @@ export async function stopCoordinatorService(): Promise<void> {
 
   state.process = null;
   state.ownsProcess = false;
+  state.ownedDescriptor = null;
   console.log('[coordinator] Service stopped');
 }
 

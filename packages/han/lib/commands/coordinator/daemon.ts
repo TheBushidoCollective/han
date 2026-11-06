@@ -18,7 +18,10 @@ import {
 import { dirname, join } from 'node:path';
 import { getHanDataDir } from '../../config/claude-settings.ts';
 import { getHanBinary } from '../../config/han-settings.ts';
-import { readCoordinatorDescriptor } from '../../coordinator/connection.ts';
+import {
+  CoordinatorSecurityError,
+  readCoordinatorDescriptor,
+} from '../../coordinator/connection.ts';
 import { createCoordinatorClients } from '../../grpc/client.ts';
 import { checkHealth, waitForHealth } from './health.ts';
 import {
@@ -379,18 +382,13 @@ async function runForeground(port: number): Promise<void> {
           const { promise, resolve } = Promise.withResolvers<void>();
           setTimeout(resolve, 1000);
           await promise;
-          try {
-            if (!(await checkHealth(port))) {
-              releaseClaim(claim);
-              return;
-            }
-          } catch {
-            releaseClaim(claim);
-            return;
+          if (!(await checkHealth(port))) {
+            throw new Error('Coordinator stopped responding');
           }
         }
       } catch (error) {
         if (shuttingDown) break;
+        if (error instanceof CoordinatorSecurityError) throw error;
 
         restartAttempts++;
         console.error(

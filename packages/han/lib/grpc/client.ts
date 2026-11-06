@@ -11,6 +11,7 @@ import { checkHealth } from '../commands/coordinator/health.ts';
 import {
   CoordinatorSecurityError,
   coordinatorFetch,
+  type LocalCoordinatorDescriptor,
   readCoordinatorDescriptor,
 } from '../coordinator/connection.ts';
 import {
@@ -37,14 +38,28 @@ const DEFAULT_PORT = 41957;
  * Create typed gRPC clients for all coordinator services.
  */
 export function createCoordinatorClients(
-  port = DEFAULT_PORT
+  port = DEFAULT_PORT,
+  expected?: LocalCoordinatorDescriptor
 ): CoordinatorClients {
   const transport = createGrpcWebTransport({
     baseUrl: `https://127.0.0.1:${port}`,
     useBinaryFormat: true,
     fetch: Object.assign(
       (input: string | URL | Request, init?: RequestInit) => {
-        const descriptor = readCoordinatorDescriptor();
+        const current = readCoordinatorDescriptor();
+        if (
+          expected &&
+          (current.instanceId !== expected.instanceId ||
+            current.pid !== expected.pid ||
+            current.grpcPort !== expected.grpcPort ||
+            current.httpsPort !== expected.httpsPort ||
+            current.certificatePem !== expected.certificatePem ||
+            current.bearerToken !== expected.bearerToken)
+        )
+          throw new CoordinatorSecurityError(
+            'Coordinator instance changed before request'
+          );
+        const descriptor = expected ?? current;
         if (descriptor.grpcPort === null)
           throw new CoordinatorSecurityError(
             'Coordinator gRPC listener is disabled'

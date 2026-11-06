@@ -539,3 +539,27 @@ test('retry exhaustion never grants ownership', async () => {
   );
   expect(await child.exited).toBe(0);
 });
+
+test('legacy regular-file reservations honor live and dead holders', async () => {
+  const path = join(dataDir, 'coordinator.pid');
+  const marker = `${path}.takeover`;
+  const holder = Bun.spawn(
+    [process.execPath, '-e', 'setInterval(() => {}, 1000)'],
+    { stdout: 'ignore' }
+  );
+  writeFileSync(marker, String(holder.pid), { mode: 0o644 });
+  try {
+    expect(claimSupervisorPid(path)).toEqual({
+      kind: 'blocked',
+      pid: holder.pid,
+    });
+  } finally {
+    holder.kill();
+    await holder.exited;
+  }
+  const claim = claimSupervisorPid(path);
+  if (claim.kind !== 'owned')
+    throw new Error('Dead legacy marker was not reclaimed');
+  expect(readFileSync(path, 'utf8')).toBe(String(process.pid));
+  releaseSupervisorPid(claim.claim);
+});

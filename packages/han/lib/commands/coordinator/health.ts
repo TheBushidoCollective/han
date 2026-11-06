@@ -28,6 +28,45 @@ async function portOccupied(port: number): Promise<boolean> {
     });
   });
 }
+function processIsDead(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return false;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ESRCH') return true;
+    if ((error as NodeJS.ErrnoException).code === 'EPERM') return false;
+    throw new CoordinatorSecurityError(
+      'Cannot establish coordinator process liveness'
+    );
+  }
+}
+
+async function portRefusesConnection(port: number): Promise<boolean> {
+  const { promise, resolve, reject } = Promise.withResolvers<boolean>();
+  const socket = connect({ host: '127.0.0.1', port });
+  socket.setTimeout(2000);
+  socket.once('connect', () => {
+    socket.destroy();
+    resolve(false);
+  });
+  socket.once('error', (error: NodeJS.ErrnoException) => {
+    socket.destroy();
+    if (error.code === 'ECONNREFUSED') resolve(true);
+    else
+      reject(
+        new CoordinatorSecurityError(
+          `Cannot establish coordinator listener state: ${error.code ?? error.message}`
+        )
+      );
+  });
+  socket.once('timeout', () => {
+    socket.destroy();
+    reject(
+      new CoordinatorSecurityError('Coordinator listener probe timed out')
+    );
+  });
+  return promise;
+}
 
 export async function checkHealth(
   port?: number,
@@ -35,6 +74,17 @@ export async function checkHealth(
 ): Promise<HealthCheckResponse | null> {
   try {
     const descriptor = readCoordinatorDescriptor();
+    if (
+      processIsDead(descriptor.pid) &&
+      (await portRefusesConnection(descriptor.httpsPort))
+    ) {
+      const current = readCoordinatorDescriptor();
+      if (current.instanceId !== descriptor.instanceId)
+        throw new CoordinatorSecurityError(
+          'Coordinator descriptor changed during stale-instance check'
+        );
+      return null;
+    }
     if (port !== undefined && port !== 0 && port !== descriptor.httpsPort)
       throw new CoordinatorSecurityError(
         'Coordinator descriptor port does not match requested port'

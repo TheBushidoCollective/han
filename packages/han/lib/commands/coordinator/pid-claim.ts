@@ -47,7 +47,10 @@ function removeCandidate(path: string, owner: string): void {
     if (!missing(error)) throw error;
   }
 }
-function protectedFile(path: string): {
+function protectedFile(
+  path: string,
+  allowPublicRead = false
+): {
   text: string;
   device: number;
   inode: number;
@@ -58,7 +61,8 @@ function protectedFile(path: string): {
     if (
       !s.isFile() ||
       (process.platform !== 'win32' &&
-        (s.uid !== process.getuid?.() || (s.mode & 0o077) !== 0))
+        (s.uid !== process.getuid?.() ||
+          (s.mode & (allowPublicRead ? 0o022 : 0o077)) !== 0))
     )
       throw new Error(`Insecure supervisor file: ${path}`);
     return { text: readFileSync(fd, 'utf8'), device: s.dev, inode: s.ino };
@@ -75,7 +79,7 @@ function pidValue(text: string): number {
 }
 export function readSupervisorPid(path: string): number | null {
   try {
-    return pidValue(protectedFile(path).text);
+    return pidValue(protectedFile(path, true).text);
   } catch (e) {
     if (missing(e)) return null;
     throw e;
@@ -111,7 +115,7 @@ function reclaim(reservation: string, pidPath: string): number | null {
     throw e;
   }
   if (s.isFile() && !s.isSymbolicLink()) {
-    const pid = pidValue(protectedFile(reservation).text);
+    const pid = pidValue(protectedFile(reservation, true).text);
     if (alive(pid)) return pid;
     try {
       unlinkSync(reservation);
@@ -227,7 +231,7 @@ export function claimSupervisorPid(path: string): ClaimResult {
         renameSync(candidate, reservation);
       } catch (e) {
         if (
-          !['EEXIST', 'ENOTEMPTY', 'EPERM', 'EACCES'].includes(
+          !['EEXIST', 'ENOTEMPTY', 'ENOTDIR', 'EPERM', 'EACCES'].includes(
             (e as NodeJS.ErrnoException).code ?? ''
           )
         )
