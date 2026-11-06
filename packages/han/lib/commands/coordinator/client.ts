@@ -9,9 +9,9 @@
  */
 
 import { type Client, createClient } from 'graphql-ws';
+import WebSocket from 'ws';
 import {
   coordinatorRequest,
-  coordinatorWebSocket,
   readCoordinatorDescriptor,
 } from '../../coordinator/connection.ts';
 import { checkHealth } from './health.ts';
@@ -142,9 +142,14 @@ export class CoordinatorClient {
   private getWsClient(): Client {
     if (!this.wsClient) {
       const descriptor = readCoordinatorDescriptor();
-      const Socket = class {
+      const Socket = class extends WebSocket {
         constructor(_url: string, protocols?: string | string[]) {
-          return coordinatorWebSocket('/graphql', protocols);
+          const current = readCoordinatorDescriptor();
+          super(`wss://127.0.0.1:${current.httpsPort}/graphql`, protocols, {
+            ca: current.certificatePem,
+            rejectUnauthorized: true,
+            headers: { Authorization: `Bearer ${current.bearerToken}` },
+          });
         }
       };
       this.wsClient = createClient({

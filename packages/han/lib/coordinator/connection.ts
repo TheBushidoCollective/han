@@ -38,6 +38,11 @@ export function getCoordinatorDataDir(): string {
 }
 
 export function readCoordinatorDescriptor(): LocalCoordinatorDescriptor {
+  if (process.platform === 'win32') {
+    throw new CoordinatorSecurityError(
+      'Windows coordinator descriptor ACL and reparse-point verification is not available'
+    );
+  }
   const runtime = join(getCoordinatorDataDir(), 'runtime');
   const path = join(runtime, 'coordinator.json');
   let fd: number | undefined;
