@@ -250,6 +250,20 @@ test("real launcher, gateway and live GraphQL subscriptions with security contro
 	let coordinator: ChildProcess | undefined;
 	const context = await browser.newContext();
 	const page = await context.newPage();
+	const responses: Array<{ path: string; status: number }> = [];
+	const pageErrors: string[] = [];
+	page.on("response", (response) => {
+		try {
+			const target = new URL(response.url());
+			if (target.hostname === "127.0.0.1")
+				responses.push({ path: target.pathname, status: response.status() });
+		} catch {
+			/* Ignore non-URL responses. */
+		}
+	});
+	page.on("pageerror", (error) => {
+		pageErrors.push(error.message.replace(/[A-Za-z0-9_-]{32,}/g, "[redacted]"));
+	});
 	const observed = observe(page);
 	try {
 		coordinator = spawn(
@@ -299,19 +313,26 @@ test("real launcher, gateway and live GraphQL subscriptions with security contro
 				launchToken: "invalid",
 			}),
 		).toBe(401);
-		const exchangeResponse = page.waitForResponse(
-			(response) =>
-				response.url() === `${url}/_han/session` && response.status() === 200,
-		);
-		const graphResponse = page.waitForResponse(
-			(response) =>
-				response.url() === `${url}/graphql` &&
-				response.request().method() === "POST" &&
-				response.status() === 200,
-		);
-		await page.goto(launcher);
-		await exchangeResponse;
-		const graph = await graphResponse;
+		const [exchangeResponse, graph] = await Promise.all([
+			page.waitForResponse(
+				(response) =>
+					response.url() === `${url}/_han/session` && response.status() === 200,
+				{ timeout: 45_000 },
+			),
+			page.waitForResponse(
+				(response) =>
+					response.url() === `${url}/graphql` &&
+					response.request().method() === "POST" &&
+					response.status() === 200,
+				{ timeout: 45_000 },
+			),
+			page.goto(launcher, { waitUntil: "domcontentloaded", timeout: 45_000 }),
+		]).catch((error) => {
+			throw new Error(
+				`Browser bootstrap failed: ${error.message}; responses=${JSON.stringify(responses)}; pageErrors=${JSON.stringify(pageErrors)}`,
+			);
+		});
+		expect(exchangeResponse.status()).toBe(200);
 		const graphBody = await graph.json();
 		expect(graphBody.data).toBeTruthy();
 		expect(graphBody.errors).toBeUndefined();
