@@ -66,7 +66,7 @@ Five platform-specific packages published separately:
 | `@thebushidocollective/han-darwin-arm64` | macOS Apple Silicon | CLI and coordinator |
 | `@thebushidocollective/han-win32-x64` | Windows x64 | CLI and coordinator |
 
-The platform package contains the CLI and coordinator from the same release. The wrapper rejects incomplete or version-mismatched platform packages and pins its on-demand install to the wrapper version. The installer verifies checksums for both platform-specific release assets before replacing either executable. Homebrew installs the corresponding coordinator as a resource.
+The platform package contains the CLI and coordinator from the same release. The wrapper rejects incomplete or version-mismatched platform packages and pins its on-demand install to the wrapper version. The installer verifies both platform-specific release assets, places the pair in a release-specific directory, and switches the CLI symlink in one rename. The CLI resolves its executable's real path to find its matching coordinator. Older pairs remain available to running processes. Homebrew installs the corresponding coordinator as a resource.
 
 ### Installation Flow
 

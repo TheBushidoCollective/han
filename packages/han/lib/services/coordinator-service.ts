@@ -15,6 +15,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
@@ -95,7 +96,7 @@ function findCoordinatorBinary(): string | null {
   const home = process.env.HOME || process.env.USERPROFILE || '/tmp';
   const binaryName =
     process.platform === 'win32' ? 'han-coordinator.exe' : 'han-coordinator';
-  const sibling = join(dirname(process.execPath), binaryName);
+  const sibling = join(dirname(realpathSync(process.execPath)), binaryName);
   if (existsSync(sibling)) return sibling;
 
   // 0. Local Rust build (dev mode: running from .ts source)

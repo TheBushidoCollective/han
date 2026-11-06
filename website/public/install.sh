@@ -102,7 +102,14 @@ echo -e "${GREEN}Installing han v$LATEST_VERSION...${NC}"
 
 BASE_URL="https://github.com/TheBushidoCollective/han/releases/download/v${LATEST_VERSION}"
 TEMP_DIR=$(mktemp -d "${BIN_DIR}/.han-install.XXXXXXXX")
-trap 'rm -rf "$TEMP_DIR"' EXIT
+RELEASE_DIR=""
+cleanup() {
+	rm -rf "$TEMP_DIR"
+	if [ -n "$RELEASE_DIR" ]; then
+		rm -rf "$RELEASE_DIR"
+	fi
+}
+trap cleanup EXIT
 
 download() {
 	if command -v curl >/dev/null 2>&1; then
@@ -146,9 +153,18 @@ COORDINATOR_ASSET="han-coordinator-${PLATFORM}${BINARY_SUFFIX}"
 download_verified "$CLI_ASSET"
 download_verified "$COORDINATOR_ASSET"
 
-# Both downloads must succeed before replacing either existing executable.
-mv -f "${TEMP_DIR}/${COORDINATOR_ASSET}" "${BIN_DIR}/han-coordinator${BINARY_SUFFIX}"
-mv -f "${TEMP_DIR}/${CLI_ASSET}" "$HAN_BIN"
+# Publish a complete pair behind a single atomic CLI symlink replacement.
+# Keep older pairs: a running CLI may still need its matching coordinator.
+mkdir -p "${BIN_DIR}/.han-releases"
+RELEASE_NAME="$(basename "$TEMP_DIR")"
+RELEASE_DIR="${BIN_DIR}/.han-releases/${RELEASE_NAME}"
+mkdir "$RELEASE_DIR"
+mv "${TEMP_DIR}/${CLI_ASSET}" "${RELEASE_DIR}/han${BINARY_SUFFIX}"
+mv "${TEMP_DIR}/${COORDINATOR_ASSET}" "${RELEASE_DIR}/han-coordinator${BINARY_SUFFIX}"
+ln -s ".han-releases/${RELEASE_NAME}/han${BINARY_SUFFIX}" "${TEMP_DIR}/han-link"
+# Once the pair is complete, keep it even if publishing is interrupted.
+RELEASE_DIR=""
+mv -f "${TEMP_DIR}/han-link" "$HAN_BIN"
 
 echo -e "${GREEN}✓ Han v$LATEST_VERSION installed successfully!${NC}"
 echo ""

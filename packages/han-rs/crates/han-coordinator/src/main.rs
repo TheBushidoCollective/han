@@ -218,7 +218,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let grpc_listener = if cli.no_grpc {
         None
     } else {
-        Some(tokio::net::TcpListener::bind(([127, 0, 0, 1], cli.grpc_port)).await?)
+        Some(tokio::net::TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], cli.grpc_port))).await?)
     };
     let grpc_port = grpc_listener.as_ref().map(|listener| listener.local_addr().map(|addr| addr.port())).transpose()?;
     let data_dir = runtime::data_dir(cli.data_dir.as_deref())?;

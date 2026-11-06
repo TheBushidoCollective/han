@@ -6,6 +6,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -122,10 +123,25 @@ describe('distribution', () => {
       );
       expect(run().exitCode).toBe(0);
       expect(readFileSync(join(bin, 'han'), 'utf8')).toBe('new cli');
-      expect(readFileSync(join(bin, 'han-coordinator'), 'utf8')).toBe(
+      const releaseDir = resolve(realpathSync(join(bin, 'han')), '..');
+      expect(readFileSync(join(releaseDir, 'han-coordinator'), 'utf8')).toBe(
         'new coordinator'
       );
+      expect(readFileSync(join(bin, 'han-coordinator'), 'utf8')).toBe(
+        'old coordinator'
+      );
       expect(existsSync(join(bin, 'han'))).toBe(true);
+      const mv = join(fakeBin, 'mv');
+      writeFileSync(
+        mv,
+        '#!/bin/sh\ncase "$*" in *han-link*) exit 1;; esac\nexec /bin/mv "$@"\n'
+      );
+      chmodSync(mv, 0o755);
+      expect(run().exitCode).not.toBe(0);
+      expect(realpathSync(join(bin, 'han'))).toBe(join(releaseDir, 'han'));
+      expect(readFileSync(join(releaseDir, 'han-coordinator'), 'utf8')).toBe(
+        'new coordinator'
+      );
     }
   );
 
