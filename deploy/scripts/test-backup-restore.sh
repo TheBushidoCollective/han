@@ -13,6 +13,9 @@ EOF
 cat > "$tmp/bin/psql" <<'EOF'
 #!/bin/bash
 printf '%s\n' "$*" >> "$PSQL_LOG"
+if [ "$#" -eq 1 ]; then
+  cat > "$PSQL_DATA"
+fi
 EOF
 cat > "$tmp/bin/ls" <<'EOF'
 #!/bin/bash
@@ -22,7 +25,7 @@ fi
 exec /bin/ls "$@"
 EOF
 chmod +x "$tmp/bin/pg_dump" "$tmp/bin/psql" "$tmp/bin/ls"
-export PATH="$tmp/bin:$PATH" DATABASE_URL='postgres://localhost/example' PSQL_LOG="$tmp/psql.log"
+export PATH="$tmp/bin:$PATH" DATABASE_URL='postgres://localhost/example' PSQL_LOG="$tmp/psql.log" PSQL_DATA="$tmp/restored.sql"
 
 backup_dir="$tmp/backups with spaces"
 bash "$scripts_dir/backup.sh" "$backup_dir" > "$tmp/backup.out"
@@ -36,11 +39,14 @@ name with spaces.sql.gz"
 cp "$backup_file" "$newline_file"
 printf 'R\\ESTORE\n' | bash "$scripts_dir/restore.sh" "$newline_file" > "$tmp/restore.out"
 [ -s "$PSQL_LOG" ]
+printf 'SELECT 1;\n' | cmp - "$PSQL_DATA"
 
 # Escaped newlines continue the original read; escaped trailing spaces reject.
 : > "$PSQL_LOG"
+rm -f "$PSQL_DATA"
 printf 'RES\\\nTORE\n' | bash "$scripts_dir/restore.sh" "$newline_file" > "$tmp/restore.out"
 [ -s "$PSQL_LOG" ]
+printf 'SELECT 1;\n' | cmp - "$PSQL_DATA"
 : > "$PSQL_LOG"
 if printf 'RESTORE\\ \n' | bash "$scripts_dir/restore.sh" "$newline_file" > "$tmp/restore.out"; then
   echo 'escaped trailing space unexpectedly confirmed restore' >&2
