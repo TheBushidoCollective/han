@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0] - 2026-11-06
+
+### Added
+
+- catalog and track metrics from every harness, and bridge omp (#109) ([a7a02ccc](../../commit/a7a02ccc))
+
+### Fixed
+
+- align formatting and import order with root Biome diagnostics ([a55aa7b2](../../commit/a55aa7b2))
+- address remaining Biome linter diagnostics in antigravity and omp bridges ([c59f3a53](../../commit/c59f3a53))
+
 ## [0.1.0] - 2026-08-12
 
 ### Added
