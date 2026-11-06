@@ -48,7 +48,7 @@ test('Stop dispatch selects real workspace projects, ignores dependencies, and d
   // Load the module dynamically so the subprocess installs its mock before the CLI starts.
   writeFileSync(
     preload,
-    `import { mock } from 'bun:test';\nconst path = ${JSON.stringify(join(packageRoot, 'lib/grpc/client.ts'))};\nconst actual = await import(path);\nmock.module(path, () => ({ ...actual, isCoordinatorHealthy: async () => false }));\n`
+    `import { mock } from 'bun:test';\nconst tsPath = ${JSON.stringify(join(packageRoot, 'lib/grpc/client.ts'))};\nconst jsPath = ${JSON.stringify(join(packageRoot, 'lib/grpc/client.js'))};\nconst actual = await import(tsPath);\nconst fake = () => ({ ...actual, isCoordinatorHealthy: async () => false });\nmock.module(tsPath, fake);\nmock.module(jsPath, fake);\nmock.module('../../grpc/client.ts', fake);\nmock.module('./client.js', fake);\n`
   );
   executable(
     'han',
@@ -133,6 +133,7 @@ test('Stop dispatch selects real workspace projects, ignores dependencies, and d
     CALL_LOG: log,
     HAN_NO_CACHE: '1',
     HAN_NO_CHECKPOINTS: '1',
+    HAN_COORDINATOR_PORT: '0',
     CLAUDE_CODE_ENABLE_TELEMETRY: '0',
     npm_config_offline: 'true',
   };

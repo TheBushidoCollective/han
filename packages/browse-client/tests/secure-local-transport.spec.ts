@@ -333,7 +333,7 @@ async function attackerControls(browser: Browser, url: string, token: string) {
 				);
 				const socket = await new Promise<boolean>((resolve) => {
 					const ws = new WebSocket(
-						target.replace("http:", "ws:") + "/graphql",
+						`${target.replace("http:", "ws:")}/graphql`,
 						"graphql-transport-ws",
 					);
 					ws.onopen = () => {

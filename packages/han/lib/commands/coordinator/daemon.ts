@@ -23,6 +23,7 @@ import { getHanBinary } from '../../config/han-settings.ts';
 import {
   CoordinatorSecurityError,
   getCoordinatorDataDir,
+  isExplicitConnectionRefusal,
   type LocalCoordinatorDescriptor,
   readCoordinatorDescriptor,
   type SupervisorBinding,
@@ -545,11 +546,13 @@ async function runForeground(port: number): Promise<void> {
           try {
             healthy = (await checkHealth(port)) !== null;
           } catch (error) {
-            if (observeIntent()) break;
-            await Promise.race([child.exited, Bun.sleep(2000)]);
-            if (observeIntent()) break;
-            if (child.exitCode !== null)
-              throw new Error('Coordinator child exited');
+            if (isExplicitConnectionRefusal(error)) {
+              if (observeIntent()) break;
+              await Promise.race([child.exited, Bun.sleep(2000)]);
+              if (observeIntent()) break;
+              if (child.exitCode !== null)
+                throw new Error('Coordinator child exited', { cause: error });
+            }
             throw error;
           }
           if (observeIntent()) break;
@@ -559,8 +562,13 @@ async function runForeground(port: number): Promise<void> {
         }
         if (signal || observeIntent()) break;
       } catch (error) {
-        if (observeIntent() || signal) break;
-        if (error instanceof CoordinatorSecurityError) throw error;
+        if (signal) break;
+        if (
+          error instanceof CoordinatorSecurityError ||
+          !isExplicitConnectionRefusal(error)
+        )
+          throw error;
+        if (observeIntent()) break;
         if (child && child.exitCode === null) {
           if (observeIntent()) break;
           // Only the authenticated descriptor may authorize shutdown.
@@ -568,7 +576,11 @@ async function runForeground(port: number): Promise<void> {
             throw new CoordinatorSecurityError(
               'Cannot authenticate coordinator shutdown'
             );
-          await stopServer();
+          try {
+            await stopServer();
+          } catch (e) {
+            if (!isExplicitConnectionRefusal(e)) throw e;
+          }
           if (observeIntent()) break;
           await Promise.race([child.exited, Bun.sleep(10000)]);
           if (observeIntent()) break;

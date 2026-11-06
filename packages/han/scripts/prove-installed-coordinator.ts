@@ -369,17 +369,23 @@ async function main(): Promise<void> {
     );
     const output = new Response(child.stderr).text();
     try {
-      await waitFor('missing sibling failure', () => {
-        const log = join(missing, 'data/coordinator.pid');
-        return existsSync(log) ? true : undefined;
-      });
-      await delay(3000);
+      await waitFor('missing sibling failure', () =>
+        child.exitCode !== null ? child.exitCode : undefined
+      );
+      assert.notEqual(child.exitCode, 0);
       assert.equal(descriptor(join(missing, 'data')), undefined);
+      assert.equal(existsSync(join(missing, 'data/coordinator.pid')), false);
     } finally {
-      child.kill('SIGTERM');
-      await child.exited;
+      if (child.exitCode === null) {
+        child.kill('SIGTERM');
+        await child.exited;
+      }
     }
-    assert.match(await output, /han-coordinator binary not found/i);
+    const stderr = await output;
+    assert.match(
+      stderr,
+      /han-coordinator binary not found|Local runtime helper unavailable/i
+    );
     results.push('missing sibling with isolated discovery paths');
 
     const arch =

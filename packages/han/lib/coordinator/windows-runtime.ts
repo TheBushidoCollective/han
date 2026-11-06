@@ -1,8 +1,8 @@
 import { join, resolve } from 'node:path';
 import {
   type LocalCoordinatorDescriptor,
-  sameSupervisor,
   type SupervisorBinding,
+  sameSupervisor,
   validateCoordinatorDescriptor,
   validSupervisorBinding,
 } from './connection.ts';

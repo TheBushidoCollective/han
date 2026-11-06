@@ -1,4 +1,3 @@
-import { spawnSync } from './windows-helper.ts';
 import { randomUUID } from 'node:crypto';
 import { findCoordinatorBinary } from './binary.ts';
 import {
@@ -9,9 +8,10 @@ import {
   validateCoordinatorDescriptor,
   validSupervisorBinding,
 } from './connection.ts';
+import { spawnSync } from './windows-helper.ts';
 import {
-  type WindowsProcessIdentity,
   validWindowsProcessIdentity,
+  type WindowsProcessIdentity,
 } from './windows-runtime.ts';
 
 const MAX_MESSAGE = 128 * 1024;

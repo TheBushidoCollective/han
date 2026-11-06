@@ -13,7 +13,6 @@
 
 import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { Code, ConnectError } from '@connectrpc/connect';
 import {
   checkDescriptorHealth,
   checkHealth,
@@ -27,6 +26,7 @@ import { findCoordinatorBinary } from '../coordinator/binary.ts';
 import {
   CoordinatorSecurityError,
   getCoordinatorDataDir,
+  isExplicitConnectionRefusal,
   type LocalCoordinatorDescriptor,
   readCoordinatorDescriptor,
   type SupervisorBinding,
@@ -37,10 +37,10 @@ import { posixPrepare } from '../coordinator/recovery-runtime.ts';
 import {
   readWindowsChildDescriptor,
   type WindowsChildDescriptor,
-  windowsProcessState,
   type WindowsClaim,
   windowsAcquire,
   windowsPrepareRuntime,
+  windowsProcessState,
   windowsRelease,
 } from '../coordinator/windows-runtime.ts';
 import { createCoordinatorClients } from '../grpc/client.ts';
@@ -82,6 +82,7 @@ interface CoordinatorState {
    * Only an owner may send it a shutdown; see stopCoordinatorService.
    */
   ownsProcess: boolean;
+  restartTimer: NodeJS.Timeout | null;
 }
 
 const state: CoordinatorState = {
@@ -91,6 +92,7 @@ const state: CoordinatorState = {
   port: DEFAULT_PORT,
   ownedDescriptor: null,
   ownsProcess: false,
+  restartTimer: null,
 };
 
 export type CoordinatorStartResult =
@@ -376,7 +378,7 @@ export async function startCoordinatorService(
   const predecessor = selected && descriptorIsDead(selected) ? selected : null;
   if (!predecessor && (await isCoordinatorServing(port))) {
     state.isRunning = true;
-    state.port = port;
+    state.port = (selected ?? readCoordinatorDescriptor()).httpsPort;
     state.ownsProcess = false;
     state.ownedDescriptor = null;
     console.log(
@@ -406,7 +408,7 @@ export async function startCoordinatorService(
     const healthy = await waitForHealthy(port, budgetMs, predecessor);
     if (healthy) {
       state.isRunning = true;
-      state.port = port;
+      state.port = readCoordinatorDescriptor().httpsPort;
       state.ownsProcess = false;
       state.ownedDescriptor = null;
       console.log('[coordinator] Coordinator started and healthy');
@@ -563,7 +565,7 @@ export async function startCoordinatorService(
             );
           state.ownedDescriptor = descriptor;
           state.isRunning = true;
-          state.port = port;
+          state.port = descriptor.httpsPort;
           return { kind: 'owned', child, descriptor };
         } else if (child.exitCode !== null) {
           const intent = await stopping();
@@ -573,7 +575,7 @@ export async function startCoordinatorService(
             state.process = null;
             state.ownsProcess = false;
             state.isRunning = true;
-            state.port = port;
+            state.port = (descriptor ?? readCoordinatorDescriptor()).httpsPort;
             return { kind: 'attached' };
           }
           throw new Error('Coordinator child exited during startup');
@@ -583,7 +585,12 @@ export async function startCoordinatorService(
       }
       throw new Error(buildHealthFailureMessage(port, budgetMs));
     } catch (error) {
-      if (options.supervisor && state.process && stopping) {
+      if (
+        options.supervisor &&
+        state.process &&
+        stopping &&
+        isExplicitConnectionRefusal(error)
+      ) {
         try {
           const intent = await stopping();
           if (intent)
@@ -614,13 +621,15 @@ export async function startCoordinatorService(
  * already-healthy coordinator started by someone else was simply connected
  * to — tearing it down here would kill a coordinator every other attached
  * `han` invocation is relying on.
- */
 export async function stopCoordinatorService(): Promise<void> {
-  if (!state.isRunning) return;
-
-  state.isRunning = false;
+  if (state.restartTimer) {
+    clearTimeout(state.restartTimer);
+    state.restartTimer = null;
+  }
+  if (!state.isRunning && !state.ownsProcess) return;
 
   if (!state.ownsProcess) {
+    state.isRunning = false;
     state.ownedDescriptor = null;
     state.process = null;
     console.log(
@@ -630,61 +639,72 @@ export async function stopCoordinatorService(): Promise<void> {
   }
 
   const owned = state.ownedDescriptor;
+  const child = state.process;
+  if (!owned || !child) {
+    state.isRunning = false;
+    state.ownsProcess = false;
+    state.ownedDescriptor = null;
+    state.process = null;
+    return;
+  }
+
+  if (child.exitCode !== null) {
+    state.isRunning = false;
+    state.ownsProcess = false;
+    state.ownedDescriptor = null;
+    state.process = null;
+    return;
+  }
+
   let current: LocalCoordinatorDescriptor | null = null;
   try {
     current = readCoordinatorDescriptor();
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      state.process = null;
-      state.ownsProcess = false;
-      state.ownedDescriptor = null;
       throw error;
     }
   }
-  if (
-    !owned ||
-    !current ||
-    !sameCoordinator(current, owned) ||
-    !state.process ||
-    state.process.exitCode !== null
-  ) {
-    state.process = null;
+
+  if (current && !sameCoordinator(current, owned)) {
+    state.isRunning = false;
     state.ownsProcess = false;
     state.ownedDescriptor = null;
+    state.process = null;
     return;
   }
+
   try {
-    const clients = createCoordinatorClients(state.port, owned);
+    const clients = createCoordinatorClients(owned.httpsPort, owned);
     await clients.coordinator.shutdown({
       graceful: true,
       timeoutSeconds: 5,
     });
     console.log('[coordinator] Graceful shutdown sent');
   } catch (error) {
-    if (
-      error instanceof CoordinatorSecurityError ||
-      (error instanceof ConnectError &&
-        (error.code === Code.Unauthenticated ||
-          error.code === Code.PermissionDenied))
-    ) {
-      state.process = null;
-      state.ownsProcess = false;
-      state.ownedDescriptor = null;
+    if (!isExplicitConnectionRefusal(error)) {
       throw error;
     }
-    // A lost response can follow a committed shutdown. Never kill that child
-    // or discard the intent that the supervisor must finish consuming.
     const committed =
       owned.supervisor && state.process
         ? readShutdownIntent(owned.supervisor, state.process.pid, owned)
         : null;
-    if (!committed && state.process && state.process.exitCode === null)
+    const childIsDead =
+      process.platform === 'win32'
+        ? !!owned.process &&
+          validWindowsProcessIdentity(owned.process) &&
+          windowsProcessState(getCoordinatorDataDir(), owned.process) === 'gone'
+        : state.process
+          ? state.process.exitCode !== null
+          : false;
+    if (!committed && !childIsDead) {
       throw error;
+    }
   }
 
-  state.process = null;
+  state.isRunning = false;
   state.ownsProcess = false;
   state.ownedDescriptor = null;
+  state.process = null;
   console.log('[coordinator] Service stopped');
 }
 
@@ -739,8 +759,12 @@ export function checkClientVersion(clientVersion: string): boolean {
     console.log(
       `[coordinator] Client version ${clientVersion} > coordinator version ${state.version}, scheduling restart`
     );
+    if (state.restartTimer) {
+      clearTimeout(state.restartTimer);
+      state.restartTimer = null;
+    }
     // Schedule restart after a short delay
-    setTimeout(async () => {
+    state.restartTimer = setTimeout(async () => {
       try {
         console.log('[coordinator] Restarting for version upgrade...');
         await stopCoordinatorService();
@@ -750,6 +774,8 @@ export function checkClientVersion(clientVersion: string): boolean {
           '[coordinator] Failed to restart for version upgrade:',
           err
         );
+      } finally {
+        state.restartTimer = null;
       }
     }, 1000);
     return true;

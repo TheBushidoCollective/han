@@ -542,4 +542,173 @@ describe('stopCoordinatorService ownership', () => {
       expect(child.kill).not.toHaveBeenCalled();
     }
   );
+
+  test('live child ownership survives authentication failure, allowing shutdown retry', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = {
+      pid: 4242,
+      exitCode: null as number | null,
+      unref: mock(),
+      kill: mock(),
+    };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await cs.startCoordinatorService();
+    const authError = new realConnection.CoordinatorSecurityError(
+      'Coordinator rejected authenticated request (401)'
+    );
+    mockShutdown.mockRejectedValueOnce(
+      new ConnectError(
+        'wrapped rejection',
+        Code.Unknown,
+        undefined,
+        undefined,
+        authError
+      )
+    );
+    await expect(cs.stopCoordinatorService()).rejects.toThrow(
+      'wrapped rejection'
+    );
+    expect(mockShutdown).toHaveBeenCalledTimes(1);
+    expect(child.kill).not.toHaveBeenCalled();
+
+    // Ownership evidence survived: state.ownsProcess is true, child remains tracked.
+    // A second shutdown attempt invokes the RPC again:
+    mockShutdown.mockResolvedValueOnce({});
+    await expect(cs.stopCoordinatorService()).resolves.toBeUndefined();
+    expect(mockShutdown).toHaveBeenCalledTimes(2);
+  });
+
+  test('wrapped authentication error is not suppressed even when child exits during RPC', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = {
+      pid: 4242,
+      exitCode: null as number | null,
+      unref: mock(),
+      kill: mock(),
+    };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await cs.startCoordinatorService();
+    const authError = new realConnection.CoordinatorSecurityError(
+      'Coordinator rejected authenticated request (401)'
+    );
+    mockShutdown.mockImplementationOnce(() => {
+      child.exitCode = 1;
+      throw new ConnectError(
+        'wrapped rejection',
+        Code.Unknown,
+        undefined,
+        undefined,
+        authError
+      );
+    });
+    await expect(cs.stopCoordinatorService()).rejects.toThrow(
+      'wrapped rejection'
+    );
+    expect(mockShutdown).toHaveBeenCalledTimes(1);
+    expect(child.kill).not.toHaveBeenCalled();
+  });
+
+  test('wrapped TLS error is not suppressed even when child exits during RPC', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = {
+      pid: 4242,
+      exitCode: null as number | null,
+      unref: mock(),
+      kill: mock(),
+    };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await cs.startCoordinatorService();
+    const tlsError = new realConnection.CoordinatorSecurityError(
+      'Coordinator connection failed: UNABLE_TO_VERIFY_LEAF_SIGNATURE'
+    );
+    mockShutdown.mockImplementationOnce(() => {
+      child.exitCode = 1;
+      throw new ConnectError(
+        'wrapped TLS failure',
+        Code.Unknown,
+        undefined,
+        undefined,
+        tlsError
+      );
+    });
+    await expect(cs.stopCoordinatorService()).rejects.toThrow(
+      'wrapped TLS failure'
+    );
+    expect(mockShutdown).toHaveBeenCalledTimes(1);
+    expect(child.kill).not.toHaveBeenCalled();
+  });
+
+  test('explicit connection refusal on an exited child stops cleanly without error', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = {
+      pid: 4242,
+      exitCode: null as number | null,
+      unref: mock(),
+      kill: mock(),
+    };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await cs.startCoordinatorService();
+    const refusalError = new realConnection.CoordinatorSecurityError(
+      'Coordinator connection failed: ECONNREFUSED: Unable to connect'
+    );
+    mockShutdown.mockImplementationOnce(() => {
+      child.exitCode = 1;
+      throw new ConnectError(
+        'wrapped refusal',
+        Code.Unknown,
+        undefined,
+        undefined,
+        refusalError
+      );
+    });
+    await expect(cs.stopCoordinatorService()).resolves.toBeUndefined();
+    expect(mockShutdown).toHaveBeenCalledTimes(1);
+  });
+
+  test('startup catch does not suppress pinned-health security failure when shutdown intent appears', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockRejectedValueOnce(
+      new realConnection.CoordinatorSecurityError(
+        'Coordinator rejected authenticated request (401)'
+      )
+    );
+    const supervisor = {
+      pid: process.pid,
+      nonce: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      generationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    };
+    const child = { pid: 4242, exitCode: null, unref: mock(), kill: mock() };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    const intentPath = join(
+      getHanDataDir(),
+      'runtime',
+      `coordinator.stopping.${supervisor.nonce}.${supervisor.generationId}.json`
+    );
+    realFs.mkdirSync(dirname(intentPath), { recursive: true });
+    realFs.writeFileSync(
+      intentPath,
+      JSON.stringify({
+        transportVersion: 1,
+        instanceId: 'owned',
+        pid: child.pid,
+        httpsPort: 41957,
+        grpcPort: 41958,
+        certificatePem: 'certificate',
+        bearerToken: 'token'.repeat(9).slice(0, 43),
+        supervisor,
+      }),
+      { mode: 0o600 }
+    );
+    try {
+      await expect(cs.startCoordinatorService({ supervisor })).rejects.toThrow(
+        'Coordinator rejected authenticated request'
+      );
+    } finally {
+      realFs.rmSync(intentPath, { force: true });
+    }
+  });
 });

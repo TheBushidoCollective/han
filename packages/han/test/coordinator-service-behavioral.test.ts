@@ -100,9 +100,10 @@ beforeEach(() => {
   };
 });
 
-afterEach(() => {
+afterEach(async () => {
   console.log = originalLog;
   console.error = originalError;
+  await cs.stopCoordinatorService().catch(() => {});
 });
 // Restore real node:fs and grpc/client after all tests so mocks don't
 // bleed into later test files.

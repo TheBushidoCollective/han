@@ -151,7 +151,7 @@ export async function checkDescriptorHealth(
       `Coordinator health rejected (${response.status})`
     );
   const health = (await response.json()) as HealthCheckResponse;
-  if (!health || health.status !== 'ok' || health.pid !== descriptor.pid)
+  if (health?.status !== 'ok' || health.pid !== descriptor.pid)
     throw new CoordinatorSecurityError('Coordinator health identity mismatch');
   return health;
 }
