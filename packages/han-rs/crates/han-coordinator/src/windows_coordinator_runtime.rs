@@ -48,12 +48,49 @@ pub(crate) fn prepare(data: &Path) -> io::Result<PathBuf> {
     Ok(runtime)
 }
 
+// A predecessor is eligible only after the lifetime lease has been acquired.
+// Validate the whole public schema before allowing its exact snapshot to retire.
+fn parse_descriptor(bytes: &[u8]) -> io::Result<Descriptor> {
+    let value: serde_json::Value = serde_json::from_slice(bytes)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+    let object = value.as_object().ok_or_else(|| invalid("descriptor is not an object"))?;
+    const FIELDS: &[&str] = &["transportVersion", "instanceId", "pid", "httpsPort",
+        "grpcPort", "certificatePem", "bearerToken", "supervisor"];
+    if object.len() != FIELDS.len() || FIELDS.iter().any(|field| !object.contains_key(*field)) {
+        return Err(invalid("invalid descriptor fields"));
+    }
+    if let Some(supervisor) = object.get("supervisor").and_then(serde_json::Value::as_object) {
+        if supervisor.len() != 3 || ["pid", "nonce", "generationId"].iter().any(|field| !supervisor.contains_key(*field)) {
+            return Err(invalid("invalid descriptor supervisor fields"));
+        }
+    }
+    // Parse the original bytes again so duplicate known keys are rejected.
+    let descriptor: Descriptor = serde_json::from_slice(bytes)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+    if descriptor.transport_version != crate::runtime::LOCAL_TRANSPORT_VERSION
+        || descriptor.instance_id.is_empty()
+        || descriptor.pid == 0
+        || descriptor.https_port == 0
+        || descriptor.grpc_port == Some(0)
+        || !descriptor.certificate_pem.contains("-----BEGIN CERTIFICATE-----")
+        || descriptor.bearer_token.len() != 43
+        || !descriptor.bearer_token.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+    {
+        return Err(invalid("invalid descriptor contents"));
+    }
+    if let Some(binding) = &descriptor.supervisor {
+        SupervisorBinding::validate(binding.pid, binding.nonce.clone(), binding.generation_id.clone())
+            .map_err(|_| invalid("invalid descriptor supervisor binding"))?;
+    }
+    Ok(descriptor)
+}
+
 pub(crate) fn read_descriptor(runtime: &Path) -> io::Result<Descriptor> {
     let directory = open_runtime(runtime, false)?;
     let guard = RecordGuard::open(&directory)?;
     let record = guard.read(OsStr::new(ACTIVE))?
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "coordinator descriptor not found"))?;
-    serde_json::from_slice(&record.bytes).map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
+    parse_descriptor(&record.bytes)
 }
 
 #[derive(Deserialize)]
@@ -107,15 +144,18 @@ impl PublicationState {
             vec![(name, snapshot)]
         };
         let result = (|| {
-            // An existing descriptor is not an identity-safe proof that its PID
-            // is dead. Refuse replacement until predecessor eligibility is available.
-            if guard.read(OsStr::new(ACTIVE))?.is_some() {
-                return Err(io::Error::new(io::ErrorKind::AlreadyExists, "existing coordinator descriptor requires identity-safe predecessor verification"));
+            // The acquired process-lifetime lease excludes every live conforming
+            // coordinator. It is not a reason to signal the recorded PID.
+            // Preserve the complete, ACL-checked snapshot for handle-based
+            // identity and byte revalidation inside publish_guarded.
+            let predecessor = guard.read(OsStr::new(ACTIVE))?;
+            if let Some(record) = &predecessor {
+                parse_descriptor(&record.bytes)?;
             }
             let mut bytes = serde_json::to_vec(descriptor).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
             bytes.push(b'\n');
             let checks: Vec<(&OsStr, &RecordSnapshot)> = bindings.iter().map(|(name, record)| (name.as_os_str(), record)).collect();
-            lease.publish_guarded(&guard, &checks, OsStr::new(ACTIVE), None, &bytes)
+            lease.publish_guarded(&guard, &checks, OsStr::new(ACTIVE), predecessor.as_ref(), &bytes)
         })();
         let publication = match result {
             Ok(publication) => publication,
@@ -154,5 +194,84 @@ impl PublicationState {
                 tracing::warn!("Could not remove coordinator ownership record: {}", error);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn descriptor() -> Descriptor {
+        Descriptor {
+            transport_version: crate::runtime::LOCAL_TRANSPORT_VERSION,
+            instance_id: crate::runtime::random_token(),
+            pid: std::process::id(),
+            https_port: 1234,
+            grpc_port: None,
+            certificate_pem: "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----".into(),
+            bearer_token: crate::runtime::random_token(),
+            supervisor: None,
+        }
+    }
+
+    fn fixture() -> (tempfile::TempDir, Arc<PinnedDirectory>) {
+        let temp = tempfile::tempdir().unwrap();
+        let runtime = prepare(&temp.path().join("han")).unwrap();
+        let directory = Arc::new(open_runtime(&runtime, false).unwrap());
+        (temp, directory)
+    }
+
+    #[test]
+    fn crashed_predecessor_is_replaced_and_late_cleanup_cannot_remove_it() {
+        let (_temp, directory) = fixture();
+        let lease = CoordinatorLease::acquire(&directory).unwrap();
+        let first = PublicationState::publish(directory.clone(), &lease, &descriptor()).unwrap();
+        assert!(CoordinatorLease::acquire(&directory).is_err());
+        // Model lease release on process death, retaining the old token to
+        // exercise a delayed cleanup against the replacement.
+        drop(lease);
+        let lease = CoordinatorLease::acquire(&directory).unwrap();
+        let replacement = descriptor();
+        let second = PublicationState::publish(directory.clone(), &lease, &replacement).unwrap();
+        let mut stale = descriptor();
+        stale.supervisor = Some(SupervisorBinding::validate(1, uuid::Uuid::new_v4().to_string(),
+            uuid::Uuid::new_v4().to_string()).unwrap());
+        assert!(first.withdraw(&stale).is_err());
+        first.cleanup();
+        let guard = lease.guard().unwrap();
+        let current = guard.read(OsStr::new(ACTIVE)).unwrap().unwrap();
+        assert_eq!(current, second.snapshot);
+        assert_eq!(parse_descriptor(&current.bytes).unwrap(), replacement);
+        drop(guard);
+        second.cleanup();
+        assert!(lease.guard().unwrap().read(OsStr::new(ACTIVE)).unwrap().is_none());
+    }
+
+    #[test]
+    fn malformed_predecessor_is_not_replaced() {
+        let (_temp, directory) = fixture();
+        let lease = CoordinatorLease::acquire(&directory).unwrap();
+        let guard = lease.guard().unwrap();
+        let bad = guard.create_if_absent(OsStr::new(ACTIVE), b"{\"transportVersion\":1}").unwrap();
+        drop(guard);
+        assert!(PublicationState::publish(directory.clone(), &lease, &descriptor()).is_err());
+        let guard = lease.guard().unwrap();
+        assert_eq!(guard.read(OsStr::new(ACTIVE)).unwrap(), Some(bad.clone()));
+        guard.remove(OsStr::new(ACTIVE), &bad).unwrap();
+    }
+
+    #[test]
+    fn descriptor_validation_rejects_unknown_duplicate_and_invalid_fields() {
+        let bytes = serde_json::to_vec(&descriptor()).unwrap();
+        assert!(parse_descriptor(&bytes).is_ok());
+        let mut value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        value["unexpected"] = serde_json::json!(true);
+        assert!(parse_descriptor(&serde_json::to_vec(&value).unwrap()).is_err());
+        value.as_object_mut().unwrap().remove("unexpected");
+        value["bearerToken"] = serde_json::json!("bad");
+        assert!(parse_descriptor(&serde_json::to_vec(&value).unwrap()).is_err());
+        let text = String::from_utf8(bytes).unwrap().replacen(
+            "\"transportVersion\":1", "\"transportVersion\":1,\"transportVersion\":1", 1);
+        assert!(parse_descriptor(text.as_bytes()).is_err());
     }
 }
