@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import {
   copyFileSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   realpathSync,
@@ -51,10 +52,10 @@ test.skipIf(process.platform !== 'win32')(
         PATH: `${pathDir};${join(process.env.SystemRoot || 'C:\\Windows', 'System32')}`,
         NODE_PATH: '',
       };
-      const discover = (entry = jsEntry) => {
+      const discover = (entry = jsEntry, childEnv = env) => {
         const result = Bun.spawnSync([bun, entry], {
           cwd,
-          env,
+          env: childEnv,
           stdout: 'pipe',
           stderr: 'pipe',
         });
@@ -84,6 +85,24 @@ test.skipIf(process.platform !== 'win32')(
         'not a trusted helper'
       );
       expect(discover()).toBeNull();
+      const rootHelper = join(
+        process.env.SystemDrive || 'C:',
+        'tmp',
+        '.han',
+        'bin',
+        'han-coordinator.exe'
+      );
+      if (existsSync(rootHelper))
+        throw new Error('Root fixture already exists');
+      try {
+        mkdirSync(dirname(rootHelper), { recursive: true });
+        writeFileSync(rootHelper, 'untrusted root helper', { flag: 'wx' });
+        expect(
+          discover(jsEntry, { ...env, HOME: '', USERPROFILE: '' })
+        ).toBeNull();
+      } finally {
+        rmSync(rootHelper, { force: true });
+      }
 
       const sibling = join(bin, 'han-coordinator.exe');
       writeFileSync(sibling, 'installed helper');

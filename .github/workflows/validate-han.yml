@@ -41,6 +41,9 @@ jobs:
       - name: Test native security primitives
         working-directory: packages/han-rs
         run: cargo test --locked -p han-coordinator windows_
+      - name: Test complete native wire integration
+        working-directory: packages/han-rs
+        run: cargo test --locked -p han-coordinator --test windows_local_transport
       - name: Prove distinct-user isolation
         shell: pwsh
         run: ./packages/han-rs/crates/han-coordinator/tests/windows_cross_user.ps1 -Coordinator ./packages/han-rs/target/debug/han-coordinator.exe
