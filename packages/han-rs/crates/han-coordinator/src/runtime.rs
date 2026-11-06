@@ -81,6 +81,8 @@ impl Drop for PublicationGuard {
 pub struct ShutdownContext {
     pub runtime: PathBuf,
     pub descriptor: Descriptor,
+    #[cfg(windows)]
+    pub(crate) windows: std::sync::Arc<crate::windows_coordinator_runtime::PublicationState>,
 }
 
 impl ShutdownContext {
@@ -103,7 +105,12 @@ impl ShutdownContext {
         fs::rename(self.runtime.join("coordinator.json"), stopping)
     }
 
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    pub fn withdraw(&self) -> io::Result<()> {
+        self.windows.withdraw(&self.descriptor)
+    }
+
+    #[cfg(not(any(unix, windows)))]
     pub fn withdraw(&self) -> io::Result<()> {
         Err(io::Error::new(io::ErrorKind::Unsupported, "secure descriptor ACL support is required on this platform"))
     }
@@ -184,7 +191,12 @@ pub fn read_descriptor(_runtime: &Path) -> io::Result<Descriptor> {
 }
 
 
-pub struct PublishedDescriptor { runtime: PathBuf, descriptor: Descriptor }
+pub struct PublishedDescriptor {
+    runtime: PathBuf,
+    descriptor: Descriptor,
+    #[cfg(windows)]
+    windows: std::sync::Arc<crate::windows_coordinator_runtime::PublicationState>,
+}
 impl PublishedDescriptor {
     #[cfg(unix)]
     pub fn publish(runtime: &Path, descriptor: &Descriptor) -> io::Result<Self> {
@@ -203,7 +215,19 @@ impl PublishedDescriptor {
         if result.is_err() { let _ = fs::remove_file(&temp); }
         result
     }
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    pub fn publish(runtime: &Path, descriptor: &Descriptor, directory: std::sync::Arc<crate::windows_secure_fs::PinnedDirectory>,
+        lease: &crate::windows_secure_fs::CoordinatorLease<'_>) -> io::Result<Self> {
+        let windows = std::sync::Arc::new(crate::windows_coordinator_runtime::PublicationState::publish(directory, lease, descriptor)?);
+        Ok(Self { runtime: runtime.to_path_buf(), descriptor: descriptor.clone(), windows })
+    }
+
+    #[cfg(windows)]
+    pub fn shutdown_context(&self) -> ShutdownContext {
+        ShutdownContext { runtime: self.runtime.clone(), descriptor: self.descriptor.clone(), windows: self.windows.clone() }
+    }
+
+    #[cfg(not(any(unix, windows)))]
     pub fn publish(_runtime: &Path, _descriptor: &Descriptor) -> io::Result<Self> {
         Err(io::Error::new(io::ErrorKind::Unsupported, "secure descriptor ACL support is required on this platform"))
     }
@@ -216,7 +240,9 @@ impl Drop for PublishedDescriptor {
             let _ = fs::remove_file(self.runtime.join("coordinator.json"));
         }
     }
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    fn drop(&mut self) { self.windows.cleanup(); }
+    #[cfg(not(any(unix, windows)))]
     fn drop(&mut self) {}
 }
 
