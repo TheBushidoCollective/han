@@ -97,9 +97,10 @@ describe('han plugin migrate CLI subprocess execution', () => {
     );
 
     // Verify user settings on disk after first migration:
-    const migratedUser = JSON.parse(
-      readFileSync(userSettingsPath, 'utf8')
-    ) as typeof initialUserSettings;
+    const migratedUser = JSON.parse(readFileSync(userSettingsPath, 'utf8')) as {
+      enabledPlugins: Record<string, boolean>;
+      mcpServers: typeof initialUserSettings.mcpServers;
+    };
     expect(migratedUser.enabledPlugins['react@han']).toBe(true);
     expect(migratedUser.enabledPlugins['jutsu-react@han']).toBeUndefined();
     expect(migratedUser.enabledPlugins['bushido@han']).toBe(true);
@@ -112,7 +113,7 @@ describe('han plugin migrate CLI subprocess execution', () => {
     // Verify project settings on disk after first migration:
     const migratedProject = JSON.parse(
       readFileSync(projectSettingsPath, 'utf8')
-    ) as typeof initialProjectSettings;
+    ) as { enabledPlugins: Record<string, boolean> };
     expect(migratedProject.enabledPlugins['frontend-development@han']).toBe(
       true
     );
