@@ -55,7 +55,8 @@ export const PLUGIN_ALIASES: Record<string, string> = {
   'do-backend-development': 'disciplines/backend-development',
   'do-blockchain': 'disciplines/blockchain-development',
   'do-blockchain-development': 'disciplines/blockchain-development',
-  'do-claude-plugin-development': 'disciplines/claude-plugin-development',
+  'do-claude-plugin-development': 'disciplines/plugin-authoring',
+  'do-plugin-authoring': 'disciplines/plugin-authoring',
   'do-compiler-development': 'disciplines/compiler-engineering',
   'do-compilers': 'disciplines/compiler-engineering',
   'do-content': 'disciplines/content-creation',
@@ -85,7 +86,7 @@ export const PLUGIN_ALIASES: Record<string, string> = {
   'do-performance-engineering': 'disciplines/performance-engineering',
   'do-platform': 'disciplines/platform-engineering',
   'do-platform-engineering': 'disciplines/platform-engineering',
-  'do-plugin-development': 'disciplines/claude-plugin-development',
+  'do-plugin-development': 'disciplines/plugin-authoring',
   'do-product': 'disciplines/product-management',
   'do-product-management': 'disciplines/product-management',
   'do-project-management': 'disciplines/project-management',
@@ -180,7 +181,8 @@ export const PLUGIN_ALIASES: Record<string, string> = {
 
   // specialized
   'jutsu-android': 'specialized/android',
-  'jutsu-claude-agent-sdk': 'specialized/claude-agent-sdk',
+  'jutsu-claude-agent-sdk': 'specialized/agent-sdk',
+  'jutsu-agent-sdk': 'specialized/agent-sdk',
   'jutsu-fnox': 'specialized/fnox',
   'jutsu-han-plugins': 'specialized/han-plugins',
   'jutsu-ios': 'specialized/ios',
@@ -244,6 +246,17 @@ export const PLUGIN_ALIASES: Record<string, string> = {
   'jutsu-rubocop': 'validation/rubocop',
   'jutsu-shellcheck': 'validation/shellcheck',
   'jutsu-shfmt': 'validation/shfmt',
+};
+
+/**
+ * Plugins renamed because their names were reserved by Claude Code
+ * ("claude-*" names read as Anthropic's own). Settings files that still enable
+ * the old name are rewritten to the new one by migrate.ts.
+ * Format: { "old-name": "new-name" }
+ */
+export const RENAMED_PLUGINS: Record<string, string> = {
+  'claude-agent-sdk': 'agent-sdk',
+  'claude-plugin-development': 'plugin-authoring',
 };
 
 /**

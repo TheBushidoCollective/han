@@ -25,14 +25,14 @@ This plugin provides the following skills:
 Install via the Han marketplace:
 
 ```bash
-han plugin install claude-agent-sdk
+han plugin install agent-sdk
 ```
 
 Or install manually:
 
 ```bash
 claude plugin marketplace add thebushidocollective/han
-claude plugin install claude-agent-sdk@han
+claude plugin install agent-sdk@han
 ```
 
 ## Usage
