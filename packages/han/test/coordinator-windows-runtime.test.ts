@@ -1,33 +1,131 @@
-import { expect, test } from 'bun:test';
-import { CoordinatorSecurityError, parseWindowsRuntimeResponse, windowsCreateLauncher, windowsProcessState, windowsRelease } from '../lib/coordinator/windows-runtime.ts';
+import { beforeEach, expect, mock, test } from 'bun:test';
+import { join, resolve } from 'node:path';
 
-const response = (stdout: string, status: number | null = 0) => ({stdout, status});
+let binary: string | null = 'native-helper';
+let output: unknown = null;
+let exitStatus: number | null = 0;
+let failure: Error | undefined;
+let rawOutput: string | undefined;
+let invocation: { executable: string; argv: string[]; options: { input: string; maxBuffer: number; timeout: number } } | undefined;
 
-test('accepts only the versioned success envelope', () => {
-  expect(parseWindowsRuntimeResponse(response('{"version":1,"ok":true,"result":null}'))).toBeNull();
-  for (const body of [
-    '', '{', '{}', 'null', '[]',
-    '{"version":2,"ok":true,"result":null}',
-    '{"version":1,"ok":false,"error":{"code":"ENOENT"}}',
-    '{"version":1,"ok":true}',
-    '{"version":1,"ok":true,"result":null} trailing',
-    'x'.repeat(128 * 1024 + 1),
-  ]) expect(() => parseWindowsRuntimeResponse(response(body))).toThrow(CoordinatorSecurityError);
+mock.module('../lib/coordinator/binary.ts', () => ({ findCoordinatorBinary: () => binary }));
+mock.module('node:child_process', () => ({
+  spawnSync: (executable: string, argv: string[], options: { input: string; maxBuffer: number; timeout: number }) => {
+    invocation = { executable, argv, options };
+    return { status: exitStatus, error: failure, stdout: rawOutput ?? JSON.stringify({ version: 1, ok: true, result: output }) };
+  },
+}));
+// Install the fake native boundary before loading the bridge.
+const bridge = await import('../lib/coordinator/windows-runtime.ts');
+const dir = resolve('bridge-test-data');
+const file = { volumeSerial: '0123456789abcdef', fileId: '0123456789abcdef0123456789abcdef' };
+const processIdentity = { pid: process.pid, creationTime: '133000000000000000', userSid: 'S-1-5-21-123' };
+const nonce = '00000000-0000-4000-8000-000000000001';
+const binding = { pid: process.pid, nonce, generationId: '00000000-0000-4000-8000-000000000002' };
+const claim = { nonce, process: processIdentity, reservation: file, ownerFile: file, pidFile: file };
+const descriptor = { transportVersion: 1 as const, instanceId: 'instance', pid: 42, httpsPort: 1234, grpcPort: null, certificatePem: '-----BEGIN CERTIFICATE-----', bearerToken: 'a'.repeat(43), supervisor: binding };
+const launcher = { name: 'launcher-abc.html', path: join(dir, 'runtime', 'launcher-abc.html'), identity: file };
+const sent = () => JSON.parse(invocation!.options.input);
+
+beforeEach(() => { binary = 'native-helper'; output = null; exitStatus = 0; failure = undefined; rawOutput = undefined; invocation = undefined; });
+
+test('bounded inherited-pipe envelope rejects missing or incompatible helper without exposing diagnostics', () => {
+  binary = null;
+  expect(() => bridge.windowsReadSupervisor(dir)).toThrow(bridge.CoordinatorSecurityError);
+  binary = 'native-helper';
+  for (const body of ['', '{', '{}', 'null', '[]', '{"version":2,"ok":true,"result":null}', '{"version":1,"ok":false,"error":{"code":"ENOENT"}}', '{"version":1,"ok":true}', '{"version":1,"ok":true,"result":null} trailing', 'x'.repeat(128 * 1024 + 1)]) {
+    rawOutput = body;
+    expect(() => bridge.windowsReadSupervisor(dir)).toThrow(bridge.CoordinatorSecurityError);
+  }
+  rawOutput = undefined;
+  exitStatus = 1;
+  expect(() => bridge.windowsReadSupervisor(dir)).toThrow(bridge.CoordinatorSecurityError);
+  exitStatus = null;
+  failure = new Error('secret diagnostics');
+  expect(() => bridge.windowsReadSupervisor(dir)).toThrow('Windows local-runtime helper failed');
+  expect(invocation!.argv).toEqual(['--local-runtime']);
+  expect(invocation!.options.maxBuffer).toBe(128 * 1024);
+  expect(invocation!.options.timeout).toBeGreaterThan(0);
+  expect(sent()).toEqual({ version: 1, dataDir: dir, op: 'supervisor.read' });
 });
 
-test('missing executable, nonzero exit and excessive output are not absence', () => {
-  expect(() => parseWindowsRuntimeResponse({error: new Error('ENOENT'), status:null, stdout:null})).toThrow(CoordinatorSecurityError);
-  expect(() => parseWindowsRuntimeResponse(response('{"version":1,"ok":true,"result":null}', 1))).toThrow(CoordinatorSecurityError);
-  expect(() => parseWindowsRuntimeResponse(response(' '.repeat(128 * 1024 + 1)))).toThrow(CoordinatorSecurityError);
+test('descriptor targets accept only complete bounded records and validated identity', () => {
+  expect(bridge.windowsReadDescriptor(dir, { kind: 'active' })).toBeNull();
+  expect(sent().target).toEqual({ kind: 'active' });
+  output = { identity: file, descriptor };
+  expect(bridge.windowsReadDescriptor(dir, { kind: 'stopping', binding })).toEqual(descriptor);
+  expect(sent().target).toEqual({ kind: 'stopping', binding });
+  for (const bad of [{ identity: {}, descriptor }, { identity: file, descriptor: {} }, { identity: file, descriptor: { ...descriptor, certificatePem: 'x'.repeat(65537) } }]) {
+    output = bad;
+    expect(() => bridge.windowsReadDescriptor(dir, { kind: 'active' })).toThrow(bridge.CoordinatorSecurityError);
+  }
+  expect(() => bridge.windowsReadDescriptor(dir, { kind: 'stopping', binding: { ...binding, nonce: '../bad' } })).toThrow(bridge.CoordinatorSecurityError);
 });
 
-test('rejects invalid launcher origins and tokens before starting a helper', () => {
+test('acquisition and conditional release use complete claims and reject changed owners', () => {
+  for (const kind of ['supervisor', 'spawn'] as const) {
+    output = { status: 'owned', claim };
+    expect(bridge.windowsAcquire(dir, kind)).toEqual({ status: 'owned', claim });
+    expect(sent().op).toBe(`${kind}.acquire`);
+    output = { status: 'blocked', ownerPid: 123 };
+    expect(bridge.windowsAcquire(dir, kind)).toEqual(output);
+    output = { status: 'owned', claim: { ...claim, process: { ...processIdentity, pid: process.pid + 1 } } };
+    expect(() => bridge.windowsAcquire(dir, kind)).toThrow(bridge.CoordinatorSecurityError);
+    output = { status: 'released' };
+    bridge.windowsRelease(dir, kind, claim);
+    expect(sent()).toEqual({ version: 1, dataDir: dir, op: `${kind}.release`, claim });
+    output = { status: 'changed' };
+    expect(() => bridge.windowsRelease(dir, kind, claim)).toThrow(bridge.CoordinatorSecurityError);
+    output = { status: 'absent' };
+    bridge.windowsRelease(dir, kind, claim);
+  }
+  for (const status of ['owned', 'changed', 'absent'] as const) {
+    output = { status };
+    expect(bridge.windowsCheck(dir, claim)).toBe(status);
+  }
+  output = { status: 'released' };
+  expect(() => bridge.windowsCheck(dir, claim)).toThrow(bridge.CoordinatorSecurityError);
+  expect(() => bridge.windowsRelease(dir, 'supervisor', { ...claim, ownerFile: {} } as never)).toThrow(bridge.CoordinatorSecurityError);
+});
+
+test('supervisor identity and process state reject PID reuse and uncertainty', () => {
+  output = { pid: process.pid, nonce, process: processIdentity };
+  expect(bridge.windowsReadSupervisor(dir)).toEqual(output);
+  output = { pid: process.pid + 1, nonce, process: processIdentity };
+  expect(() => bridge.windowsReadSupervisor(dir)).toThrow(bridge.CoordinatorSecurityError);
+  for (const status of ['alive', 'gone'] as const) {
+    output = { status };
+    expect(bridge.windowsProcessState(dir, processIdentity)).toBe(status);
+    expect(sent()).toEqual({ version: 1, dataDir: dir, op: 'process.state', process: processIdentity });
+  }
+  output = { status: 'unknown' };
+  expect(() => bridge.windowsProcessState(dir, processIdentity)).toThrow(bridge.CoordinatorSecurityError);
+  expect(() => bridge.windowsProcessState(dir, { ...processIdentity, creationTime: '18446744073709551616' })).toThrow(bridge.CoordinatorSecurityError);
+});
+
+test('intent cleanup requires the entire matching generation and does not remove a replacement', () => {
+  output = { status: 'removed' };
+  bridge.windowsRemoveIntent(dir, binding, 42, descriptor);
+  expect(sent()).toEqual({ version: 1, dataDir: dir, op: 'intent.remove', binding, childPid: 42, descriptor });
+  output = { status: 'changed' };
+  expect(() => bridge.windowsRemoveIntent(dir, binding, 42, descriptor)).toThrow(bridge.CoordinatorSecurityError);
+  expect(() => bridge.windowsRemoveIntent(dir, binding, 43, descriptor)).toThrow(bridge.CoordinatorSecurityError);
+  output = { status: 'absent' };
+  bridge.windowsRemoveIntent(dir, binding, 42, descriptor);
+});
+
+test('launcher creation and removal stay bound to the returned file identity', () => {
+  output = launcher;
+  expect(bridge.windowsCreateLauncher(dir, 'http://127.0.0.1:1234', 'a'.repeat(43))).toEqual(launcher);
+  expect(invocation!.argv).not.toContain('a'.repeat(43));
+  expect(sent()).toEqual({ version: 1, dataDir: dir, op: 'launcher.create', origin: 'http://127.0.0.1:1234', token: 'a'.repeat(43) });
   for (const origin of ['http://localhost:1234', 'https://127.0.0.1:1234', 'http://127.0.0.1:0', 'http://127.0.0.1:1234/', 'http://127.0.0.1:65536', 'http://user@127.0.0.1:1234'])
-    expect(() => windowsCreateLauncher('/tmp/han', origin, 'a'.repeat(43))).toThrow(CoordinatorSecurityError);
-  expect(() => windowsCreateLauncher('/tmp/han', 'http://127.0.0.1:1234', 'bad')).toThrow(CoordinatorSecurityError);
-});
-
-test('rejects incomplete process and claim identities before invoking helper', () => {
-  expect(() => windowsProcessState('/tmp/han', {pid:123, creationTime:'', userSid:'S-1-5-21'})).toThrow(CoordinatorSecurityError);
-  expect(() => windowsRelease('/tmp/han', 'supervisor', {nonce:'bad'} as never)).toThrow(CoordinatorSecurityError);
+    expect(() => bridge.windowsCreateLauncher(dir, origin, 'a'.repeat(43))).toThrow(bridge.CoordinatorSecurityError);
+  output = { ...launcher, path: join(dir, 'elsewhere', launcher.name) };
+  expect(() => bridge.windowsCreateLauncher(dir, 'http://127.0.0.1:1234', 'a'.repeat(43))).toThrow(bridge.CoordinatorSecurityError);
+  output = { status: 'changed' };
+  expect(() => bridge.windowsRemoveLauncher(dir, launcher)).toThrow(bridge.CoordinatorSecurityError);
+  expect(sent()).toEqual({ version: 1, dataDir: dir, op: 'launcher.remove', name: launcher.name, identity: file });
+  output = { status: 'absent' };
+  bridge.windowsRemoveLauncher(dir, launcher);
 });

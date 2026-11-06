@@ -455,10 +455,20 @@ async function runForeground(port: number): Promise<void> {
         if (error instanceof CoordinatorSecurityError) throw error;
         if (child && child.exitCode === null) {
           if (observeIntent()) break;
-          if (process.platform === 'win32')
-            throw new CoordinatorSecurityError('Cannot signal a Windows coordinator by PID');
-          child.kill();
-          await child.exited;
+          if (process.platform === 'win32') {
+            // The descriptor-bound RPC is the only permitted stop mechanism.
+            // A failed RPC leaves the child alone and aborts restart.
+            if (!owned) throw new CoordinatorSecurityError('Cannot authenticate Windows coordinator shutdown');
+            await stopServer();
+            if (observeIntent()) break;
+            await Promise.race([child.exited, Bun.sleep(10000)]);
+            if (observeIntent()) break;
+            if (child.exitCode === null)
+              throw new CoordinatorSecurityError('Windows coordinator did not exit after authenticated shutdown');
+          } else {
+            child.kill();
+            await child.exited;
+          }
           if (observeIntent()) break;
         }
         restartAttempts++;

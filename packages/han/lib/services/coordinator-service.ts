@@ -165,7 +165,6 @@ interface SpawnGuardInfo {
   pid: number;
   timestamp: string;
 }
-let windowsSpawnClaim: WindowsClaim | null = null;
 
 function isPidAlive(pid: number): boolean {
   try {
@@ -227,12 +226,10 @@ function writeSpawnGuard(guardPath: string): boolean {
  * claims this guard actually spawns; everyone else falls through to
  * waitForHealthy instead. Returns true if this call now owns the guard.
  */
-function claimSpawnGuard(): boolean {
+function claimSpawnGuard(): boolean | WindowsClaim {
   if (process.platform === 'win32') {
     const result = windowsAcquire(getCoordinatorDataDir(), 'spawn');
-    if (result.status === 'blocked') return false;
-    windowsSpawnClaim = result.claim;
-    return true;
+    return result.status === 'blocked' ? false : result.claim;
   }
   const guardPath = join(getHanDataDir(), SPAWN_GUARD_FILENAME);
   try {
@@ -266,12 +263,10 @@ function claimSpawnGuard(): boolean {
  * claimed it after we went stale) and must never be unlinked out from under
  * them.
  */
-function releaseSpawnGuard(): void {
+function releaseSpawnGuard(claim: boolean | WindowsClaim): void {
   if (process.platform === 'win32') {
-    if (windowsSpawnClaim) {
-      windowsRelease(getCoordinatorDataDir(), 'spawn', windowsSpawnClaim);
-      windowsSpawnClaim = null;
-    }
+    if (typeof claim !== 'object') throw new CoordinatorSecurityError('Missing Windows spawn claim');
+    windowsRelease(getCoordinatorDataDir(), 'spawn', claim);
     return;
   }
   const guardPath = join(getHanDataDir(), SPAWN_GUARD_FILENAME);
@@ -293,6 +288,8 @@ function releaseSpawnGuard(): void {
  * actionable ("is there already a live-but-unresponsive incumbent?").
  */
 function readIncumbentCoordinatorPid(): number | null {
+  // Windows lock PIDs are informational and do not establish process identity.
+  if (process.platform === 'win32') return null;
   try {
     const lockPath = join(getHanDataDir(), 'coordinator.lock');
     const parsed = JSON.parse(readFileSync(lockPath, 'utf-8'));
@@ -378,7 +375,8 @@ export async function startCoordinatorService(
   // about to spawn its own han-coordinator against the same database. Only
   // the process that claims this guard spawns; everyone else waits on
   // health instead of piling on more processes.
-  if (!claimSpawnGuard()) {
+  const spawnClaim = claimSpawnGuard();
+  if (!spawnClaim) {
     console.log(
       '[coordinator] Another process is already starting the coordinator, waiting for it to become healthy...'
     );
@@ -557,7 +555,7 @@ export async function startCoordinatorService(
       throw error;
     }
   } finally {
-    releaseSpawnGuard();
+    releaseSpawnGuard(spawnClaim);
   }
 }
 

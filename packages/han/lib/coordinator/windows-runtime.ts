@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { findCoordinatorBinary } from './binary.ts';
-import type { LocalCoordinatorDescriptor, SupervisorBinding } from './connection.ts';
+import { validSupervisorBinding, validateCoordinatorDescriptor, type LocalCoordinatorDescriptor, type SupervisorBinding } from './connection.ts';
 
 export class CoordinatorSecurityError extends Error {
   constructor(message: string) { super(message); this.name = 'CoordinatorSecurityError'; }
@@ -23,7 +23,7 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const pid = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0 && (v as number) <= 0xffffffff;
 const file = (v: unknown): v is unknown & WindowsFileIdentity => object(v) && typeof v.volumeSerial === 'string' && /^[0-9a-f]{16}$/i.test(v.volumeSerial) && typeof v.fileId === 'string' && /^[0-9a-f]{32}$/i.test(v.fileId);
-const processIdentity = (v: unknown): v is unknown & WindowsProcessIdentity => object(v) && pid(v.pid) && typeof v.creationTime === 'string' && /^[1-9][0-9]{0,19}$/.test(v.creationTime) && typeof v.userSid === 'string' && /^S-1-(?:[0-9]+-)*[0-9]+$/.test(v.userSid);
+const processIdentity = (v: unknown): v is unknown & WindowsProcessIdentity => object(v) && pid(v.pid) && typeof v.creationTime === 'string' && /^[1-9][0-9]{0,19}$/.test(v.creationTime) && BigInt(v.creationTime) <= 0xffffffffffffffffn && typeof v.userSid === 'string' && /^S-1-(?:[0-9]+-)*[0-9]+$/.test(v.userSid);
 const claim = (v: unknown): v is unknown & WindowsClaim => object(v) && typeof v.nonce === 'string' && uuid.test(v.nonce) && processIdentity(v.process) && file(v.reservation) && file(v.ownerFile) && file(v.pidFile);
 function invalid(): never { throw new CoordinatorSecurityError('Invalid Windows local-runtime response'); }
 
@@ -51,10 +51,11 @@ function status(v: unknown, allowed: Status[]): Status {
   return v.status as Status;
 }
 export function windowsReadDescriptor(dataDir: string, target: {kind:'active'} | {kind:'stopping';binding:SupervisorBinding}): LocalCoordinatorDescriptor | null {
+  if (target.kind !== 'active' && (target.kind !== 'stopping' || !validSupervisorBinding(target.binding))) return invalid();
   const value = request(dataDir, 'descriptor.read', { target });
   if (value === null) return null;
   if (!object(value) || !file(value.identity) || !object(value.descriptor) || Buffer.byteLength(JSON.stringify(value.descriptor)) > 65536) return invalid();
-  return value.descriptor as unknown as LocalCoordinatorDescriptor;
+  return validateCoordinatorDescriptor(value.descriptor as unknown as LocalCoordinatorDescriptor);
 }
 export function windowsAcquire(dataDir: string, kind: 'supervisor' | 'spawn'): {status:'owned';claim:WindowsClaim} | {status:'blocked';ownerPid:number} {
   const value = request(dataDir, `${kind}.acquire`);
@@ -70,15 +71,20 @@ export function windowsReadSupervisor(dataDir: string): WindowsSupervisorIdentit
   return value as unknown as WindowsSupervisorIdentity;
 }
 export function windowsCheck(dataDir: string, expected: WindowsClaim): 'owned' | 'changed' | 'absent' {
-  if (!claim(expected)) return invalid();
+  if (!claim(expected) || expected.process.pid !== process.pid) return invalid();
   return status(request(dataDir, 'supervisor.check', {claim:expected}), ['owned','changed','absent']) as 'owned' | 'changed' | 'absent';
 }
 export function windowsRelease(dataDir: string, kind: 'supervisor' | 'spawn', expected: WindowsClaim): void {
-  if (!claim(expected)) return invalid();
+  if (!claim(expected) || expected.process.pid !== process.pid) return invalid();
   const s = status(request(dataDir, `${kind}.release`, {claim:expected}), ['released','changed','absent']);
   if (s === 'changed') throw new CoordinatorSecurityError('Windows ownership changed');
 }
 export function windowsRemoveIntent(dataDir: string, binding: SupervisorBinding, childPid: number, descriptor: LocalCoordinatorDescriptor): void {
+  if (!validSupervisorBinding(binding) || !pid(childPid)) return invalid();
+  validateCoordinatorDescriptor(descriptor);
+  if (descriptor.pid !== childPid || !descriptor.supervisor ||
+      descriptor.supervisor.pid !== binding.pid || descriptor.supervisor.nonce !== binding.nonce ||
+      descriptor.supervisor.generationId !== binding.generationId) return invalid();
   const s = status(request(dataDir, 'intent.remove', {binding,childPid,descriptor}), ['removed','changed','absent']);
   if (s === 'changed') throw new CoordinatorSecurityError('Windows shutdown intent changed');
 }
