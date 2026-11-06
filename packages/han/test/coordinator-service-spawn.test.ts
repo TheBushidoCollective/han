@@ -4,6 +4,7 @@
  * Uses existsSync mock that returns true to exercise findCoordinatorBinary
  * success path and Bun.spawn error handling.
  */
+
 import {
   afterAll,
   afterEach,
@@ -14,6 +15,7 @@ import {
   test,
 } from 'bun:test';
 import { join } from 'node:path';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { getHanDataDir } from '../lib/config/claude-settings.ts';
 import { realGrpcClient } from './setup.ts';
 
@@ -385,4 +387,18 @@ describe('stopCoordinatorService ownership', () => {
     expect(mockShutdown).not.toHaveBeenCalled();
     expect(child.kill).not.toHaveBeenCalled();
   });
+
+  test.each([Code.Unauthenticated, Code.PermissionDenied])(
+    'authentication RPC error %s does not trigger a kill',
+    async (code) => {
+      mockHealth.mockResolvedValueOnce(false);
+      mockHealth.mockResolvedValue(true);
+      const child = { pid: 4242, exitCode: null, unref: mock(), kill: mock() };
+      mockBunSpawn.mockImplementationOnce(() => child as never);
+      await cs.startCoordinatorService();
+      mockShutdown.mockRejectedValueOnce(new ConnectError('refused', code));
+      await expect(cs.stopCoordinatorService()).rejects.toThrow('refused');
+      expect(child.kill).not.toHaveBeenCalled();
+    }
+  );
 });

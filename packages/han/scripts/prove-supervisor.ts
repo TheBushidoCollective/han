@@ -89,8 +89,13 @@ async function ready(
   previous?: string
 ): Promise<Descriptor> {
   return waitFor('authenticated coordinator', async () => {
-    if (child.exitCode !== null)
-      throw new Error(`Fixture process ${child.pid} exited ${child.exitCode}`);
+    if (child.exitCode !== null) {
+      const stdout = await new Response(child.stdout as ReadableStream).text();
+      const stderr = await new Response(child.stderr as ReadableStream).text();
+      throw new Error(
+        `Fixture process ${child.pid} exited ${child.exitCode}\nstdout:\n${stdout}\nstderr:\n${stderr}`
+      );
+    }
     const d = readDescriptor(dir);
     if (!d || d.instanceId === previous || !(await healthy(d)))
       return undefined;
@@ -158,6 +163,14 @@ async function supervisorRecovery(): Promise<void> {
       } as RequestInit
     );
     assert.equal(unauthorized.status, 401);
+    const oldBearer = await fetch(
+      `https://127.0.0.1:${replacement.httpsPort}/health`,
+      {
+        headers: { Authorization: `Bearer ${initial.bearerToken}` },
+        tls: { ca: replacement.certificatePem, rejectUnauthorized: true },
+      } as RequestInit
+    );
+    assert.equal(oldBearer.status, 401);
     await assert.rejects(
       fetch(`https://127.0.0.1:${replacement.httpsPort}/health`, {
         headers: { Authorization: `Bearer ${replacement.bearerToken}` },

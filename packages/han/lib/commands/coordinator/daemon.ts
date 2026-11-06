@@ -262,7 +262,10 @@ export async function stopDaemon(port?: number): Promise<void> {
   if (!status.running) return;
   const descriptor = readCoordinatorDescriptor();
   const supervisorPid = readPid();
-  await createCoordinatorClients().coordinator.shutdown({
+  await createCoordinatorClients(
+    descriptor.httpsPort,
+    descriptor
+  ).coordinator.shutdown({
     graceful: true,
     timeoutSeconds: 5,
   });

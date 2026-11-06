@@ -20,6 +20,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { checkHealth } from '../commands/coordinator/health.ts';
 import { getHanDataDir } from '../config/claude-settings.ts';
 import {
@@ -543,7 +544,12 @@ export async function stopCoordinatorService(): Promise<void> {
     });
     console.log('[coordinator] Graceful shutdown sent');
   } catch (error) {
-    if (error instanceof CoordinatorSecurityError) {
+    if (
+      error instanceof CoordinatorSecurityError ||
+      (error instanceof ConnectError &&
+        (error.code === Code.Unauthenticated ||
+          error.code === Code.PermissionDenied))
+    ) {
       state.process = null;
       state.ownsProcess = false;
       state.ownedDescriptor = null;
