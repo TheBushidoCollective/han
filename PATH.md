@@ -19,6 +19,31 @@ The proof uses disposable data directories and checks authenticated stop,
 restart, crash recovery, replacement isolation, and shutdown races. It does
 not exercise an installed production binary or a shared data directory.
 
+## Installed Windows coordinator path
+
+On a disposable Windows CI runner, from `packages/han-rs`, run
+`cargo test --locked -p han-coordinator windows_` and
+`powershell -File crates/han-coordinator/tests/windows_cross_user.ps1 -Coordinator <fresh-coordinator.exe>`.
+From `packages/han`, run each test in a separate Bun invocation:
+
+```sh
+bun test test/coordinator-windows-runtime.test.ts
+bun test test/coordinator-windows-health.test.ts
+bun test test/coordinator-windows-startup.test.ts
+bun test test/windows-proof-diagnostics.test.ts
+bun scripts/build-bundle.js bun-windows-x64
+bun scripts/prove-installed-windows-coordinator.ts <han.exe> <han-coordinator.exe>
+```
+
+The installed proof uses disposable private data and exercises authenticated
+HTTPS and gRPC, restart, crash recovery, missing-lock and incomplete-claim
+startup, and modeled PID reuse. The modeled case changes a stale descriptor to
+refer to a live fixture process with a different creation time; it does not
+claim an actual OS PID recycle. Failure output is restricted to the phase,
+numeric exit status, and validated helper metadata, with cleanup failures
+reported separately. The existing Windows workflow is manually dispatched and
+restricted to its WIP branch; these commands do not imply automatic coverage.
+
 ## Local browser transport path
 
 Use Bun 1.4.4, Rust with the protobuf compiler, and the dependencies installed

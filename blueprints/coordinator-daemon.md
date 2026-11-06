@@ -25,7 +25,7 @@ The coordinator binds HTTPS and gRPC listeners to `127.0.0.1`. The CLI coordinat
 
 Each instance generates a new certificate and bearer token. Its owner-protected `runtime/coordinator.json` records the instance identity, process ID, ports, certificate, bearer token, and optional supervisor binding. Clients validate the descriptor, pin its certificate, and authenticate requests. The HTTPS listener serves `/health` and `/graphql`, including GraphQL WebSocket subscriptions. Request guards restrict authority, Origin, and credentials; the gRPC listener has equivalent local request guards.
 
-The descriptor and token protect the local transport from other users and browser origins, not from an untrusted process running as the same operating-system user. A process with the same user privileges can read the private descriptor. Windows secure descriptor access is not provided by this implementation; it fails closed rather than assuming Unix permissions apply.
+The descriptor and token protect the local transport from other users and browser origins, not from an untrusted process running as the same operating-system user. A process with the same user privileges can read the private descriptor. On Windows, a native helper checks the owner-protected runtime directory, records, and publication lock rather than assuming Unix permissions apply. Unsafe or malformed objects fail closed.
 
 ## Browse and client connections
 
@@ -57,6 +57,19 @@ The numeric `coordinator.pid` is informational. A nonempty `coordinator.pid.take
 A foreground supervisor assigns each owned child a binding containing the supervisor PID, its claim nonce, and a fresh generation ID. It keeps the child process referenced so it can reap it and release the matching records. A genuine child crash is eligible for restart; an attached coordinator is not treated as an owned child.
 
 The Rust process binds its listeners and claims its coordinator lock before publishing readiness. Publication, withdrawal, and owner-checked descriptor cleanup use a shared protected lock file in the runtime directory.
+
+On Windows, start intent prepares the private runtime and publication lock before
+status or health reads. Read-only status never creates the lock or removes a
+claim. A partial supervisor claim is recoverable only when its validated
+reservation identifies a verified-dead owner; acquisition rechecks it under
+the publication guard. Unknown process state and conflicting or malformed
+records fail closed.
+
+The Windows descriptor binds its PID to the process creation time and user SID.
+Health checks use that persisted identity so a reused live PID is not mistaken
+for the original coordinator. A missing or invalid Windows identity fails
+closed. The installed CI proof models PID reuse with a live fixture; it does not
+assert that Windows recycled a PID.
 
 ## Authenticated shutdown
 
