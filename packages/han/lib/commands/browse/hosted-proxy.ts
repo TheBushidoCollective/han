@@ -14,6 +14,7 @@ import {
   type Server,
   type ServerResponse,
 } from 'node:http';
+import type { Socket } from 'node:net';
 import { join, resolve, sep } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -298,6 +299,7 @@ export async function startHostedDashboardProxy(
   const expires = Date.now() + TOKEN_LIFETIME;
   const accessTokens = new Set<string>();
   const sockets = new Set<WebSocket>();
+  const connections = new Set<Socket>();
   let closing = false;
   const server = createServer(async (req, res) => {
     headers(res, authority);
@@ -437,6 +439,10 @@ export async function startHostedDashboardProxy(
       if (!res.headersSent) res.writeHead(502);
       res.end('Dashboard asset unavailable');
     }
+  });
+  server.on('connection', (socket) => {
+    connections.add(socket);
+    socket.once('close', () => connections.delete(socket));
   });
   const websocket = new WebSocketServer({
     noServer: true,
@@ -656,6 +662,7 @@ export async function startHostedDashboardProxy(
         /* Already consumed. */
       }
       for (const socket of sockets) socket.terminate();
+      for (const connection of connections) connection.destroy();
       websocket.close();
       hmr.close();
       await new Promise<void>((resolveClose) =>

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import { once } from 'node:events';
 import {
   existsSync,
   mkdirSync,
@@ -158,6 +159,16 @@ describe('local dashboard gateway', () => {
       startHostedDashboardProxy({ port: occupied.port, origin })
     ).rejects.toThrow();
   });
+  test('shutdown closes connections that have not finished a request', async () => {
+    const { proxy } = await setup();
+    const target = new URL(proxy.url);
+    const accepted = once(proxy.server, 'connection');
+    const socket = connect(Number(target.port), target.hostname);
+    const closed = once(socket, 'close');
+    await accepted;
+    await proxy.close();
+    await closed;
+  });
   test('rejects network-path and absolute-form asset requests', async () => {
     const { proxy, seen } = await setup();
     const target = new URL(proxy.url);
@@ -204,8 +215,12 @@ describe('local dashboard gateway', () => {
     const socket = connect(Number(target.port), target.hostname);
     let buffer = Buffer.alloc(0);
     let upgraded = false;
-    socket.setTimeout(5000, () =>
-      socket.destroy(new Error('WebSocket timed out'))
+    socket.setTimeout(3000, () =>
+      socket.destroy(
+        new Error(
+          `WebSocket timed out ${upgraded ? 'after' : 'before'} upgrade`
+        )
+      )
     );
     socket.on('error', reject);
     socket.on('end', () =>
