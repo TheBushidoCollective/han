@@ -6,12 +6,12 @@
  * the "server" is the external Rust han-coordinator binary.
  */
 
+import type { SupervisorBinding } from '../../coordinator/connection.ts';
 import {
   type CoordinatorStartResult,
   startCoordinatorService,
   stopCoordinatorService,
 } from '../../services/coordinator-service.ts';
-import type { SupervisorBinding } from '../../coordinator/connection.ts';
 import type { CoordinatorOptions } from './types.ts';
 
 /**

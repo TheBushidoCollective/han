@@ -21,9 +21,12 @@ const mutations: Record<
     test: 'reclaims an owner stopped before PID publication',
   },
   unguardedPid: {
-    anchor: 'const reservation = `' + '$' + '{pidPath}.takeover`;',
+    anchor:
+      'inspectDirectory(dir);\n  const reservation = `' +
+      '$' +
+      '{pidPath}.takeover`;',
     replacement:
-      'const reservation = `' +
+      'inspectDirectory(dir);\n  const reservation = `' +
       '$' +
       '{pidPath}.takeover`; writeFileSync(pidPath, String(process.pid), { mode: 0o600 });',
     test: 'reclaims an owner stopped before PID publication',

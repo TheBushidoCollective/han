@@ -21,18 +21,18 @@ import { getHanDataDir } from '../../config/claude-settings.ts';
 import { getHanBinary } from '../../config/han-settings.ts';
 import {
   CoordinatorSecurityError,
-  readCoordinatorDescriptor,
-  sameCoordinator,
   type LocalCoordinatorDescriptor,
+  readCoordinatorDescriptor,
   type SupervisorBinding,
+  sameCoordinator,
 } from '../../coordinator/connection.ts';
 import { createCoordinatorClients } from '../../grpc/client.ts';
 import { checkHealth, waitForHealth } from './health.ts';
 import {
   claimStillOwned,
   claimSupervisorPid,
-  readSupervisorPid,
   readSupervisorIdentity,
+  readSupervisorPid,
   releaseSupervisorPid,
   type SupervisorClaim,
   SupervisorReservationBusyError,
@@ -271,16 +271,27 @@ export async function stopDaemon(_port?: number): Promise<void> {
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     if (readSupervisorIdentity(getPidFilePath()))
-      throw new Error('Coordinator supervisor is running or starting without an available descriptor');
+      throw new Error(
+        'Coordinator supervisor is running or starting without an available descriptor'
+      );
     return;
   }
   const binding = descriptor.supervisor;
   if (binding) {
     const identity = readSupervisorIdentity(getPidFilePath());
-    if (!identity || identity.pid !== binding.pid || identity.nonce !== binding.nonce)
-      throw new CoordinatorSecurityError('Coordinator supervisor claim does not match descriptor');
+    if (
+      !identity ||
+      identity.pid !== binding.pid ||
+      identity.nonce !== binding.nonce
+    )
+      throw new CoordinatorSecurityError(
+        'Coordinator supervisor claim does not match descriptor'
+      );
   }
-  await createCoordinatorClients(descriptor.httpsPort, descriptor).coordinator.shutdown(
+  await createCoordinatorClients(
+    descriptor.httpsPort,
+    descriptor
+  ).coordinator.shutdown(
     { graceful: true, timeoutSeconds: 5 },
     { timeoutMs: 10000 }
   );
@@ -292,7 +303,8 @@ export async function stopDaemon(_port?: number): Promise<void> {
       if (!sameCoordinator(current, descriptor))
         throw new Error('A different coordinator appeared during shutdown');
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') descriptorGone = true;
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT')
+        descriptorGone = true;
       else throw error;
     }
     if (!binding) {
@@ -306,14 +318,25 @@ export async function stopDaemon(_port?: number): Promise<void> {
         await Bun.sleep(100);
         continue;
       }
-      if (identity && (identity.pid !== binding.pid || identity.nonce !== binding.nonce))
+      if (
+        identity &&
+        (identity.pid !== binding.pid || identity.nonce !== binding.nonce)
+      )
         throw new Error('A different supervisor appeared during shutdown');
       const intent = readShutdownIntent(binding, descriptor.pid, descriptor);
-      if (descriptorGone && !identity && !intent && !isProcessRunning(binding.pid)) return;
+      if (
+        descriptorGone &&
+        !identity &&
+        !intent &&
+        !isProcessRunning(binding.pid)
+      )
+        return;
     }
     await Bun.sleep(100);
   }
-  throw new Error('Coordinator shutdown did not release its descriptor and supervisor');
+  throw new Error(
+    'Coordinator shutdown did not release its descriptor and supervisor'
+  );
 }
 
 // Constants for auto-restart
@@ -346,7 +369,9 @@ async function runForeground(port: number): Promise<void> {
   let binding: SupervisorBinding | null = null;
   let child: Bun.Subprocess | null = null;
   let owned: LocalCoordinatorDescriptor | undefined;
-  const shutdown = () => { signal = true; };
+  const shutdown = () => {
+    signal = true;
+  };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
   let restartAttempts = 0;
@@ -360,7 +385,8 @@ async function runForeground(port: number): Promise<void> {
     return stopping !== null;
   };
   const finishIntent = async () => {
-    if (!binding || !child || !stopping) throw new Error('Missing shutdown ownership');
+    if (!binding || !child || !stopping)
+      throw new Error('Missing shutdown ownership');
     await child.exited;
     removeShutdownIntent(binding, child.pid, stopping);
   };
@@ -368,7 +394,11 @@ async function runForeground(port: number): Promise<void> {
   try {
     while (!signal) {
       if (observeIntent()) break;
-      binding = { pid: process.pid, nonce: claim.nonce, generationId: randomUUID() };
+      binding = {
+        pid: process.pid,
+        nonce: claim.nonce,
+        generationId: randomUUID(),
+      };
       child = null;
       owned = undefined;
       try {
@@ -385,7 +415,8 @@ async function runForeground(port: number): Promise<void> {
         currentDelay = RESTART_DELAY_MS;
         console.log('[coordinator] Running. Press Ctrl+C to stop.');
         while (!signal) {
-          if (child.exitCode !== null) throw new Error('Coordinator child exited');
+          if (child.exitCode !== null)
+            throw new Error('Coordinator child exited');
           if (observeIntent()) break;
           let healthy: boolean;
           try {
@@ -394,11 +425,13 @@ async function runForeground(port: number): Promise<void> {
             if (observeIntent()) break;
             await Promise.race([child.exited, Bun.sleep(100)]);
             if (observeIntent()) break;
-            if (child.exitCode !== null) throw new Error('Coordinator child exited');
+            if (child.exitCode !== null)
+              throw new Error('Coordinator child exited');
             throw error;
           }
           if (observeIntent()) break;
-          if (!healthy || child.exitCode !== null) throw new Error('Coordinator stopped responding');
+          if (!healthy || child.exitCode !== null)
+            throw new Error('Coordinator stopped responding');
           await Bun.sleep(1000);
         }
         if (signal || observeIntent()) break;
@@ -412,7 +445,10 @@ async function runForeground(port: number): Promise<void> {
           if (observeIntent()) break;
         }
         restartAttempts++;
-        console.error(`[coordinator] Server crashed (attempt ${restartAttempts}/${MAX_RESTART_ATTEMPTS}):`, error);
+        console.error(
+          `[coordinator] Server crashed (attempt ${restartAttempts}/${MAX_RESTART_ATTEMPTS}):`,
+          error
+        );
         if (restartAttempts >= MAX_RESTART_ATTEMPTS) throw error;
         if (observeIntent()) break;
         await Bun.sleep(currentDelay);

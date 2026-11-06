@@ -48,10 +48,7 @@ export function createCoordinatorClients(
     fetch: Object.assign(
       (input: string | URL | Request, init?: RequestInit) => {
         const current = readCoordinatorDescriptor();
-        if (
-          expected &&
-          !sameCoordinator(current, expected)
-        )
+        if (expected && !sameCoordinator(current, expected))
           throw new CoordinatorSecurityError(
             'Coordinator instance changed before request'
           );

@@ -93,6 +93,9 @@ jobs:
       - name: Build coordinator
         working-directory: packages/han-rs
         run: cargo build --locked -p han-coordinator
+      - name: Test coordinator
+        working-directory: packages/han-rs
+        run: cargo test --locked -p han-coordinator
       - name: Install CLI dependencies
         working-directory: packages/han
         run: bun install --frozen-lockfile

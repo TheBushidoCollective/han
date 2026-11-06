@@ -56,7 +56,10 @@ test('read-only identity follows the owned reservation and rejects its absence a
   const result = claimSupervisorPid(path);
   expect(result.kind).toBe('owned');
   if (result.kind !== 'owned') throw new Error('claim was not acquired');
-  expect(readSupervisorIdentity(path)).toEqual({ pid: process.pid, nonce: result.claim.nonce });
+  expect(readSupervisorIdentity(path)).toEqual({
+    pid: process.pid,
+    nonce: result.claim.nonce,
+  });
   releaseSupervisorPid(result.claim);
   expect(readSupervisorIdentity(path)).toBeNull();
 });

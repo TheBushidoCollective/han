@@ -17,25 +17,48 @@ export interface SupervisorBinding {
   generationId: string;
 }
 
-export function validSupervisorBinding(value: unknown): value is SupervisorBinding {
+export function validSupervisorBinding(
+  value: unknown
+): value is SupervisorBinding {
   if (!value || typeof value !== 'object') return false;
   const b = value as SupervisorBinding;
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-  return Number.isSafeInteger(b.pid) && b.pid > 0 &&
-    typeof b.nonce === 'string' && uuid.test(b.nonce) &&
-    typeof b.generationId === 'string' && uuid.test(b.generationId);
+  return (
+    Number.isSafeInteger(b.pid) &&
+    b.pid > 0 &&
+    typeof b.nonce === 'string' &&
+    uuid.test(b.nonce) &&
+    typeof b.generationId === 'string' &&
+    uuid.test(b.generationId)
+  );
 }
 
-export function sameSupervisor(a: SupervisorBinding | null, b: SupervisorBinding | null): boolean {
-  return a === null ? b === null : b !== null &&
-    a.pid === b.pid && a.nonce === b.nonce && a.generationId === b.generationId;
+export function sameSupervisor(
+  a: SupervisorBinding | null,
+  b: SupervisorBinding | null
+): boolean {
+  return a === null
+    ? b === null
+    : b !== null &&
+        a.pid === b.pid &&
+        a.nonce === b.nonce &&
+        a.generationId === b.generationId;
 }
 
-export function sameCoordinator(a: LocalCoordinatorDescriptor, b: LocalCoordinatorDescriptor): boolean {
-  return a.transportVersion === b.transportVersion && a.instanceId === b.instanceId &&
-    a.pid === b.pid && a.httpsPort === b.httpsPort && a.grpcPort === b.grpcPort &&
-    a.certificatePem === b.certificatePem && a.bearerToken === b.bearerToken &&
-    sameSupervisor(a.supervisor, b.supervisor);
+export function sameCoordinator(
+  a: LocalCoordinatorDescriptor,
+  b: LocalCoordinatorDescriptor
+): boolean {
+  return (
+    a.transportVersion === b.transportVersion &&
+    a.instanceId === b.instanceId &&
+    a.pid === b.pid &&
+    a.httpsPort === b.httpsPort &&
+    a.grpcPort === b.grpcPort &&
+    a.certificatePem === b.certificatePem &&
+    a.bearerToken === b.bearerToken &&
+    sameSupervisor(a.supervisor, b.supervisor)
+  );
 }
 
 export interface LocalCoordinatorDescriptor {
@@ -65,7 +88,9 @@ export function getCoordinatorDataDir(): string {
   );
 }
 
-export function readCoordinatorDescriptor(path = join(getCoordinatorDataDir(), 'runtime', 'coordinator.json')): LocalCoordinatorDescriptor {
+export function readCoordinatorDescriptor(
+  path = join(getCoordinatorDataDir(), 'runtime', 'coordinator.json')
+): LocalCoordinatorDescriptor {
   if (process.platform === 'win32') {
     throw new CoordinatorSecurityError(
       'Windows coordinator descriptor ACL and reparse-point verification is not available'

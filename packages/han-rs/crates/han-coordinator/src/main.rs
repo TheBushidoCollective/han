@@ -189,10 +189,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     let supervisor = match (&cli.supervisor_pid, &cli.supervisor_nonce, &cli.supervisor_generation) {
         (None, None, None) => None,
-        (Some(&pid), Some(nonce), Some(generation)) if cli.foreground => {
-            let binding = runtime::SupervisorBinding::validate(pid, nonce.clone(), generation.clone())?;
+        (Some(pid), Some(nonce), Some(generation)) if cli.foreground => {
+            let binding = runtime::SupervisorBinding::validate(*pid, nonce.clone(), generation.clone())?;
             #[cfg(unix)]
-            if unsafe { libc::getppid() } as u32 != pid {
+            if unsafe { libc::getppid() } as u32 != *pid {
                 return Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "supervisor is not the parent process").into());
             }
             #[cfg(not(unix))]

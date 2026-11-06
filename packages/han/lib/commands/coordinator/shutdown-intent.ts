@@ -5,23 +5,37 @@ import {
   getCoordinatorDataDir,
   type LocalCoordinatorDescriptor,
   readCoordinatorDescriptor,
+  type SupervisorBinding,
   sameCoordinator,
   sameSupervisor,
-  type SupervisorBinding,
   validSupervisorBinding,
 } from '../../coordinator/connection.ts';
 
 function intentPath(binding: SupervisorBinding): string {
-  if (!validSupervisorBinding(binding)) throw new CoordinatorSecurityError('Invalid supervisor binding');
-  return join(getCoordinatorDataDir(), 'runtime', `coordinator.stopping.${binding.nonce}.${binding.generationId}.json`);
+  if (!validSupervisorBinding(binding))
+    throw new CoordinatorSecurityError('Invalid supervisor binding');
+  return join(
+    getCoordinatorDataDir(),
+    'runtime',
+    `coordinator.stopping.${binding.nonce}.${binding.generationId}.json`
+  );
 }
 
-export function readShutdownIntent(binding: SupervisorBinding, childPid: number, expected?: LocalCoordinatorDescriptor): LocalCoordinatorDescriptor | null {
+export function readShutdownIntent(
+  binding: SupervisorBinding,
+  childPid: number,
+  expected?: LocalCoordinatorDescriptor
+): LocalCoordinatorDescriptor | null {
   try {
     const descriptor = readCoordinatorDescriptor(intentPath(binding));
-    if (descriptor.pid !== childPid || !sameSupervisor(descriptor.supervisor, binding) ||
-        (expected && !sameCoordinator(descriptor, expected))) {
-      throw new CoordinatorSecurityError('Shutdown intent does not match owned coordinator');
+    if (
+      descriptor.pid !== childPid ||
+      !sameSupervisor(descriptor.supervisor, binding) ||
+      (expected && !sameCoordinator(descriptor, expected))
+    ) {
+      throw new CoordinatorSecurityError(
+        'Shutdown intent does not match owned coordinator'
+      );
     }
     return descriptor;
   } catch (error) {
@@ -30,6 +44,11 @@ export function readShutdownIntent(binding: SupervisorBinding, childPid: number,
   }
 }
 
-export function removeShutdownIntent(binding: SupervisorBinding, childPid: number, expected: LocalCoordinatorDescriptor): void {
-  if (readShutdownIntent(binding, childPid, expected)) unlinkSync(intentPath(binding));
+export function removeShutdownIntent(
+  binding: SupervisorBinding,
+  childPid: number,
+  expected: LocalCoordinatorDescriptor
+): void {
+  if (readShutdownIntent(binding, childPid, expected))
+    unlinkSync(intentPath(binding));
 }

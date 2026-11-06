@@ -183,11 +183,17 @@ describe('startCoordinatorService with binary found', () => {
       nonce: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       generationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
     };
-    await expect(cs.startCoordinatorService({ supervisor })).rejects.toThrow('test double');
+    await expect(cs.startCoordinatorService({ supervisor })).rejects.toThrow(
+      'test double'
+    );
     const args = mockBunSpawn.mock.calls[0][0] as string[];
-    expect(args[args.indexOf('--supervisor-pid') + 1]).toBe(String(supervisor.pid));
+    expect(args[args.indexOf('--supervisor-pid') + 1]).toBe(
+      String(supervisor.pid)
+    );
     expect(args[args.indexOf('--supervisor-nonce') + 1]).toBe(supervisor.nonce);
-    expect(args[args.indexOf('--supervisor-generation') + 1]).toBe(supervisor.generationId);
+    expect(args[args.indexOf('--supervisor-generation') + 1]).toBe(
+      supervisor.generationId
+    );
   });
 
   test('handles spawn failure gracefully', async () => {
