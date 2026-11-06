@@ -159,13 +159,16 @@ describe('local dashboard gateway', () => {
       startHostedDashboardProxy({ port: occupied.port, origin })
     ).rejects.toThrow();
   });
-  test('shutdown closes connections that have not finished a request', async () => {
+  test('shutdown closes an idle keep-alive connection', async () => {
     const { proxy } = await setup();
     const target = new URL(proxy.url);
-    const accepted = once(proxy.server, 'connection');
     const socket = connect(Number(target.port), target.hostname);
+    const response = once(socket, 'data');
     const closed = once(socket, 'close');
-    await accepted;
+    socket.write(
+      `GET / HTTP/1.1\r\nHost: ${target.host}\r\nConnection: keep-alive\r\n\r\n`
+    );
+    await response;
     await proxy.close();
     await closed;
   });
