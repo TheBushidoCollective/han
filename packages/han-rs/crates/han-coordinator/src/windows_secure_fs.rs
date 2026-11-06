@@ -436,6 +436,14 @@ fn verify_acl_mode(handle: &OwnedHandle, private: bool, ancestor: bool) -> io::R
                 const MUTATION: u32 = 0x40 | 0x0001_0000 | 0x0004_0000
                     | 0x0008_0000 | 0x4000_0000 | 0x1000_0000;
                 if ace.Mask & MUTATION != 0 {
+                    let mut text = null_mut();
+                    if unsafe { ConvertSidToStringSidW(sid, &mut text) } != 0 {
+                        let _text = LocalAllocation(text as _);
+                        let mut len = 0usize;
+                        while len < 184 && unsafe { *text.add(len) } != 0 { len += 1; }
+                        let value = String::from_utf16_lossy(unsafe { std::slice::from_raw_parts(text, len) });
+                        return Err(io::Error::new(io::ErrorKind::InvalidData, format!("untrusted ancestor deletion grant sid={value} mask={:#x} flags={:#x}", ace.Mask, ace.Header.AceFlags)));
+                    }
                     return Err(invalid("untrusted ancestor deletion grant"));
                 }
             } else {
