@@ -36,7 +36,7 @@ jobs:
       - name: Setup Biome
         uses: biomejs/setup-biome@v2
         with:
-          version: latest
+          version: 2.3.7
 
       - name: Run Biome lint
         run: biome lint --files-ignore-unknown=true .

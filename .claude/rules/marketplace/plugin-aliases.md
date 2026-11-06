@@ -3,6 +3,8 @@
 ## NEVER Remove Plugin Aliases from marketplace.json
 
 The marketplace.json file MUST contain alias entries for backwards compatibility with existing user installations.
+Exception: Claude Code rejects the reserved names `claude-agent-sdk`, `claude-plugin-development`, `jutsu-claude-agent-sdk`, and `do-claude-plugin-development`. Do not re-add those entries. The migration retains their mappings so existing settings can be updated, but installations that have not run it can fail to resolve them.
+
 
 ### Why Aliases Are Required
 
@@ -55,7 +57,7 @@ Previous attempts added `deprecated` and `alias_for` fields which caused Claude 
 The `packages/han/lib/plugin-aliases.ts` file defines the mapping of old names to new paths. When adding new plugins or reorganizing, ensure:
 
 1. The canonical (short) name exists in marketplace.json
-2. ALL alias variants from plugin-aliases.ts also exist in marketplace.json
+2. Alias variants from plugin-aliases.ts exist in marketplace.json, except the reserved names listed above
 3. All entries point to the correct `./plugins/` path
 
 ### Common Alias Patterns

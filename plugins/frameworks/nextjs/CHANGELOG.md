@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Changed
+
+- Detect actual Next.js applications from parsed dependencies and application
+  directories or configuration, and run the project's `npm run lint` script.
+  Projects relying on the previous implicit command need a lint script or a
+  Han command override.
+
 ## [1.1.2] - 2026-08-12
 
 ### Added

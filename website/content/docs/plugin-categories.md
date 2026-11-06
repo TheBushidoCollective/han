@@ -333,7 +333,7 @@ Specialized plugins cover niche technologies, platform-specific tools, and domai
 - **ios** - iOS development with Xcode validation
 - **tensorflow** - Machine learning framework skills
 - **fnox** - Secrets management validation
-- **claude-agent-sdk** - Claude Agent SDK projects
+- **agent-sdk** - Claude Agent SDK projects
 - **han-plugins** - Han plugin development
 - **sentry** - Error monitoring patterns
 - **sip** - VoIP and real-time communications
