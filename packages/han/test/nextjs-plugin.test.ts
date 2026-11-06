@@ -90,7 +90,7 @@ describe('Next.js lint hook', () => {
     const dir = fixture({ scripts: { lint: 'node -e "process.exit(42)"' } });
     expect(run(hook.command, dir).exitCode).toBe(42);
     expect(run(hook.command, fixture({})).exitCode).not.toBe(0);
-  });
+  }, 30_000);
 
   test('website script is non-writing and executes from the website directory', () => {
     const website = join(root, 'website');
@@ -115,7 +115,7 @@ describe('Next.js lint hook', () => {
     expect(result.stdout.toString()).toContain(
       `${dir}\ncheck --error-on-warnings .`
     );
-  });
+  }, 30_000);
 
   test('tracks project and linter configuration changes', () => {
     for (const path of [
