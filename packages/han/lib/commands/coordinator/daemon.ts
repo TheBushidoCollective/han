@@ -423,7 +423,7 @@ async function runForeground(port: number): Promise<void> {
             healthy = (await checkHealth(port)) !== null;
           } catch (error) {
             if (observeIntent()) break;
-            await Promise.race([child.exited, Bun.sleep(100)]);
+            await Promise.race([child.exited, Bun.sleep(2000)]);
             if (observeIntent()) break;
             if (child.exitCode !== null)
               throw new Error('Coordinator child exited');

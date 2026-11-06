@@ -510,6 +510,17 @@ export async function startCoordinatorService(
           intent = stopping();
           if (intent)
             return { kind: 'shutdown-requested', child, descriptor: intent };
+          // A transport reset can race the subprocess exit notification. Only
+          // classify it as a crash after the owned child has actually exited;
+          // a live child's authentication or TLS failure remains fatal.
+          await Promise.race([child.exited, Bun.sleep(2000)]);
+          intent = stopping();
+          if (intent)
+            return { kind: 'shutdown-requested', child, descriptor: intent };
+          if (child.exitCode !== null)
+            throw new Error('Coordinator child exited during startup', {
+              cause: error,
+            });
           throw error;
         }
         intent = stopping();

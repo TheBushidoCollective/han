@@ -350,6 +350,29 @@ describe('stopCoordinatorService ownership', () => {
     expect(child.unref).not.toHaveBeenCalled();
   });
 
+  test('classifies a health reset as a crash only after the owned child exits', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockRejectedValueOnce(
+      new realConnection.CoordinatorSecurityError('connection reset')
+    );
+    const child = {
+      pid: 4242,
+      exitCode: null as number | null,
+      unref: mock(),
+      kill: mock(),
+      exited: Promise.resolve(1),
+    };
+    child.exited = child.exited.then((code) => {
+      child.exitCode = code;
+      return code;
+    });
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await expect(cs.startCoordinatorService()).rejects.toThrow(
+      'Coordinator child exited during startup'
+    );
+    expect(child.kill).not.toHaveBeenCalled();
+  });
+
   test('attaches to a replacement instead of returning a cached dead child', async () => {
     mockHealth.mockResolvedValueOnce(false);
     mockHealth.mockResolvedValue(true);
