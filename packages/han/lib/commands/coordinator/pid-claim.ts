@@ -102,7 +102,7 @@ function inspectDirectory(path: string, privateOnly = false): void {
   )
     throw new Error(`Insecure supervisor directory: ${path}`);
 }
-function reclaim(reservation: string): number | null {
+function reclaim(reservation: string, pidPath: string): number | null {
   let s: Stats;
   try {
     s = lstatSync(reservation);
@@ -162,7 +162,10 @@ function reclaim(reservation: string): number | null {
     names[0] !== `owner.${record.nonce}.json`
   )
     throw new Error('Malformed supervisor reservation');
-  if (alive(record.pid)) return record.pid;
+  if (alive(record.pid)) {
+    const published = readSupervisorPid(pidPath);
+    return published !== null && alive(published) ? published : record.pid;
+  }
   try {
     unlinkSync(owner);
   } catch (e) {
@@ -229,7 +232,7 @@ export function claimSupervisorPid(path: string): ClaimResult {
           )
         )
           throw e;
-        const pid = reclaim(reservation);
+        const pid = reclaim(reservation, pidPath);
         if (pid !== null) return { kind: 'blocked', pid };
         continue;
       }
