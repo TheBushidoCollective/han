@@ -669,6 +669,112 @@ async function committedStopSurvivesFailure(
   }
 }
 
+async function preDispatchFailure(
+  failure: 'stale-request' | 'dead-requester'
+): Promise<void> {
+  const dir = directory();
+  const barrier = join(dir, 'request-held');
+  const release = join(dir, 'request-release');
+  const grpc = resolve(import.meta.dir, '../lib/grpc/client.ts');
+  const daemon = resolve(
+    import.meta.dir,
+    '../lib/commands/coordinator/daemon.ts'
+  );
+  const script = `
+    const fs = await import('node:fs');
+    const { mock } = await import('bun:test');
+    const original = await import(${JSON.stringify(grpc)});
+    const createClients = original.createCoordinatorClients;
+    mock.module(${JSON.stringify(grpc)}, () => ({
+      ...original,
+      createCoordinatorClients(...args) {
+        const clients = createClients(...args);
+        return { ...clients, coordinator: {
+          async shutdown(...request) {
+            fs.writeFileSync(${JSON.stringify(barrier)}, 'held');
+            while (!fs.existsSync(${JSON.stringify(release)})) await Bun.sleep(20);
+            return clients.coordinator.shutdown(...request);
+          },
+        } };
+      },
+    }));
+    const { stopDaemon } = await import(${JSON.stringify(daemon)});
+    try { await stopDaemon(0); } catch { process.exitCode = 1; }
+  `;
+  const supervisor = Bun.spawn(
+    [
+      process.execPath,
+      cli,
+      'coordinator',
+      'start',
+      '--foreground',
+      '--port',
+      '0',
+    ],
+    { env: environment(dir), stdout: 'pipe', stderr: 'pipe' }
+  );
+  children.push(supervisor);
+  let ownedPid: number | undefined;
+  let requester: Bun.Subprocess | undefined;
+  try {
+    const original = await ready(dir, supervisor);
+    ownedPid = original.pid;
+    assertChild(original.pid, supervisor.pid);
+    requester = Bun.spawn([process.execPath, '-e', script], {
+      env: environment(dir),
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    children.push(requester);
+    await waitFor('stop request held before dispatch', () => {
+      if (requester?.exitCode !== null)
+        throw new Error('requester exited before dispatch barrier');
+      return existsSync(barrier) ? true : undefined;
+    });
+    if (failure === 'dead-requester') {
+      requester.kill('SIGKILL');
+      await requester.exited;
+    }
+    killChild(original.pid, supervisor.pid);
+    ownedPid = undefined;
+    const replacement = await ready(dir, supervisor, original.instanceId);
+    ownedPid = replacement.pid;
+    assertChild(replacement.pid, supervisor.pid);
+    if (failure === 'stale-request') {
+      writeFileSync(release, 'release');
+      await waitFor('stale requester exit', () =>
+        requester?.exitCode !== null ? requester?.exitCode : undefined
+      );
+      assert.notEqual(requester.exitCode, 0);
+    }
+    assert.equal(await healthy(replacement), true);
+    assert.equal(
+      readdirSync(join(dir, 'runtime')).some((name) =>
+        name.startsWith('coordinator.stopping.')
+      ),
+      false
+    );
+    await cliCommand(dir, 'stop');
+    await waitFor('recovered supervisor stop', () =>
+      supervisor.exitCode !== null ? supervisor.exitCode : undefined
+    );
+    assert.equal(supervisor.exitCode, 0);
+    await waitFor('recovered child stop', () =>
+      !existsSync(`/proc/${replacement.pid}`) ? true : undefined
+    );
+    ownedPid = undefined;
+    assertStoppedRecords(dir);
+    console.log(`${failure} before dispatch left crash recovery intact`);
+  } finally {
+    if (requester && requester.exitCode === null) requester.kill();
+    if (requester) await requester.exited;
+    if (ownedPid !== undefined && supervisor.exitCode === null)
+      killChild(ownedPid, supervisor.pid);
+    if (supervisor.exitCode === null) supervisor.kill();
+    await supervisor.exited;
+  }
+}
+
 try {
   await intentionalStopAndRestart();
   await supervisorRecovery();
@@ -677,6 +783,8 @@ try {
   await standaloneStopPreservesUnrelatedMarker();
   await committedStopSurvivesFailure('child');
   await committedStopSurvivesFailure('requester');
+  await preDispatchFailure('stale-request');
+  await preDispatchFailure('dead-requester');
 } finally {
   for (const child of children) if (child.exitCode === null) child.kill();
   await Promise.all(children.map((child) => child.exited));
