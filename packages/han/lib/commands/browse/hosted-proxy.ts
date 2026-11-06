@@ -14,9 +14,8 @@ import {
   type Server,
   type ServerResponse,
 } from 'node:http';
-import type { Socket } from 'node:net';
 import { join, resolve, sep } from 'node:path';
-import { Readable } from 'node:stream';
+import { type Duplex, Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { pathToFileURL } from 'node:url';
@@ -299,7 +298,7 @@ export async function startHostedDashboardProxy(
   const expires = Date.now() + TOKEN_LIFETIME;
   const accessTokens = new Set<string>();
   const sockets = new Set<WebSocket>();
-  const connections = new Set<Socket>();
+  const connections = new Set<Duplex>();
   let closing = false;
   const server = createServer(async (req, res) => {
     headers(res, authority);
@@ -455,6 +454,8 @@ export async function startHostedDashboardProxy(
       protocols.has('vite-hmr') ? 'vite-hmr' : false,
   });
   server.on('upgrade', (req, socket, head) => {
+    connections.add(socket);
+    socket.once('close', () => connections.delete(socket));
     const failure = guard(req, authority, true);
     const protocol = header(req, 'sec-websocket-protocol');
     if (
