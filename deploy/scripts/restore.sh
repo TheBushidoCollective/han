@@ -71,7 +71,7 @@ if [ "$CONFIRM" != "--confirm" ]; then
         CONFIRMATION+="${pending_space}${char}"
         pending_space=""
         escaped=false
-      elif [[ "$char" == '\' ]]; then
+      elif [[ "$char" == "\\" ]]; then
         escaped=true
       elif [[ "$char" == ' ' || "$char" == $'\t' ]]; then
         if [[ -n "$CONFIRMATION" ]]; then
