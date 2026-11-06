@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -27,6 +28,7 @@ interface Descriptor {
   grpcPort: number;
   certificatePem: string;
   bearerToken: string;
+  supervisor: { pid: number; nonce: string; generationId: string } | null;
 }
 const children: Bun.Subprocess[] = [];
 const directories: string[] = [];
@@ -43,6 +45,7 @@ function environment(dir: string): Record<string, string | undefined> {
     HAN_DATA_DIR: dir,
     CLAUDE_CONFIG_DIR: join(dir, 'claude'),
     HAN_REEXEC: '1',
+    HAN_BINARY: `'${process.execPath.replaceAll("'", "'\\''")}' '${cli.replaceAll("'", "'\\''")}'`,
     HAN_COORDINATOR_PORT: '0',
     PATH: `${resolve(import.meta.dir, '../../han-rs/target/debug')}:${process.env.PATH}`,
   };
@@ -334,10 +337,191 @@ async function replacementWinsStartupRace(): Promise<void> {
   }
 }
 
+async function cliCommand(
+  dir: string,
+  command: 'stop' | 'restart'
+): Promise<void> {
+  const child = Bun.spawn(
+    [process.execPath, cli, 'coordinator', command, '--port', '0'],
+    {
+      env: environment(dir),
+      stdout: 'pipe',
+      stderr: 'pipe',
+    }
+  );
+  children.push(child);
+  await waitFor(`coordinator ${command} exit`, () =>
+    child.exitCode !== null ? child.exitCode : undefined
+  );
+  if (child.exitCode !== 0) {
+    const stdout = await new Response(child.stdout as ReadableStream).text();
+    const stderr = await new Response(child.stderr as ReadableStream).text();
+    throw new Error(
+      `coordinator ${command} exited ${child.exitCode}\nstdout:\n${stdout}\nstderr:\n${stderr}`
+    );
+  }
+}
+
+function assertStoppedRecords(dir: string): void {
+  assert.equal(existsSync(join(dir, 'coordinator.pid')), false);
+  assert.equal(existsSync(join(dir, 'coordinator.pid.takeover')), false);
+  assert.equal(existsSync(join(dir, 'runtime/coordinator.json')), false);
+  assert.equal(
+    readdirSync(join(dir, 'runtime')).some((name) =>
+      name.startsWith('coordinator.stopping.')
+    ),
+    false
+  );
+}
+
+function killFixtureSupervisor(pid: number, dir: string): void {
+  try {
+    const env = readFileSync(`/proc/${pid}/environ`, 'utf8').split('\0');
+    assert.ok(
+      env.includes(`HAN_DATA_DIR=${dir}`),
+      'refusing to signal a supervisor outside the fixture'
+    );
+    const command = readFileSync(`/proc/${pid}/cmdline`, 'utf8');
+    assert.ok(
+      command.includes(cli),
+      'refusing to signal a different executable'
+    );
+    process.kill(pid, 'SIGKILL');
+  } catch (error) {
+    if (
+      (error as NodeJS.ErrnoException).code !== 'ENOENT' &&
+      (error as NodeJS.ErrnoException).code !== 'ESRCH'
+    )
+      throw error;
+  }
+}
+
+async function intentionalStopAndRestart(): Promise<void> {
+  const dir = directory();
+  const supervisor = Bun.spawn(
+    [
+      process.execPath,
+      cli,
+      'coordinator',
+      'start',
+      '--foreground',
+      '--port',
+      '0',
+    ],
+    {
+      env: environment(dir),
+      stdout: 'pipe',
+      stderr: 'pipe',
+    }
+  );
+  children.push(supervisor);
+  let ownedPid: number | undefined;
+  let beforeRestart: Bun.Subprocess | undefined;
+  let restartOwnedPid: number | undefined;
+  let detachedSupervisor: number | undefined;
+  let detachedChild: number | undefined;
+  try {
+    const initial = await ready(dir, supervisor);
+    ownedPid = initial.pid;
+    assertChild(initial.pid, supervisor.pid);
+    assert.equal(initial.supervisor?.pid, supervisor.pid);
+    await cliCommand(dir, 'stop');
+    await waitFor('supervisor stop', () =>
+      supervisor.exitCode !== null ? supervisor.exitCode : undefined
+    );
+    assert.equal(supervisor.exitCode, 0);
+    await waitFor('stopped Rust child', () =>
+      !existsSync(`/proc/${initial.pid}`) ? true : undefined
+    );
+    ownedPid = undefined;
+    assertStoppedRecords(dir);
+
+    beforeRestart = Bun.spawn(
+      [
+        process.execPath,
+        cli,
+        'coordinator',
+        'start',
+        '--foreground',
+        '--port',
+        '0',
+      ],
+      {
+        env: environment(dir),
+        stdout: 'pipe',
+        stderr: 'pipe',
+      }
+    );
+    children.push(beforeRestart);
+    const original = await ready(dir, beforeRestart);
+    restartOwnedPid = original.pid;
+    assertChild(original.pid, beforeRestart.pid);
+    assert.equal(original.supervisor?.pid, beforeRestart.pid);
+    await cliCommand(dir, 'restart');
+    await waitFor('old supervisor after restart', () =>
+      beforeRestart.exitCode !== null ? beforeRestart.exitCode : undefined
+    );
+    assert.equal(beforeRestart.exitCode, 0);
+    await waitFor('old Rust child after restart', () =>
+      !existsSync(`/proc/${original.pid}`) ? true : undefined
+    );
+    restartOwnedPid = undefined;
+    const replacement = await waitFor('restarted coordinator', async () => {
+      const descriptor = readDescriptor(dir);
+      return descriptor &&
+        descriptor.instanceId !== original.instanceId &&
+        (await healthy(descriptor))
+        ? descriptor
+        : undefined;
+    });
+    assert.ok(replacement.supervisor);
+    detachedSupervisor = replacement.supervisor.pid;
+    detachedChild = replacement.pid;
+    assert.notEqual(detachedSupervisor, beforeRestart.pid);
+    assert.notEqual(replacement.certificatePem, original.certificatePem);
+    assert.notEqual(replacement.bearerToken, original.bearerToken);
+    assert.notEqual(
+      replacement.supervisor.generationId,
+      original.supervisor?.generationId
+    );
+    assertChild(replacement.pid, detachedSupervisor);
+    await cliCommand(dir, 'stop');
+    await waitFor('restarted supervisor exit', () =>
+      !existsSync(`/proc/${detachedSupervisor}`) ? true : undefined
+    );
+    await waitFor('restarted child exit', () =>
+      !existsSync(`/proc/${detachedChild}`) ? true : undefined
+    );
+    detachedSupervisor = undefined;
+    detachedChild = undefined;
+    assertStoppedRecords(dir);
+    console.log(
+      'actual coordinator stop and restart released their owned records'
+    );
+  } finally {
+    if (beforeRestart && beforeRestart.exitCode === null) {
+      if (restartOwnedPid !== undefined)
+        killChild(restartOwnedPid, beforeRestart.pid);
+      beforeRestart.kill();
+      await beforeRestart.exited;
+    }
+    if (ownedPid !== undefined && supervisor.exitCode === null)
+      killChild(ownedPid, supervisor.pid);
+    if (supervisor.exitCode === null) supervisor.kill();
+    await supervisor.exited;
+    if (detachedSupervisor !== undefined) {
+      if (detachedChild !== undefined)
+        killChild(detachedChild, detachedSupervisor);
+      killFixtureSupervisor(detachedSupervisor, dir);
+    }
+  }
+}
+
 try {
   await supervisorRecovery();
   await replacementSurvivesOldOwner();
   await replacementWinsStartupRace();
+  await intentionalStopAndRestart();
 } finally {
   for (const child of children) if (child.exitCode === null) child.kill();
   await Promise.all(children.map((child) => child.exited));
