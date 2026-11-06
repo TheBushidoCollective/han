@@ -7,6 +7,22 @@ use crate::{runtime::{Descriptor, SupervisorBinding}, windows_process_identity::
 const ACTIVE: &str = "coordinator.json";
 const RESERVATION: &str = "supervisor.reservation.json";
 const OWNER: &str = "supervisor.owner.json";
+// These process-lifetime owners prevent a successor from acquiring the lease
+// while detached connection tasks may still be unwinding.
+static DIRECTORY: std::sync::OnceLock<Arc<PinnedDirectory>> = std::sync::OnceLock::new();
+static LEASE: std::sync::OnceLock<CoordinatorLease<'static>> = std::sync::OnceLock::new();
+
+pub(crate) fn retain_directory(runtime: &Path) -> io::Result<&'static Arc<PinnedDirectory>> {
+    DIRECTORY.set(Arc::new(open_runtime(runtime, false)?))
+        .map_err(|_| invalid("coordinator directory already initialized"))?;
+    DIRECTORY.get().ok_or_else(|| invalid("coordinator directory unavailable"))
+}
+
+pub(crate) fn retain_lease(directory: &'static Arc<PinnedDirectory>) -> io::Result<&'static CoordinatorLease<'static>> {
+    LEASE.set(CoordinatorLease::acquire(directory.as_ref())?)
+        .map_err(|_| invalid("coordinator lease already initialized"))?;
+    LEASE.get().ok_or_else(|| invalid("coordinator lease unavailable"))
+}
 const PID: &str = "supervisor.pid";
 
 fn invalid(message: &'static str) -> io::Error {

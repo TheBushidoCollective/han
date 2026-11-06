@@ -271,9 +271,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let data_dir = runtime::data_dir(cli.data_dir.as_deref())?;
     let runtime_dir = runtime::prepare(&data_dir)?;
     #[cfg(windows)]
-    let windows_directory = Arc::new(windows_coordinator_runtime::open_runtime(&runtime_dir, false)?);
+    let windows_directory = windows_coordinator_runtime::retain_directory(&runtime_dir)?;
+    // Keep the pin and lifetime lock through process termination, including
+    // unwinding after server startup. Connection tasks may outlive abort.
     #[cfg(windows)]
-    let windows_lease = windows_secure_fs::CoordinatorLease::acquire(&windows_directory)?;
+    let windows_lease = windows_coordinator_runtime::retain_lease(windows_directory)?;
 
     // Acquire coordinator lock. Another live coordinator already holding it
     // is not an error: exit cleanly (status 0) so the TypeScript supervisor's
@@ -371,7 +373,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(not(windows))]
     let published_descriptor = runtime::PublishedDescriptor::publish(&runtime_dir, &descriptor)?;
     #[cfg(windows)]
-    let published_descriptor = runtime::PublishedDescriptor::publish(&runtime_dir, &descriptor, windows_directory.clone(), &windows_lease)?;
+    let published_descriptor = runtime::PublishedDescriptor::publish(&runtime_dir, &descriptor, windows_directory.clone(), windows_lease)?;
     #[cfg(not(windows))]
     let shutdown_context = runtime::ShutdownContext { runtime: runtime_dir.clone(), descriptor: descriptor.clone() };
     #[cfg(windows)]
