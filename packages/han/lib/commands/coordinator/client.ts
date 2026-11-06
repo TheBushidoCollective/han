@@ -58,6 +58,8 @@ export interface GraphQLResponse<T = unknown> {
 export class CoordinatorClient {
   private wsClient: Client | null = null;
 
+  constructor(_port?: number) {}
+
   /**
    * Check if the coordinator is available
    */

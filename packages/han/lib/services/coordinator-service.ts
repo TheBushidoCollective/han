@@ -614,13 +614,14 @@ export async function startCoordinatorService(
 
 /**
  * Stop the coordinator service.
- * Sends graceful shutdown via gRPC, falls back to process kill.
+ * Sends an authenticated graceful shutdown to the owned coordinator.
  *
  * Only sends the shutdown when this process actually owns the coordinator
  * process (i.e. it spawned it). On the attach path — where an
  * already-healthy coordinator started by someone else was simply connected
  * to — tearing it down here would kill a coordinator every other attached
  * `han` invocation is relying on.
+ */
 export async function stopCoordinatorService(): Promise<void> {
   if (state.restartTimer) {
     clearTimeout(state.restartTimer);
