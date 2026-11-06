@@ -136,3 +136,4 @@ $results | ConvertTo-Json -Compress | Set-Content -LiteralPath $Result -Encoding
     if ($accountCreated) { Remove-LocalUser -Name $name -ErrorAction Stop }
     if (Test-Path -LiteralPath $root) { Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction Stop }
 }
+$global:LASTEXITCODE = 0
