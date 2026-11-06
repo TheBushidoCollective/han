@@ -374,7 +374,7 @@ function assertStoppedRecords(dir: string): void {
   );
 }
 
-function killFixtureSupervisor(pid: number, dir: string): void {
+function killFixtureSupervisor(pid: number, dir: string, child?: number): void {
   try {
     const env = readFileSync(`/proc/${pid}/environ`, 'utf8').split('\0');
     assert.ok(
@@ -386,6 +386,7 @@ function killFixtureSupervisor(pid: number, dir: string): void {
       command.includes(cli),
       'refusing to signal a different executable'
     );
+    if (child !== undefined) killChild(child, pid);
     process.kill(pid, 'SIGKILL');
   } catch (error) {
     if (
@@ -509,11 +510,18 @@ async function intentionalStopAndRestart(): Promise<void> {
       killChild(ownedPid, supervisor.pid);
     if (supervisor.exitCode === null) supervisor.kill();
     await supervisor.exited;
-    if (detachedSupervisor !== undefined) {
-      if (detachedChild !== undefined)
-        killChild(detachedChild, detachedSupervisor);
-      killFixtureSupervisor(detachedSupervisor, dir);
+    const remaining = readDescriptor(dir);
+    if (
+      detachedSupervisor === undefined &&
+      remaining?.supervisor &&
+      remaining.supervisor.pid !== supervisor.pid &&
+      remaining.supervisor.pid !== beforeRestart?.pid
+    ) {
+      detachedSupervisor = remaining.supervisor.pid;
+      detachedChild = remaining.pid;
     }
+    if (detachedSupervisor !== undefined)
+      killFixtureSupervisor(detachedSupervisor, dir, detachedChild);
   }
 }
 
