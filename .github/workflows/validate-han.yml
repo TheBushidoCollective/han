@@ -88,7 +88,7 @@ jobs:
           name: han-cli-coverage
           disable_search: true
           fail_ci_if_error: true
-          handle_no_reports_found: true
+          handle_no_reports_found: false
 
   root-biome:
     name: Root Non-Mutating Biome Check
