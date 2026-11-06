@@ -138,7 +138,7 @@ jobs:
           node-version: "22"
 
       - name: Run root Biome check
-        run: npx -y @biomejs/biome@2.6.5 check --error-on-warnings .
+        run: npx -y @biomejs/biome check --error-on-warnings .
 
   deploy-scripts:
     name: Validate Deploy Scripts
