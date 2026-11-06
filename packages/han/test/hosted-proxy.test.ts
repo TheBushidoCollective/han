@@ -17,7 +17,18 @@ import { startHostedDashboardProxy } from '../lib/commands/browse/hosted-proxy.t
 
 const cleanups: Array<() => void | Promise<void>> = [];
 afterEach(async () => {
-  for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
+  for (const [index, cleanup] of cleanups.splice(0).reverse().entries()) {
+    const { promise, reject } = Promise.withResolvers<never>();
+    const timer = setTimeout(
+      () => reject(new Error(`Gateway cleanup ${index} timed out`)),
+      3000
+    );
+    try {
+      await Promise.race([cleanup(), promise]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
 });
 
 async function setup() {
