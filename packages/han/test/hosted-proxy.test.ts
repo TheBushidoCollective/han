@@ -7,7 +7,8 @@ import {
   rmSync,
   statSync,
 } from 'node:fs';
-import { request } from 'node:http';
+import { connect } from 'node:net';
+
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -162,17 +163,25 @@ describe('local dashboard gateway', () => {
     const { proxy, seen } = await setup();
     const target = new URL(proxy.url);
     for (const path of ['//example.com/steal', 'http://example.com/steal']) {
-      const result = Promise.withResolvers<number>();
-      const req = request(
-        { hostname: target.hostname, port: target.port, path, method: 'GET' },
-        (res) => {
-          res.resume();
-          result.resolve(res.statusCode ?? 0);
+      const { promise, resolve, reject } = Promise.withResolvers<number>();
+      const socket = connect(Number(target.port), target.hostname);
+      let response = '';
+      socket.on('data', (chunk) => {
+        response += chunk.toString();
+        const code = Number(/^HTTP\/1\.[01] (\d+)/.exec(response)?.[1]);
+        if (code) {
+          socket.end();
+          resolve(code);
         }
-      );
-      req.on('error', result.reject);
-      req.end();
-      expect(await result.promise).toBe(400);
+      });
+      socket.on('error', reject);
+      socket.on('connect', () => {
+        socket.write(
+          `GET ${path} HTTP/1.1\r\nHost: ${target.host}\r\nConnection: close\r\n\r\n`
+        );
+      });
+      const status = await promise;
+      expect(status).toBe(400);
     }
     expect(seen.some((item) => item.path === '/steal')).toBe(false);
   });
