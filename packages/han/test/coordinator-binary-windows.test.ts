@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, parse } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 // Exercise discovery in a fresh process so the executable, cwd, home and PATH
@@ -86,7 +86,7 @@ test.skipIf(process.platform !== 'win32')(
       );
       expect(discover()).toBeNull();
       const rootHelper = join(
-        process.env.SystemDrive || 'C:',
+        parse(cwd).root,
         'tmp',
         '.han',
         'bin',
@@ -94,14 +94,16 @@ test.skipIf(process.platform !== 'win32')(
       );
       if (existsSync(rootHelper))
         throw new Error('Root fixture already exists');
+      let rootHelperCreated = false;
       try {
         mkdirSync(dirname(rootHelper), { recursive: true });
         writeFileSync(rootHelper, 'untrusted root helper', { flag: 'wx' });
+        rootHelperCreated = true;
         expect(
           discover(jsEntry, { ...env, HOME: '', USERPROFILE: '' })
         ).toBeNull();
       } finally {
-        rmSync(rootHelper, { force: true });
+        if (rootHelperCreated) rmSync(rootHelper, { force: true });
       }
 
       const sibling = join(bin, 'han-coordinator.exe');
