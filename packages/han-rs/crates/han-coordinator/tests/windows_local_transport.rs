@@ -43,7 +43,7 @@ fn call(dir: &Path, op: &str, extra: Value) -> Value {
     let mut request = json!({"version": 1, "dataDir": dir, "op": op});
     request.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
     let out = helper_raw(&serde_json::to_vec(&request).unwrap());
-    assert!(out.status.success(), "helper {op} failed: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(out.status.success(), "helper {op} failed");
     assert!(out.stdout.len() <= 128 * 1024);
     let response: Value = serde_json::from_slice(&out.stdout).unwrap();
     assert_eq!(response["version"], 1);
@@ -117,7 +117,7 @@ async fn shutdown(dir: &Path, d: &Value, binding: &Value) {
     assert_eq!(response.bytes().await.unwrap()[0], 0);
     assert!(read_descriptor(dir, json!({"kind":"active"})).is_null());
     let intent = read_descriptor(dir, json!({"kind":"stopping", "binding":binding}));
-    assert_eq!(intent["descriptor"], *d);
+    assert!(intent["descriptor"] == *d);
 }
 
 fn remove_intent(dir: &Path, d: &Value, binding: &Value) {
@@ -140,13 +140,44 @@ fn windows_helper_rejects_malformed_and_oversized_input() {
     assert!(helper_raw(&serde_json::to_vec(&valid).unwrap()).status.success());
 }
 
+#[test]
+fn runtime_prepare_recovers_missing_lock_without_readers_creating_it() {
+    let dir = TestDir::new();
+    assert_eq!(call(dir.path(), "runtime.prepare", json!({}))["status"], "prepared");
+    let lock = dir.path().join("runtime/descriptor-publication.lock");
+    std::fs::remove_file(&lock).unwrap();
+    for (op, extra) in [("supervisor.read", json!({})), ("descriptor.read", json!({"target":{"kind":"active"}}))] {
+        let mut request = json!({"version":1,"dataDir":dir.path(),"op":op});
+        request.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
+        assert!(!helper_raw(&serde_json::to_vec(&request).unwrap()).status.success());
+        assert!(!lock.exists());
+    }
+    assert_eq!(call(dir.path(), "runtime.prepare", json!({}))["status"], "prepared");
+    assert_eq!(call(dir.path(), "runtime.prepare", json!({}))["status"], "prepared");
+    assert_eq!(call(dir.path(), "supervisor.read", json!({}))["status"], "absent");
+}
+
+#[test]
+fn malformed_request_reports_only_safe_diagnostic() {
+    let out = helper_raw(br#"{"secret":"sentinel-secret"}"#);
+    assert!(!out.status.success());
+    let response: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(response["version"], 1);
+    assert_eq!(response["ok"], false);
+    assert_eq!(response["error"]["stage"], "input_validation");
+    assert_eq!(response["error"]["kind"], "invalid_data");
+    assert!(!String::from_utf8_lossy(&out.stdout).contains("sentinel-secret"));
+    assert!(!String::from_utf8_lossy(&out.stderr).contains("sentinel-secret"));
+}
+
 #[tokio::test]
 async fn windows_supervised_wire_shutdown_and_successor_isolation() {
     let dir = TestDir::new();
     let claim = acquire(dir.path());
     let status = call(dir.path(), "supervisor.read", json!({}));
-    assert_eq!(status["process"], claim["process"]);
-    assert_eq!(status["nonce"], claim["nonce"]);
+    assert_eq!(status["status"], "present");
+    assert!(status["process"] == claim["process"]);
+    assert!(status["nonce"] == claim["nonce"]);
     assert_eq!(call(dir.path(), "supervisor.check", json!({"claim":claim}))["status"], "owned");
     assert_eq!(call(dir.path(), "supervisor.acquire", json!({}))["status"], "blocked");
     let generation = uuid::Uuid::new_v4().to_string();
@@ -154,7 +185,17 @@ async fn windows_supervised_wire_shutdown_and_successor_isolation() {
     let mut daemon = spawn(dir.path(), &claim, &generation);
     let d = wait_descriptor(dir.path(), &mut daemon).await;
     assert_eq!(d["pid"], daemon.0.id());
-    assert_eq!(d["supervisor"], binding);
+    assert_eq!(d["process"]["pid"], daemon.0.id());
+    assert_eq!(call(dir.path(), "process.state", json!({"process":d["process"]}))["status"], "alive");
+    let mut old_process = d["process"].clone();
+    let time = old_process["creationTime"].as_str().unwrap().parse::<u64>().unwrap();
+    old_process["creationTime"] = json!((time + 1).to_string());
+    assert_eq!(call(dir.path(), "process.state", json!({"process":old_process}))["status"], "gone");
+    let mut wrong_sid = d["process"].clone();
+    wrong_sid["userSid"] = if wrong_sid["userSid"] == "S-1-5-18" { json!("S-1-5-19") } else { json!("S-1-5-18") };
+    let request = json!({"version":1, "dataDir":dir.path(), "op":"process.state", "process":wrong_sid});
+    assert!(!helper_raw(&serde_json::to_vec(&request).unwrap()).status.success());
+    assert!(d["supervisor"] == binding);
     let http = client(&d);
     let url = format!("https://127.0.0.1:{}/health", d["httpsPort"]);
     let token = d["bearerToken"].as_str().unwrap();
@@ -180,13 +221,13 @@ async fn windows_supervised_wire_shutdown_and_successor_isolation() {
     assert_eq!(denied.status(), reqwest::StatusCode::FORBIDDEN);
     let denied = http.post(&stop).header("content-type", "application/grpc-web+proto").header("host", format!("evil.example:{}", d["grpcPort"])).bearer_auth(token).body(vec![0u8;5]).send().await.unwrap();
     assert_eq!(denied.status(), reqwest::StatusCode::MISDIRECTED_REQUEST);
-    assert_eq!(read_descriptor(dir.path(), json!({"kind":"active"}))["descriptor"], d);
+    assert!(read_descriptor(dir.path(), json!({"kind":"active"}))["descriptor"] == d);
     shutdown(dir.path(), &d, &binding).await;
     wait_exit(&mut daemon).await;
     remove_intent(dir.path(), &d, &binding);
     assert_eq!(call(dir.path(), "supervisor.release", json!({"claim":claim}))["status"], "released");
     let successor = acquire(dir.path());
-    assert_ne!(successor["nonce"], claim["nonce"]);
+    assert!(successor["nonce"] != claim["nonce"]);
     assert_eq!(call(dir.path(), "supervisor.release", json!({"claim":claim}))["status"], "changed");
     assert_eq!(call(dir.path(), "supervisor.check", json!({"claim":successor}))["status"], "owned");
     let next_generation = uuid::Uuid::new_v4().to_string();
@@ -197,7 +238,7 @@ async fn windows_supervised_wire_shutdown_and_successor_isolation() {
     assert!(read_descriptor(dir.path(), json!({"kind":"stopping","binding":binding})).is_null());
     let stale = json!({"version":1,"dataDir":dir.path(),"op":"intent.remove","binding":binding,"childPid":d["pid"],"descriptor":d});
     assert!(!helper_raw(&serde_json::to_vec(&stale).unwrap()).status.success());
-    assert_eq!(read_descriptor(dir.path(), json!({"kind":"active"}))["descriptor"], next_d);
+    assert!(read_descriptor(dir.path(), json!({"kind":"active"}))["descriptor"] == next_d);
     shutdown(dir.path(), &next_d, &next_binding).await;
     wait_exit(&mut next).await;
     remove_intent(dir.path(), &next_d, &next_binding);
@@ -229,7 +270,7 @@ async fn windows_crashed_coordinator_is_replaced_by_fresh_generation() {
     let mut replacement = spawn(dir.path(), &claim, &generation);
     let descriptor = wait_descriptor(dir.path(), &mut replacement).await;
     assert_ne!(old_descriptor["instanceId"], descriptor["instanceId"]);
-    assert_eq!(descriptor["supervisor"], binding);
+    assert!(descriptor["supervisor"] == binding);
     let url = format!("https://127.0.0.1:{}/health", descriptor["httpsPort"]);
     assert_eq!(client(&descriptor).get(url).bearer_auth(descriptor["bearerToken"].as_str().unwrap()).send().await.unwrap().status(), reqwest::StatusCode::OK);
     shutdown(dir.path(), &descriptor, &binding).await;
@@ -258,8 +299,11 @@ fn windows_partial_claim_crash_recovers_from_dead_owner() {
     assert_eq!(call(dir.path(), "supervisor.acquire", json!({}))["status"], "blocked");
     child.0.kill().unwrap();
     child.0.wait().unwrap();
+    let reservation = std::fs::read(dir.path().join("runtime/supervisor.reservation.json")).unwrap();
+    assert_eq!(call(dir.path(), "supervisor.read", json!({}))["status"], "recoverable");
+    assert!(std::fs::read(dir.path().join("runtime/supervisor.reservation.json")).unwrap() == reservation);
     let replacement = acquire(dir.path());
-    assert_ne!(old["nonce"], replacement["nonce"]);
+    assert!(old["nonce"] != replacement["nonce"]);
     assert_eq!(call(dir.path(), "supervisor.check", json!({"claim":replacement}))["status"], "owned");
     assert_eq!(call(dir.path(), "supervisor.release", json!({"claim":replacement}))["status"], "released");
 }
