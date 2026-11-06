@@ -47,10 +47,10 @@ export function findCoordinatorBinary(): string | null {
     if (existsSync(pkgPath)) return pkgPath;
   } catch {}
   try {
-    const result = Bun.spawnSync(
-      [process.platform === 'win32' ? 'where' : 'which', binaryName],
-      { stdout: 'pipe', stderr: 'ignore' }
-    );
+    const result = Bun.spawnSync(['which', binaryName], {
+      stdout: 'pipe',
+      stderr: 'ignore',
+    });
     if (result.exitCode === 0) {
       const path = result.stdout.toString().trim();
       if (path && existsSync(path)) return path;

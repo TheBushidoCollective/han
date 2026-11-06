@@ -91,21 +91,19 @@ describe('Biome validation hook', () => {
     };
   }
 
-  test.each([
-    'missing',
-    'empty',
-    'error',
-    'disabled',
-  ])('Stop fallback for %s validates without writing', (mode) => {
-    const file = join(project, 'example.js');
-    writeFileSync(file, dirty);
-    const resolved = resolveStop(mode);
-    expect(resolved.skipped).toBe(false);
-    const result = run(resolved.command);
-    expect(result.status).not.toBe(0);
-    expect(`${result.stdout}${result.stderr}`).toContain('format');
-    expect(readFileSync(file, 'utf8')).toBe(dirty);
-  });
+  test.each(['missing', 'empty', 'error', 'disabled'])(
+    'Stop fallback for %s validates without writing',
+    (mode) => {
+      const file = join(project, 'example.js');
+      writeFileSync(file, dirty);
+      const resolved = resolveStop(mode);
+      expect(resolved.skipped).toBe(false);
+      const result = run(resolved.command);
+      expect(result.status).not.toBe(0);
+      expect(`${result.stdout}${result.stderr}`).toContain('format');
+      expect(readFileSync(file, 'utf8')).toBe(dirty);
+    }
+  );
 
   test('Stop skips a known session set with no matching files', () => {
     writeFileSync(join(project, 'outside.txt'), 'not a matching file');

@@ -165,7 +165,10 @@ test('acquisition and conditional release use complete claims and reject changed
     });
     expect(sent().op).toBe(`${kind}.acquire`);
     output = { status: 'blocked', ownerPid: 123 };
-    expect(bridge.windowsAcquire(dir, kind)).toEqual(output);
+    expect(bridge.windowsAcquire(dir, kind)).toEqual({
+      status: 'blocked',
+      ownerPid: 123,
+    });
     output = {
       status: 'owned',
       claim: {
@@ -208,16 +211,18 @@ test('acquisition and conditional release use complete claims and reject changed
 });
 
 test('supervisor identity and process state reject PID reuse and uncertainty', () => {
-  output = {
-    status: 'present',
+  const present = {
+    status: 'present' as const,
     pid: process.pid,
     nonce,
     process: processIdentity,
   };
-  expect(bridge.windowsReadSupervisor(dir)).toEqual(output);
-  for (const status of ['absent', 'recoverable']) {
-    output = { status };
-    expect(bridge.windowsReadSupervisor(dir)).toEqual(output);
+  output = present;
+  expect(bridge.windowsReadSupervisor(dir)).toEqual(present);
+  for (const status of ['absent', 'recoverable'] as const) {
+    const record = { status };
+    output = record;
+    expect(bridge.windowsReadSupervisor(dir)).toEqual(record);
   }
   output = {
     status: 'present',
