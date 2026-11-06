@@ -988,8 +988,21 @@ impl CoordinatorLease<'_> {
     pub(crate) fn publish(&self, binding_name: &OsStr, binding: &RecordSnapshot,
         active_name: &OsStr, predecessor: Option<&RecordSnapshot>, bytes: &[u8]) -> io::Result<Publication> {
         let guard = self.guard()?;
-        if !guard.matches(binding_name, binding)? {
-            return Err(invalid("publisher binding changed"));
+        self.publish_guarded(&guard, &[(binding_name, binding)], active_name, predecessor, bytes)
+    }
+
+    /// Compare every ownership record under one continuously held publication
+    /// guard before retiring or installing any active record.
+    pub(crate) fn publish_guarded(&self, guard: &RecordGuard<'_>,
+        bindings: &[(&OsStr, &RecordSnapshot)], active_name: &OsStr,
+        predecessor: Option<&RecordSnapshot>, bytes: &[u8]) -> io::Result<Publication> {
+        if !std::ptr::eq(self.directory, guard.guard._directory) || bindings.is_empty() {
+            return Err(invalid("publisher guard or bindings invalid"));
+        }
+        for (name, expected) in bindings {
+            if !guard.matches(name, expected)? {
+                return Err(invalid("publisher binding changed"));
+            }
         }
         let (_, temporary) = PrivateRecord::create_temp(self.directory, bytes)?;
         let temp_id = temporary.identity;
