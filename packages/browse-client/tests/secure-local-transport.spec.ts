@@ -250,13 +250,34 @@ test("real launcher, gateway and live GraphQL subscriptions with security contro
 	let coordinator: ChildProcess | undefined;
 	const context = await browser.newContext();
 	const page = await context.newPage();
-	const responses: Array<{ path: string; status: number }> = [];
+	const responses: Array<{
+		path: string;
+		status: number;
+		site?: string;
+		mode?: string;
+		dest?: string;
+		origin?: string;
+	}> = [];
 	const pageErrors: string[] = [];
-	page.on("response", (response) => {
+	page.on("response", async (response) => {
 		try {
 			const target = new URL(response.url());
-			if (target.hostname === "127.0.0.1")
-				responses.push({ path: target.pathname, status: response.status() });
+			if (target.hostname === "127.0.0.1") {
+				const headers = await response.request().allHeaders();
+				responses.push({
+					path: target.pathname,
+					status: response.status(),
+					site: headers["sec-fetch-site"],
+					mode: headers["sec-fetch-mode"],
+					dest: headers["sec-fetch-dest"],
+					origin:
+						headers.origin === "null"
+							? "null"
+							: headers.origin
+								? "present"
+								: "absent",
+				});
+			}
 		} catch {
 			/* Ignore non-URL responses. */
 		}
