@@ -726,7 +726,10 @@ test("real launcher, gateway and live GraphQL subscriptions with security contro
 				),
 			).toBe(200);
 			await until(() => interrupted, "deliberately interrupted WebSocket");
+			{
 			await brokenPage.locator(`a[href="/sessions/${id}"]`).click();
+			await brokenPage.getByRole("button", { name: /^Messages(?: \(\d+\))?$/ }).click();
+		}
 			await expect(
 				brokenPage.getByText(message, { exact: false }),
 			).toBeVisible();
