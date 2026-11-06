@@ -22,7 +22,7 @@ use windows_sys::Wdk::Storage::FileSystem::{
 };
 use windows_sys::Win32::Foundation::{RtlNtStatusToDosError, INVALID_HANDLE_VALUE, OBJ_CASE_INSENSITIVE, UNICODE_STRING};
 use windows_sys::Win32::Storage::FileSystem::{
-    CreateFileW, GetDriveTypeW, GetFileInformationByHandleEx, GetVolumeInformationByHandleW,
+    CreateFileW, ReOpenFile, GetDriveTypeW, GetFileInformationByHandleEx, GetVolumeInformationByHandleW,
     LockFileEx, SetFileInformationByHandle, UnlockFileEx, FileAttributeTagInfo,
     FileDispositionInfo, FileIdInfo, FileStandardInfo,
     FILE_ATTRIBUTE_REPARSE_POINT, FILE_ATTRIBUTE_TAG_INFO, FILE_DISPOSITION_INFO,
@@ -61,6 +61,16 @@ pub(crate) struct PinnedDirectory {
 
 impl PinnedDirectory {
     pub(crate) fn open_data_directory(path: &Path) -> io::Result<Self> {
+        Self::data_directory(path, false)
+    }
+
+    /// Prepare missing data-directory components with private security at
+    /// creation. Existing components remain subject to full validation.
+    pub(crate) fn prepare_data_directory(path: &Path) -> io::Result<Self> {
+        Self::data_directory(path, true)
+    }
+
+    fn data_directory(path: &Path, create: bool) -> io::Result<Self> {
         let mut parts = path.components();
         let drive = match parts.next() {
             Some(Component::Prefix(prefix)) => match prefix.kind() {
@@ -113,7 +123,34 @@ impl PinnedDirectory {
                 access |= windows_sys::Win32::Storage::FileSystem::FILE_ADD_FILE
                     | windows_sys::Win32::Storage::FileSystem::FILE_ADD_SUBDIRECTORY;
             }
-            let next = open_child(handles.last().unwrap(), name, true, access)?;
+            let parent = handles.last().unwrap();
+            let next = match open_child(parent, name, true, access) {
+                Ok(next) => next,
+                Err(error) if create && error.kind() == io::ErrorKind::NotFound => {
+                    // Reopen the already-pinned parent by handle, never by
+                    // pathname, to request creation rights only where needed.
+                    let raw = unsafe { ReOpenFile(parent.as_raw_handle() as _,
+                        FILE_READ_ATTRIBUTES | FILE_TRAVERSE | READ_CONTROL
+                            | windows_sys::Win32::Storage::FileSystem::FILE_ADD_SUBDIRECTORY,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE,
+                        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT) };
+                    if raw == INVALID_HANDLE_VALUE { return Err(io::Error::last_os_error()); }
+                    let creation_parent = unsafe { OwnedHandle::from_raw_handle(raw as _) };
+                    let pinned_id: FILE_ID_INFO = file_info(parent, FileIdInfo)?;
+                    let reopened_id: FILE_ID_INFO = file_info(&creation_parent, FileIdInfo)?;
+                    if pinned_id.VolumeSerialNumber != reopened_id.VolumeSerialNumber
+                        || pinned_id.FileId.Identifier != reopened_id.FileId.Identifier {
+                        return Err(invalid("reopened parent identity changed"));
+                    }
+                    match create_private_child(&creation_parent, name, true, access) {
+                        Ok(next) => next,
+                        Err(error) if error.kind() == io::ErrorKind::AlreadyExists =>
+                            open_child(parent, name, true, access)?,
+                        Err(error) => return Err(error),
+                    }
+                }
+                Err(error) => return Err(error),
+            };
             if parts.peek().is_some() { verify_ancestor_acl(&next)?; }
             handles.push(next);
         }
@@ -676,6 +713,20 @@ mod tests {
         drop(file);
         assert!(!temp.path().join("third").exists());
         assert!(temp.path().join("second").exists());
+    }
+
+    #[test]
+    fn data_directory_reads_do_not_create_and_mutations_create_private_components() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("new-parent").join("han");
+        assert!(PinnedDirectory::open_data_directory(&path).is_err());
+        assert!(!temp.path().join("new-parent").exists());
+        let pinned = PinnedDirectory::prepare_data_directory(&path).unwrap();
+        assert!(path.is_dir());
+        verify_private_acl(pinned.handle()).unwrap();
+        drop(pinned);
+        let reopened = PinnedDirectory::open_data_directory(&path).unwrap();
+        verify_private_acl(reopened.handle()).unwrap();
     }
 
     #[test]
