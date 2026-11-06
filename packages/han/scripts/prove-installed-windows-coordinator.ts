@@ -286,16 +286,17 @@ async function main(): Promise<void> {
       !(await ownedProcess(d.process, coordinator, false)) ? true : undefined
     );
   };
+  const ensureStopped = async (identity: Identity, image: string) => {
+    if (!(await ownedProcess(identity, image, false))) return;
+    assert.ok(await ownedProcess(identity, image, true));
+    await waitFor('fixture process exit', async () =>
+      !(await ownedProcess(identity, image, false)) ? true : undefined
+    );
+  };
   const killPair = async (d: Descriptor) => {
     const supervisor = register(d);
-    assert.ok(await ownedProcess(supervisor, cli, true));
-    await waitFor('supervisor exit', async () =>
-      !(await ownedProcess(supervisor, cli, false)) ? true : undefined
-    );
-    assert.ok(await ownedProcess(d.process, coordinator, true));
-    await waitFor('coordinator exit', async () =>
-      !(await ownedProcess(d.process, coordinator, false)) ? true : undefined
-    );
+    await ensureStopped(supervisor, cli);
+    await ensureStopped(d.process, coordinator);
   };
 
   try {
@@ -354,9 +355,10 @@ async function main(): Promise<void> {
     current = await started(beforeRestart);
     assert.ok(existsSync(lock));
 
-    phase = 'partial-claim-status';
+    phase = 'partial-claim-kill';
     const beforePartial = current;
     await killPair(beforePartial);
+    phase = 'partial-claim-status';
     rmSync(pidFile);
     const reservationBytes = readFileSync(reservation);
     const ownerBytes = readFileSync(owner);

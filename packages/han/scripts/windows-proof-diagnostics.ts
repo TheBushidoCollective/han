@@ -79,6 +79,7 @@ const phases = [
   'crash-recovery',
   'restart',
   'stop',
+  'partial-claim-kill',
   'missing-lock-status',
   'missing-lock-start',
   'partial-claim-status',
