@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.22.0] - 2026-11-06
+
+### Added
+
+- catalog and track metrics from every harness, and bridge omp (#109) ([a7a02ccc](../../commit/a7a02ccc))
+- bring han current with the Claude Code 2.1.228 harness surface (#107) ([3405f340](../../commit/3405f340))
+- support all Claude Code hook events through 2.1.215 ([658961d5](../../commit/658961d5))
+
+### Fixed
+
+- restore package manifest formatting after release ([2f75d570](../../commit/2f75d570))
+- preserve hook gates in Antigravity discovery ([32242c12](../../commit/32242c12))
+- type migrated plugin settings as keyed records ([63a8e41a](../../commit/63a8e41a))
+- align formatting and import order with root Biome diagnostics ([a55aa7b2](../../commit/a55aa7b2))
+- type isolated hook test environment ([0ed20a15](../../commit/0ed20a15))
+- make biome hook validation non-mutating ([ab66ee21](../../commit/ab66ee21))
+- detect Next applications and use project lint script ([48688018](../../commit/48688018))
+- preserve conflicting migration settings ([f11fc288](../../commit/f11fc288))
+- rename reserved plugin names and migrate installs ([ff836c6f](../../commit/ff836c6f))
+- claim the supervisor PID file atomically ([c9d74c1a](../../commit/c9d74c1a))
+- probe the health route the coordinator actually serves ([89238e60](../../commit/89238e60))
+- stop the spawn-storm leak on unhealthy starts ([19336b19](../../commit/19336b19))
+- sanitize Windows project path slugs (#105) ([6529db3b](../../commit/6529db3b))
+- remove Reddit from the public marketplace (#114) ([86e63c91](../../commit/86e63c91))
+- serve the dashboard from loopback and create the tables it reads (#112) ([b13c116b](../../commit/b13c116b))
+- three defects behind the hanging dashboard (#111) ([3aa22bd6](../../commit/3aa22bd6))
+- ship a tools list in kiro-agent.json ([ace6e0f7](../../commit/ace6e0f7))
+
+### Other
+
+- Merge branch 'main' of github.com:TheBushidoCollective/han into pr-117 ([c5641a7e](../../commit/c5641a7e))
+- allow npm startup on loaded CI runners ([2368a936](../../commit/2368a936))
+- isolate hook UI renders and await completed row ([a134905c](../../commit/a134905c))
+- align root Biome check with hook and add CLI migrate subprocess test ([e30bfb56](../../commit/e30bfb56))
+- Fix reported root Biome diagnostics ([71209040](../../commit/71209040))
+- verify Stop validation diagnostics ([9aae7809](../../commit/9aae7809))
+- Merge branch 'fix/plugin-reserved-names' of github.com:TheBushidoCollective/han into integrate/han-hook-validation-20261105 ([7298f9b9](../../commit/7298f9b9))
+- cover isolated Stop hook dispatch ([fa122fb7](../../commit/fa122fb7))
+- Merge branch 'fix/biome-nonmutating' of github.com:TheBushidoCollective/han into integrate/han-hook-validation-20261105 ([b507113f](../../commit/b507113f))
+- Merge branch 'fix/bdd-hook-discovery' of github.com:TheBushidoCollective/han into integrate/han-hook-validation-20261105 ([3527c8e6](../../commit/3527c8e6))
+- Merge branch 'fix/next-hook-validation-1793932376' of github.com:TheBushidoCollective/han into integrate/han-hook-validation-20261105 ([b7e6a8a8](../../commit/b7e6a8a8))
+- Respect scoped gitignore rules during hook discovery ([337fb290](../../commit/337fb290))
+- Fix Playwright BDD hook discovery and configuration ([ad4f0c38](../../commit/ad4f0c38))
+
 ## [3.21.6] - 2026-11-06
 
 ### Added
