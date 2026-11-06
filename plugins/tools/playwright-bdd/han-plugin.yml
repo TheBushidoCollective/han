@@ -6,8 +6,8 @@ hooks:
       - "playwright.bdd.config.js"
       - "playwright.config.ts"
       - "playwright.config.js"
-    dir_test: >-
-      node -e 'const fs = require("node:fs"), path = require("node:path"); let dir = process.cwd(); for (;;) { const file = path.join(dir, "package.json"); if (fs.existsSync(file)) { try { const pkg = JSON.parse(fs.readFileSync(file, "utf8")); process.exit(Object.hasOwn(pkg.dependencies || {}, "playwright-bdd") || Object.hasOwn(pkg.devDependencies || {}, "playwright-bdd") ? 0 : 1); } catch { process.exit(1); } } const parent = path.dirname(dir); if (parent === dir) process.exit(1); dir = parent; }'
+    # Keep this a plain single-line scalar for bridge discovery.
+    dir_test: node -e 'const fs = require("node:fs"), path = require("node:path"); let dir = process.cwd(); for (;;) { const file = path.join(dir, "package.json"); if (fs.existsSync(file)) { try { const pkg = JSON.parse(fs.readFileSync(file, "utf8")); process.exit(Object.hasOwn(pkg.dependencies || {}, "playwright-bdd") || Object.hasOwn(pkg.devDependencies || {}, "playwright-bdd") ? 0 :1); } catch { process.exit(1); } } const parent = path.dirname(dir); if (parent === dir) process.exit(1); dir = parent; }';
     if_changed:
       - "**/*.feature"
       - "**/steps/**/*.ts"
