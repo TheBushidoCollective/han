@@ -58,6 +58,7 @@ mock.module('../lib/commands/coordinator/health.ts', () => ({
       : null,
 }));
 const realConnection = require('../lib/coordinator/connection.ts');
+const readActualDescriptor = realConnection.readCoordinatorDescriptor;
 const mockDescriptor = mock(() => ({
   transportVersion: 1,
   instanceId: 'owned',
@@ -70,7 +71,8 @@ const mockDescriptor = mock(() => ({
 }));
 mock.module('../lib/coordinator/connection.ts', () => ({
   ...realConnection,
-  readCoordinatorDescriptor: mockDescriptor,
+  readCoordinatorDescriptor: (path?: string) =>
+    path === undefined ? mockDescriptor() : readActualDescriptor(path),
 }));
 
 // existsSync returns true so findCoordinatorBinary "finds" a binary path.

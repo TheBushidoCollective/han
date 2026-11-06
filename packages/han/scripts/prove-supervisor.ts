@@ -421,6 +421,7 @@ async function intentionalStopAndRestart(): Promise<void> {
   let restartOwnedPid: number | undefined;
   let detachedSupervisor: number | undefined;
   let detachedChild: number | undefined;
+  let failed = true;
   try {
     const initial = await ready(dir, supervisor);
     ownedPid = initial.pid;
@@ -499,7 +500,22 @@ async function intentionalStopAndRestart(): Promise<void> {
     console.log(
       'actual coordinator stop and restart released their owned records'
     );
+    failed = false;
   } finally {
+    if (failed) {
+      console.error(
+        'supervisor diagnostics',
+        JSON.stringify({
+          exitCode: supervisor.exitCode,
+          pidFile: existsSync(join(dir, 'coordinator.pid')),
+          reservation: existsSync(join(dir, 'coordinator.pid.takeover')),
+          runtime: readdirSync(join(dir, 'runtime')),
+          processStat: existsSync(`/proc/${supervisor.pid}/stat`)
+            ? readFileSync(`/proc/${supervisor.pid}/stat`, 'utf8')
+            : null,
+        })
+      );
+    }
     if (beforeRestart && beforeRestart.exitCode === null) {
       if (restartOwnedPid !== undefined)
         killChild(restartOwnedPid, beforeRestart.pid);
@@ -510,6 +526,16 @@ async function intentionalStopAndRestart(): Promise<void> {
       killChild(ownedPid, supervisor.pid);
     if (supervisor.exitCode === null) supervisor.kill();
     await supervisor.exited;
+    if (failed) {
+      console.error(
+        'supervisor stdout:',
+        await new Response(supervisor.stdout as ReadableStream).text()
+      );
+      console.error(
+        'supervisor stderr:',
+        await new Response(supervisor.stderr as ReadableStream).text()
+      );
+    }
     const remaining = readDescriptor(dir);
     if (
       detachedSupervisor === undefined &&
