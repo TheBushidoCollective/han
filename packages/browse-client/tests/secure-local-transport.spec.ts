@@ -381,10 +381,9 @@ function observe(page: Page) {
 	const subscriptions = new Set<string>();
 	const events: Array<{ field: string; sessionId: string }> = [];
 	let acknowledged = false;
-	let closed = false;
+	let messageSocket: BrowserSocket | undefined;
 	page.on("websocket", (socket: BrowserSocket) => {
 		if (!socket.url().endsWith("/graphql")) return;
-		let carriesUiSubscription = false;
 		socket.on("framesent", ({ payload }) => {
 			try {
 				const frame = JSON.parse(String(payload));
@@ -392,11 +391,9 @@ function observe(page: Page) {
 					const query = String(frame.payload?.query ?? "");
 					if (query.includes("SessionsContentSubscription")) {
 						subscriptions.add("sessions");
-						carriesUiSubscription = true;
 					}
 					if (query.includes("SessionMessagesSubscription")) {
 						subscriptions.add("messages");
-						carriesUiSubscription = true;
 					}
 				}
 			} catch {
@@ -409,25 +406,21 @@ function observe(page: Page) {
 				if (frame.type === "connection_ack") acknowledged = true;
 				for (const field of ["sessionAdded", "sessionMessageAdded"]) {
 					const value = frame.payload?.data?.[field];
-					if (value?.sessionId)
+					if (value?.sessionId) {
 						events.push({ field, sessionId: value.sessionId });
+						if (field === "sessionMessageAdded") messageSocket = socket;
+					}
 				}
 			} catch {
 				/* Ignore non-JSON frames. */
 			}
-		});
-		socket.on("close", () => {
-			if (carriesUiSubscription) closed = true;
-		});
-		socket.on("socketerror", () => {
-			if (carriesUiSubscription) closed = true;
 		});
 	});
 	return {
 		subscriptions,
 		events,
 		acknowledged: () => acknowledged,
-		closed: () => closed,
+		closed: () => messageSocket?.isClosed() ?? false,
 	};
 }
 
@@ -776,6 +769,7 @@ test("real launcher, gateway and live GraphQL subscriptions with security contro
 			await broken.close();
 		}
 
+		expect(observed.closed()).toBe(false);
 		expect(await command(["coordinator", "stop"], env)).toBe(0);
 		await until(
 			() => observed.closed(),
