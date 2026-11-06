@@ -152,6 +152,12 @@ async function supervisorRecovery(): Promise<void> {
       } as RequestInit
     );
     assert.equal(unauthorized.status, 401);
+    await assert.rejects(
+      fetch(`https://127.0.0.1:${replacement.httpsPort}/health`, {
+        headers: { Authorization: `Bearer ${replacement.bearerToken}` },
+        tls: { ca: initial.certificatePem, rejectUnauthorized: true },
+      } as RequestInit)
+    );
     console.log(
       'supervisor restarted its crashed child with a new authenticated identity'
     );
