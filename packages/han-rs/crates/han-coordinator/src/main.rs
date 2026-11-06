@@ -98,6 +98,8 @@ struct Cli {
     /// Write PID to file (daemon mode).
     #[arg(long)]
     pid_file: Option<String>,
+    #[arg(long, hide = true)]
+    startup_receipt: bool,
 }
 
 /// How long a peer gets to finish its TLS handshake before being dropped.
@@ -242,14 +244,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if cli.pid_file.is_some() {
         return Err(std::io::Error::new(std::io::ErrorKind::Unsupported, "Windows PID-file publication is unavailable").into());
     }
+    #[cfg(not(windows))]
+    if cli.startup_receipt {
+        return Err(std::io::Error::new(std::io::ErrorKind::Unsupported, "--startup-receipt is supported only on Windows").into());
+    }
+    #[cfg(windows)]
+    if cli.startup_receipt && !cli.foreground {
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "--startup-receipt requires --foreground").into());
+    }
+
 
     // Initialize tracing
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
-        )
-        .init();
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
+    if cli.startup_receipt {
+        tracing_subscriber::fmt()
+            .with_env_filter(filter)
+            .with_writer(std::io::stderr)
+            .init();
+    } else {
+        tracing_subscriber::fmt()
+            .with_env_filter(filter)
+            .init();
+    }
 
     // Install ring crypto provider for rustls (must be before any TLS operations)
     let _ = rustls::crypto::ring::default_provider().install_default();
@@ -414,6 +431,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let published_descriptor = runtime::PublishedDescriptor::publish(&runtime_dir, &descriptor)?;
     #[cfg(windows)]
     let published_descriptor = runtime::PublishedDescriptor::publish(&runtime_dir, &descriptor, windows_directory.clone(), windows_lease)?;
+    #[cfg(windows)]
+    if cli.startup_receipt {
+        use std::io::Write;
+        let descriptor_bytes = serde_json::to_vec(&descriptor)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        if descriptor_bytes.len() > 65536 {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "descriptor exceeds 64 KiB receipt limit").into());
+        }
+        let receipt = serde_json::json!({
+            "version": 1,
+            "descriptor": descriptor,
+        });
+        let mut receipt_bytes = serde_json::to_vec(&receipt)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        receipt_bytes.push(b'\n');
+        if receipt_bytes.len() > 131072 {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "receipt exceeds 128 KiB envelope limit").into());
+        }
+        let mut stdout = std::io::stdout().lock();
+        stdout.write_all(&receipt_bytes)?;
+        stdout.flush()?;
+    }
     #[cfg(not(windows))]
     let shutdown_context = runtime::ShutdownContext { runtime: runtime_dir.clone(), descriptor: descriptor.clone() };
     #[cfg(windows)]

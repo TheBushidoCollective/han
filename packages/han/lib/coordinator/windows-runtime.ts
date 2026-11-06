@@ -1,6 +1,7 @@
 import { join, resolve } from 'node:path';
 import {
   type LocalCoordinatorDescriptor,
+  sameSupervisor,
   type SupervisorBinding,
   validateCoordinatorDescriptor,
   validSupervisorBinding,
@@ -99,8 +100,7 @@ type RuntimeOperation =
   | 'intent.remove'
   | 'launcher.create'
   | 'launcher.remove'
-  | 'process.state'
-  | 'process.child';
+  | 'process.state';
 type Category =
   | 'binary_missing'
   | 'request_too_large'
@@ -123,7 +123,6 @@ const stages = [
   'claim_acquisition',
   'descriptor_read',
   'process_state',
-  'process_child',
   'response_write',
 ];
 const kinds = [
@@ -448,21 +447,110 @@ export function windowsProcessState(
     throw new CoordinatorSecurityError('Windows process state is unknown');
   return s as 'alive' | 'gone';
 }
+export type WindowsChildDescriptor = LocalCoordinatorDescriptor & {
+  process: WindowsProcessIdentity;
+};
 
-export function windowsChildIdentity(
-  dataDir: string,
-  childPid: number
-): WindowsProcessIdentity | null {
-  if (!pid(childPid)) return invalid();
-  const value = request(dataDir, 'process.child', { childPid });
-  if (!object(value)) return fail('process.child', 'invalid_result');
-  if (value.status === 'gone' && Object.keys(value).length === 1) return null;
+export async function readWindowsChildDescriptor(
+  child: Bun.Subprocess,
+  expectedSupervisor: SupervisorBinding | null,
+  deadline: number
+): Promise<WindowsChildDescriptor | null> {
   if (
-    value.status !== 'alive' ||
-    Object.keys(value).length !== 2 ||
-    !processIdentity(value.process) ||
-    value.process.pid !== childPid
+    !child.stdout ||
+    typeof (child.stdout as ReadableStream<Uint8Array>).getReader !== 'function'
   )
-    return fail('process.child', 'invalid_result');
-  return value.process;
+    throw new CoordinatorSecurityError('Missing child stdout stream');
+  const reader = (child.stdout as ReadableStream<Uint8Array>).getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  const maxBytes = 131072;
+  try {
+    while (true) {
+      const remainingMs = deadline - Date.now();
+      if (remainingMs <= 0)
+        throw new CoordinatorSecurityError('Startup receipt timed out');
+
+      const readPromise = reader.read();
+      const timeout = Promise.withResolvers<never>();
+      const timer = setTimeout(() => {
+        timeout.reject(
+          new CoordinatorSecurityError('Startup receipt timed out')
+        );
+      }, remainingMs);
+
+      let chunk: ReadableStreamReadResult<Uint8Array>;
+      try {
+        chunk = await Promise.race([readPromise, timeout.promise]);
+      } finally {
+        clearTimeout(timer);
+      }
+
+      if (chunk.done) {
+        if (totalBytes === 0) return null;
+        throw new CoordinatorSecurityError('Incomplete startup receipt frame');
+      }
+
+      const value = chunk.value;
+      const lfIndex = value.indexOf(0x0a);
+      if (lfIndex !== -1) {
+        const slice = value.subarray(0, lfIndex);
+        chunks.push(slice);
+        totalBytes += slice.length;
+        if (totalBytes > maxBytes)
+          throw new CoordinatorSecurityError(
+            'Startup receipt exceeds size limit'
+          );
+        break;
+      }
+
+      chunks.push(value);
+      totalBytes += value.length;
+      if (totalBytes > maxBytes)
+        throw new CoordinatorSecurityError(
+          'Startup receipt exceeds size limit'
+        );
+    }
+  } finally {
+    try {
+      await reader.cancel();
+    } catch {}
+    reader.releaseLock();
+  }
+
+  const totalBuffer = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    totalBuffer.set(chunk, offset);
+    offset += chunk.length;
+  }
+  const text = new TextDecoder('utf-8', { fatal: true }).decode(totalBuffer);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new CoordinatorSecurityError('Malformed startup receipt JSON');
+  }
+  if (
+    !object(parsed) ||
+    parsed.version !== 1 ||
+    !('descriptor' in parsed) ||
+    Object.keys(parsed).length !== 2
+  )
+    throw new CoordinatorSecurityError('Invalid startup receipt envelope');
+
+  const rawDescriptor = parsed.descriptor;
+  const descriptor = validateCoordinatorDescriptor(
+    rawDescriptor as LocalCoordinatorDescriptor
+  );
+  if (!validWindowsProcessIdentity(descriptor.process))
+    throw new CoordinatorSecurityError(
+      'Missing Windows process identity in startup receipt'
+    );
+  if (descriptor.pid !== child.pid || descriptor.process.pid !== child.pid)
+    throw new CoordinatorSecurityError('Startup receipt PID mismatch');
+  if (!sameSupervisor(descriptor.supervisor, expectedSupervisor))
+    throw new CoordinatorSecurityError('Startup receipt supervisor mismatch');
+
+  return descriptor as WindowsChildDescriptor;
 }

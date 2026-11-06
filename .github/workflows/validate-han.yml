@@ -61,7 +61,8 @@ jobs:
             'test/coordinator-windows-runtime.test.ts',
             'test/coordinator-windows-health.test.ts',
             'test/coordinator-windows-startup.test.ts',
-            'test/windows-proof-diagnostics.test.ts'
+            'test/windows-proof-diagnostics.test.ts',
+            'test/coordinator-windows-receipt.test.ts'
           )
           foreach ($test in $tests) {
             bun test $test

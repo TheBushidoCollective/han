@@ -42,14 +42,15 @@ bun test test/coordinator-windows-runtime.test.ts
 bun test test/coordinator-windows-health.test.ts
 bun test test/coordinator-windows-startup.test.ts
 bun test test/windows-proof-diagnostics.test.ts
+bun test test/coordinator-windows-receipt.test.ts
 bun scripts/build-bundle.js bun-windows-x64
 bun scripts/prove-installed-windows-coordinator.ts <han.exe> <han-coordinator.exe>
 ```
 
 The default-build installed proof uses disposable private data and exercises
 authenticated HTTPS and gRPC, restart, crash recovery, dead-pair stop and
-restart, orphan shutdown, missing-lock and incomplete-claim startup, and
-modeled PID reuse. The modeled case changes a stale descriptor to refer to a
+restart, orphan shutdown, missing-lock and incomplete-claim startup,
+modeled PID reuse, and fast-exit startup receipt validation. The modeled case changes a stale descriptor to refer to a
 live fixture process with a different creation time; it does not claim an
 actual OS PID recycle. Failure output is restricted to the phase, numeric exit
 status, and validated helper metadata, with cleanup failures reported

@@ -326,47 +326,31 @@ fn acquire(path: &Path, kind: &str) -> io::Result<Value> {
     stage("claim_acquisition");
     if kind == "supervisor" {
         let active_snap = guard.read(OsStr::new("coordinator.json"))?;
-        let active_desc = active_snap.as_ref().and_then(|r| crate::windows_coordinator_runtime::parse_descriptor(&r.bytes).ok());
+        let active_desc = active_snap.as_ref().map(|r| crate::windows_coordinator_runtime::parse_descriptor(&r.bytes)).transpose()?;
+        if let Some(d) = &active_desc { descriptor(d)?; }
         let stopping_names_list = stopping_names(path, &guard)?;
         let mut stopping_descriptors = Vec::new();
         for name in &stopping_names_list {
-            if let Some(record) = guard.read(OsStr::new(name))? {
-                if let Ok(d) = crate::windows_coordinator_runtime::parse_descriptor(&record.bytes) {
-                    stopping_descriptors.push(d);
-                }
-            }
-        }
-        if let Some(partial) = incomplete(&guard, kind)? {
-            if partial.liveness == Liveness::Alive {
-                return Ok(json!({"status":"blocked", "ownerPid":partial.owner.process.pid}));
-            }
-            if is_authority_referenced(&partial.owner.nonce, active_desc.as_ref(), &stopping_descriptors, None) {
-                authorities::ensure_authority(&guard, &partial.owner)?;
-            }
-            remove_incomplete(&guard, kind, &partial)?;
-        }
-        if let Some(existing) = records(&guard, kind)? {
-            match processes::liveness(&existing.owner.process)? {
-                Liveness::Alive => return Ok(json!({"status":"blocked", "ownerPid":existing.owner.process.pid})),
-                Liveness::Unknown => return Err(invalid()),
-                Liveness::Gone => {
-                    if is_authority_referenced(&existing.owner.nonce, active_desc.as_ref(), &stopping_descriptors, None) {
-                        authorities::ensure_authority(&guard, &existing.owner)?;
-                    }
-                    remove_records(&guard, kind, &existing)?;
-                }
-            }
+            let record = guard.read(OsStr::new(name))?.ok_or_else(invalid)?;
+            let d = crate::windows_coordinator_runtime::parse_descriptor(&record.bytes)?;
+            descriptor(&d)?;
+            stopping_descriptors.push(d);
         }
         let auth_list = authorities::list_authorities(&guard)?;
+        let partial_claim = incomplete(&guard, kind)?;
+        let full_claim = records(&guard, kind)?;
+        let claim_owner = full_claim.as_ref().map(|r| &r.owner).or_else(|| partial_claim.as_ref().map(|p| &p.owner));
+
+        // 1. Verify descriptors have resolvable supervisor authority and dead processes BEFORE any deletion
         if let Some(d) = &active_desc {
             if state(&d.process)? != "gone" {
                 return Ok(json!({"status":"blocked", "ownerPid":d.pid}));
             }
             if let Some(b) = &d.supervisor {
-                if let Ok(Some(sup_proc)) = authorities::resolve_supervisor(Some(d), None, &auth_list) {
-                    if state(sup_proc)? != "gone" {
-                        return Ok(json!({"status":"blocked", "ownerPid":b.pid}));
-                    }
+                let sup_proc = authorities::resolve_supervisor(Some(d), claim_owner, &auth_list)?
+                    .ok_or_else(invalid)?;
+                if state(sup_proc)? != "gone" {
+                    return Ok(json!({"status":"blocked", "ownerPid":b.pid}));
                 }
             }
         }
@@ -375,12 +359,41 @@ fn acquire(path: &Path, kind: &str) -> io::Result<Value> {
                 return Ok(json!({"status":"blocked", "ownerPid":d.pid}));
             }
             if let Some(b) = &d.supervisor {
-                if let Ok(Some(sup_proc)) = authorities::resolve_supervisor(Some(d), None, &auth_list) {
-                    if state(sup_proc)? != "gone" {
-                        return Ok(json!({"status":"blocked", "ownerPid":b.pid}));
+                let sup_proc = authorities::resolve_supervisor(Some(d), claim_owner, &auth_list)?
+                    .ok_or_else(invalid)?;
+                if state(sup_proc)? != "gone" {
+                    return Ok(json!({"status":"blocked", "ownerPid":b.pid}));
+                }
+            }
+        }
+
+        // 2. Validate claim liveness and preserve authority if referenced BEFORE removing claim
+        if let Some(partial) = &partial_claim {
+            if partial.liveness == Liveness::Alive {
+                return Ok(json!({"status":"blocked", "ownerPid":partial.owner.process.pid}));
+            }
+            if is_authority_referenced(&partial.owner.nonce, active_desc.as_ref(), &stopping_descriptors, None) {
+                authorities::ensure_authority(&guard, &partial.owner)?;
+            }
+        }
+        if let Some(existing) = &full_claim {
+            match processes::liveness(&existing.owner.process)? {
+                Liveness::Alive => return Ok(json!({"status":"blocked", "ownerPid":existing.owner.process.pid})),
+                Liveness::Unknown => return Err(invalid()),
+                Liveness::Gone => {
+                    if is_authority_referenced(&existing.owner.nonce, active_desc.as_ref(), &stopping_descriptors, None) {
+                        authorities::ensure_authority(&guard, &existing.owner)?;
                     }
                 }
             }
+        }
+
+        // 3. Now that entire inventory is validated, perform deletions
+        if let Some(partial) = &partial_claim {
+            remove_incomplete(&guard, kind, partial)?;
+        }
+        if let Some(existing) = &full_claim {
+            remove_records(&guard, kind, existing)?;
         }
         clean_unreferenced_authorities(&guard, active_desc.as_ref(), &stopping_descriptors, None)?;
     } else {
@@ -418,15 +431,14 @@ fn claim_operation(path: &Path, kind: &str, claim: &Claim, release: bool) -> io:
     if release {
         if kind == "supervisor" {
             let active = guard.read(OsStr::new("coordinator.json"))?;
-            let active_desc = active.as_ref().and_then(|rec| crate::windows_coordinator_runtime::parse_descriptor(&rec.bytes).ok());
+            let active_desc = active.as_ref().map(|rec| crate::windows_coordinator_runtime::parse_descriptor(&rec.bytes)).transpose()?;
             let stopping_names_list = stopping_names(path, &guard)?;
             let mut stopping_descriptors = Vec::new();
             for name in &stopping_names_list {
-                if let Some(record) = guard.read(OsStr::new(name))? {
-                    if let Ok(d) = crate::windows_coordinator_runtime::parse_descriptor(&record.bytes) {
-                        stopping_descriptors.push(d);
-                    }
-                }
+                let record = guard.read(OsStr::new(name))?.ok_or_else(invalid)?;
+                let d = crate::windows_coordinator_runtime::parse_descriptor(&record.bytes)?;
+                descriptor(&d)?;
+                stopping_descriptors.push(d);
             }
             let referenced = is_authority_referenced(&r.owner.nonce, active_desc.as_ref(), &stopping_descriptors, None);
             if referenced {
@@ -627,15 +639,14 @@ fn recovery_reclaim(path: &Path, expected: &RecoverySnapshot) -> io::Result<Valu
         remove_records(&guard, "supervisor", &full)?;
     }
     let active_now = guard.read(OsStr::new("coordinator.json"))?;
-    let active_desc = active_now.as_ref().and_then(|rec| crate::windows_coordinator_runtime::parse_descriptor(&rec.bytes).ok());
+    let active_desc = active_now.as_ref().map(|rec| crate::windows_coordinator_runtime::parse_descriptor(&rec.bytes)).transpose()?;
     let stopping_names_now = stopping_names(path, &guard)?;
     let mut stopping_descriptors_now = Vec::new();
     for name in &stopping_names_now {
-        if let Some(record) = guard.read(OsStr::new(name))? {
-            if let Ok(d) = crate::windows_coordinator_runtime::parse_descriptor(&record.bytes) {
-                stopping_descriptors_now.push(d);
-            }
-        }
+        let record = guard.read(OsStr::new(name))?.ok_or_else(invalid)?;
+        let d = crate::windows_coordinator_runtime::parse_descriptor(&record.bytes)?;
+        descriptor(&d)?;
+        stopping_descriptors_now.push(d);
     }
     clean_unreferenced_authorities(&guard, active_desc.as_ref(), &stopping_descriptors_now, None)?;
     Ok(json!({"status":"removed"}))
@@ -729,13 +740,7 @@ fn dispatch(r: Request) -> io::Result<Value> {
             remove_intent(&r.data_dir, r.binding.as_ref().unwrap(), r.child_pid.unwrap(), r.descriptor.as_ref().unwrap()),
         "launcher.create" if count == 2 && r.origin.is_some() && r.token.is_some() => launcher(&r.data_dir, r.origin.as_deref().unwrap(), r.token.as_deref().unwrap()),
         "launcher.remove" if count == 2 && r.name.is_some() && r.identity.is_some() => remove_launcher(&r.data_dir, r.name.as_deref().unwrap(), r.identity.as_ref().unwrap()),
-        "process.child" if count == 1 && r.child_pid.is_some() => {
-            stage("process_child");
-            match processes::child_identity(r.child_pid.unwrap())? {
-                Some(process) => Ok(json!({"status":"alive", "process":process})),
-                None => Ok(json!({"status":"gone"})),
-            }
-        }
+
         "process.state" if count == 1 && r.process.is_some() => {
             stage("process_state");
             let state = match processes::liveness(r.process.as_ref().unwrap())? { Liveness::Alive => "alive", Liveness::Gone => "gone", Liveness::Unknown => "unknown" };
@@ -763,7 +768,7 @@ fn run_request() -> io::Result<()> {
         "launcher.create" => &["origin", "token"],
         "launcher.remove" => &["name", "identity"],
         "process.state" => &["process"],
-        "process.child" => &["childPid"],
+
         _ => return Err(invalid()),
     };
     if object.len() != extras.len() + 3 || !["version", "dataDir", "op"].iter().chain(extras)
@@ -1099,5 +1104,47 @@ mod tests {
         assert_eq!(inspection["supervisorState"], "gone");
         let snapshot: RecoverySnapshot = serde_json::from_value(inspection["snapshot"].clone()).unwrap();
         assert_eq!(recovery_reclaim(&data, &snapshot).unwrap()["status"], "removed");
+    }
+    #[test]
+    fn windows_acquisition_fails_closed_on_unresolved_predecessor_authority() {
+        let temp = tempfile::tempdir().unwrap();
+        let data = temp.path().join("data");
+        let dir = directory(&data, true).unwrap();
+        let guard = RecordGuard::open(&dir).unwrap();
+        let binding = SupervisorBinding { pid: 9999, nonce: uuid::Uuid::new_v4().to_string(), generation_id: uuid::Uuid::new_v4().to_string() };
+        let d = test_descriptor(12345, Some(binding));
+        guard.create_if_absent(OsStr::new("coordinator.json"), &serde_json::to_vec(&d).unwrap()).unwrap();
+        let mut repl_process = processes::current_identity().unwrap();
+        let repl_creation: u64 = repl_process.creation_time.parse().unwrap();
+        repl_process.creation_time = repl_creation.saturating_add(2).to_string();
+        let repl_nonce = uuid::Uuid::new_v4().to_string();
+        let repl_owner = Owner { version: 1, nonce: repl_nonce, process: repl_process };
+        let repl_bytes = serde_json::to_vec(&repl_owner).unwrap();
+        let repl_snap = guard.create_if_absent(OsStr::new("supervisor.reservation.json"), &repl_bytes).unwrap();
+        drop(guard);
+        assert!(acquire(&data, "supervisor").is_err());
+        let guard = RecordGuard::open(&dir).unwrap();
+        assert_eq!(guard.read(OsStr::new("supervisor.reservation.json")).unwrap(), Some(repl_snap));
+        assert!(guard.read(OsStr::new("coordinator.json")).unwrap().is_some());
+    }
+
+    #[test]
+    fn windows_acquisition_fails_closed_on_malformed_active_descriptor() {
+        let temp = tempfile::tempdir().unwrap();
+        let data = temp.path().join("data");
+        let dir = directory(&data, true).unwrap();
+        let guard = RecordGuard::open(&dir).unwrap();
+        guard.create_if_absent(OsStr::new("coordinator.json"), b"{\"invalid\":true}").unwrap();
+        let mut repl_process = processes::current_identity().unwrap();
+        let repl_creation: u64 = repl_process.creation_time.parse().unwrap();
+        repl_process.creation_time = repl_creation.saturating_add(2).to_string();
+        let repl_nonce = uuid::Uuid::new_v4().to_string();
+        let repl_owner = Owner { version: 1, nonce: repl_nonce, process: repl_process };
+        let repl_bytes = serde_json::to_vec(&repl_owner).unwrap();
+        let repl_snap = guard.create_if_absent(OsStr::new("supervisor.reservation.json"), &repl_bytes).unwrap();
+        drop(guard);
+        assert!(acquire(&data, "supervisor").is_err());
+        let guard = RecordGuard::open(&dir).unwrap();
+        assert_eq!(guard.read(OsStr::new("supervisor.reservation.json")).unwrap(), Some(repl_snap));
     }
 }

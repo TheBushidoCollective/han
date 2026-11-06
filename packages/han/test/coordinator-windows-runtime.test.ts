@@ -434,3 +434,149 @@ test.skipIf(process.platform !== 'win32')(
     }
   }
 );
+
+test.skipIf(process.platform !== 'win32')(
+  'Windows recovery inspection accepts nonempty authority records and validates fence',
+  async () => {
+    // Load after installing mock.module boundary above.
+    const recovery = await import('../lib/coordinator/recovery-runtime.ts');
+    const authorityRecord = {
+      identity: file,
+      bytes: Buffer.from(
+        JSON.stringify({ version: 1, nonce, process: processIdentity })
+      ).toString('base64'),
+    };
+    output = {
+      status: 'present',
+      snapshot: {
+        platform: 'windows',
+        target: { kind: 'active' },
+        active: {
+          identity: file,
+          bytes: Buffer.from(JSON.stringify(descriptor)).toString('base64'),
+        },
+        selected: {
+          identity: file,
+          bytes: Buffer.from(JSON.stringify(descriptor)).toString('base64'),
+        },
+        reservation: { identity: file, bytes: '' },
+        ownerFile: {
+          identity: file,
+          bytes: Buffer.from(
+            JSON.stringify({ version: 1, nonce, process: processIdentity })
+          ).toString('base64'),
+        },
+        pidFile: {
+          identity: file,
+          bytes: Buffer.from('4242').toString('base64'),
+        },
+        stoppingNames: [],
+        stopping: [],
+        authorities: [
+          {
+            name: `supervisor.authority.${nonce}.json`,
+            record: authorityRecord,
+          },
+        ],
+      },
+      descriptor,
+      childState: 'alive',
+      supervisorState: 'alive',
+      supervisorProcess: processIdentity,
+      claimState: 'alive',
+      claimProcess: processIdentity,
+      stoppingNames: [],
+      stoppingBindings: [],
+    };
+    const inspection = recovery.recoveryInspect(dir, { kind: 'active' });
+    expect(inspection.status).toBe('present');
+    expect(inspection.snapshot.platform).toBe('windows');
+    if (inspection.snapshot.platform === 'windows') {
+      expect(inspection.snapshot.authorities.length).toBe(1);
+      expect(inspection.snapshot.authorities[0].name).toBe(
+        `supervisor.authority.${nonce}.json`
+      );
+    }
+    expect(() =>
+      recovery.assertRecoveryFence(
+        inspection.snapshot,
+        inspection.snapshot,
+        descriptor.supervisor
+      )
+    ).not.toThrow();
+  }
+);
+
+function mockChildWithStdout(bytes: Uint8Array, childPid = descriptor.pid) {
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      if (bytes.length > 0) controller.enqueue(bytes);
+      controller.close();
+    },
+  });
+  return {
+    pid: childPid,
+    stdout: stream,
+    exitCode: 0,
+  } as unknown as Bun.Subprocess;
+}
+
+test('readWindowsChildDescriptor reads complete receipt and validates descriptor', async () => {
+  const receiptLine = new TextEncoder().encode(
+    `${JSON.stringify({ version: 1, descriptor })}\n`
+  );
+  const child = mockChildWithStdout(receiptLine);
+  const read = await bridge.readWindowsChildDescriptor(
+    child,
+    descriptor.supervisor,
+    Date.now() + 5000
+  );
+  expect(read).toEqual(descriptor);
+});
+
+test('readWindowsChildDescriptor returns null on zero-byte EOF', async () => {
+  const emptyChild = mockChildWithStdout(new Uint8Array(0));
+  const read = await bridge.readWindowsChildDescriptor(
+    emptyChild,
+    descriptor.supervisor,
+    Date.now() + 5000
+  );
+  expect(read).toBeNull();
+});
+
+test('readWindowsChildDescriptor rejects partial-frame, PID mismatch, and oversize receipts', async () => {
+  const receiptLine = new TextEncoder().encode(
+    `${JSON.stringify({ version: 1, descriptor })}\n`
+  );
+  const partialChild = mockChildWithStdout(
+    new TextEncoder().encode('{"version":1')
+  );
+  await expect(
+    bridge.readWindowsChildDescriptor(
+      partialChild,
+      descriptor.supervisor,
+      Date.now() + 5000
+    )
+  ).rejects.toThrow(bridge.CoordinatorSecurityError);
+
+  const mismatchChild = mockChildWithStdout(receiptLine, descriptor.pid + 1);
+  await expect(
+    bridge.readWindowsChildDescriptor(
+      mismatchChild,
+      descriptor.supervisor,
+      Date.now() + 5000
+    )
+  ).rejects.toThrow(bridge.CoordinatorSecurityError);
+
+  const oversized = new Uint8Array(131073);
+  oversized.fill(0x61);
+  oversized[131072] = 0x0a;
+  const oversizedChild = mockChildWithStdout(oversized);
+  await expect(
+    bridge.readWindowsChildDescriptor(
+      oversizedChild,
+      descriptor.supervisor,
+      Date.now() + 5000
+    )
+  ).rejects.toThrow(bridge.CoordinatorSecurityError);
+});

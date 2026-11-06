@@ -546,6 +546,19 @@ async function main(): Promise<void> {
     );
     assert.equal(fixture.exitCode, null);
     await stop(current);
+
+    phase = 'fast-exit-receipt';
+    // Exercise child shutdown and exit immediately after publication and receipt emission
+    await command('coordinator', 'start');
+    current = await started(beforeReuse);
+    const fastExitChild = current;
+    await command('coordinator', 'stop');
+    await waitFor('fast exit coordinator stop', async () =>
+      !(await ownedProcess(fastExitChild.process, coordinator, false))
+        ? true
+        : undefined
+    );
+    assert.equal(readDescriptor(data), undefined);
   } catch (error) {
     failed = true;
     console.error(

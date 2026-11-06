@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawnSync } from './windows-helper.ts';
 import { randomUUID } from 'node:crypto';
 import { findCoordinatorBinary } from './binary.ts';
 import {
@@ -278,7 +278,9 @@ function validSnapshot(
         object(entry) &&
         exact(entry, ['name', 'record']) &&
         typeof entry.name === 'string' &&
-        /^coordinator\.authority\.[0-9a-f-]+\.json$/.test(entry.name) &&
+        /^supervisor\.authority\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.json$/.test(
+          entry.name
+        ) &&
         (index === 0 || v[index - 1].name < entry.name) &&
         record(entry.record, identity)
     );

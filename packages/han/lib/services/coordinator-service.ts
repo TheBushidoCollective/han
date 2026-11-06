@@ -35,8 +35,8 @@ import {
 } from '../coordinator/connection.ts';
 import { posixPrepare } from '../coordinator/recovery-runtime.ts';
 import {
-  windowsChildIdentity,
-  type WindowsProcessIdentity,
+  readWindowsChildDescriptor,
+  type WindowsChildDescriptor,
   windowsProcessState,
   type WindowsClaim,
   windowsAcquire,
@@ -427,6 +427,7 @@ export async function startCoordinatorService(
         [
           binaryPath,
           '--foreground',
+          ...(process.platform === 'win32' ? ['--startup-receipt'] : []),
           '--port',
           String(port),
           '--data-dir',
@@ -444,7 +445,7 @@ export async function startCoordinatorService(
             : []),
         ],
         {
-          stdout: 'ignore',
+          stdout: process.platform === 'win32' ? 'pipe' : 'ignore',
           stderr: 'ignore',
         }
       );
@@ -454,12 +455,29 @@ export async function startCoordinatorService(
       state.ownsProcess = true;
 
       const child = state.process;
-      const childIdentity: WindowsProcessIdentity | null =
+      const budgetMs = getHealthBudgetMs();
+      const deadline = Date.now() + budgetMs;
+      const receiptPromise =
         process.platform === 'win32'
-          ? windowsChildIdentity(getCoordinatorDataDir(), child.pid)
-          : null;
+          ? readWindowsChildDescriptor(
+              child,
+              options.supervisor ?? null,
+              deadline
+            )
+          : Promise.resolve(null);
+      let spawnDescriptor: WindowsChildDescriptor | null = null;
+      let receiptResolved = false;
+      const getSpawnDescriptor =
+        async (): Promise<WindowsChildDescriptor | null> => {
+          if (!receiptResolved) {
+            spawnDescriptor = await receiptPromise;
+            receiptResolved = true;
+          }
+          return spawnDescriptor;
+        };
       const matchesChild = (
         descriptor: LocalCoordinatorDescriptor,
+        expected?: WindowsChildDescriptor | null,
         allowExited = false
       ): boolean => {
         if (
@@ -469,39 +487,39 @@ export async function startCoordinatorService(
         )
           return false;
         if (process.platform !== 'win32') return true;
-        const actual = descriptor.process;
-        if (
-          !childIdentity ||
-          !actual ||
-          actual.pid !== childIdentity.pid ||
-          actual.creationTime !== childIdentity.creationTime ||
-          actual.userSid !== childIdentity.userSid
-        )
-          return false;
+        if (!expected || !sameCoordinator(descriptor, expected)) return false;
         const state = windowsProcessState(
           getCoordinatorDataDir(),
-          childIdentity
+          expected.process
         );
         return allowExited ? state !== 'unknown' : state === 'alive';
       };
-      const budgetMs = getHealthBudgetMs();
-      const deadline = Date.now() + budgetMs;
       let delay = 100;
-      const stopping = (expected?: LocalCoordinatorDescriptor) => {
+      const stopping = async (
+        expectedCandidate?: LocalCoordinatorDescriptor
+      ) => {
         if (!options.supervisor) return null;
+        const expected =
+          process.platform === 'win32'
+            ? await getSpawnDescriptor()
+            : (expectedCandidate ?? state.ownedDescriptor ?? undefined);
+        if (process.platform === 'win32' && !expected) return null;
         const intent = readShutdownIntent(
           options.supervisor,
           child.pid,
-          expected ?? state.ownedDescriptor ?? undefined
+          expected ?? undefined
         );
-        if (intent && !matchesChild(intent, true))
+        if (
+          intent &&
+          !matchesChild(intent, expected as WindowsChildDescriptor | null, true)
+        )
           throw new CoordinatorSecurityError(
             'Shutdown intent child identity mismatch'
           );
         return intent;
       };
       while (Date.now() < deadline) {
-        const intent = stopping();
+        const intent = await stopping();
         if (intent)
           return { kind: 'shutdown-requested', child, descriptor: intent };
         const descriptor = readOptionalDescriptor();
@@ -514,20 +532,28 @@ export async function startCoordinatorService(
             throw new CoordinatorSecurityError(
               'Previous coordinator is still alive'
             );
-        } else if (descriptor && matchesChild(descriptor)) {
+        } else if (
+          descriptor &&
+          matchesChild(
+            descriptor,
+            process.platform === 'win32' ? await getSpawnDescriptor() : null
+          )
+        ) {
           await checkDescriptorHealth(descriptor, port);
           const current = readOptionalDescriptor();
           if (current && !sameCoordinator(current, descriptor))
             throw new CoordinatorSecurityError(
               'Coordinator changed during startup'
             );
-          const committed = stopping(descriptor);
+          const committed = await stopping(descriptor);
           if (committed)
             return { kind: 'shutdown-requested', child, descriptor: committed };
+          const activeSpawn =
+            process.platform === 'win32' ? await getSpawnDescriptor() : null;
           if (
             !current ||
             !sameCoordinator(current, descriptor) ||
-            !matchesChild(descriptor)
+            !matchesChild(descriptor, activeSpawn)
           )
             throw new CoordinatorSecurityError(
               'Coordinator changed during startup'
@@ -537,7 +563,7 @@ export async function startCoordinatorService(
           state.port = port;
           return { kind: 'owned', child, descriptor };
         } else if (child.exitCode !== null) {
-          const intent = stopping();
+          const intent = await stopping();
           if (intent)
             return { kind: 'shutdown-requested', child, descriptor: intent };
           if (descriptor && (await checkStartupObserver(port, predecessor))) {
@@ -554,6 +580,17 @@ export async function startCoordinatorService(
       }
       throw new Error(buildHealthFailureMessage(port, budgetMs));
     } catch (error) {
+      if (options.supervisor && state.process) {
+        try {
+          const intent = await stopping();
+          if (intent)
+            return {
+              kind: 'shutdown-requested',
+              child: state.process,
+              descriptor: intent,
+            };
+        } catch {}
+      }
       if (state.process && state.process.exitCode === null)
         state.process.unref();
       state.process = null;

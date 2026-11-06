@@ -69,13 +69,27 @@ fn acquire(dir: &Path) -> Value {
     claim
 }
 
-fn spawn(dir: &Path, claim: &Value, generation: &str) -> Process {
-    Process(Command::new(BIN)
-        .args(["--foreground", "--port", "0", "--grpc-port", "0", "--no-watcher", "--data-dir"])
+fn spawn_with_receipt(dir: &Path, claim: &Value, generation: &str) -> (Process, std::thread::JoinHandle<Value>) {
+    let mut child = Command::new(BIN)
+        .args(["--foreground", "--port", "0", "--grpc-port", "0", "--no-watcher", "--startup-receipt", "--data-dir"])
         .arg(dir)
         .args(["--supervisor-pid", &std::process::id().to_string(), "--supervisor-nonce", claim["nonce"].as_str().unwrap(), "--supervisor-generation", generation])
         .env("HAN_DATA_DIR", dir).env("CLAUDE_CONFIG_DIR", dir.join("claude"))
-        .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap())
+        .stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn().unwrap();
+    let mut stdout = child.stdout.take().unwrap();
+    let reader = std::thread::spawn(move || {
+        use std::io::BufRead;
+        let mut line = String::new();
+        std::io::BufReader::new(&mut stdout).read_line(&mut line).unwrap();
+        let v: Value = serde_json::from_str(&line).unwrap();
+        assert_eq!(v["version"], 1);
+        v["descriptor"].clone()
+    });
+    (Process(child), reader)
+}
+
+fn spawn(dir: &Path, claim: &Value, generation: &str) -> Process {
+    spawn_with_receipt(dir, claim, generation).0
 }
 
 async fn wait_descriptor(dir: &Path, daemon: &mut Process) -> Value {
@@ -182,8 +196,12 @@ async fn windows_supervised_wire_shutdown_and_successor_isolation() {
     assert_eq!(call(dir.path(), "supervisor.acquire", json!({}))["status"], "blocked");
     let generation = uuid::Uuid::new_v4().to_string();
     let binding = json!({"pid":std::process::id(),"nonce":claim["nonce"],"generationId":generation});
-    let mut daemon = spawn(dir.path(), &claim, &generation);
+    let (mut daemon, receipt_reader) = spawn_with_receipt(dir.path(), &claim, &generation);
     let d = wait_descriptor(dir.path(), &mut daemon).await;
+    let receipt_d = receipt_reader.join().unwrap();
+    assert_eq!(receipt_d["instanceId"], d["instanceId"]);
+    assert_eq!(receipt_d["pid"], d["pid"]);
+    assert_eq!(receipt_d["process"]["creationTime"], d["process"]["creationTime"]);
     assert_eq!(d["pid"], daemon.0.id());
     assert_eq!(d["process"]["pid"], daemon.0.id());
     assert_eq!(call(dir.path(), "process.state", json!({"process":d["process"]}))["status"], "alive");

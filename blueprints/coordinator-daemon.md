@@ -78,6 +78,13 @@ for the original coordinator. A missing or invalid Windows identity fails
 closed. The installed CI proof models PID reuse with a live fixture; it does not
 assert that Windows recycled a PID.
 
+On Windows, the coordinator emits a single-line startup receipt over its inherited
+stdout pipe immediately upon successful descriptor publication. The supervisor
+reads this receipt concurrently with child startup. When a child commits shutdown
+and exits before health polling completes, the supervisor validates the committed
+shutdown intent directly against this startup receipt, ensuring fast exits are
+safely accepted without circular trust or unreliable postmortem handle queries.
+
 ## Authenticated shutdown
 
 The CLI sends the authenticated Shutdown RPC using the descriptor it read for that instance. For a supervised child, Rust atomically moves the matching active descriptor into a generation-specific `coordinator.stopping.<nonce>.<generationId>.json` record before acknowledging the request. A replaced descriptor cannot be withdrawn by the old instance. The supervisor recognizes only an intent matching its own binding and child, waits for the child to exit, and removes the intent and its own claim.

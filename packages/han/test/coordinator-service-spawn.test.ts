@@ -88,6 +88,11 @@ mock.module('../lib/coordinator/recovery-runtime.ts', () => ({
   ...realRecovery,
   posixPrepare: () => {},
 }));
+const realWindowsRuntime = require('../lib/coordinator/windows-runtime.ts');
+mock.module('../lib/coordinator/windows-runtime.ts', () => ({
+  ...realWindowsRuntime,
+  readWindowsChildDescriptor: async () => mockDescriptor(),
+}));
 
 // existsSync returns true so findCoordinatorBinary "finds" a binary path.
 // Spread the real fs module (captured before this call) so the spawn
@@ -161,6 +166,10 @@ afterAll(() => {
   mock.module('../lib/grpc/client.ts', () => realGrpcClient);
   mock.module('../lib/commands/coordinator/health.ts', () => realHealthModule);
   mock.module('../lib/coordinator/recovery-runtime.ts', () => realRecovery);
+  mock.module(
+    '../lib/coordinator/windows-runtime.ts',
+    () => realWindowsRuntime
+  );
   mock.module('../lib/coordinator/connection.ts', () => ({
     ...realConnection,
     readCoordinatorDescriptor: readActualDescriptor,
