@@ -33,7 +33,7 @@ import {
 } from '../coordinator/connection.ts';
 import { createCoordinatorClients } from '../grpc/client.ts';
 import { findCoordinatorBinary } from '../coordinator/binary.ts';
-import { windowsAcquire, windowsRelease, type WindowsClaim } from '../coordinator/windows-runtime.ts';
+import { windowsAcquire, windowsPrepareRuntime, windowsRelease, type WindowsClaim } from '../coordinator/windows-runtime.ts';
 
 async function isCoordinatorServing(port: number): Promise<boolean> {
   return Boolean(await checkHealth(port));
@@ -310,7 +310,7 @@ function buildHealthFailureMessage(port: number, budgetMs: number): string {
     : '';
   return (
     `[coordinator] Coordinator on port ${port} failed its health check ` +
-    `after ${budgetMs}ms.${incumbentNote} See ${join(getHanDataDir(), 'coordinator.log')} for details.`
+    `after ${budgetMs}ms.${incumbentNote} See ${join(process.platform === 'win32' ? getCoordinatorDataDir() : getHanDataDir(), 'coordinator.log')} for details.`
   );
 }
 
@@ -327,6 +327,7 @@ function buildHealthFailureMessage(port: number, budgetMs: number): string {
 export async function startCoordinatorService(
   options: { supervisor?: SupervisorBinding } = {}
 ): Promise<CoordinatorStartResult> {
+  if (process.platform === 'win32') windowsPrepareRuntime(getCoordinatorDataDir());
   if (state.isRunning && (await isCoordinatorServing(state.port))) {
     if (state.ownsProcess && state.process && state.ownedDescriptor) {
       const current = readCoordinatorDescriptor();
@@ -736,6 +737,7 @@ export async function indexFile(filePath: string): Promise<void> {
  * Returns true if coordinator is available.
  */
 export async function ensureCoordinator(): Promise<boolean> {
+  if (process.platform === 'win32') windowsPrepareRuntime(getCoordinatorDataDir());
   if (state.isRunning && (await isCoordinatorServing(state.port))) {
     return true;
   }
