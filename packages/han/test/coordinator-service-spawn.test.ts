@@ -496,17 +496,17 @@ describe('stopCoordinatorService ownership', () => {
     expect(child.kill).not.toHaveBeenCalled();
   });
 
-  test.each([Code.Unauthenticated, Code.PermissionDenied])(
-    'authentication RPC error %s does not trigger a kill',
-    async (code) => {
-      mockHealth.mockResolvedValueOnce(false);
-      mockHealth.mockResolvedValue(true);
-      const child = { pid: 4242, exitCode: null, unref: mock(), kill: mock() };
-      mockBunSpawn.mockImplementationOnce(() => child as never);
-      await cs.startCoordinatorService();
-      mockShutdown.mockRejectedValueOnce(new ConnectError('refused', code));
-      await expect(cs.stopCoordinatorService()).rejects.toThrow('refused');
-      expect(child.kill).not.toHaveBeenCalled();
-    }
-  );
+  test.each([
+    Code.Unauthenticated,
+    Code.PermissionDenied,
+  ])('authentication RPC error %s does not trigger a kill', async (code) => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = { pid: 4242, exitCode: null, unref: mock(), kill: mock() };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await cs.startCoordinatorService();
+    mockShutdown.mockRejectedValueOnce(new ConnectError('refused', code));
+    await expect(cs.stopCoordinatorService()).rejects.toThrow('refused');
+    expect(child.kill).not.toHaveBeenCalled();
+  });
 });

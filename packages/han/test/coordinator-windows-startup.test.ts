@@ -20,9 +20,9 @@ beforeAll(async () => {
   root = mkdtempSync(join(tmpdir(), 'han-windows-startup-'));
   originalDataDir = process.env.HAN_DATA_DIR;
   // These imports preserve real exports before installing the test boundary.
-  realRuntime = { ...await import('../lib/coordinator/windows-runtime.ts') };
-  realHealth = { ...await import('../lib/commands/coordinator/health.ts') };
-  realConnection = { ...await import('../lib/coordinator/connection.ts') };
+  realRuntime = { ...(await import('../lib/coordinator/windows-runtime.ts')) };
+  realHealth = { ...(await import('../lib/commands/coordinator/health.ts')) };
+  realConnection = { ...(await import('../lib/coordinator/connection.ts')) };
   mock.module('../lib/coordinator/windows-runtime.ts', () => ({
     ...realRuntime,
     windowsPrepareRuntime: (path: string) => {
@@ -33,7 +33,11 @@ beforeAll(async () => {
   mock.module('../lib/commands/coordinator/health.ts', () => ({
     ...realHealth,
     checkHealth: async () => {
-      events.push(existsSync(realConnection.getCoordinatorDataDir()) ? 'health-prepared' : 'health-unprepared');
+      events.push(
+        existsSync(realConnection.getCoordinatorDataDir())
+          ? 'health-prepared'
+          : 'health-unprepared'
+      );
       return { status: 'ok', pid: process.pid };
     },
   }));
@@ -67,17 +71,26 @@ async function checkStart(name: string, start: () => Promise<unknown>) {
   expect(events).not.toContain('health-unprepared');
 }
 
-test.skipIf(!windows)('each independent start path prepares a fresh data root before its first health read', async () => {
-  await checkStart('daemon', () => daemon.startDaemon());
-  await checkStart('ensure-daemon', () => daemon.ensureCoordinator());
-  await checkStart('service', () => service.startCoordinatorService());
-  await checkStart('ensure-service', () => service.ensureCoordinator());
-  await checkStart('ensure-background', async () => {
-    const program = new Command();
-    commands.registerCoordinatorCommands(program);
-    await program.parseAsync(['node', 'han', 'coordinator', 'ensure', '--background']);
-  });
-});
+test.skipIf(!windows)(
+  'each independent start path prepares a fresh data root before its first health read',
+  async () => {
+    await checkStart('daemon', () => daemon.startDaemon());
+    await checkStart('ensure-daemon', () => daemon.ensureCoordinator());
+    await checkStart('service', () => service.startCoordinatorService());
+    await checkStart('ensure-service', () => service.ensureCoordinator());
+    await checkStart('ensure-background', async () => {
+      const program = new Command();
+      commands.registerCoordinatorCommands(program);
+      await program.parseAsync([
+        'node',
+        'han',
+        'coordinator',
+        'ensure',
+        '--background',
+      ]);
+    });
+  }
+);
 
 test.skipIf(!windows)('status does not prepare the runtime', async () => {
   process.env.HAN_DATA_DIR = join(root, 'status');

@@ -3,10 +3,13 @@ import {
   CoordinatorSecurityError,
   coordinatorRequest,
   getCoordinatorDataDir,
-  sameCoordinator,
   readCoordinatorDescriptor,
+  sameCoordinator,
 } from '../../coordinator/connection.ts';
-import { validWindowsProcessIdentity, windowsProcessState } from '../../coordinator/windows-runtime.ts';
+import {
+  validWindowsProcessIdentity,
+  windowsProcessState,
+} from '../../coordinator/windows-runtime.ts';
 import { getCoordinatorPort } from './types.ts';
 
 export interface HealthCheckResponse {
@@ -79,12 +82,18 @@ export async function checkHealth(
     const descriptor = readCoordinatorDescriptor();
     if (
       (process.platform === 'win32'
-        ? validWindowsProcessIdentity(descriptor.process) && windowsProcessState(getCoordinatorDataDir(), descriptor.process) === 'gone'
+        ? validWindowsProcessIdentity(descriptor.process) &&
+          windowsProcessState(getCoordinatorDataDir(), descriptor.process) ===
+            'gone'
         : processIsDead(descriptor.pid)) &&
       (await portRefusesConnection(descriptor.httpsPort))
     ) {
       const current = readCoordinatorDescriptor();
-      if (process.platform === 'win32' ? !sameCoordinator(current, descriptor) : current.instanceId !== descriptor.instanceId)
+      if (
+        process.platform === 'win32'
+          ? !sameCoordinator(current, descriptor)
+          : current.instanceId !== descriptor.instanceId
+      )
         throw new CoordinatorSecurityError(
           'Coordinator descriptor changed during stale-instance check'
         );

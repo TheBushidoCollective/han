@@ -15,8 +15,16 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
-import { CoordinatorSecurityError, windowsAcquire, windowsCheck, windowsReadSupervisor, windowsRelease, type WindowsClaim, type WindowsProcessIdentity } from '../../coordinator/windows-runtime.ts';
 import { getCoordinatorDataDir } from '../../coordinator/connection.ts';
+import {
+  CoordinatorSecurityError,
+  type WindowsClaim,
+  type WindowsProcessIdentity,
+  windowsAcquire,
+  windowsCheck,
+  windowsReadSupervisor,
+  windowsRelease,
+} from '../../coordinator/windows-runtime.ts';
 
 function windowsDataDir(path: string): string {
   const dataDir = getCoordinatorDataDir();
@@ -25,22 +33,24 @@ function windowsDataDir(path: string): string {
   return dataDir;
 }
 
-export type SupervisorClaim = {
-  readonly kind: 'unix';
-  readonly pidPath: string;
-  readonly reservation: string;
-  readonly owner: string;
-  readonly nonce: string;
-  readonly device: number;
-  readonly inode: number;
-  released: boolean;
-} | {
-  readonly kind: 'windows';
-  readonly pidPath: string;
-  readonly nonce: string;
-  readonly native: WindowsClaim;
-  released: boolean;
-};
+export type SupervisorClaim =
+  | {
+      readonly kind: 'unix';
+      readonly pidPath: string;
+      readonly reservation: string;
+      readonly owner: string;
+      readonly nonce: string;
+      readonly device: number;
+      readonly inode: number;
+      released: boolean;
+    }
+  | {
+      readonly kind: 'windows';
+      readonly pidPath: string;
+      readonly nonce: string;
+      readonly native: WindowsClaim;
+      released: boolean;
+    };
 export type ClaimResult =
   | { kind: 'owned'; claim: SupervisorClaim }
   | { kind: 'blocked'; pid: number };
@@ -94,7 +104,8 @@ function pidValue(text: string): number {
   return pid;
 }
 export function readSupervisorPid(path: string): number | null {
-  if (process.platform === 'win32') return readSupervisorIdentity(path)?.pid ?? null;
+  if (process.platform === 'win32')
+    return readSupervisorIdentity(path)?.pid ?? null;
   try {
     return pidValue(protectedFile(path, true).text);
   } catch (e) {
@@ -132,7 +143,10 @@ export function readSupervisorIdentity(
 ): { pid: number; nonce: string; process?: WindowsProcessIdentity } | null {
   if (process.platform === 'win32') {
     const result = windowsReadSupervisor(windowsDataDir(path));
-    if (result.status === 'recoverable') throw new SupervisorReservationBusyError('Supervisor reservation is incomplete');
+    if (result.status === 'recoverable')
+      throw new SupervisorReservationBusyError(
+        'Supervisor reservation is incomplete'
+      );
     if (result.status === 'absent') return null;
     return { pid: result.pid, nonce: result.nonce, process: result.process };
   }
@@ -249,7 +263,10 @@ function reclaim(reservation: string, pidPath: string): number | null {
 }
 export function claimStillOwned(claim: SupervisorClaim): boolean {
   if (claim.released) return false;
-  if (claim.kind === 'windows') return windowsCheck(windowsDataDir(claim.pidPath), claim.native) === 'owned';
+  if (claim.kind === 'windows')
+    return (
+      windowsCheck(windowsDataDir(claim.pidPath), claim.native) === 'owned'
+    );
   try {
     const record = JSON.parse(
       protectedFile(join(claim.reservation, claim.owner)).text
@@ -272,8 +289,18 @@ export function claimSupervisorPid(path: string): ClaimResult {
   if (process.platform === 'win32') {
     const dataDir = windowsDataDir(path);
     const result = windowsAcquire(dataDir, 'supervisor');
-    if (result.status === 'blocked') return {kind:'blocked', pid:result.ownerPid};
-    return {kind:'owned', claim:{kind:'windows', pidPath:resolve(path), nonce:result.claim.nonce, native:result.claim, released:false}};
+    if (result.status === 'blocked')
+      return { kind: 'blocked', pid: result.ownerPid };
+    return {
+      kind: 'owned',
+      claim: {
+        kind: 'windows',
+        pidPath: resolve(path),
+        nonce: result.claim.nonce,
+        native: result.claim,
+        released: false,
+      },
+    };
   }
   const pidPath = resolve(path);
   const dir = dirname(pidPath);

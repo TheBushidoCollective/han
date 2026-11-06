@@ -62,37 +62,34 @@ describe('distribution', () => {
     ['darwin-x64', 'han-darwin-x64', ''],
     ['darwin-arm64', 'han-darwin-arm64', ''],
     ['win32-x64', 'han-windows-x64', '.exe'],
-  ])(
-    'npm packages require the matching pair for %s',
-    (platform, artifact, suffix) => {
-      const dir = temp();
-      mkdirSync(join(dir, 'artifact'));
-      writeFileSync(join(dir, 'artifact', `${artifact}${suffix}`), 'cli');
-      const run = () =>
-        Bun.spawnSync(
-          [
-            'bash',
-            join(root, '.github/scripts/create-npm-platform-package.sh'),
-            'v9.8.7',
-            platform,
-            artifact,
-          ],
-          { cwd: dir }
-        );
-      expect(run().exitCode).not.toBe(0);
-      writeFileSync(
-        join(dir, 'artifact', `han-coordinator-${artifact.slice(4)}${suffix}`),
-        'coordinator'
+  ])('npm packages require the matching pair for %s', (platform, artifact, suffix) => {
+    const dir = temp();
+    mkdirSync(join(dir, 'artifact'));
+    writeFileSync(join(dir, 'artifact', `${artifact}${suffix}`), 'cli');
+    const run = () =>
+      Bun.spawnSync(
+        [
+          'bash',
+          join(root, '.github/scripts/create-npm-platform-package.sh'),
+          'v9.8.7',
+          platform,
+          artifact,
+        ],
+        { cwd: dir }
       );
-      expect(run().exitCode).toBe(0);
-      expect(readFileSync(join(dir, 'package', `han${suffix}`), 'utf8')).toBe(
-        'cli'
-      );
-      expect(
-        readFileSync(join(dir, 'package', `han-coordinator${suffix}`), 'utf8')
-      ).toBe('coordinator');
-    }
-  );
+    expect(run().exitCode).not.toBe(0);
+    writeFileSync(
+      join(dir, 'artifact', `han-coordinator-${artifact.slice(4)}${suffix}`),
+      'coordinator'
+    );
+    expect(run().exitCode).toBe(0);
+    expect(readFileSync(join(dir, 'package', `han${suffix}`), 'utf8')).toBe(
+      'cli'
+    );
+    expect(
+      readFileSync(join(dir, 'package', `han-coordinator${suffix}`), 'utf8')
+    ).toBe('coordinator');
+  });
 
   test.skipIf(process.platform === 'win32')(
     'installer requires both checksummed assets before replacing an existing pair',

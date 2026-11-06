@@ -11,17 +11,13 @@
  * file watching, JSONL indexing, SQLite, FTS, subscriptions.
  */
 
-import {
-  mkdirSync,
-  readFileSync,
-  unlinkSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { Code, ConnectError } from '@connectrpc/connect';
 import { checkHealth } from '../commands/coordinator/health.ts';
 import { readShutdownIntent } from '../commands/coordinator/shutdown-intent.ts';
 import { getHanDataDir } from '../config/claude-settings.ts';
+import { findCoordinatorBinary } from '../coordinator/binary.ts';
 import {
   CoordinatorSecurityError,
   getCoordinatorDataDir,
@@ -31,9 +27,13 @@ import {
   sameCoordinator,
   sameSupervisor,
 } from '../coordinator/connection.ts';
+import {
+  type WindowsClaim,
+  windowsAcquire,
+  windowsPrepareRuntime,
+  windowsRelease,
+} from '../coordinator/windows-runtime.ts';
 import { createCoordinatorClients } from '../grpc/client.ts';
-import { findCoordinatorBinary } from '../coordinator/binary.ts';
-import { windowsAcquire, windowsPrepareRuntime, windowsRelease, type WindowsClaim } from '../coordinator/windows-runtime.ts';
 
 async function isCoordinatorServing(port: number): Promise<boolean> {
   return Boolean(await checkHealth(port));
@@ -104,7 +104,6 @@ function getEffectivePort(): number {
   const port = Number.parseInt(process.env.HAN_COORDINATOR_PORT ?? '', 10);
   return Number.isNaN(port) ? state.port : port;
 }
-
 
 // ============================================================================
 // Health Check with Retry
@@ -265,7 +264,8 @@ function claimSpawnGuard(): boolean | WindowsClaim {
  */
 function releaseSpawnGuard(claim: boolean | WindowsClaim): void {
   if (process.platform === 'win32') {
-    if (typeof claim !== 'object') throw new CoordinatorSecurityError('Missing Windows spawn claim');
+    if (typeof claim !== 'object')
+      throw new CoordinatorSecurityError('Missing Windows spawn claim');
     windowsRelease(getCoordinatorDataDir(), 'spawn', claim);
     return;
   }
@@ -327,7 +327,8 @@ function buildHealthFailureMessage(port: number, budgetMs: number): string {
 export async function startCoordinatorService(
   options: { supervisor?: SupervisorBinding } = {}
 ): Promise<CoordinatorStartResult> {
-  if (process.platform === 'win32') windowsPrepareRuntime(getCoordinatorDataDir());
+  if (process.platform === 'win32')
+    windowsPrepareRuntime(getCoordinatorDataDir());
   if (state.isRunning && (await isCoordinatorServing(state.port))) {
     if (state.ownsProcess && state.process && state.ownedDescriptor) {
       const current = readCoordinatorDescriptor();
@@ -475,7 +476,10 @@ export async function startCoordinatorService(
           const descriptor = readCoordinatorDescriptor();
           if (descriptor.pid !== child.pid) {
             if (child.exitCode === null) {
-              if (process.platform === 'win32') throw new CoordinatorSecurityError('Cannot signal a Windows coordinator by PID');
+              if (process.platform === 'win32')
+                throw new CoordinatorSecurityError(
+                  'Cannot signal a Windows coordinator by PID'
+                );
               child.kill();
             }
             await child.exited;
@@ -534,7 +538,9 @@ export async function startCoordinatorService(
       if (state.ownsProcess && state.process) {
         const child = state.process;
         if (process.platform === 'win32' && child.exitCode === null)
-          throw new CoordinatorSecurityError('Cannot signal a Windows coordinator by PID');
+          throw new CoordinatorSecurityError(
+            'Cannot signal a Windows coordinator by PID'
+          );
         try {
           if (child.exitCode === null) child.kill();
           await child.exited;
@@ -634,7 +640,10 @@ export async function stopCoordinatorService(): Promise<void> {
         ? readShutdownIntent(owned.supervisor, state.process.pid, owned)
         : null;
     if (!committed && state.process) {
-      if (process.platform === 'win32') throw new CoordinatorSecurityError('Cannot signal a Windows coordinator by PID');
+      if (process.platform === 'win32')
+        throw new CoordinatorSecurityError(
+          'Cannot signal a Windows coordinator by PID'
+        );
       state.process.kill();
       console.log('[coordinator] Process killed');
     }
@@ -737,7 +746,8 @@ export async function indexFile(filePath: string): Promise<void> {
  * Returns true if coordinator is available.
  */
 export async function ensureCoordinator(): Promise<boolean> {
-  if (process.platform === 'win32') windowsPrepareRuntime(getCoordinatorDataDir());
+  if (process.platform === 'win32')
+    windowsPrepareRuntime(getCoordinatorDataDir());
   if (state.isRunning && (await isCoordinatorServing(state.port))) {
     return true;
   }

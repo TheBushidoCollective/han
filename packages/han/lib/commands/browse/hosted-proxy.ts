@@ -26,7 +26,11 @@ import {
   coordinatorWebSocket,
   getCoordinatorDataDir,
 } from '../../coordinator/connection.ts';
-import { windowsCreateLauncher, windowsRemoveLauncher, type WindowsLauncher } from '../../coordinator/windows-runtime.ts';
+import {
+  type WindowsLauncher,
+  windowsCreateLauncher,
+  windowsRemoveLauncher,
+} from '../../coordinator/windows-runtime.ts';
 
 export const HOSTED_DASHBOARD_ORIGIN = 'https://dashboard.local.han.guru';
 const TOKEN_LIFETIME = 120_000;
@@ -310,10 +314,15 @@ export async function startHostedDashboardProxy(
   let nativeLauncher: WindowsLauncher | null = null;
   const removeLauncher = () => {
     if (process.platform === 'win32') {
-      if (!nativeLauncher) throw new CoordinatorSecurityError('Missing Windows launcher identity');
+      if (!nativeLauncher)
+        throw new CoordinatorSecurityError('Missing Windows launcher identity');
       windowsRemoveLauncher(getCoordinatorDataDir(), nativeLauncher);
     } else {
-      try { unlinkSync(launchPath); } catch { /* Already removed. */ }
+      try {
+        unlinkSync(launchPath);
+      } catch {
+        /* Already removed. */
+      }
     }
   };
   const expires = Date.now() + TOKEN_LIFETIME;
@@ -652,10 +661,18 @@ export async function startHostedDashboardProxy(
   const url = `http://${authority}`;
   try {
     if (process.platform === 'win32') {
-      nativeLauncher = windowsCreateLauncher(getCoordinatorDataDir(), url, launchToken);
+      nativeLauncher = windowsCreateLauncher(
+        getCoordinatorDataDir(),
+        url,
+        launchToken
+      );
       launchPath = nativeLauncher.path;
     } else {
-      launchPath = launcher(join(getCoordinatorDataDir(), 'runtime'), url, launchToken);
+      launchPath = launcher(
+        join(getCoordinatorDataDir(), 'runtime'),
+        url,
+        launchToken
+      );
     }
   } catch (error) {
     server.close();
@@ -663,7 +680,9 @@ export async function startHostedDashboardProxy(
   }
   const expiryTimer = setTimeout(() => {
     launchToken = null;
-    try { removeLauncher(); } catch (error) {
+    try {
+      removeLauncher();
+    } catch (error) {
       console.error('Failed to remove dashboard launcher:', error);
     }
   }, TOKEN_LIFETIME);
@@ -679,7 +698,11 @@ export async function startHostedDashboardProxy(
       launchToken = null;
       accessTokens.clear();
       let cleanupError: unknown;
-      try { removeLauncher(); } catch (error) { cleanupError = error; }
+      try {
+        removeLauncher();
+      } catch (error) {
+        cleanupError = error;
+      }
       for (const socket of sockets) socket.terminate();
       for (const connection of connections) connection.destroy();
       websocket.close();

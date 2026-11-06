@@ -115,7 +115,9 @@ function viteRelayPlugin() {
 					// Resolve import relative to the source file
 					const fileDir = id.substring(0, id.lastIndexOf("/"));
 					const absoluteImport = resolve(fileDir, importPath);
-					imports.push(`import ${varName} from ${JSON.stringify(absoluteImport)};`);
+					imports.push(
+						`import ${varName} from ${JSON.stringify(absoluteImport)};`,
+					);
 
 					return `(${varName}.hash && ${varName}.hash !== "${hash}" && console.error("The definition of '${name}' appears to have changed. Run relay-compiler to update."), ${varName})`;
 				},
