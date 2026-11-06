@@ -1,8 +1,8 @@
 /**
  * Tests for HookTestUI component using ink-testing-library
  */
-import { describe, expect, test } from 'bun:test';
-import { render } from 'ink-testing-library';
+import { afterEach, describe, expect, test } from 'bun:test';
+import { cleanup, render } from 'ink-testing-library';
 import { HookTestUI } from '../lib/hooks/index.ts';
 
 interface HookResult {
@@ -21,6 +21,8 @@ interface HookStructureItem {
   type: 'command' | 'prompt';
   timeout?: number;
 }
+
+afterEach(() => cleanup());
 
 describe('HookTestUI component', () => {
   describe('initial rendering', () => {
@@ -296,7 +298,7 @@ describe('HookTestUI component', () => {
       expect(lastFrame()).toContain('(0/2)');
     });
 
-    test('shows hook counts for completed hooks', () => {
+    test('shows hook counts for completed hooks', async () => {
       const hookStructure = new Map<string, HookStructureItem[]>([
         [
           'Stop',
@@ -335,6 +337,11 @@ describe('HookTestUI component', () => {
         />
       );
 
+      // Wait for the expected row rather than assuming the first frame is complete.
+      const deadline = Date.now() + 2000;
+      while (!lastFrame()?.includes('(1/1)') && Date.now() < deadline) {
+        await Bun.sleep(10);
+      }
       expect(lastFrame()).toContain('(1/1)');
     });
   });
