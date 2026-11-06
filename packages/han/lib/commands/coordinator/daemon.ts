@@ -35,6 +35,7 @@ import {
   readSupervisorIdentity,
   releaseSupervisorPid,
   type SupervisorClaim,
+  SupervisorReservationBusyError,
 } from './pid-claim.ts';
 import { startServer, stopServer } from './server.ts';
 import { readShutdownIntent, removeShutdownIntent } from './shutdown-intent.ts';
@@ -297,7 +298,14 @@ export async function stopDaemon(_port?: number): Promise<void> {
     if (!binding) {
       if (descriptorGone) return;
     } else {
-      const identity = readSupervisorIdentity(getPidFilePath());
+      let identity: { pid: number; nonce: string } | null;
+      try {
+        identity = readSupervisorIdentity(getPidFilePath());
+      } catch (error) {
+        if (!(error instanceof SupervisorReservationBusyError)) throw error;
+        await Bun.sleep(100);
+        continue;
+      }
       if (identity && (identity.pid !== binding.pid || identity.nonce !== binding.nonce))
         throw new Error('A different supervisor appeared during shutdown');
       const intent = readShutdownIntent(binding, descriptor.pid, descriptor);

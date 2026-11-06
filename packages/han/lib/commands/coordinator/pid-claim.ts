@@ -107,6 +107,8 @@ function inspectDirectory(path: string, privateOnly = false): void {
     throw new Error(`Insecure supervisor directory: ${path}`);
 }
 
+export class SupervisorReservationBusyError extends Error {}
+
 /** Read the protected reservation without acquiring or modifying it. */
 export function readSupervisorIdentity(path: string): { pid: number; nonce: string } | null {
   if (process.platform === 'win32') throw new Error('Windows supervisor ACL and reparse-point verification is unavailable');
@@ -116,6 +118,7 @@ export function readSupervisorIdentity(path: string): { pid: number; nonce: stri
     inspectDirectory(dirname(pidPath));
     inspectDirectory(reservation, true);
     const names = readdirSync(reservation);
+    if (names.length === 0) throw new SupervisorReservationBusyError('Supervisor reservation is changing');
     if (names.length !== 1 || !/^owner\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.json$/.test(names[0]))
       throw new Error('Invalid supervisor reservation');
     const record = JSON.parse(protectedFile(join(reservation, names[0])).text);

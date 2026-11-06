@@ -499,6 +499,10 @@ export async function startCoordinatorService(options: { supervisor?: Supervisor
         const intent = readShutdownIntent(options.supervisor, state.process.pid, state.ownedDescriptor ?? undefined);
         if (intent) return { kind: 'shutdown-requested', child: state.process, descriptor: intent };
       }
+      if (error instanceof CoordinatorSecurityError ||
+          (error instanceof ConnectError &&
+            (error.code === Code.Unauthenticated || error.code === Code.PermissionDenied)))
+        throw error;
       if (state.ownsProcess && state.process) {
         const child = state.process;
         try {
