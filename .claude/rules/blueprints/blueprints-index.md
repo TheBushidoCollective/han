@@ -33,7 +33,7 @@ Update blueprints using the Write tool on `blueprints/{name}.md` when you:
 |-----------|---------|
 | blueprint-system | Skills-based blueprint management with frontmatter metadata |
 | browse-architecture | Han browse command architecture - remote dashboard with local GraphQL coordinator |
-| build-deployment | CI/CD with auto-versioning, cross-platform builds from Linux, npm OIDC publishing, and Railway deployment |
+| build-deployment | CI/CD with auto-versioning, cross-platform builds from Linux, npm OIDC publishing, and deployment |
 | cli-architecture | Entry point, command structure, and CLI framework |
 | cli-interface | Interactive CLI with Commander.js, Ink UI, and AI-powered plugin discovery via Agent SDK |
 | coordinator-daemon | Coordinator daemon with GraphQL server, lazy startup, file watching, and unified data access via han-native |

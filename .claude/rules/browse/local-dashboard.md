@@ -2,7 +2,7 @@
 
 ## Rule: Always Open the Local Dashboard When Developing Locally
 
-When developing or testing browse-client or GraphQL changes locally, **always use the local dashboard** served by `han browse`, not the remote Railway deployment.
+When developing or testing browse-client or GraphQL changes locally, **always use the local dashboard** served by `han browse`, not the remote deployment.
 
 ## How to Start
 
@@ -37,10 +37,10 @@ curl -sk https://localhost:41957/graphql -X POST \
 
 ## Why Local, Not Remote
 
-1. **Immediate feedback** — See changes without deploying to Railway
-2. **Real data** — Local coordinator reads from your actual `~/.han/han.db`
-3. **GraphQL iteration** — Test schema changes against the local server
-4. **No deployment lag** — Railway builds add delays to the feedback loop
+1. **Immediate feedback**: See changes without a remote deployment.
+2. **Real data**: Local coordinator reads from your actual `~/.han/han.db`.
+3. **GraphQL iteration**: Test schema changes against the local server.
+4. **No deployment lag**: Local changes do not wait for a remote build.
 
 ## When to Use Remote
 

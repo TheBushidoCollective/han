@@ -66,7 +66,7 @@ Pre-build Scripts
     ↓
 Next.js Build (Static Export)
     ↓
-Railway Deployment (dashboard.han.guru)
+Static Site Deployment (dashboard.han.guru)
 ```
 
 ## Page Routes
@@ -281,7 +281,7 @@ Component shows multiple installation methods:
 
 ## Deployment
 
-### Railway
+### Website Hosting
 
 Service: `han-dashboard`
 URL: https://dashboard.han.guru

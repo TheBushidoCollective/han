@@ -119,7 +119,7 @@ Never replace VirtualList with simple `map()` rendering. Never remove
 - Use `cargo-zigbuild` for Linux/Darwin targets, `cargo-xwin` for Windows MSVC.
 - Darwin builds use Docker (`ghcr.io/rust-cross/cargo-zigbuild:latest`) for
   macOS SDK access.
-- Railway waits for all GitHub CI checks before deploying.
+- Check the deployment configuration and required CI checks before deploying.
 
 ## Plugin Conventions
 

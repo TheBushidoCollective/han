@@ -10,7 +10,7 @@ cd packages/han && bun run lib/main.ts browse --local
 
 ## Why
 
-Without `--local`, the browse command opens the **remote** dashboard at `dashboard.local.han.guru` and immediately exits. This does NOT serve the local browse-client code — it just opens the deployed Railway site in the browser.
+Without `--local`, the browse command opens the **remote** dashboard at `dashboard.local.han.guru` and immediately exits. It opens the deployed site rather than serving local browse-client code.
 
 The `--local` flag starts a **local Vite dev server** on port 41956 that:
 - Serves the local browse-client source with HMR

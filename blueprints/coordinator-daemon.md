@@ -133,7 +133,7 @@ packages/han/lib/commands/coordinator/
 **Two Modes:**
 
 1. **Remote (default)** - Opens `https://dashboard.local.han.guru`
-   - Frontend hosted on Railway
+   - Frontend hosted remotely
    - Connects to local coordinator via TLS
    - No local static server needed
 

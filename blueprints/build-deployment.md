@@ -1,6 +1,6 @@
 ---
 name: build-deployment
-summary: CI/CD with auto-versioning, cross-platform builds from Linux, npm OIDC publishing, and Railway deployment
+summary: CI/CD with auto-versioning, cross-platform builds from Linux, npm OIDC publishing, and deployment
 ---
 
 # Build & Deployment System

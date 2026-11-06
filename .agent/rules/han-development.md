@@ -95,7 +95,7 @@ Use `VirtualList` (FlashList) for paginated data. SessionMessages uses
 - Linux-only runners (never macOS or Windows - they are paid)
 - Cross-compile with `cargo-zigbuild` (Linux/Darwin) and `cargo-xwin` (Windows)
 - Darwin builds use Docker for macOS SDK access
-- Railway waits for all GitHub CI checks before deploying
+- Check the deployment configuration and required CI checks before deploying.
 
 ## Plugin Conventions
 

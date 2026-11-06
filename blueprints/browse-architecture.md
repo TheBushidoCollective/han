@@ -9,7 +9,7 @@ summary: Han browse command architecture - remote dashboard with local GraphQL c
 
 `han browse` provides a web-based dashboard for viewing Claude Code sessions. The architecture splits between:
 
-- **Remote Dashboard**: Static site hosted on Railway at `dashboard.local.han.guru`
+- **Remote Dashboard**: Static site at `dashboard.local.han.guru`
 - **Local Coordinator**: GraphQL server + indexing daemon running on user's machine
 
 This hybrid approach enables:
@@ -131,8 +131,8 @@ packages/browse-client/
 │   ├── relay-plugin.ts       # Bun plugin for Relay __generated__
 │   ├── pages-plugin.ts       # Bun plugin for page routing
 │   └── rnw-compat-plugin.ts  # React Native Web compatibility fixes
-├── serve.ts                  # Static file server (Railway production)
-├── Dockerfile                # Multi-stage build for Railway
+├── serve.ts                  # Static file server
+├── Dockerfile                # Multi-stage build
 ├── index.html                # HTML template
 └── vite.config.ts            # Vite dev server config
 ```
@@ -178,7 +178,7 @@ bun run build
 
 **Why JS entrypoint?** Bun's HTML bundler has a bug on Linux where it assigns the wrong chunk as the entry script. Using JS entrypoint + manual HTML generation avoids this.
 
-## Railway Deployment
+## Dashboard Deployment
 
 **Service**: `han-dashboard`  
 **Repository**: thebushidocollective/han  
@@ -208,18 +208,12 @@ CMD ["bun", "serve.ts"]
 `serve.ts` is a simple Bun HTTP server:
 - Serves files from `out/` directory
 - Falls back to `index.html` for SPA routing
-- Uses `PORT` env var (Railway sets this)
+- Uses the `PORT` environment variable
 - Supports standard MIME types
 
 ### CI/CD Flow
 
-1. Push to `main` branch
-2. GitHub Actions CI runs tests
-3. Railway waits for all CI checks to pass
-4. Railway pulls repo and runs Dockerfile
-5. Deploys to `dashboard.local.han.guru`
-
-**Note:** Railway auto-skips deployments if CI fails.
+Check the current deployment configuration and required GitHub Actions checks before deploying to `dashboard.local.han.guru`.
 
 ## Frontend Architecture
 
