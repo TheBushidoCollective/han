@@ -227,7 +227,7 @@ export class BackendPool {
     await this.connect(serverId);
 
     const connection = this.backends.get(serverId);
-    if (!connection || connection.state !== 'connected') {
+    if (connection?.state !== 'connected') {
       throw new Error(`Backend ${serverId} is not connected`);
     }
 
@@ -759,7 +759,7 @@ export class BackendPool {
    */
   private async fetchTools(serverId: string): Promise<McpTool[]> {
     const connection = this.backends.get(serverId);
-    if (!connection || connection.state !== 'connected') {
+    if (connection?.state !== 'connected') {
       throw new Error(`Backend ${serverId} is not connected`);
     }
 

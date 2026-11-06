@@ -168,7 +168,9 @@ function OverviewTabContent({
 										weight="bold"
 										style={{ fontVariantNumeric: "tabular-nums" }}
 									>
-										${(data.estimatedCostUsd != null && data.estimatedCostUsd >= 0.01)
+										$
+										{data.estimatedCostUsd != null &&
+										data.estimatedCostUsd >= 0.01
 											? data.estimatedCostUsd.toFixed(2)
 											: "0.00"}
 									</Text>
@@ -181,12 +183,12 @@ function OverviewTabContent({
 						</SectionCard>
 					</Box>
 					<Box style={{ flex: 1 }}>
-						<SectionCard title="Effectiveness Metrics" style={{ height: "100%" }}>
+						<SectionCard
+							title="Effectiveness Metrics"
+							style={{ height: "100%" }}
+						>
 							<VStack gap="sm">
-								<StatusItem
-									label="Turns"
-									value={data.turnCount ?? 0}
-								/>
+								<StatusItem label="Turns" value={data.turnCount ?? 0} />
 								<StatusItem
 									label="Tasks"
 									value={`${completedTasks}/${totalTasks}`}
@@ -257,11 +259,7 @@ function OverviewTabContent({
 									Status
 								</Text>
 								<Badge
-									variant={
-										data.status === "active"
-											? "success"
-											: "default"
-									}
+									variant={data.status === "active" ? "success" : "default"}
 								>
 									{data.status ?? "unknown"}
 								</Badge>
@@ -273,10 +271,7 @@ function OverviewTabContent({
 								value={data.fileChangeCount ?? 0}
 							/>
 							{data.version && (
-								<StatusItem
-									label="Claude Code"
-									value={`v${data.version}`}
-								/>
+								<StatusItem label="Claude Code" value={`v${data.version}`} />
 							)}
 						</VStack>
 					</HStack>

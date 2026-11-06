@@ -4,7 +4,10 @@
   "description": "Han bridge for OpenCode - enables Han's validation hooks and plugin ecosystem in OpenCode sessions",
   "main": "src/index.ts",
   "type": "module",
-  "oc-plugin": ["server", "tui"],
+  "oc-plugin": [
+    "server",
+    "tui"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./tui": "./dist/tui/index.js"

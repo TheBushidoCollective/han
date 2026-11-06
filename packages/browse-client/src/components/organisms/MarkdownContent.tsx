@@ -479,4 +479,4 @@ export function MarkdownContent({
 /**
  * Export utility functions for use in other components
  */
-export { containsAnsi, stripAnsi, detectContentType, looksLikeMarkdown };
+export { containsAnsi, detectContentType, looksLikeMarkdown, stripAnsi };

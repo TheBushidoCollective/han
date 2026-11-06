@@ -32,11 +32,7 @@ export default function NotFoundPage(): React.ReactElement {
 				padding: theme.spacing.xl,
 			}}
 		>
-			<Text
-				size="lg"
-				color="muted"
-				style={{ fontSize: 64, lineHeight: 72 }}
-			>
+			<Text size="lg" color="muted" style={{ fontSize: 64, lineHeight: 72 }}>
 				404
 			</Text>
 			<Heading size="lg">Page Not Found</Heading>

@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-11-06
+
+### Added
+
+- bring han current with the Claude Code 2.1.228 harness surface (#107) ([3405f340](../../commit/3405f340))
+
+### Fixed
+
+- preserve hook gates in Antigravity discovery ([32242c12](../../commit/32242c12))
+- detect Next applications and use project lint script ([48688018](../../commit/48688018))
+
+## Unreleased
+
+### Changed
+
+- Detect actual Next.js applications from parsed dependencies and application
+  directories or configuration, and run the project's `npm run lint` script.
+  Projects relying on the previous implicit command need a lint script or a
+  Han command override.
+
 ## [1.1.2] - 2026-08-12
 
 ### Added

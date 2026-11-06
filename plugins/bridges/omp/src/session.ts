@@ -269,7 +269,7 @@ export class SessionUsageReader {
 
     if (entry.type !== 'message') return null;
     const message = entry.message;
-    if (!message || message.role !== 'assistant') return null;
+    if (message?.role !== 'assistant') return null;
 
     const usage = message.usage;
     if (!usage) return null;

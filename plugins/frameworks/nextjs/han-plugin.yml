@@ -1,11 +1,23 @@
 hooks:
   lint:
     event: Stop
-    command: "npx next lint"
+    command: "npm run lint"
     dirs_with:
       - "package.json"
-    dir_test: "grep -qE '\"next\":' package.json"
+    # Keep this a plain single-line scalar for bridge discovery.
+    dir_test: node -e 'const fs = require("fs"); try { const p = JSON.parse(fs.readFileSync("package.json", "utf8")); const hasNext = ["dependencies", "devDependencies"].some(k => p[k] && Object.hasOwn(p[k], "next")); const hasApp = ["app", "pages", "src/app", "src/pages"].some(p => { try { return fs.statSync(p).isDirectory(); } catch { return false; } }); const hasConfig = ["next.config.js", "next.config.mjs", "next.config.ts"].some(p => { try { return fs.statSync(p).isFile(); } catch { return false; } }); process.exit(hasNext && (hasApp || hasConfig) ? 0 :1); } catch { process.exit(1); }';
     if_changed:
       - "**/*.{ts,tsx,js,jsx,mjs}"
       - "package.json"
       - "next.config.{js,mjs,ts}"
+      - "biome.json"
+      - "biome.jsonc"
+      - ".eslintrc*"
+      - "eslint.config.*"
+      - ".eslintignore"
+      - ".prettierignore"
+      - "package-lock.json"
+      - "bun.lock"
+      - "bun.lockb"
+      - "yarn.lock"
+      - "pnpm-lock.yaml"

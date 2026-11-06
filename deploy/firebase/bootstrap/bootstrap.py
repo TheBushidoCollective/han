@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """One-shot bootstrap for Han inside the existing project thebushido-co.
 
-Runs only from .github/workflows/han-bootstrap.yml, in the han-bootstrap
-environment, which needs a reviewer and runs from main. Nothing else calls it.
+Runs only from .github/workflows/han-bootstrap.yml, in the main-only
+han-bootstrap environment and an execution-specific federation route.
 
 Modes:
   (default)                      print the plan and its sha256. Reads nothing and
@@ -56,6 +56,10 @@ HERE = Path(__file__).resolve().parent
 # The repository root. Plan lines name files relative to it, so the plan and its hash are
 # the same on any checkout, and every command runs from it.
 ROOT = HERE.parents[2]
+# Isolated Python mode omits the script directory; explicitly load the
+# co-reviewed execution contract from this checkout.
+sys.path.insert(0, str(HERE))
+import execution
 
 PROJECT = "thebushido-co"
 PROJECT_NUMBER = "911514101920"
@@ -72,16 +76,17 @@ WORKFLOWS_ALLOWED_TO_SIGN_IN = ("han-infra.yml", "deploy-han-server.yml", "deplo
 # The sign-in identity this job uses. The website's reviewed grant (contract C1) time-boxes it before the run
 # (PATH.md section 8). This run removes the principal from that grant again.
 BOOTSTRAP_SA = f"terraform-bootstrap@{PROJECT}.iam.gserviceaccount.com"
-BOOTSTRAP_ENV_SUBJECT = f"repo:{REPO}:environment:han-bootstrap"
-SHARED_POOL = f"projects/{PROJECT_NUMBER}/locations/global/workloadIdentityPools/github"
-BOOTSTRAP_PRINCIPAL = f"principal://iam.googleapis.com/{SHARED_POOL}/subject/{BOOTSTRAP_ENV_SUBJECT}"
+# Populated only from a validated execution manifest before credentialed work.
+BOOTSTRAP_PRINCIPAL = ""
+SHARED_POOL = ""
+ACTIVE_EXECUTION = None
 
 # The sign-in grant the website side creates, time-boxed (contract C1). Preflight matches all of it exactly. Revoke
 # matches the role, the title, the approved description and the principal, and passes the stored condition verbatim.
 # A binding with any other role, title or description is never touched.
 SIGNIN_ROLE = "roles/iam.workloadIdentityUser"
 SIGNIN_TITLE = "han-bootstrap-sign-in"
-SIGNIN_DESCRIPTION = "han-bootstrap commit={commit} plan={plan}"
+SIGNIN_DESCRIPTION = "han-bootstrap commit={commit} plan={plan} run={run} attempt=1"
 SIGNIN_EXPRESSION = re.compile(r"request\.time < timestamp\('([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)'\)")
 MIN_REMAINING = timedelta(minutes=45)
 MAX_LEAD = timedelta(minutes=120)
@@ -91,7 +96,7 @@ POLICY_READ_ATTEMPTS = 4
 POLICY_READ_BASE = 1.0
 POLICY_READ_MAX_BACKOFF = 8.0
 # The description contract C1 requires: a 40-hex commit and a 64-hex plan hash.
-CONTRACT_DESCRIPTION = re.compile(r"han-bootstrap commit=[0-9a-f]{40} plan=[0-9a-f]{64}")
+CONTRACT_DESCRIPTION = re.compile(r"han-bootstrap commit=[0-9a-f]{40} plan=[0-9a-f]{64} run=[1-9][0-9]{0,19} attempt=1")
 CONTRACT_CONDITION_KEYS = frozenset({"title", "description", "expression"})
 WORKFLOW_REF = f"{REPO}/.github/workflows/han-bootstrap.yml@refs/heads/main"
 # --execute and --revoke-only run only from that workflow, on main, by dispatch, on a github-hosted runner.
@@ -557,11 +562,11 @@ def steps(r: Runner, rotate: bool = False) -> None:
 
 
 def revoke_plan(r: Runner) -> None:
-    r.plan.append(f"revoke: remove the reviewed sign-in binding for {BOOTSTRAP_PRINCIPAL} from {BOOTSTRAP_SA}, "
+    r.plan.append(f"revoke: remove the reviewed per-execution sign-in binding from {BOOTSTRAP_SA}, "
                   "then prove the principal is in no binding")
 
 
-def preflight(r: Runner, plan_sha: str, commit: str) -> None:
+def preflight(r: Runner, plan_sha: str, commit: str) -> set[tuple]:
     """Read-only, before any mutation. Checks the bootstrap account's own IAM policy only: not inherited, project or
     organisation bindings, and not delegation (reviewer scope note A). The identity, the one exact reviewed grant,
     its window and its provenance must all hold, and no member may match the principal besides that grant."""
@@ -572,6 +577,31 @@ def preflight(r: Runner, plan_sha: str, commit: str) -> None:
     active = [a.get("account") for a in json.loads(out) if a.get("status") == "ACTIVE"]
     if active != [BOOTSTRAP_SA]:
         raise StepError(f"refusing to continue as {active!r}; expected {BOOTSTRAP_SA}")
+    if ACTIVE_EXECUTION is None:
+        raise StepError("execution manifest missing; nothing ran")
+    pool = ACTIVE_EXECUTION["pool_id"]
+    rc, pool_out, _ = r._read(["gcloud", "iam", "workload-identity-pools", "describe", pool,
+                               "--location=global", f"--project={PROJECT}", "--format=json"])
+    if rc != 0:
+        raise StepError("cannot read the execution-specific pool; nothing ran")
+    rc, providers_out, _ = r._read(["gcloud", "iam", "workload-identity-pools", "providers", "list",
+                                    f"--workload-identity-pool={pool}", "--location=global",
+                                    f"--project={PROJECT}", "--show-deleted", "--format=json"])
+    if rc != 0:
+        raise StepError("cannot enumerate execution pool providers; nothing ran")
+    try:
+        execution.verify_pool(ACTIVE_EXECUTION, json.loads(pool_out), json.loads(providers_out))
+    except (ValueError, execution.Refuse) as exc:
+        raise StepError("execution pool is not the exact single-provider pool; nothing ran") from exc
+    rc, out, _ = r._read(["gcloud", "iam", "workload-identity-pools", "providers", "describe",
+                          ACTIVE_EXECUTION["provider_id"], f"--workload-identity-pool={ACTIVE_EXECUTION['pool_id']}",
+                          "--location=global", f"--project={PROJECT}", "--format=json"])
+    if rc != 0:
+        raise StepError("cannot read the execution-specific provider; nothing ran")
+    try:
+        execution.verify_provider(ACTIVE_EXECUTION, json.loads(out))
+    except (ValueError, execution.Refuse) as exc:
+        raise StepError("execution-specific provider does not match the contract; nothing ran") from exc
     policy = read_policy(r, "cannot read the bootstrap policy before the run")
     found = holders(policy)
     if len(found) != 1:
@@ -590,9 +620,13 @@ def preflight(r: Runner, plan_sha: str, commit: str) -> None:
     remaining = expiry - utc_now()
     if not MIN_REMAINING <= remaining <= MAX_LEAD:
         raise StepError(f"the sign-in expires {remaining} from now; the window is 45 to 120 minutes; nothing ran")
-    expected = SIGNIN_DESCRIPTION.format(commit=commit, plan=plan_sha)
+    if binding["condition"]["expression"] != f"request.time < timestamp('{ACTIVE_EXECUTION['T']}')":
+        raise StepError("the sign-in deadline does not match this execution; nothing ran")
+    expected = SIGNIN_DESCRIPTION.format(commit=commit, plan=plan_sha, run=ACTIVE_EXECUTION["R"])
     if binding["condition"]["description"] != expected:
         raise StepError("the sign-in does not name this commit and this plan; nothing ran")
+    # Preserve the direct policy baseline before any resource mutation.
+    return policy_tuples(policy)
 
 
 
@@ -822,7 +856,7 @@ def pinned_identity_error(commit: str, plan_sha: str) -> str | None:
     return None
 
 
-def revoke(r: Runner, commit: str, plan_sha: str) -> None:
+def revoke(r: Runner, commit: str, plan_sha: str, baseline: set[tuple] | None = None) -> None:
     """Remove the bootstrap principal from the approved grant, the binding whose description names this commit
     and plan, then prove the principal has no coverage left and that no other grant moved. Only the bootstrap
     account's own policy is read: project and organisation bindings and delegation are not checked (scope note A).
@@ -831,9 +865,9 @@ def revoke(r: Runner, commit: str, plan_sha: str) -> None:
     if not r.execute:
         revoke_plan(r)
         return
-    approved = SIGNIN_DESCRIPTION.format(commit=commit, plan=plan_sha)
+    approved = SIGNIN_DESCRIPTION.format(commit=commit, plan=plan_sha, run=ACTIVE_EXECUTION["R"])
     policy = read_policy(r, "cannot read the bootstrap policy, so cannot prove the sign-in is revoked")
-    before = policy_tuples(policy)
+    before = baseline if baseline is not None else policy_tuples(policy)
     last_error = "none"
     for _ in range(REVOKE_ATTEMPTS):
         grants = [b for b in holders(policy) if is_approved_grant(b, approved)]
@@ -850,9 +884,8 @@ def revoke(r: Runner, commit: str, plan_sha: str) -> None:
 
 def verify_revoked(policy: dict, before: set[tuple], last_error: str, approved: str) -> None:
     """Fail unless the principal has no binding, no capable member remains, the approved grant binds no other
-    member, every other grant is still there, and no grant was added between revoke's first read and its final
-    read. The first read is taken after preflight and the steps, so earlier changes are not detected here. Named,
-    never deleted."""
+    member, every other grant is still there, and no grant was added since the
+    supplied preflight baseline. Named, never deleted."""
     left = holders(policy)
     if left:
         named = ", ".join(f"role {b.get('role')!r} (title {(b.get('condition') or {}).get('title')!r})" for b in left)
@@ -871,7 +904,7 @@ def verify_revoked(policy: dict, before: set[tuple], last_error: str, approved: 
     lost = {t for t in before if t[-1] != BOOTSTRAP_PRINCIPAL} - policy_tuples(policy)
     if lost:
         raise StepError(f"revoke changed a binding it should not have; missing {sorted(lost)[0]}")
-    # The baseline is revoke's first read, not preflight. Only changes made between the two reads are detected.
+    # The normal path supplies the read-only preflight baseline.
     added = policy_tuples(policy) - before
     if added:
         named = ", ".join(f"{member} on {role}" for role, _title, _desc, _expr, member in sorted(added, key=str))
@@ -888,7 +921,7 @@ def referenced_files() -> list[Path]:
     """Every file whose contents the plan depends on: this code, the roles and the condition."""
     roles = [HERE / "roles" / name for name in sorted(CUSTOM_ROLES.values())]
     workflow = ROOT / ".github" / "workflows" / "han-bootstrap.yml"
-    return [Path(__file__).resolve(), SQL_CONDITION, *roles, workflow]
+    return [Path(__file__).resolve(), HERE / "execution.py", SQL_CONDITION, *roles, workflow]
 
 
 def build_plan(rotate: bool = False) -> list[str]:
@@ -907,8 +940,9 @@ def plan_sha256(lines: list[str]) -> str:
 
 def run_execute(backend: Backend, plan_sha: str, commit: str, rotate: bool = False) -> None:
     r = Runner(execute=True, backend=backend)
+    baseline = None
     try:
-        preflight(r, plan_sha, commit)
+        baseline = preflight(r, plan_sha, commit)
         steps(r, rotate)
         postcheck(r)
         database_postcheck(r)
@@ -916,11 +950,11 @@ def run_execute(backend: Backend, plan_sha: str, commit: str, rotate: bool = Fal
         # The sign-in must not outlive a failed run. A failure to revoke is reported
         # alongside the original error, which is kept as the cause.
         try:
-            revoke(r, commit, plan_sha)
+            revoke(r, commit, plan_sha, baseline)
         except StepError as err:
             print(f"::error::revoke also failed: {err}", file=sys.stderr)
         raise
-    revoke(r, commit, plan_sha)
+    revoke(r, commit, plan_sha, baseline)
 
 
 def real_backend(kind: str, argv: list[str], stdin: str | None = None) -> tuple[int, str, str]:
@@ -962,6 +996,7 @@ def main(argv: list[str], backend: Backend | None = None) -> int:
     parser.add_argument("--rotate-db-password", action="store_true",
                         help="generate a new database password and seed database-url with it")
     parser.add_argument("--revoke-only", action="store_true", help="remove the sign-in member and nothing else")
+    parser.add_argument("--execution-manifest", help="canonical per-run identity registration")
     parser.add_argument("--plan-file", help="write the plan text here")
     args = parser.parse_args(argv)
     if args.execute or args.revoke_only:
@@ -969,6 +1004,25 @@ def main(argv: list[str], backend: Backend | None = None) -> int:
         if error:
             print(f"::error::{error}", file=sys.stderr)
             return 2
+        if args.expect_sha256 is None or args.expect_commit is None:
+            print("::error::--expect-sha256 and --expect-commit are required; nothing ran", file=sys.stderr)
+            return 2
+        if not args.execution_manifest:
+            print("::error::execution manifest is required; nothing ran", file=sys.stderr)
+            return 2
+        try:
+            manifest = execution.load_manifest(args.execution_manifest)
+            execution.check_ci(manifest, enforce_window=not args.revoke_only)
+            if (manifest["C"] != args.expect_commit or manifest["H"] != args.expect_sha256 or
+                    manifest["rotate_db_password"] != args.rotate_db_password):
+                raise execution.Refuse("manifest does not match the reviewed commit, plan and rotation")
+        except (OSError, ValueError, execution.Refuse) as exc:
+            print(f"::error::invalid execution manifest: {exc}; nothing ran", file=sys.stderr)
+            return 2
+        global ACTIVE_EXECUTION, BOOTSTRAP_PRINCIPAL, SHARED_POOL
+        ACTIVE_EXECUTION = manifest
+        BOOTSTRAP_PRINCIPAL = manifest["member"]
+        SHARED_POOL = f"projects/{PROJECT_NUMBER}/locations/global/workloadIdentityPools/{manifest['pool_id']}"
 
     if args.revoke_only:
         if args.execute:
