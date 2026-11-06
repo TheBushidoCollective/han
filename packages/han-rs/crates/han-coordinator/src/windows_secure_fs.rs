@@ -41,7 +41,7 @@ use windows_sys::Win32::Security::{
 };
 use windows_sys::Win32::Security::Authorization::{
     ConvertSidToStringSidW, ConvertStringSecurityDescriptorToSecurityDescriptorW,
-    GetSecurityInfo, SE_FILE_OBJECT, SDDL_REVISION_1,
+    ConvertStringSidToSidW, GetSecurityInfo, SE_FILE_OBJECT, SDDL_REVISION_1,
 };
 use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
 use windows_sys::Win32::System::IO::{IO_STATUS_BLOCK, OVERLAPPED};
@@ -337,6 +337,21 @@ fn verify_acl_mode(handle: &OwnedHandle, private: bool, ancestor: bool) -> io::R
     if user.is_null() || unsafe { IsValidSid(user) } == 0 {
         return Err(invalid("invalid token user SID"));
     }
+    // The Windows servicing identity owns protected system ancestors on normal
+    // installations. It is privileged like SYSTEM, not an untrusted user.
+    let mut trusted_installer = null_mut();
+    let trusted_installer_sid = if ancestor {
+        let value: Vec<u16> = "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464"
+            .encode_utf16().chain(Some(0)).collect();
+        if unsafe { ConvertStringSidToSidW(value.as_ptr(), &mut trusted_installer) } == 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Some(LocalAllocation(trusted_installer))
+    } else {
+        None
+    };
+    let is_trusted_installer = |sid| trusted_installer_sid.as_ref()
+        .is_some_and(|trusted| unsafe { EqualSid(sid, trusted.0) } != 0);
 
     let mut owner = null_mut();
     let mut dacl: *mut ACL = null_mut();
@@ -353,7 +368,8 @@ fn verify_acl_mode(handle: &OwnedHandle, private: bool, ancestor: bool) -> io::R
     if owner.is_null() || unsafe { IsValidSid(owner) } == 0
         || (unsafe { EqualSid(owner, user) } == 0
             && !(ancestor && (unsafe { IsWellKnownSid(owner, WinLocalSystemSid) } != 0
-                || unsafe { IsWellKnownSid(owner, WinBuiltinAdministratorsSid) } != 0))) {
+                || unsafe { IsWellKnownSid(owner, WinBuiltinAdministratorsSid) } != 0
+                || is_trusted_installer(owner)))) {
         let mut text = null_mut();
         if !owner.is_null() && unsafe { IsValidSid(owner) } != 0
             && unsafe { ConvertSidToStringSidW(owner, &mut text) } != 0
@@ -412,7 +428,8 @@ fn verify_acl_mode(handle: &OwnedHandle, private: bool, ancestor: bool) -> io::R
             system_allowed = true;
         } else if private {
             return Err(invalid("untrusted private DACL grant"));
-        } else if unsafe { IsWellKnownSid(sid, WinBuiltinAdministratorsSid) } == 0 {
+        } else if unsafe { IsWellKnownSid(sid, WinBuiltinAdministratorsSid) } == 0
+            && !(ancestor && is_trusted_installer(sid)) {
             if ancestor {
                 // DELETE_CHILD, DELETE, WRITE_DAC, WRITE_OWNER, GENERIC_WRITE,
                 // and GENERIC_ALL can remove or replace a descendant.
