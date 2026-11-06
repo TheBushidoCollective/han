@@ -17,6 +17,7 @@ import {
   statSync,
 } from 'node:fs';
 import { dirname, join, win32 } from 'node:path';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { getHanDataDir } from '../../config/claude-settings.ts';
 import { getHanBinary } from '../../config/han-settings.ts';
 import {
@@ -28,21 +29,30 @@ import {
   sameCoordinator,
 } from '../../coordinator/connection.ts';
 import {
-  type WindowsProcessIdentity,
+  assertRecoveryFence,
+  posixPrepare,
+  type RecoveryInspection,
+  recoveryInspect,
+  recoveryReclaim,
+} from '../../coordinator/recovery-runtime.ts';
+import {
   windowsPrepareRuntime,
   windowsProcessState,
   windowsReadSupervisor,
 } from '../../coordinator/windows-runtime.ts';
 import { createCoordinatorClients } from '../../grpc/client.ts';
-import { checkHealth, waitForHealth } from './health.ts';
+import {
+  checkHealth,
+  descriptorIsDead,
+  readOptionalDescriptor,
+  waitForHealth,
+} from './health.ts';
 import {
   claimStillOwned,
   claimSupervisorPid,
-  readSupervisorIdentity,
   readSupervisorPid,
   releaseSupervisorPid,
   type SupervisorClaim,
-  SupervisorReservationBusyError,
 } from './pid-claim.ts';
 import { startServer, stopServer } from './server.ts';
 import { readShutdownIntent, removeShutdownIntent } from './shutdown-intent.ts';
@@ -145,8 +155,8 @@ export function claimPidFile(): number | null {
 }
 
 function releaseClaim(claim: SupervisorClaim): void {
-  if (claims.get(claim.pidPath) === claim) claims.delete(claim.pidPath);
   releaseSupervisorPid(claim);
+  if (claims.get(claim.pidPath) === claim) claims.delete(claim.pidPath);
 }
 
 /**
@@ -219,14 +229,18 @@ export async function startDaemon(
 ): Promise<CoordinatorStatus> {
   if (process.platform === 'win32')
     windowsPrepareRuntime(getCoordinatorDataDir());
+  else posixPrepare(getCoordinatorDataDir());
   const port = options.port ?? getCoordinatorPort();
   console.log(`[coordinator] Using port: ${port}`);
 
-  // Check if already running
-  const status = await getStatus(port);
-  if (status.running) {
-    console.log(`[coordinator] Already running (PID: ${status.pid})`);
-    return status;
+  const selected = readOptionalDescriptor();
+  const predecessor = selected && descriptorIsDead(selected) ? selected : null;
+  if (!predecessor) {
+    const status = await getStatus(port);
+    if (status.running) {
+      console.log(`[coordinator] Already running (PID: ${status.pid})`);
+      return status;
+    }
   }
 
   // Run in foreground mode
@@ -300,7 +314,7 @@ export async function startDaemon(
     process.env.HAN_COORDINATOR_TIMEOUT || '60000',
     10
   );
-  const healthy = await waitForHealth(port, timeoutMs, 100);
+  const healthy = await waitForHealth(port, timeoutMs, 100, predecessor);
 
   if (!healthy) {
     throw new Error(
@@ -314,98 +328,130 @@ export async function startDaemon(
   return newStatus;
 }
 
-/** Stop only a coordinator authenticated by its runtime descriptor. */
+function reclaimRecovery(inspection: RecoveryInspection): boolean {
+  if (
+    inspection.childState === 'alive' ||
+    inspection.supervisorState === 'alive'
+  )
+    return false;
+  const result = recoveryReclaim(getCoordinatorDataDir(), inspection.snapshot);
+  if (result === 'changed')
+    throw new CoordinatorSecurityError('Coordinator recovery snapshot changed');
+  return result !== 'busy';
+}
+
+/** Stop the exact authenticated instance or recover its verified-dead records. */
 export async function stopDaemon(_port?: number): Promise<void> {
-  let descriptor: LocalCoordinatorDescriptor;
-  try {
-    descriptor = readCoordinatorDescriptor();
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    if (readSupervisorIdentity(getPidFilePath()))
-      throw new Error(
-        'Coordinator supervisor is running or starting without an available descriptor'
+  const dataDir = getCoordinatorDataDir();
+  if (process.platform === 'win32') windowsPrepareRuntime(dataDir);
+  else posixPrepare(dataDir);
+  let active = recoveryInspect(dataDir, { kind: 'active' });
+  const fence = active.snapshot;
+  if (!active.descriptor && active.stoppingBindings.length > 1)
+    throw new CoordinatorSecurityError(
+      'Multiple shutdown generations require recovery'
+    );
+  let selected = active;
+  if (!active.descriptor && active.stoppingBindings.length === 1)
+    selected = recoveryInspect(dataDir, {
+      kind: 'stopping',
+      binding: active.stoppingBindings[0],
+    });
+  assertRecoveryFence(
+    fence,
+    selected.snapshot,
+    selected.descriptor?.supervisor ?? null
+  );
+  const original = selected.descriptor;
+  const binding = original?.supervisor ?? null;
+  const supervisorProcess = selected.supervisorProcess;
+  if (process.platform === 'win32' && binding && !supervisorProcess)
+    throw new CoordinatorSecurityError('Missing supervisor process identity');
+  if (active.descriptor && active.childState === 'alive') {
+    try {
+      await createCoordinatorClients(
+        active.descriptor.httpsPort,
+        active.descriptor
+      ).coordinator.shutdown(
+        { graceful: true, timeoutSeconds: 5 },
+        { timeoutMs: 10000 }
       );
-    return;
-  }
-  const binding = descriptor.supervisor;
-  let supervisorProcess: WindowsProcessIdentity | undefined;
-  if (binding) {
-    const identity = readSupervisorIdentity(getPidFilePath());
-    if (
-      !identity ||
-      identity.pid !== binding.pid ||
-      identity.nonce !== binding.nonce
-    )
-      throw new CoordinatorSecurityError(
-        'Coordinator supervisor claim does not match descriptor'
-      );
-    if (process.platform === 'win32') {
-      if (!identity.process)
+    } catch (error) {
+      if (
+        !(error instanceof ConnectError) ||
+        error.code !== Code.DeadlineExceeded
+      )
+        throw error;
+      const current = recoveryInspect(dataDir, { kind: 'active' });
+      assertRecoveryFence(fence, current.snapshot, binding);
+      const intent = binding
+        ? recoveryInspect(dataDir, { kind: 'stopping', binding })
+        : null;
+      if (intent) assertRecoveryFence(fence, intent.snapshot, binding);
+      if (
+        current.descriptor &&
+        !sameCoordinator(current.descriptor, active.descriptor)
+      )
         throw new CoordinatorSecurityError(
-          'Missing Windows supervisor process identity'
+          'A different coordinator appeared during shutdown'
         );
-      supervisorProcess = identity.process;
+      if (
+        !(
+          intent?.descriptor &&
+          sameCoordinator(intent.descriptor, active.descriptor)
+        ) &&
+        !descriptorIsDead(active.descriptor)
+      )
+        throw error;
     }
   }
-  await createCoordinatorClients(
-    descriptor.httpsPort,
-    descriptor
-  ).coordinator.shutdown(
-    { graceful: true, timeoutSeconds: 5 },
-    { timeoutMs: 10000 }
-  );
   const deadline = Date.now() + 10000;
   while (Date.now() < deadline) {
-    let descriptorGone = false;
-    try {
-      const current = readCoordinatorDescriptor();
-      if (!sameCoordinator(current, descriptor))
-        throw new Error('A different coordinator appeared during shutdown');
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT')
-        descriptorGone = true;
-      else throw error;
-    }
-    if (!binding) {
-      if (descriptorGone) return;
-    } else {
-      let identity: {
-        pid: number;
-        nonce: string;
-        process?: WindowsProcessIdentity;
-      } | null;
-      try {
-        identity = readSupervisorIdentity(getPidFilePath());
-      } catch (error) {
-        if (!(error instanceof SupervisorReservationBusyError)) throw error;
-        await Bun.sleep(100);
-        continue;
-      }
+    active = recoveryInspect(dataDir, { kind: 'active' });
+    assertRecoveryFence(fence, active.snapshot, binding);
+    if (
+      active.descriptor &&
+      (!original || !sameCoordinator(active.descriptor, original))
+    )
+      throw new CoordinatorSecurityError(
+        'A different coordinator appeared during shutdown'
+      );
+    if (active.descriptor) {
+      selected = active;
+    } else if (binding) {
+      selected = recoveryInspect(dataDir, { kind: 'stopping', binding });
+      assertRecoveryFence(fence, selected.snapshot, binding);
       if (
-        identity &&
-        (identity.pid !== binding.pid ||
-          identity.nonce !== binding.nonce ||
-          (process.platform === 'win32' &&
-            (!identity.process ||
-              !supervisorProcess ||
-              identity.process.pid !== supervisorProcess.pid ||
-              identity.process.creationTime !==
-                supervisorProcess.creationTime ||
-              identity.process.userSid !== supervisorProcess.userSid)))
+        selected.descriptor &&
+        (!original || !sameCoordinator(selected.descriptor, original))
       )
-        throw new Error('A different supervisor appeared during shutdown');
-      const intent = readShutdownIntent(binding, descriptor.pid, descriptor);
-      if (
-        descriptorGone &&
-        !identity &&
-        !intent &&
+        throw new CoordinatorSecurityError(
+          'A different shutdown generation appeared'
+        );
+      if (!selected.descriptor && active.stoppingBindings.length)
+        throw new CoordinatorSecurityError(
+          'A different shutdown generation appeared'
+        );
+    } else {
+      selected = active;
+      if (active.stoppingBindings.length)
+        throw new CoordinatorSecurityError(
+          'A different shutdown generation appeared'
+        );
+    }
+    if (
+      selected.childState !== 'alive' &&
+      selected.supervisorState !== 'alive' &&
+      (!original ||
+        selected.descriptor !== null ||
+        descriptorIsDead(original)) &&
+      (!binding ||
         (process.platform === 'win32'
           ? !!supervisorProcess &&
-            windowsProcessState(getCoordinatorDataDir(), supervisorProcess) ===
-              'gone'
-          : !isProcessRunning(binding.pid))
-      )
-        return;
+            windowsProcessState(dataDir, supervisorProcess) === 'gone'
+          : !isProcessRunning(binding.pid)))
+    ) {
+      if (reclaimRecovery(selected)) return;
     }
     await Bun.sleep(100);
   }
@@ -463,7 +509,7 @@ async function runForeground(port: number): Promise<void> {
     if (!binding || !child || !stopping)
       throw new Error('Missing shutdown ownership');
     await child.exited;
-    removeShutdownIntent(binding, child.pid, stopping);
+    removeShutdownIntent(binding, child.pid, stopping, claim);
   };
 
   try {
@@ -515,25 +561,19 @@ async function runForeground(port: number): Promise<void> {
         if (error instanceof CoordinatorSecurityError) throw error;
         if (child && child.exitCode === null) {
           if (observeIntent()) break;
-          if (process.platform === 'win32') {
-            // The descriptor-bound RPC is the only permitted stop mechanism.
-            // A failed RPC leaves the child alone and aborts restart.
-            if (!owned)
-              throw new CoordinatorSecurityError(
-                'Cannot authenticate Windows coordinator shutdown'
-              );
-            await stopServer();
-            if (observeIntent()) break;
-            await Promise.race([child.exited, Bun.sleep(10000)]);
-            if (observeIntent()) break;
-            if (child.exitCode === null)
-              throw new CoordinatorSecurityError(
-                'Windows coordinator did not exit after authenticated shutdown'
-              );
-          } else {
-            child.kill();
-            await child.exited;
-          }
+          // Only the authenticated descriptor may authorize shutdown.
+          if (!owned)
+            throw new CoordinatorSecurityError(
+              'Cannot authenticate coordinator shutdown'
+            );
+          await stopServer();
+          if (observeIntent()) break;
+          await Promise.race([child.exited, Bun.sleep(10000)]);
+          if (observeIntent()) break;
+          if (child.exitCode === null)
+            throw new CoordinatorSecurityError(
+              'Coordinator did not exit after authenticated shutdown'
+            );
           if (observeIntent()) break;
         }
         restartAttempts++;

@@ -1,10 +1,12 @@
 import { connect } from 'node:net';
 import {
   CoordinatorSecurityError,
-  coordinatorRequest,
+  coordinatorFetch,
   getCoordinatorDataDir,
+  type LocalCoordinatorDescriptor,
   readCoordinatorDescriptor,
   sameCoordinator,
+  validateCoordinatorDescriptor,
 } from '../../coordinator/connection.ts';
 import {
   validWindowsProcessIdentity,
@@ -74,6 +76,86 @@ async function portRefusesConnection(port: number): Promise<boolean> {
   return promise;
 }
 
+export function descriptorIsDead(
+  descriptor: LocalCoordinatorDescriptor
+): boolean {
+  validateCoordinatorDescriptor(descriptor);
+  if (process.platform === 'win32') {
+    if (!validWindowsProcessIdentity(descriptor.process))
+      throw new CoordinatorSecurityError('Missing Windows process identity');
+    return (
+      windowsProcessState(getCoordinatorDataDir(), descriptor.process) ===
+      'gone'
+    );
+  }
+  return processIsDead(descriptor.pid);
+}
+
+export function readOptionalDescriptor(): LocalCoordinatorDescriptor | null {
+  try {
+    return readCoordinatorDescriptor();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
+export async function checkStartupObserver(
+  port: number,
+  predecessor: LocalCoordinatorDescriptor | null
+): Promise<boolean> {
+  const selected = readOptionalDescriptor();
+  if (!selected) return false;
+  if (predecessor && sameCoordinator(selected, predecessor)) {
+    if (!descriptorIsDead(predecessor))
+      throw new CoordinatorSecurityError('Previous coordinator is still alive');
+    return false;
+  }
+  if (descriptorIsDead(selected))
+    throw new CoordinatorSecurityError('Unexpected dead startup candidate');
+  await checkDescriptorHealth(selected, port);
+  const current = readOptionalDescriptor();
+  if (!current || !sameCoordinator(current, selected))
+    throw new CoordinatorSecurityError(
+      'Coordinator descriptor changed during health check'
+    );
+  return true;
+}
+
+export async function checkDescriptorHealth(
+  descriptor: LocalCoordinatorDescriptor,
+  requestedPort?: number
+): Promise<HealthCheckResponse> {
+  validateCoordinatorDescriptor(descriptor);
+  if (
+    requestedPort !== undefined &&
+    requestedPort !== 0 &&
+    (!Number.isInteger(requestedPort) ||
+      requestedPort < 1 ||
+      requestedPort > 65535 ||
+      requestedPort !== descriptor.httpsPort)
+  )
+    throw new CoordinatorSecurityError(
+      'Coordinator descriptor port does not match requested port'
+    );
+  const response = await coordinatorFetch(
+    descriptor,
+    descriptor.httpsPort,
+    '/health',
+    {
+      signal: AbortSignal.timeout(2000),
+    }
+  );
+  if (!response.ok)
+    throw new CoordinatorSecurityError(
+      `Coordinator health rejected (${response.status})`
+    );
+  const health = (await response.json()) as HealthCheckResponse;
+  if (!health || health.status !== 'ok' || health.pid !== descriptor.pid)
+    throw new CoordinatorSecurityError('Coordinator health identity mismatch');
+  return health;
+}
+
 export async function checkHealth(
   port?: number,
   starting = false
@@ -89,28 +171,13 @@ export async function checkHealth(
       (await portRefusesConnection(descriptor.httpsPort))
     ) {
       const current = readCoordinatorDescriptor();
-      if (
-        process.platform === 'win32'
-          ? !sameCoordinator(current, descriptor)
-          : current.instanceId !== descriptor.instanceId
-      )
+      if (!sameCoordinator(current, descriptor))
         throw new CoordinatorSecurityError(
           'Coordinator descriptor changed during stale-instance check'
         );
       return null;
     }
-    if (port !== undefined && port !== 0 && port !== descriptor.httpsPort)
-      throw new CoordinatorSecurityError(
-        'Coordinator descriptor port does not match requested port'
-      );
-    const response = await coordinatorRequest('/health', {
-      signal: AbortSignal.timeout(2000),
-    });
-    if (!response.ok)
-      throw new CoordinatorSecurityError(
-        `Coordinator health rejected (${response.status})`
-      );
-    return (await response.json()) as HealthCheckResponse;
+    return await checkDescriptorHealth(descriptor, port);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       if (!starting && (await portOccupied(port ?? getCoordinatorPort())))
@@ -138,11 +205,13 @@ export async function checkHealthHttps(port?: number): Promise<{
 export async function waitForHealth(
   port?: number,
   timeoutMs = 10000,
-  intervalMs = 200
+  intervalMs = 200,
+  predecessor: LocalCoordinatorDescriptor | null = null
 ): Promise<boolean> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    if ((await checkHealth(port, true))?.status === 'ok') return true;
+    if (await checkStartupObserver(port ?? getCoordinatorPort(), predecessor))
+      return true;
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
   return false;

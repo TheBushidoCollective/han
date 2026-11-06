@@ -1,125 +1,119 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
-// This script mutates only an isolated CI checkout and restores the source even on failure.
+// Each invocation uses a disposable CI checkout. Never run mutations on a shared tree.
 if (process.env.CI !== 'true')
   throw new Error('PID mutation proof requires an isolated CI checkout');
+const rust = resolve(import.meta.dir, '../../han-rs');
 const sourcePath = join(
-  import.meta.dir,
-  '../lib/commands/coordinator/pid-claim.ts'
+  rust,
+  'crates/han-coordinator/src/posix_runtime_helper.rs'
 );
 const original = readFileSync(sourcePath, 'utf8');
 const name = process.argv[2];
 const mutations: Record<
   string,
-  { anchor: string; replacement: string; test: string }
+  { anchor: string; replacement: string; test: string; assertion: string }
 > = {
   emptyPublication: {
-    anchor: 'renameSync(candidate, reservation);',
+    anchor:
+      'if o.pid != requested_pid || o.nonce != nonce { return Ok(json!({"status":"blocked","ownerPid":o.pid})); }',
     replacement:
-      'const savedOwner = readFileSync(join(candidate, owner)); unlinkSync(join(candidate, owner)); renameSync(candidate, reservation); writeFileSync(join(reservation, owner), savedOwner, { mode: 0o600 });',
-    test: 'reclaims an owner stopped before PID publication',
+      'if o.pid != requested_pid || o.nonce != nonce { return Ok(json!({"status":"owned"})); }',
+    test: 'native_empty_publication_never_adopts_live_partial',
+    assertion: 'assertion `left == right` failed',
   },
   unguardedPid: {
     anchor:
-      'inspectDirectory(dir);\n  const reservation = `' +
-      '$' +
-      '{pidPath}.takeover`;',
+      'let snap = snapshot(roots, &Target::Active)?;\n    if let Some(o) = owner_for(&snap.claim)? {',
     replacement:
-      'inspectDirectory(dir);\n  const reservation = `' +
-      '$' +
-      '{pidPath}.takeover`; writeFileSync(pidPath, String(process.pid), { mode: 0o600 });',
-    test: 'reclaims an owner stopped before PID publication',
+      'let snap = snapshot(roots, &Target::Active)?;\n    if read_at(&roots.data, OsStr::new("coordinator.pid"), true)?.is_some() { unlink(&roots.data, "coordinator.pid", false)?; write_new(&roots.data, "coordinator.pid", requested_pid.to_string().as_bytes())?; }\n    if let Some(o) = owner_for(&snap.claim)? {',
+    test: 'native_unguarded_pid_never_overwrites_live_claim',
+    assertion: 'assertion `left == right` failed',
   },
   recursiveReclaim: {
     anchor:
-      'function reclaim(reservation: string, pidPath: string): number | null {',
-    replacement: `function unsafeRemove(path: string): void { try { rmdirSync(path); } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOTEMPTY') throw error; require('node:fs').rmSync(path, { recursive: true, force: true }); } }
-function reclaim(reservation: string, pidPath: string): number | null {`,
-    test: 'delayed removal of an empty reservation cannot remove a successor',
+      'let owner_file = read_at(&reservation, OsStr::new(&names[0]), false)?.ok_or_else(invalid)?;',
+    replacement:
+      'if names[0] == "unexpected" { return Ok(ClaimSnapshot::Vacated { reservation: reservation_id }); }\n    let owner_file = read_at(&reservation, OsStr::new(&names[0]), false)?.ok_or_else(invalid)?;',
+    test: 'native_recursive_reclaim_rejects_unexpected_entries',
+    assertion: 'assertion failed: snapshot(&roots, &Target::Active).is_err()',
   },
   ageSteal: {
-    anchor: 'if (alive(record.pid)) {',
+    anchor:
+      'if let Some(o) = owner_for(&actual.claim)? { if observed(o.pid)? != "gone" { return Ok(json!({"status":"busy"})); } }',
     replacement:
-      'if (alive(record.pid) && Date.now() - lstatSync(reservation).mtimeMs < 5000) {',
-    test: 'a live reservation blocks before its PID is published',
+      'if let Some(o) = owner_for(&actual.claim)? { if false && observed(o.pid)? != "gone" { return Ok(json!({"status":"busy"})); } }',
+    test: 'native_age_never_authorizes_live_claim_theft',
+    assertion: 'assertion `left == right` failed',
   },
   staleRelease: {
-    anchor: 'if (claim.released) return;',
-    replacement: 'if (claim.released) { unlinkSync(claim.pidPath); return; }',
-    test: 'old release cannot remove a later acquisition',
+    anchor:
+      'if !own_claim(&snap.claim, claim)? { return Ok(json!({"status":"changed"})); }',
+    replacement:
+      'if false && !own_claim(&snap.claim, claim)? { return Ok(json!({"status":"changed"})); }',
+    test: 'native_stale_release_preserves_successor',
+    assertion: 'assertion `left == right` failed',
   },
   probeFailure: {
-    anchor: "if ((e as NodeJS.ErrnoException).code === 'EPERM') return true;",
-    replacement:
-      "if ((e as NodeJS.ErrnoException).code === 'EPERM') return false;",
-    test: 'uncertain liveness cannot reclaim a reservation',
+    anchor: 'Some(libc::EPERM) => Ok("alive")',
+    replacement: 'Some(libc::EPERM) => Ok("gone")',
+    test: 'native_probe_failure_never_means_gone',
+    assertion: 'assertion `left == right` failed',
   },
   exhaustion: {
-    anchor:
-      "throw new Error('Supervisor claim contention exceeded retry limit');",
-    replacement: "return { kind: 'owned', claim: {} as SupervisorClaim };",
-    test: 'retry exhaustion never grants ownership',
+    anchor: 'mkdir(&roots.data, &candidate)?;',
+    replacement: 'let _ = mkdir(&roots.data, &candidate);',
+    test: 'native_collision_never_grants_ownership',
+    assertion: 'assertion failed: acquire(&roots, parent(), &nonce).is_err()',
   },
 };
 const mutation = mutations[name];
 if (!mutation) throw new Error(`Unknown PID mutation: ${name}`);
 if (original.split(mutation.anchor).length !== 2)
   throw new Error(`Mutation anchor not unique: ${name}`);
-let modified = original.replace(mutation.anchor, mutation.replacement);
-if (name === 'recursiveReclaim') {
-  const anchor = 'rmdirSync(reservation);';
-  if (!modified.includes(anchor))
-    throw new Error('Missing reservation removal');
-  modified = modified.replaceAll(anchor, 'unsafeRemove(reservation);');
-}
+const modified = original.replace(mutation.anchor, mutation.replacement);
 if (modified === original)
   throw new Error(`Mutation did not modify source: ${name}`);
-function restoreSource(): void {
-  writeFileSync(sourcePath, original);
-  if (readFileSync(sourcePath, 'utf8') !== original)
-    throw new Error('Failed to restore PID claim source');
-}
 try {
   writeFileSync(sourcePath, modified);
   const result = Bun.spawnSync(
     [
-      process.execPath,
+      'cargo',
       'test',
-      'test/coordinator-pid-claim.test.ts',
-      '-t',
+      '--locked',
+      '-p',
+      'han-coordinator',
+      '--bin',
+      'han-coordinator',
       mutation.test,
     ],
     {
-      cwd: join(import.meta.dir, '..'),
+      cwd: rust,
       stdout: 'pipe',
       stderr: 'pipe',
       env: process.env,
+      timeout: 300_000,
     }
   );
   const output = result.stdout.toString() + result.stderr.toString();
   console.log(output);
-  const expectedAssertion: Record<string, string> = {
-    emptyPublication: 'expect(claimSupervisorPid(path)).toEqual',
-    unguardedPid: 'expect(claimSupervisorPid(path)).toEqual',
-    recursiveReclaim: 'expect(existsSync(reservation)).toBe(true)',
-    ageSteal: 'expect(claimSupervisorPid(path)).toEqual',
-    staleRelease: 'expect(existsSync(path)).toBe(true)',
-    probeFailure: 'expect(claimSupervisorPid(path)).toEqual',
-    exhaustion: 'UNEXPECTED_OWNERSHIP',
-  };
   if (
     result.exitCode === 0 ||
-    !output.includes(`(fail) ${mutation.test}`) ||
-    !output.includes('error: expect(') ||
-    !output.includes(expectedAssertion[name]) ||
+    !output.includes(
+      `test posix_runtime_helper::tests::${mutation.test} ... FAILED`
+    ) ||
+    !output.includes(mutation.assertion) ||
     output.includes('timed out')
-  ) {
+  )
     throw new Error(
-      `Mutation ${name} did not produce the intended assertion failure`
+      `Mutation ${name} did not produce the intended behavioral assertion failure`
     );
-  }
   console.log(`Mutation ${name} rejected by ${mutation.test}`);
 } finally {
-  restoreSource();
+  writeFileSync(sourcePath, original);
+  if (readFileSync(sourcePath, 'utf8') !== original) {
+    console.error('Failed to restore native PID claim source');
+    process.exitCode = 1;
+  }
 }

@@ -62,10 +62,16 @@ mock.module('../lib/grpc/client.ts', () => ({
 const realHealthModule = require('../lib/commands/coordinator/health.ts');
 mock.module('../lib/commands/coordinator/health.ts', () => ({
   ...realHealthModule,
+  readOptionalDescriptor: () => null,
   checkHealth: async (port?: number) =>
     (await mockHealth(port))
       ? { status: 'ok', pid: 4242, uptime: 1, version: 'test' }
       : null,
+}));
+const realRecovery = require('../lib/coordinator/recovery-runtime.ts');
+mock.module('../lib/coordinator/recovery-runtime.ts', () => ({
+  ...realRecovery,
+  posixPrepare: () => {},
 }));
 
 // Mock existsSync so findCoordinatorBinary doesn't find real binaries
@@ -104,6 +110,7 @@ afterAll(() => {
   mock.module('node:fs', () => realFs);
   mock.module('../lib/grpc/client.ts', () => realGrpcClient);
   mock.module('../lib/commands/coordinator/health.ts', () => realHealthModule);
+  mock.module('../lib/coordinator/recovery-runtime.ts', () => realRecovery);
 });
 
 // ============================================================================

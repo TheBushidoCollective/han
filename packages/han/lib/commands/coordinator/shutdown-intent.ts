@@ -1,4 +1,3 @@
-import { unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   CoordinatorSecurityError,
@@ -15,6 +14,8 @@ import {
   windowsReadDescriptor,
   windowsRemoveIntent,
 } from '../../coordinator/windows-runtime.ts';
+import { removePosixIntent } from '../../coordinator/recovery-runtime.ts';
+import type { SupervisorClaim } from './pid-claim.ts';
 
 function intentPath(binding: SupervisorBinding): string {
   if (!validSupervisorBinding(binding))
@@ -62,7 +63,8 @@ export function readShutdownIntent(
 export function removeShutdownIntent(
   binding: SupervisorBinding,
   childPid: number,
-  expected: LocalCoordinatorDescriptor
+  expected: LocalCoordinatorDescriptor,
+  claim: SupervisorClaim
 ): void {
   if (process.platform === 'win32') {
     if (!validSupervisorBinding(binding))
@@ -70,6 +72,7 @@ export function removeShutdownIntent(
     windowsRemoveIntent(getCoordinatorDataDir(), binding, childPid, expected);
     return;
   }
-  if (readShutdownIntent(binding, childPid, expected))
-    unlinkSync(intentPath(binding));
+  if (claim.kind !== 'unix')
+    throw new CoordinatorSecurityError('Invalid POSIX supervisor claim');
+  removePosixIntent(getCoordinatorDataDir(), binding, expected, claim.native);
 }

@@ -8,7 +8,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { createConnection } from 'node:net';
+import { createConnection, createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
@@ -194,6 +194,25 @@ async function main(): Promise<void> {
     CI: 'true',
     CLAUDE_CODE_ENABLE_TELEMETRY: '0',
   };
+  const barrier = join(root, 'startup-barrier');
+  const barrierProof = process.env.HAN_PROOF_BARRIER_ONLY === '1';
+  if (barrierProof) {
+    mkdirSync(barrier);
+    env.HAN_PROOF_STARTUP_BARRIER = barrier;
+    const listener = createServer();
+    const listening = Promise.withResolvers<void>();
+    listener.once('error', listening.reject);
+    listener.listen(0, '127.0.0.1', listening.resolve);
+    await listening.promise;
+    const address = listener.address();
+    assert.ok(address && typeof address !== 'string');
+    env.HAN_COORDINATOR_PORT = String(address.port);
+    const closed = Promise.withResolvers<void>();
+    listener.close((error) =>
+      error ? closed.reject(error) : closed.resolve()
+    );
+    await closed.promise;
+  }
   const command = (...args: string[]) => run([cli, ...args], root, env);
   const runtime = join(data, 'runtime');
   const reservation = join(runtime, 'supervisor.reservation.json');
@@ -313,6 +332,79 @@ async function main(): Promise<void> {
       /Coordinator: running/.test(await command('coordinator', 'status'))
     );
 
+    if (barrierProof) {
+      phase = 'fixed-port-bind-before-publication';
+      const previous = current;
+      writeFileSync(join(barrier, 'arm'), '');
+      assert.ok(await ownedProcess(previous.process, coordinator, true));
+      const marker = await waitFor('bound replacement', () => {
+        const path = join(barrier, 'bound.json');
+        if (!existsSync(path)) return undefined;
+        return JSON.parse(readFileSync(path, 'utf8')) as {
+          pid: number;
+          httpsPort: number;
+          supervisor: Descriptor['supervisor'];
+        };
+      });
+      assert.ok(Number.isSafeInteger(marker.pid) && marker.pid > 0);
+      const creationTime = (
+        await run(
+          [
+            powershell,
+            '-NoProfile',
+            '-NonInteractive',
+            '-Command',
+            `$p=Get-Process -Id ${marker.pid} -ErrorAction Stop; $w=Get-CimInstance Win32_Process -Filter 'ProcessId=${marker.pid}'; if ($w.ParentProcessId -ne ${previous.supervisor?.pid ?? 0}) { exit 4 }; if ([System.IO.Path]::GetFullPath($p.Path) -ne [System.IO.Path]::GetFullPath($env:HAN_PROOF_IMAGE)) { exit 5 }; $p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString()`,
+          ],
+          root,
+          { ...env, HAN_PROOF_IMAGE: coordinator }
+        )
+      ).trim();
+      assert.match(creationTime, /^[1-9][0-9]{0,19}$/);
+      owned.push({
+        identity: {
+          pid: marker.pid,
+          creationTime,
+          userSid: previous.process.userSid,
+        },
+        image: coordinator,
+      });
+      assert.equal(marker.httpsPort, Number(env.HAN_COORDINATOR_PORT));
+      assert.equal(marker.supervisor?.pid, previous.supervisor?.pid);
+      assert.notEqual(
+        marker.supervisor?.generationId,
+        previous.supervisor?.generationId
+      );
+      assert.equal(readDescriptor(data)?.instanceId, previous.instanceId);
+      for (let i = 0; i < 5; i++) {
+        const check = Bun.spawn(
+          [
+            powershell,
+            '-NoProfile',
+            '-NonInteractive',
+            '-Command',
+            `$c=Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort ${marker.httpsPort} -State Established -ErrorAction SilentlyContinue; if ($c) { exit 1 }`,
+          ],
+          { cwd: root, env, stdout: 'ignore', stderr: 'ignore' }
+        );
+        assert.equal(
+          await check.exited,
+          0,
+          'request reached unpublished listener'
+        );
+        assert.equal(readDescriptor(data)?.instanceId, previous.instanceId);
+        await Bun.sleep(100);
+      }
+      writeFileSync(join(barrier, 'release'), '');
+      current = await started(previous);
+      assert.equal(current.pid, marker.pid);
+      assert.equal(
+        current.supervisor?.generationId,
+        marker.supervisor?.generationId
+      );
+      assert.notEqual(current.bearerToken, previous.bearerToken);
+    }
+
     phase = 'crash-recovery';
     const beforeCrash = current;
     assert.ok(await ownedProcess(beforeCrash.process, coordinator, true));
@@ -345,6 +437,48 @@ async function main(): Promise<void> {
     assert.ok(
       /Coordinator: not running/.test(await command('coordinator', 'status'))
     );
+    phase = 'dead-pair-stop';
+    await command('coordinator', 'start');
+    current = await started(beforeRestart);
+    const beforeDeadStop = current;
+    await killPair(beforeDeadStop);
+    assert.equal(readDescriptor(data)?.instanceId, beforeDeadStop.instanceId);
+    assert.ok(existsSync(reservation));
+    await command('coordinator', 'stop');
+    assert.equal(readDescriptor(data), undefined);
+    assert.ok(!existsSync(reservation));
+
+    phase = 'dead-pair-restart';
+    await command('coordinator', 'start');
+    current = await started(beforeDeadStop);
+    const beforeDeadRestart = current;
+    await killPair(beforeDeadRestart);
+    assert.equal(
+      readDescriptor(data)?.instanceId,
+      beforeDeadRestart.instanceId
+    );
+    await command('coordinator', 'restart');
+    current = await started(beforeDeadRestart);
+    await stop(current);
+
+    phase = 'orphan-stop-and-restart';
+    await command('coordinator', 'start');
+    current = await started(beforeDeadRestart);
+    const orphan = current;
+    const deadSupervisor = register(orphan);
+    await ensureStopped(deadSupervisor, cli);
+    await live(orphan);
+    await command('coordinator', 'stop');
+    await waitFor('orphan coordinator exit', async () =>
+      !(await ownedProcess(orphan.process, coordinator, false))
+        ? true
+        : undefined
+    );
+    assert.equal(readDescriptor(data), undefined);
+    assert.ok(!existsSync(reservation));
+    await command('coordinator', 'restart');
+    current = await started(orphan);
+    await stop(current);
 
     phase = 'missing-lock-status';
     rmSync(lock);

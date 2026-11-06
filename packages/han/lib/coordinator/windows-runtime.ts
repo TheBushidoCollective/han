@@ -99,7 +99,8 @@ type RuntimeOperation =
   | 'intent.remove'
   | 'launcher.create'
   | 'launcher.remove'
-  | 'process.state';
+  | 'process.state'
+  | 'process.child';
 type Category =
   | 'binary_missing'
   | 'request_too_large'
@@ -122,6 +123,7 @@ const stages = [
   'claim_acquisition',
   'descriptor_read',
   'process_state',
+  'process_child',
   'response_write',
 ];
 const kinds = [
@@ -445,4 +447,22 @@ export function windowsProcessState(
   if (s === 'unknown')
     throw new CoordinatorSecurityError('Windows process state is unknown');
   return s as 'alive' | 'gone';
+}
+
+export function windowsChildIdentity(
+  dataDir: string,
+  childPid: number
+): WindowsProcessIdentity | null {
+  if (!pid(childPid)) return invalid();
+  const value = request(dataDir, 'process.child', { childPid });
+  if (!object(value)) return fail('process.child', 'invalid_result');
+  if (value.status === 'gone' && Object.keys(value).length === 1) return null;
+  if (
+    value.status !== 'alive' ||
+    Object.keys(value).length !== 2 ||
+    !processIdentity(value.process) ||
+    value.process.pid !== childPid
+  )
+    return fail('process.child', 'invalid_result');
+  return value.process;
 }

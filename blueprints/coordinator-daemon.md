@@ -57,6 +57,13 @@ The numeric `coordinator.pid` is informational. A nonempty `coordinator.pid.take
 A foreground supervisor assigns each owned child a binding containing the supervisor PID, its claim nonce, and a fresh generation ID. It keeps the child process referenced so it can reap it and release the matching records. A genuine child crash is eligible for restart; an attached coordinator is not treated as an owned child.
 
 The Rust process binds its listeners and claims its coordinator lock before publishing readiness. Publication, withdrawal, and owner-checked descriptor cleanup use a shared protected lock file in the runtime directory.
+Startup selects the expected child and generation before making a health request.
+It uses the selected descriptor's certificate and token without rediscovering
+credentials during the request, then checks that publication still names that
+instance before treating it as owned. A verified dead predecessor can remain
+visible while its replacement binds; an unrelated publication is not an owned
+child.
+
 
 On Windows, start intent prepares the private runtime and publication lock before
 status or health reads. Read-only status never creates the lock or removes a
@@ -76,6 +83,14 @@ assert that Windows recycled a PID.
 The CLI sends the authenticated Shutdown RPC using the descriptor it read for that instance. For a supervised child, Rust atomically moves the matching active descriptor into a generation-specific `coordinator.stopping.<nonce>.<generationId>.json` record before acknowledging the request. A replaced descriptor cannot be withdrawn by the old instance. The supervisor recognizes only an intent matching its own binding and child, waits for the child to exit, and removes the intent and its own claim.
 
 The stop command waits for the relevant records and process to disappear. Restart stops the existing instance before starting another. A standalone Rust coordinator has no supervisor intent; an unrelated PID marker does not authorize signalling it. SIGINT and SIGTERM initiate the supervisor's cleanup path.
+When the supervisor is gone, stop authenticates a still-live child before
+reclaiming its exact committed shutdown intent and dead claim. If both are
+verified dead, it can reclaim the matching stale publication without an RPC.
+Recovery compares the selected protected records under the platform's
+publication guard; changed, malformed, live, or uncertain state is not
+authority to remove a successor. A committed intent remains discoverable when
+the active publication has already been withdrawn.
+
 
 ## Data and subscriptions
 

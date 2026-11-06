@@ -13,6 +13,7 @@ let reads = 0;
 let state: 'alive' | 'gone' | 'unknown' = 'gone';
 let requests = 0;
 let rejectRequest = false;
+let responseHealth: { status: string; pid: number } | null = null;
 let port = 0;
 
 beforeAll(async () => {
@@ -38,10 +39,12 @@ beforeAll(async () => {
     ...realConnection,
     readCoordinatorDescriptor: () =>
       ++reads > 1 && replacement ? replacement : descriptor,
-    coordinatorRequest: async () => {
+    coordinatorFetch: async () => {
       requests++;
       if (rejectRequest) throw new Error('TLS rejection');
-      return new Response('{}', { status: 401 });
+      return responseHealth
+        ? Response.json(responseHealth)
+        : new Response('{}', { status: 401 });
     },
   }));
   // Import after mocks so this test exercises the substituted boundaries.
@@ -153,6 +156,38 @@ test.skipIf(!windows)(
       await new Promise<void>((resolve, reject) =>
         server.close((error) => (error ? reject(error) : resolve()))
       );
+    }
+  }
+);
+
+test.skipIf(!windows)(
+  'startup observer never sends predecessor credentials to a reused port',
+  async () => {
+    reads = requests = 0;
+    state = 'gone';
+    replacement = undefined;
+    expect(
+      await health.checkStartupObserver(descriptor.httpsPort, descriptor)
+    ).toBe(false);
+    expect(requests).toBe(0);
+  }
+);
+
+test.skipIf(!windows)(
+  'pinned health rejects a different response PID',
+  async () => {
+    responseHealth = { status: 'ok', pid: descriptor.pid + 1 };
+    try {
+      await expect(
+        health.checkDescriptorHealth(descriptor, descriptor.httpsPort)
+      ).rejects.toThrow('identity mismatch');
+      responseHealth = { status: 'ok', pid: descriptor.pid };
+      expect(
+        (await health.checkDescriptorHealth(descriptor, descriptor.httpsPort))
+          .pid
+      ).toBe(descriptor.pid);
+    } finally {
+      responseHealth = null;
     }
   }
 );

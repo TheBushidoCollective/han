@@ -12,6 +12,7 @@ path = "src/main.rs"
 default = ["sqlite"]
 sqlite = ["han-db/sqlite", "han-indexer/sqlite", "han-api/sqlite"]
 postgres = ["han-db/postgres", "han-indexer/postgres", "han-api/postgres"]
+proof-startup-barrier = []
 
 [dependencies]
 han-db = { path = "../han-db" }

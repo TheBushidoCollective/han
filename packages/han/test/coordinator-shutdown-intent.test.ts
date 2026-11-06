@@ -19,8 +19,14 @@ import {
   readCoordinatorDescriptor,
   sameCoordinator,
 } from '../lib/coordinator/connection.ts';
+import {
+  claimSupervisorPid,
+  releaseSupervisorPid,
+  type SupervisorClaim,
+} from '../lib/commands/coordinator/pid-claim.ts';
 
 let dir: string;
+let claim: SupervisorClaim;
 const previous = process.env.HAN_DATA_DIR;
 const binding = {
   pid: process.pid,
@@ -43,6 +49,11 @@ beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'han-intent-'));
   process.env.HAN_DATA_DIR = dir;
   mkdirSync(join(dir, 'runtime'), { mode: 0o700 });
+  const acquired = claimSupervisorPid(join(dir, 'coordinator.pid'));
+  if (acquired.kind !== 'owned')
+    throw new Error('Could not acquire test supervisor');
+  claim = acquired.claim;
+  binding.nonce = claim.nonce;
   path = join(
     dir,
     'runtime',
@@ -50,6 +61,7 @@ beforeEach(() => {
   );
 });
 afterEach(() => {
+  releaseSupervisorPid(claim);
   if (previous === undefined) delete process.env.HAN_DATA_DIR;
   else process.env.HAN_DATA_DIR = previous;
   rmSync(dir, { recursive: true, force: true });
@@ -69,7 +81,7 @@ test('accepts and removes only a bound child generation', () => {
       instanceId: randomUUID(),
     })
   ).toThrow(CoordinatorSecurityError);
-  removeShutdownIntent(binding, descriptor.pid, descriptor);
+  removeShutdownIntent(binding, descriptor.pid, descriptor, claim);
   expect(readShutdownIntent(binding, descriptor.pid)).toBeNull();
 });
 

@@ -74,6 +74,21 @@ jobs:
           if ($cli.Count -ne 1) { throw "Expected exactly one Windows CLI binary" }
           bun packages/han/scripts/prove-installed-windows-coordinator.ts $cli[0].FullName packages/han-rs/target/debug/han-coordinator.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build feature-enabled startup barrier coordinator
+        working-directory: packages/han-rs
+        run: cargo build --locked -p han-coordinator --features proof-startup-barrier
+      - name: Prove Windows fixed-port startup barrier
+        shell: pwsh
+        env:
+          HAN_PROOF_BARRIER_ONLY: "1"
+        run: |
+          $cli = @(Get-ChildItem packages/han/dist/binaries/han-windows-x64*)
+          if ($cli.Count -ne 1) { throw "Expected exactly one Windows CLI binary" }
+          bun packages/han/scripts/prove-installed-windows-coordinator.ts $cli[0].FullName packages/han-rs/target/debug/han-coordinator.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Restore default coordinator for browser proof
+        working-directory: packages/han-rs
+        run: cargo build --locked -p han-coordinator
       - name: Install browser proof dependencies
         if: ${{ success() || failure() }}
         working-directory: packages/browse-client
@@ -125,7 +140,7 @@ jobs:
 
   pid-mutation-controls:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -135,6 +150,12 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.4.4"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Build native coordinator
+        working-directory: packages/han-rs
+        run: cargo build --locked -p han-coordinator
       - name: Install dependencies
         working-directory: packages/han
         run: bun install --frozen-lockfile
@@ -179,6 +200,14 @@ jobs:
           EOF
       - name: Prove supervisor crash recovery and replacement isolation
         working-directory: packages/han
+        run: bun run scripts/prove-supervisor.ts
+      - name: Build feature-enabled startup barrier coordinator
+        working-directory: packages/han-rs
+        run: cargo build --locked -p han-coordinator --features proof-startup-barrier
+      - name: Prove Linux fixed-port startup barrier
+        working-directory: packages/han
+        env:
+          HAN_PROOF_BARRIER_ONLY: "1"
         run: bun run scripts/prove-supervisor.ts
 
   installed-coordinator:
@@ -287,7 +316,7 @@ jobs:
 
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -297,6 +326,12 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.4.4"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Build native coordinator
+        working-directory: packages/han-rs
+        run: cargo build --locked -p han-coordinator
 
       - name: Install dependencies
         run: bun install --frozen-lockfile

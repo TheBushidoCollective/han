@@ -32,6 +32,7 @@ beforeAll(async () => {
   }));
   mock.module('../lib/commands/coordinator/health.ts', () => ({
     ...realHealth,
+    readOptionalDescriptor: () => null,
     checkHealth: async () => {
       events.push(
         existsSync(realConnection.getCoordinatorDataDir())

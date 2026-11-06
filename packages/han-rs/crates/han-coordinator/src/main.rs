@@ -11,6 +11,8 @@ mod rpc_guard;
 mod server;
 mod tls;
 mod watcher_bridge;
+#[cfg(unix)]
+mod posix_runtime_helper;
 #[cfg(windows)]
 mod windows_process_identity;
 #[cfg(windows)]
@@ -204,6 +206,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             return Ok(());
         }
     }
+    #[cfg(unix)]
+    {
+        let mut args = std::env::args_os();
+        let _program = args.next();
+        if args.next().as_deref() == Some(std::ffi::OsStr::new("--local-runtime"))
+            && args.next().is_none()
+        {
+            posix_runtime_helper::run()?;
+            return Ok(());
+        }
+    }
     // Parse CLI args
     let cli = Cli::parse();
     let supervisor = match (&cli.supervisor_pid, &cli.supervisor_nonce, &cli.supervisor_generation) {
@@ -319,6 +332,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     });
+    // This hook exists only in explicitly feature-enabled proof binaries.
+    // Fixture state is private and no transport credentials are recorded.
+    #[cfg(feature = "proof-startup-barrier")]
+    if let Some(path) = std::env::var_os("HAN_PROOF_STARTUP_BARRIER") {
+        let path = std::path::PathBuf::from(path);
+        if path.join("arm").is_file() {
+            let marker = serde_json::json!({
+                "pid": std::process::id(),
+                "httpsPort": https_port,
+                "grpcPort": grpc_port,
+                "supervisor": &supervisor,
+            });
+            std::fs::write(path.join("bound.json"), serde_json::to_vec(&marker)?)?;
+            let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(45);
+            while !path.join("release").is_file() {
+                if tokio::time::Instant::now() >= deadline {
+                    return Err(std::io::Error::new(std::io::ErrorKind::TimedOut, "startup proof barrier timed out").into());
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+            }
+        }
+    }
+
 
     // Initialize database
     let db_path = resolve_db_path(cli.db_path.as_deref(), &data_dir);

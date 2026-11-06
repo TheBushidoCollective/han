@@ -210,6 +210,35 @@ pub(crate) fn verify_parent(expected: &ProcessIdentity) -> io::Result<()> {
     Ok(())
 }
 
+/// Captures the helper parent's direct child while retaining the queried handle.
+pub(crate) fn child_identity(pid: u32) -> io::Result<Option<ProcessIdentity>> {
+    let parent = own_parent_identity()?;
+    let child = match open_process(pid) {
+        Ok(child) => child,
+        Err(error) if error.raw_os_error() == Some(ERROR_INVALID_PARAMETER as i32) => return Ok(None),
+        Err(error) => return Err(error),
+    };
+    match unsafe { WaitForSingleObject(child.0, 0) } {
+        WAIT_OBJECT_0 => return Ok(None),
+        WAIT_TIMEOUT => {},
+        _ => return Err(io::Error::last_os_error()),
+    }
+    let identity = identity_from_handle(child.0)?;
+    let child_time = identity.creation_time.parse::<u64>().map_err(|_| invalid("invalid child time"))?;
+    let parent_time = parent.creation_time.parse::<u64>().map_err(|_| invalid("invalid parent time"))?;
+    if identity.pid != pid || identity.user_sid != parent.user_sid || child_time <= parent_time || parent_pid(pid)? != parent.pid {
+        return Err(invalid("process is not the expected child"));
+    }
+    if liveness(&parent)? != Liveness::Alive {
+        return Err(invalid("parent identity is not alive"));
+    }
+    match unsafe { WaitForSingleObject(child.0, 0) } {
+        WAIT_TIMEOUT => Ok(Some(identity)),
+        WAIT_OBJECT_0 => Ok(None),
+        _ => Err(io::Error::last_os_error()),
+    }
+}
+
 fn open_failure_state(error: io::Error) -> io::Result<Liveness> {
     match error.raw_os_error() {
         Some(code) if code == ERROR_ACCESS_DENIED as i32 => Ok(Liveness::Unknown),

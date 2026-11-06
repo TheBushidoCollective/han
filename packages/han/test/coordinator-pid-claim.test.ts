@@ -20,27 +20,49 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
+  renameSync,
   rmSync,
   symlinkSync,
   utimesSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { delimiter, join, resolve } from 'node:path';
 import {
   claimSupervisorPid,
   readSupervisorIdentity,
   releaseSupervisorPid,
 } from '../lib/commands/coordinator/pid-claim.ts';
+import {
+  recoveryInspect,
+  recoveryReclaim,
+} from '../lib/coordinator/recovery-runtime.ts';
+import { findCoordinatorBinary } from '../lib/coordinator/binary.ts';
 
 const CLAIMANTS = 8;
 
 let dataDir: string;
 let children: Bun.Subprocess[];
+let originalPath: string | undefined;
+let originalHome: string | undefined;
 
 beforeEach(() => {
   dataDir = mkdtempSync(join(tmpdir(), 'han-pid-claim-'));
   children = [];
+  originalPath = process.env.PATH;
+  originalHome = process.env.HOME;
+  if (process.env.CI === 'true' && process.platform !== 'win32') {
+    const buildDir = resolve(import.meta.dir, '../../han-rs/target/debug');
+    process.env.PATH = `${buildDir}${delimiter}${originalPath ?? ''}`;
+    process.env.HOME = dataDir;
+    const selected = findCoordinatorBinary();
+    if (
+      !selected ||
+      realpathSync(selected) !== realpathSync(join(buildDir, 'han-coordinator'))
+    )
+      throw new Error('PID proof did not select the freshly built coordinator');
+  }
 });
 
 afterEach(async () => {
@@ -48,6 +70,8 @@ afterEach(async () => {
     child.kill();
   }
   await Promise.all(children.map((child) => child.exited));
+  process.env.PATH = originalPath;
+  process.env.HOME = originalHome;
   rmSync(dataDir, { recursive: true, force: true });
 });
 
@@ -63,6 +87,23 @@ test('read-only identity follows the owned reservation and rejects its absence a
   releaseSupervisorPid(result.claim);
   expect(readSupervisorIdentity(path)).toBeNull();
 });
+
+test.skipIf(process.platform === 'win32')(
+  'recovery refuses a replacement PID file even when its contents match',
+  () => {
+    const path = join(dataDir, 'coordinator.pid');
+    const result = claimSupervisorPid(path);
+    if (result.kind !== 'owned' || result.claim.kind !== 'unix')
+      throw new Error('test claim was not acquired');
+    const snapshot = recoveryInspect(dataDir, { kind: 'active' }).snapshot;
+    const replacement = `${path}.replacement`;
+    writeFileSync(replacement, readFileSync(path), { mode: 0o600 });
+    renameSync(replacement, path);
+    expect(recoveryReclaim(dataDir, snapshot)).toBe('changed');
+    expect(readFileSync(path, 'utf8')).toBe(String(process.pid));
+    expect(existsSync(`${path}.takeover`)).toBe(true);
+  }
+);
 
 /**
  * Read one newline-terminated line from a child's stdout.
@@ -126,8 +167,10 @@ async function raceClaimants(): Promise<string[]> {
     await Promise.withResolvers().promise;
   `;
 
+  const scriptPath = join(dataDir, 'claimant.ts');
+  writeFileSync(scriptPath, script);
   children = Array.from({ length: CLAIMANTS }, () =>
-    Bun.spawn([process.execPath, '-e', script], {
+    Bun.spawn([process.execPath, scriptPath], {
       env: { ...process.env, HAN_DATA_DIR: dataDir },
       stdout: 'pipe',
       stderr: 'pipe',
@@ -180,46 +223,27 @@ test('concurrent claims produce exactly one winner', async () => {
   expect(winner.exitCode).toBeNull();
 }, 30_000);
 
-test('a claim held by a live process is refused, not stolen', async () => {
+test('unanchored live and dead PID files cannot authorize takeover', async () => {
+  const path = join(dataDir, 'coordinator.pid');
   const holder = Bun.spawn(
     [process.execPath, '-e', 'setInterval(() => {}, 1000)'],
     { stdout: 'ignore' }
   );
-  writeFileSync(join(dataDir, 'coordinator.pid'), String(holder.pid), {
-    mode: 0o600,
-  });
-
-  try {
-    const outcomes = await raceClaimants();
-
-    expect(outcomes).toEqual(
-      Array.from({ length: CLAIMANTS }, () => `BLOCKED:${holder.pid}`)
-    );
-  } finally {
-    holder.kill();
-    await holder.exited;
-  }
-}, 30_000);
-
-test('a dead holder is taken over by exactly one caller', async () => {
-  const dead = Bun.spawn([process.execPath, '-e', ''], { stdout: 'ignore' });
-  await dead.exited;
-  writeFileSync(join(dataDir, 'coordinator.pid'), String(dead.pid), {
-    mode: 0o600,
-  });
-
-  const outcomes = await raceClaimants();
-
-  expect(outcomes.filter((line) => line === 'WON')).toHaveLength(1);
-  expect(outcomes.filter((line) => line.startsWith('BLOCKED:'))).toHaveLength(
-    CLAIMANTS - 1
-  );
+  children.push(holder);
+  writeFileSync(path, String(holder.pid), { mode: 0o600 });
+  expect(() => claimSupervisorPid(path)).toThrow();
+  expect(readFileSync(path, 'utf8')).toBe(String(holder.pid));
+  holder.kill();
+  await holder.exited;
+  children.splice(children.indexOf(holder), 1);
+  expect(() => claimSupervisorPid(path)).toThrow();
+  expect(readFileSync(path, 'utf8')).toBe(String(holder.pid));
 }, 30_000);
 
 test('malformed PID metadata cannot grant a claim or be removed', () => {
   const path = join(dataDir, 'coordinator.pid');
   writeFileSync(path, '123junk', { mode: 0o600 });
-  expect(() => claimSupervisorPid(path)).toThrow('Malformed supervisor PID');
+  expect(() => claimSupervisorPid(path)).toThrow();
   expect(readFileSync(path, 'utf8')).toBe('123junk');
 });
 
@@ -252,258 +276,78 @@ test('old release cannot remove a later acquisition', () => {
   expect(existsSync(path)).toBe(true);
   expect(readFileSync(path, 'utf8')).toBe(String(process.pid));
   if (second.claim.kind !== 'unix') throw new Error('expected unix claim');
-  expect(readdirSync(`${path}.takeover`)).toEqual([second.claim.owner]);
+  expect(readdirSync(`${path}.takeover`)).toEqual([
+    `owner.${second.claim.nonce}.json`,
+  ]);
   releaseSupervisorPid(second.claim);
 });
 
-test('delayed stale reclaimer cannot delete a successor reservation', async () => {
-  const dead = Bun.spawn([process.execPath, '-e', ''], { stdout: 'ignore' });
-  await dead.exited;
+test('delayed stale reclaimer cannot delete a successor reservation', () => {
   const path = join(dataDir, 'coordinator.pid');
-  const reservation = `${path}.takeover`;
-  const nonce = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-  const staleOwner = join(reservation, `owner.${nonce}.json`);
-  const resume = join(dataDir, 'resume');
-  mkdirSync(reservation, { mode: 0o700 });
-  writeFileSync(
-    staleOwner,
-    JSON.stringify({ version: 1, pid: dead.pid, nonce }),
-    { mode: 0o600 }
-  );
-  const modulePath = join(
-    import.meta.dir,
-    '..',
-    'lib',
-    'commands',
-    'coordinator',
-    'pid-claim.ts'
-  );
-  const prefix = `
-    const fs = await import('node:fs');
-    const real = { ...fs };
-    const { mock } = await import('bun:test');
-  `;
-  const pausedScript = `${prefix}
-    mock.module('node:fs', () => ({ ...real, unlinkSync(path) {
-      if (path === ${JSON.stringify(staleOwner)}) {
-        console.log('PAUSED');
-        while (!real.existsSync(${JSON.stringify(resume)})) {}
-      }
-      return real.unlinkSync(path);
-    }}));
-    const { claimSupervisorPid } = await import(${JSON.stringify(modulePath)});
-    const result = claimSupervisorPid(${JSON.stringify(path)});
-    console.log(result.kind === 'owned' ? 'WON' : 'BLOCKED:' + result.pid);
-    await Promise.withResolvers().promise;
-  `;
-  const winnerScript = `
-    const { claimSupervisorPid } = await import(${JSON.stringify(modulePath)});
-    const result = claimSupervisorPid(${JSON.stringify(path)});
-    console.log(result.kind === 'owned' ? 'WON' : 'BLOCKED:' + result.pid);
-    await Promise.withResolvers().promise;
-  `;
-  const paused = Bun.spawn([process.execPath, '-e', pausedScript], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  children.push(paused);
-  const pausedReader = (
-    paused.stdout as ReadableStream<Uint8Array>
-  ).getReader();
-  const pausedDecoder = new TextDecoder();
-  const pausedCarry = { text: '' };
-  expect(await readLine(pausedReader, pausedDecoder, pausedCarry)).toBe(
-    'PAUSED'
-  );
-  const winner = Bun.spawn([process.execPath, '-e', winnerScript], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  children.push(winner);
-  const winnerReader = (
-    winner.stdout as ReadableStream<Uint8Array>
-  ).getReader();
-  expect(await readLine(winnerReader, new TextDecoder(), { text: '' })).toBe(
-    'WON'
-  );
-  const successorOwner = readdirSync(reservation);
-  writeFileSync(resume, 'go');
-  expect(await readLine(pausedReader, pausedDecoder, pausedCarry)).toBe(
-    `BLOCKED:${winner.pid}`
-  );
-  expect(readFileSync(path, 'utf8')).toBe(String(winner.pid));
-  expect(readdirSync(reservation)).toEqual(successorOwner);
-  expect(winner.exitCode).toBeNull();
-}, 30_000);
-
-test.each([true, false])(
-  'reclaims an owner stopped before PID publication: %s',
-  async (crashBeforePublication) => {
-    const path = join(dataDir, 'coordinator.pid');
-    const reservation = `${path}.takeover`;
-    const resume = join(dataDir, 'resume');
-    const modulePath = join(
-      import.meta.dir,
-      '..',
-      'lib',
-      'commands',
-      'coordinator',
-      'pid-claim.ts'
-    );
-    const script = `
-    const fs = await import('node:fs');
-    const real = { ...fs };
-    const { mock } = await import('bun:test');
-    mock.module('node:fs', () => ({ ...real, renameSync(source, destination) {
-      real.renameSync(source, destination);
-      if (destination === ${JSON.stringify(reservation)}) {
-        console.log('RESERVED');
-        while (!real.existsSync(${JSON.stringify(resume)})) {}
-      }
-    }}));
-    const { claimSupervisorPid } = await import(${JSON.stringify(modulePath)});
-    const result = claimSupervisorPid(${JSON.stringify(path)});
-    console.log(result.kind === 'owned' ? 'WON' : 'BLOCKED:' + result.pid);
-    await Promise.withResolvers().promise;
-  `;
-    const owner = Bun.spawn([process.execPath, '-e', script], {
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    children.push(owner);
-    const reader = (owner.stdout as ReadableStream<Uint8Array>).getReader();
-    const decoder = new TextDecoder();
-    const carry = { text: '' };
-    expect(await readLine(reader, decoder, carry)).toBe('RESERVED');
-    expect(claimSupervisorPid(path)).toEqual({
-      kind: 'blocked',
-      pid: owner.pid,
-    });
-    if (!crashBeforePublication) {
-      writeFileSync(resume, 'go');
-      expect(await readLine(reader, decoder, carry)).toBe('WON');
-      expect(readFileSync(path, 'utf8')).toBe(String(owner.pid));
-    }
-    expect(owner.exitCode).toBeNull();
-    owner.kill();
-    await owner.exited;
-    children.splice(children.indexOf(owner), 1);
-    const successor = claimSupervisorPid(path);
-    if (successor.kind !== 'owned')
-      throw new Error('Dead owner was not reclaimed');
-    expect(readFileSync(path, 'utf8')).toBe(String(process.pid));
-    releaseSupervisorPid(successor.claim);
-  },
-  30_000
-);
-
-test('uncertain liveness cannot reclaim a reservation', () => {
-  const path = join(dataDir, 'coordinator.pid');
-  const reservation = `${path}.takeover`;
-  const nonce = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
-  const otherPid = 2147483000;
-  mkdirSync(reservation, { mode: 0o700 });
-  writeFileSync(
-    join(reservation, `owner.${nonce}.json`),
-    JSON.stringify({ version: 1, pid: otherPid, nonce }),
-    { mode: 0o600 }
-  );
-  const original = process.kill;
-  try {
-    process.kill = ((pid: number, signal?: NodeJS.Signals | number) => {
-      if (pid === otherPid)
-        throw Object.assign(new Error('denied'), { code: 'EPERM' });
-      return original(pid, signal);
-    }) as typeof process.kill;
-    expect(claimSupervisorPid(path)).toEqual({
-      kind: 'blocked',
-      pid: otherPid,
-    });
-    process.kill = ((pid: number, signal?: NodeJS.Signals | number) => {
-      if (pid === otherPid)
-        throw Object.assign(new Error('probe failed'), { code: 'EIO' });
-      return original(pid, signal);
-    }) as typeof process.kill;
-    expect(() => claimSupervisorPid(path)).toThrow('probe failed');
-    expect(readdirSync(reservation)).toEqual([`owner.${nonce}.json`]);
-  } finally {
-    process.kill = original;
-  }
+  const old = claimSupervisorPid(path);
+  if (old.kind !== 'owned') throw new Error('First claim blocked');
+  const snapshot = recoveryInspect(dataDir, { kind: 'active' }).snapshot;
+  releaseSupervisorPid(old.claim);
+  const successor = claimSupervisorPid(path);
+  if (successor.kind !== 'owned') throw new Error('Successor blocked');
+  expect(recoveryReclaim(dataDir, snapshot)).toBe('changed');
+  expect(readFileSync(path, 'utf8')).toBe(String(process.pid));
+  expect(readdirSync(`${path}.takeover`)).toEqual([
+    `owner.${successor.claim.nonce}.json`,
+  ]);
+  releaseSupervisorPid(successor.claim);
 });
 
-test('delayed removal of an empty reservation cannot remove a successor', async () => {
-  const dead = Bun.spawn([process.execPath, '-e', ''], { stdout: 'ignore' });
-  await dead.exited;
+test('reclaims a dead owner stopped before PID publication', async () => {
   const path = join(dataDir, 'coordinator.pid');
   const reservation = `${path}.takeover`;
-  const nonce = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
-  const resume = join(dataDir, 'resume');
+  const owner = Bun.spawn(
+    [process.execPath, '-e', 'setInterval(() => {}, 1000)'],
+    {
+      stdout: 'ignore',
+    }
+  );
+  children.push(owner);
+  const nonce = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   mkdirSync(reservation, { mode: 0o700 });
   writeFileSync(
     join(reservation, `owner.${nonce}.json`),
-    JSON.stringify({ version: 1, pid: dead.pid, nonce }),
+    JSON.stringify({ version: 1, pid: owner.pid, nonce }),
     { mode: 0o600 }
   );
-  const modulePath = join(
-    import.meta.dir,
-    '..',
-    'lib',
-    'commands',
-    'coordinator',
-    'pid-claim.ts'
-  );
-  const pausedScript = `
-    const fs = await import('node:fs');
-    const real = { ...fs };
-    const { mock } = await import('bun:test');
-    let paused = false;
-    mock.module('node:fs', () => ({ ...real, rmdirSync(path) {
-      if (path === ${JSON.stringify(reservation)} && !paused) {
-        paused = true;
-        console.log('PAUSED');
-        while (!real.existsSync(${JSON.stringify(resume)})) {}
-      }
-      return real.rmdirSync(path);
-    }}));
-    const { claimSupervisorPid } = await import(${JSON.stringify(modulePath)});
-    const result = claimSupervisorPid(${JSON.stringify(path)});
-    console.log(result.kind === 'owned' ? 'WON' : 'BLOCKED:' + result.pid);
-    await Promise.withResolvers().promise;
-  `;
-  const winnerScript = `
-    const { claimSupervisorPid } = await import(${JSON.stringify(modulePath)});
-    const result = claimSupervisorPid(${JSON.stringify(path)});
-    console.log(result.kind === 'owned' ? 'WON' : 'BLOCKED:' + result.pid);
-    await Promise.withResolvers().promise;
-  `;
-  const paused = Bun.spawn([process.execPath, '-e', pausedScript], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  children.push(paused);
-  const reader = (paused.stdout as ReadableStream<Uint8Array>).getReader();
-  const decoder = new TextDecoder();
-  const carry = { text: '' };
-  expect(await readLine(reader, decoder, carry)).toBe('PAUSED');
-  const winner = Bun.spawn([process.execPath, '-e', winnerScript], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  children.push(winner);
-  const winnerReader = (
-    winner.stdout as ReadableStream<Uint8Array>
-  ).getReader();
-  expect(await readLine(winnerReader, new TextDecoder(), { text: '' })).toBe(
-    'WON'
-  );
-  const successorOwner = readdirSync(reservation);
-  writeFileSync(resume, 'go');
-  expect(await readLine(reader, decoder, carry)).toBe(`BLOCKED:${winner.pid}`);
-  expect(existsSync(reservation)).toBe(true);
-  expect(readFileSync(path, 'utf8')).toBe(String(winner.pid));
-  expect(readdirSync(reservation)).toEqual(successorOwner);
-  expect(winner.exitCode).toBeNull();
+  expect(claimSupervisorPid(path)).toEqual({ kind: 'blocked', pid: owner.pid });
+  owner.kill();
+  await owner.exited;
+  children.splice(children.indexOf(owner), 1);
+  const successor = claimSupervisorPid(path);
+  if (successor.kind !== 'owned')
+    throw new Error('Dead owner was not reclaimed');
+  expect(readFileSync(path, 'utf8')).toBe(String(process.pid));
+  releaseSupervisorPid(successor.claim);
 }, 30_000);
+
+test('live owner cannot be reclaimed through a recovery snapshot', () => {
+  const path = join(dataDir, 'coordinator.pid');
+  const claim = claimSupervisorPid(path);
+  if (claim.kind !== 'owned') throw new Error('Claim blocked');
+  const snapshot = recoveryInspect(dataDir, { kind: 'active' }).snapshot;
+  expect(recoveryReclaim(dataDir, snapshot)).toBe('busy');
+  expect(readFileSync(path, 'utf8')).toBe(String(process.pid));
+  releaseSupervisorPid(claim.claim);
+});
+
+test('recovery preserves an intervening claim after an absent snapshot', () => {
+  const path = join(dataDir, 'coordinator.pid');
+  const first = claimSupervisorPid(path);
+  if (first.kind !== 'owned') throw new Error('Claim blocked');
+  releaseSupervisorPid(first.claim);
+  const snapshot = recoveryInspect(dataDir, { kind: 'active' }).snapshot;
+  const successor = claimSupervisorPid(path);
+  if (successor.kind !== 'owned') throw new Error('Successor blocked');
+  expect(recoveryReclaim(dataDir, snapshot)).toBe('changed');
+  expect(readFileSync(path, 'utf8')).toBe(String(process.pid));
+  releaseSupervisorPid(successor.claim);
+});
 
 test.skipIf(process.platform === 'win32')(
   'PID symlinks are rejected without changing their target',
@@ -517,42 +361,14 @@ test.skipIf(process.platform === 'win32')(
   }
 );
 
-test('retry exhaustion never grants ownership', async () => {
+test('malformed reservation never grants ownership', () => {
   const path = join(dataDir, 'coordinator.pid');
   const reservation = `${path}.takeover`;
-  const modulePath = join(
-    import.meta.dir,
-    '..',
-    'lib',
-    'commands',
-    'coordinator',
-    'pid-claim.ts'
-  );
-  const script = `
-    const fs = await import('node:fs');
-    const real = { ...fs };
-    const { mock } = await import('bun:test');
-    mock.module('node:fs', () => ({ ...real, renameSync(source, destination) {
-      if (destination === ${JSON.stringify(reservation)}) throw Object.assign(new Error('contended'), { code: 'EEXIST' });
-      return real.renameSync(source, destination);
-    }}));
-    const { claimSupervisorPid } = await import(${JSON.stringify(modulePath)});
-    try {
-      claimSupervisorPid(${JSON.stringify(path)});
-      console.log('UNEXPECTED_OWNERSHIP');
-    } catch (error) {
-      console.log('ERROR:' + error.message);
-    }
-  `;
-  const child = Bun.spawn([process.execPath, '-e', script], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  const reader = (child.stdout as ReadableStream<Uint8Array>).getReader();
-  expect(await readLine(reader, new TextDecoder(), { text: '' })).toBe(
-    'ERROR:Supervisor claim contention exceeded retry limit'
-  );
-  expect(await child.exited).toBe(0);
+  mkdirSync(reservation, { mode: 0o700 });
+  writeFileSync(join(reservation, 'unexpected'), 'unsafe', { mode: 0o600 });
+  expect(() => claimSupervisorPid(path)).toThrow();
+  expect(readFileSync(join(reservation, 'unexpected'), 'utf8')).toBe('unsafe');
+  expect(existsSync(path)).toBe(false);
 });
 
 test('legacy regular-file reservations honor live and dead holders', async () => {

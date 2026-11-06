@@ -15,9 +15,20 @@ In an isolated Linux CI runner, build and test `han-coordinator` from
 `cargo test --locked -p han-coordinator`. Then run
 `bun run scripts/prove-supervisor.ts` from `packages/han`.
 
-The proof uses disposable data directories and checks authenticated stop,
-restart, crash recovery, replacement isolation, and shutdown races. It does
-not exercise an installed production binary or a shared data directory.
+The default-build proof uses disposable data directories and exercises
+authenticated stop, restart, crash recovery, dead supervisor and child recovery,
+orphan shutdown, replacement isolation, and shutdown races. It does not
+exercise an installed production binary or a shared data directory.
+
+The fixed-port bind-before-publication case uses a separate, explicitly
+feature-enabled coordinator. After the default proof, build with
+`cargo build --locked -p han-coordinator --features proof-startup-barrier`
+from `packages/han-rs`, then run
+`HAN_PROOF_BARRIER_ONLY=1 bun run scripts/prove-supervisor.ts` from
+`packages/han`. The feature is not in the default build. Its private fixture
+holds a real child after binding and before publication, checks the predecessor
+descriptor and pending listener connections, then releases it and authenticates
+the replacement. This is separate evidence from the default artifact.
 
 ## Installed Windows coordinator path
 
@@ -35,14 +46,20 @@ bun scripts/build-bundle.js bun-windows-x64
 bun scripts/prove-installed-windows-coordinator.ts <han.exe> <han-coordinator.exe>
 ```
 
-The installed proof uses disposable private data and exercises authenticated
-HTTPS and gRPC, restart, crash recovery, missing-lock and incomplete-claim
-startup, and modeled PID reuse. The modeled case changes a stale descriptor to
-refer to a live fixture process with a different creation time; it does not
-claim an actual OS PID recycle. Failure output is restricted to the phase,
-numeric exit status, and validated helper metadata, with cleanup failures
-reported separately. The existing Windows workflow is manually dispatched and
-restricted to its WIP branch; these commands do not imply automatic coverage.
+The default-build installed proof uses disposable private data and exercises
+authenticated HTTPS and gRPC, restart, crash recovery, dead-pair stop and
+restart, orphan shutdown, missing-lock and incomplete-claim startup, and
+modeled PID reuse. The modeled case changes a stale descriptor to refer to a
+live fixture process with a different creation time; it does not claim an
+actual OS PID recycle. Failure output is restricted to the phase, numeric exit
+status, and validated helper metadata, with cleanup failures reported
+separately.
+
+For the distinct feature-enabled fixed-port proof, build with
+`cargo build --locked -p han-coordinator --features proof-startup-barrier`, set
+`HAN_PROOF_BARRIER_ONLY=1`, and run the installed proof command above with that
+coordinator binary. The default installed pair must also be proven separately.
+The `windows-native-primitives` job runs both paths on Windows.
 
 ## Local browser transport path
 

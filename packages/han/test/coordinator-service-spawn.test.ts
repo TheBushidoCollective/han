@@ -56,6 +56,15 @@ mock.module('../lib/commands/coordinator/health.ts', () => ({
     (await mockHealth(port))
       ? { status: 'ok', pid: 4242, uptime: 1, version: 'test' }
       : null,
+  readOptionalDescriptor: () =>
+    mockBunSpawn.mock.calls.length ? mockDescriptor() : null,
+  checkDescriptorHealth: async (descriptor: { pid: number }) => {
+    if (!(await mockHealth()))
+      throw new realConnection.CoordinatorSecurityError('not healthy');
+    return { status: 'ok', pid: descriptor.pid };
+  },
+  checkStartupObserver: async () => !!(await mockHealth()),
+  descriptorIsDead: () => false,
 }));
 const realConnection = require('../lib/coordinator/connection.ts');
 const readActualDescriptor = realConnection.readCoordinatorDescriptor;
@@ -73,6 +82,11 @@ mock.module('../lib/coordinator/connection.ts', () => ({
   ...realConnection,
   readCoordinatorDescriptor: (path?: string) =>
     path === undefined ? mockDescriptor() : readActualDescriptor(path),
+}));
+const realRecovery = require('../lib/coordinator/recovery-runtime.ts');
+mock.module('../lib/coordinator/recovery-runtime.ts', () => ({
+  ...realRecovery,
+  posixPrepare: () => {},
 }));
 
 // existsSync returns true so findCoordinatorBinary "finds" a binary path.
@@ -146,6 +160,7 @@ afterAll(() => {
   mock.module('node:fs', () => realFs);
   mock.module('../lib/grpc/client.ts', () => realGrpcClient);
   mock.module('../lib/commands/coordinator/health.ts', () => realHealthModule);
+  mock.module('../lib/coordinator/recovery-runtime.ts', () => realRecovery);
   mock.module('../lib/coordinator/connection.ts', () => ({
     ...realConnection,
     readCoordinatorDescriptor: readActualDescriptor,
@@ -350,7 +365,7 @@ describe('stopCoordinatorService ownership', () => {
     expect(child.unref).not.toHaveBeenCalled();
   });
 
-  test('classifies a health reset as a crash only after the owned child exits', async () => {
+  test('does not signal a live child when pinned health fails', async () => {
     mockHealth.mockResolvedValueOnce(false);
     mockHealth.mockRejectedValueOnce(
       new realConnection.CoordinatorSecurityError('connection reset')
@@ -360,15 +375,11 @@ describe('stopCoordinatorService ownership', () => {
       exitCode: null as number | null,
       unref: mock(),
       kill: mock(),
-      exited: Promise.resolve(1),
+      exited: new Promise<number>(() => {}),
     };
-    child.exited = child.exited.then((code) => {
-      child.exitCode = code;
-      return code;
-    });
     mockBunSpawn.mockImplementationOnce(() => child as never);
     await expect(cs.startCoordinatorService()).rejects.toThrow(
-      'Coordinator child exited during startup'
+      'connection reset'
     );
     expect(child.kill).not.toHaveBeenCalled();
   });
@@ -426,7 +437,7 @@ describe('stopCoordinatorService ownership', () => {
     expect(shutdownArgs.timeoutSeconds).toBe(5);
   });
 
-  test('owned coordinator falls back to process kill if gRPC shutdown fails', async () => {
+  test('does not signal a child when shutdown fails without a committed intent', async () => {
     mockHealth.mockReset();
     mockHealth.mockResolvedValueOnce(false);
     mockHealth.mockResolvedValue(true);
@@ -443,9 +454,10 @@ describe('stopCoordinatorService ownership', () => {
 
     mockShutdown.mockReset();
     mockShutdown.mockRejectedValueOnce(new Error('connection refused'));
-    await cs.stopCoordinatorService();
-
-    expect(fakeSubprocess.kill).toHaveBeenCalled();
+    await expect(cs.stopCoordinatorService()).rejects.toThrow(
+      'connection refused'
+    );
+    expect(fakeSubprocess.kill).not.toHaveBeenCalled();
   });
 
   test('a replacement descriptor is never sent shutdown by an old owner', async () => {
@@ -472,12 +484,24 @@ describe('stopCoordinatorService ownership', () => {
   test('a child that loses startup does not own the healthy replacement', async () => {
     mockHealth.mockResolvedValueOnce(false);
     mockHealth.mockResolvedValue(true);
-    const child = { pid: 4241, exitCode: null, unref: mock(), kill: mock() };
+    const child = { pid: 4241, exitCode: 1, unref: mock(), kill: mock() };
     mockBunSpawn.mockImplementationOnce(() => child as never);
-    await cs.startCoordinatorService();
-    expect(child.kill).toHaveBeenCalledTimes(1);
+    expect((await cs.startCoordinatorService()).kind).toBe('attached');
+    expect(child.kill).not.toHaveBeenCalled();
     await cs.stopCoordinatorService();
     expect(mockShutdown).not.toHaveBeenCalled();
+  });
+
+  test('does not authenticate an unrelated publication while the child is live', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = { pid: 4241, exitCode: null, unref: mock(), kill: mock() };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await expect(cs.startCoordinatorService()).rejects.toThrow(
+      'failed its health check'
+    );
+    expect(mockHealth).toHaveBeenCalledTimes(1);
+    expect(child.kill).not.toHaveBeenCalled();
   });
 
   test('descriptor security failure does not trigger an unverified shutdown', async () => {

@@ -14,7 +14,13 @@
 import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { Code, ConnectError } from '@connectrpc/connect';
-import { checkHealth } from '../commands/coordinator/health.ts';
+import {
+  checkDescriptorHealth,
+  checkHealth,
+  checkStartupObserver,
+  descriptorIsDead,
+  readOptionalDescriptor,
+} from '../commands/coordinator/health.ts';
 import { readShutdownIntent } from '../commands/coordinator/shutdown-intent.ts';
 import { getHanDataDir } from '../config/claude-settings.ts';
 import { findCoordinatorBinary } from '../coordinator/binary.ts';
@@ -27,7 +33,11 @@ import {
   sameCoordinator,
   sameSupervisor,
 } from '../coordinator/connection.ts';
+import { posixPrepare } from '../coordinator/recovery-runtime.ts';
 import {
+  windowsChildIdentity,
+  type WindowsProcessIdentity,
+  windowsProcessState,
   type WindowsClaim,
   windowsAcquire,
   windowsPrepareRuntime,
@@ -131,12 +141,13 @@ function getHealthBudgetMs(): number {
  */
 async function waitForHealthy(
   port: number,
-  budgetMs = getHealthBudgetMs()
+  budgetMs = getHealthBudgetMs(),
+  predecessor: LocalCoordinatorDescriptor | null = null
 ): Promise<boolean> {
   const deadline = Date.now() + budgetMs;
   let delay = 100;
   while (Date.now() < deadline) {
-    if (await checkHealth(port, true)) {
+    if (await checkStartupObserver(port, predecessor)) {
       return true;
     }
     await Bun.sleep(Math.min(delay, deadline - Date.now()));
@@ -329,7 +340,14 @@ export async function startCoordinatorService(
 ): Promise<CoordinatorStartResult> {
   if (process.platform === 'win32')
     windowsPrepareRuntime(getCoordinatorDataDir());
-  if (state.isRunning && (await isCoordinatorServing(state.port))) {
+  else posixPrepare(getCoordinatorDataDir());
+  const cachedDescriptor = state.isRunning ? readOptionalDescriptor() : null;
+  if (
+    state.isRunning &&
+    cachedDescriptor &&
+    !descriptorIsDead(cachedDescriptor) &&
+    (await checkDescriptorHealth(cachedDescriptor, state.port))
+  ) {
     if (state.ownsProcess && state.process && state.ownedDescriptor) {
       const current = readCoordinatorDescriptor();
       if (
@@ -354,7 +372,9 @@ export async function startCoordinatorService(
   }
   state.isRunning = false;
   const port = getEffectivePort();
-  if (await isCoordinatorServing(port)) {
+  const selected = readOptionalDescriptor();
+  const predecessor = selected && descriptorIsDead(selected) ? selected : null;
+  if (!predecessor && (await isCoordinatorServing(port))) {
     state.isRunning = true;
     state.port = port;
     state.ownsProcess = false;
@@ -383,7 +403,7 @@ export async function startCoordinatorService(
       '[coordinator] Another process is already starting the coordinator, waiting for it to become healthy...'
     );
     const budgetMs = getHealthBudgetMs();
-    const healthy = await waitForHealthy(port, budgetMs);
+    const healthy = await waitForHealthy(port, budgetMs, predecessor);
     if (healthy) {
       state.isRunning = true;
       state.port = port;
@@ -434,129 +454,93 @@ export async function startCoordinatorService(
       state.ownsProcess = true;
 
       const child = state.process;
+      const childIdentity: WindowsProcessIdentity | null =
+        process.platform === 'win32'
+          ? windowsChildIdentity(getCoordinatorDataDir(), child.pid)
+          : null;
+      const matchesChild = (
+        descriptor: LocalCoordinatorDescriptor
+      ): boolean => {
+        if (
+          child.exitCode !== null ||
+          descriptor.pid !== child.pid ||
+          !sameSupervisor(descriptor.supervisor, options.supervisor ?? null)
+        )
+          return false;
+        if (process.platform !== 'win32') return true;
+        const actual = descriptor.process;
+        return (
+          !!childIdentity &&
+          !!actual &&
+          actual.pid === childIdentity.pid &&
+          actual.creationTime === childIdentity.creationTime &&
+          actual.userSid === childIdentity.userSid &&
+          windowsProcessState(getCoordinatorDataDir(), childIdentity) ===
+            'alive'
+        );
+      };
       const budgetMs = getHealthBudgetMs();
       const deadline = Date.now() + budgetMs;
       let delay = 100;
-      const stopping = () =>
-        options.supervisor
-          ? readShutdownIntent(
-              options.supervisor,
-              child.pid,
-              state.ownedDescriptor ?? undefined
-            )
-          : null;
+      const stopping = () => {
+        if (!options.supervisor) return null;
+        const intent = readShutdownIntent(
+          options.supervisor,
+          child.pid,
+          state.ownedDescriptor ?? undefined
+        );
+        if (intent && !matchesChild(intent))
+          throw new CoordinatorSecurityError(
+            'Shutdown intent child identity mismatch'
+          );
+        return intent;
+      };
       while (Date.now() < deadline) {
-        let intent = stopping();
+        const intent = stopping();
         if (intent)
           return { kind: 'shutdown-requested', child, descriptor: intent };
-        let healthy = false;
-        try {
-          healthy = Boolean(await checkHealth(port, true));
-        } catch (error) {
-          intent = stopping();
-          if (intent)
-            return { kind: 'shutdown-requested', child, descriptor: intent };
-          // A transport reset can race the subprocess exit notification. Only
-          // classify it as a crash after the owned child has actually exited;
-          // a live child's authentication or TLS failure remains fatal.
-          await Promise.race([child.exited, Bun.sleep(2000)]);
-          intent = stopping();
-          if (intent)
-            return { kind: 'shutdown-requested', child, descriptor: intent };
-          if (child.exitCode !== null)
-            throw new Error('Coordinator child exited during startup', {
-              cause: error,
-            });
-          throw error;
-        }
-        intent = stopping();
-        if (intent)
-          return { kind: 'shutdown-requested', child, descriptor: intent };
-        if (healthy) {
-          const descriptor = readCoordinatorDescriptor();
-          if (descriptor.pid !== child.pid) {
-            if (child.exitCode === null) {
-              if (process.platform === 'win32')
-                throw new CoordinatorSecurityError(
-                  'Cannot signal a Windows coordinator by PID'
-                );
-              child.kill();
-            }
-            await child.exited;
+        const descriptor = readOptionalDescriptor();
+        if (
+          descriptor &&
+          predecessor &&
+          sameCoordinator(descriptor, predecessor)
+        ) {
+          if (!descriptorIsDead(predecessor))
+            throw new CoordinatorSecurityError(
+              'Previous coordinator is still alive'
+            );
+        } else if (descriptor && matchesChild(descriptor)) {
+          await checkDescriptorHealth(descriptor, port);
+          const current = readOptionalDescriptor();
+          if (
+            !current ||
+            !sameCoordinator(current, descriptor) ||
+            !matchesChild(descriptor)
+          )
+            throw new CoordinatorSecurityError(
+              'Coordinator changed during startup'
+            );
+          state.ownedDescriptor = descriptor;
+          state.isRunning = true;
+          state.port = port;
+          return { kind: 'owned', child, descriptor };
+        } else if (child.exitCode !== null) {
+          if (descriptor && (await checkStartupObserver(port, predecessor))) {
             state.process = null;
             state.ownsProcess = false;
             state.isRunning = true;
             state.port = port;
             return { kind: 'attached' };
           }
-          if (child.exitCode !== null) {
-            intent = stopping();
-            if (intent)
-              return { kind: 'shutdown-requested', child, descriptor: intent };
-            throw new Error('Coordinator child exited during startup');
-          }
-          if (
-            !sameSupervisor(descriptor.supervisor, options.supervisor ?? null)
-          )
-            throw new CoordinatorSecurityError(
-              'Coordinator supervisor binding mismatch'
-            );
-          state.ownedDescriptor = descriptor;
-          state.isRunning = true;
-          state.port = port;
-          return { kind: 'owned', child, descriptor };
+          throw new Error('Coordinator child exited during startup');
         }
-        if (child.exitCode !== null) break;
         await Bun.sleep(Math.min(delay, Math.max(0, deadline - Date.now())));
         delay = Math.min(delay * 2, 2000);
       }
-      const intent = stopping();
-      if (intent)
-        return { kind: 'shutdown-requested', child, descriptor: intent };
       throw new Error(buildHealthFailureMessage(port, budgetMs));
     } catch (error) {
-      if (options.supervisor && state.process) {
-        const intent = readShutdownIntent(
-          options.supervisor,
-          state.process.pid,
-          state.ownedDescriptor ?? undefined
-        );
-        if (intent)
-          return {
-            kind: 'shutdown-requested',
-            child: state.process,
-            descriptor: intent,
-          };
-      }
-      if (
-        error instanceof CoordinatorSecurityError ||
-        (error instanceof ConnectError &&
-          (error.code === Code.Unauthenticated ||
-            error.code === Code.PermissionDenied))
-      )
-        throw error;
-      if (state.ownsProcess && state.process) {
-        const child = state.process;
-        if (process.platform === 'win32' && child.exitCode === null)
-          throw new CoordinatorSecurityError(
-            'Cannot signal a Windows coordinator by PID'
-          );
-        try {
-          if (child.exitCode === null) child.kill();
-          await child.exited;
-        } catch {
-          /* Child already exited. */
-        }
-        if (options.supervisor) {
-          const intent = readShutdownIntent(
-            options.supervisor,
-            child.pid,
-            state.ownedDescriptor ?? undefined
-          );
-          if (intent)
-            return { kind: 'shutdown-requested', child, descriptor: intent };
-        }
-      }
+      if (state.process && state.process.exitCode === null)
+        state.process.unref();
       state.process = null;
       state.ownsProcess = false;
       throw error;
@@ -639,14 +623,8 @@ export async function stopCoordinatorService(): Promise<void> {
       owned.supervisor && state.process
         ? readShutdownIntent(owned.supervisor, state.process.pid, owned)
         : null;
-    if (!committed && state.process) {
-      if (process.platform === 'win32')
-        throw new CoordinatorSecurityError(
-          'Cannot signal a Windows coordinator by PID'
-        );
-      state.process.kill();
-      console.log('[coordinator] Process killed');
-    }
+    if (!committed && state.process && state.process.exitCode === null)
+      throw error;
   }
 
   state.process = null;

@@ -7,6 +7,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
+import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -546,6 +547,98 @@ function killFixtureSupervisor(pid: number, dir: string, child?: number): void {
   }
 }
 
+async function deadOwnerRecovery(
+  command: 'stop' | 'restart' | 'orphan'
+): Promise<void> {
+  const dir = directory();
+  const supervisor = Bun.spawn(
+    [
+      process.execPath,
+      cli,
+      'coordinator',
+      'start',
+      '--foreground',
+      '--port',
+      '0',
+    ],
+    { env: environment(dir), stdout: 'pipe', stderr: 'pipe' }
+  );
+  children.push(supervisor);
+  let original: Descriptor | undefined;
+  let replacement: Descriptor | undefined;
+  try {
+    original = await ready(dir, supervisor);
+    const predecessor = original;
+    assertChild(original.pid, supervisor.pid);
+    assert.equal(original.supervisor?.pid, supervisor.pid);
+    // Freeze the supervisor so it cannot restart the child while the fixture
+    // independently kills the pair. Only verified fixture-owned PIDs are signalled.
+    process.kill(supervisor.pid, 'SIGSTOP');
+    if (command !== 'orphan') killChild(original.pid, supervisor.pid);
+    process.kill(supervisor.pid, 'SIGKILL');
+    await supervisor.exited;
+    if (command !== 'orphan') {
+      await waitFor('dead coordinator process', () =>
+        !existsSync(`/proc/${predecessor.pid}`) ? true : undefined
+      );
+      assert.equal(readDescriptor(dir)?.instanceId, original.instanceId);
+      assert.equal(existsSync(join(dir, 'coordinator.pid.takeover')), true);
+    } else {
+      assert.equal(await healthy(original), true);
+    }
+    await cliCommand(dir, command === 'restart' ? 'restart' : 'stop');
+    if (command === 'restart') {
+      replacement = await waitFor('replacement after dead pair', async () => {
+        const current = readDescriptor(dir);
+        return current &&
+          current.instanceId !== predecessor.instanceId &&
+          (await healthy(current))
+          ? current
+          : undefined;
+      });
+      assert.ok(replacement.supervisor);
+      assertChild(replacement.pid, replacement.supervisor.pid);
+      await cliCommand(dir, 'stop');
+    } else if (command === 'orphan') {
+      await cliCommand(dir, 'restart');
+      replacement = await waitFor(
+        'replacement after orphan shutdown',
+        async () => {
+          const current = readDescriptor(dir);
+          return current &&
+            current.instanceId !== predecessor.instanceId &&
+            (await healthy(current))
+            ? current
+            : undefined;
+        }
+      );
+      assert.ok(replacement.supervisor);
+      assertChild(replacement.pid, replacement.supervisor.pid);
+      await cliCommand(dir, 'stop');
+    }
+    assertStoppedRecords(dir);
+    console.log(`dead-owner recovery: ${command}`);
+  } finally {
+    if (supervisor.exitCode === null) {
+      if (original) killChild(original.pid, supervisor.pid);
+      supervisor.kill('SIGKILL');
+      await supervisor.exited;
+    }
+    const remaining = readDescriptor(dir);
+    if (remaining?.supervisor && remaining.supervisor.pid !== supervisor.pid)
+      killFixtureSupervisor(remaining.supervisor.pid, dir, remaining.pid);
+    // An orphan may still be alive if the stop failed. It was verified as the
+    // fixture's child before the supervisor was killed.
+    if (original && command === 'orphan' && (await healthy(original))) {
+      const env = readFileSync(`/proc/${original.pid}/environ`, 'utf8').split(
+        '\0'
+      );
+      if (env.includes(`HAN_DATA_DIR=${dir}`))
+        process.kill(original.pid, 'SIGKILL');
+    }
+  }
+}
+
 async function intentionalStopAndRestart(): Promise<void> {
   const dir = directory();
   const supervisor = Bun.spawn(
@@ -738,7 +831,7 @@ async function standaloneStopPreservesUnrelatedMarker(): Promise<void> {
 }
 
 async function committedStopSurvivesFailure(
-  failure: 'child' | 'requester'
+  failure: 'child' | 'requester' | 'both'
 ): Promise<void> {
   const dir = directory();
   const supervisor = Bun.spawn(
@@ -782,6 +875,23 @@ async function committedStopSurvivesFailure(
     });
     assert.deepEqual(JSON.parse(readFileSync(marker, 'utf8')), descriptor);
     assert.equal(existsSync(join(dir, 'runtime/coordinator.json')), false);
+    if (failure === 'both') {
+      requester.kill('SIGKILL');
+      killChild(descriptor.pid, supervisor.pid);
+      supervisor.kill('SIGKILL');
+      paused = false;
+      await supervisor.exited;
+      await requester.exited;
+      await waitFor('dead committed-intent child', () =>
+        !existsSync(`/proc/${descriptor.pid}`) ? true : undefined
+      );
+      assert.equal(existsSync(marker), true);
+      await cliCommand(dir, 'stop');
+      ownedPid = undefined;
+      assertStoppedRecords(dir);
+      console.log('CLI reclaimed committed intent after both owners died');
+      return;
+    }
     if (failure === 'child') killChild(descriptor.pid, supervisor.pid);
     else requester.kill('SIGKILL');
     supervisor.kill('SIGCONT');
@@ -1008,18 +1118,168 @@ async function stopDuringStartup(): Promise<void> {
   }
 }
 
+async function fixedPortPublicationBarrier(): Promise<void> {
+  const dir = directory();
+  const barrier = directory();
+  const listener = createServer();
+  const listening = Promise.withResolvers<void>();
+  listener.once('error', listening.reject);
+  listener.listen(0, '127.0.0.1', listening.resolve);
+  await listening.promise;
+  const address = listener.address();
+  assert.ok(address && typeof address !== 'string');
+  const port = address.port;
+  const closed = Promise.withResolvers<void>();
+  listener.close((error) => (error ? closed.reject(error) : closed.resolve()));
+  await closed.promise;
+  const env = {
+    ...environment(dir),
+    HAN_COORDINATOR_PORT: String(port),
+    HAN_PROOF_STARTUP_BARRIER: barrier,
+  };
+  const supervisor = Bun.spawn(
+    [
+      process.execPath,
+      cli,
+      'coordinator',
+      'start',
+      '--foreground',
+      '--port',
+      String(port),
+    ],
+    { env, stdout: 'pipe', stderr: 'pipe' }
+  );
+  children.push(supervisor);
+  let owned: number | undefined;
+  try {
+    const previous = await ready(dir, supervisor);
+    owned = previous.pid;
+    assert.equal(previous.httpsPort, port);
+    assertChild(previous.pid, supervisor.pid);
+    writeFileSync(join(barrier, 'arm'), '');
+    killChild(previous.pid, supervisor.pid);
+    const marker = await waitFor('bound replacement', () => {
+      if (!existsSync(join(barrier, 'bound.json'))) return undefined;
+      return JSON.parse(readFileSync(join(barrier, 'bound.json'), 'utf8')) as {
+        pid: number;
+        httpsPort: number;
+        supervisor: Descriptor['supervisor'];
+      };
+    });
+    owned = marker.pid;
+    assertChild(marker.pid, supervisor.pid);
+    assert.equal(marker.httpsPort, port);
+    assert.equal(marker.supervisor?.pid, supervisor.pid);
+    assert.notEqual(
+      marker.supervisor?.generationId,
+      previous.supervisor?.generationId
+    );
+    assert.equal(readDescriptor(dir)?.instanceId, previous.instanceId);
+    // A TCP connection to the held listener remains established because the
+    // server cannot accept or close it before release. Detect attempted stale
+    // health requests without ever exposing the token.
+    for (let i = 0; i < 20; i++) {
+      assert.equal(supervisor.exitCode, null);
+      const established = readFileSync('/proc/net/tcp', 'utf8')
+        .split('\n')
+        .some((line) => {
+          const fields = line.trim().split(/\s+/);
+          return (
+            fields[1]?.endsWith(
+              `:${port.toString(16).toUpperCase().padStart(4, '0')}`
+            ) && fields[3] === '01'
+          );
+        });
+      assert.equal(established, false, 'request reached unpublished listener');
+      await Bun.sleep(100);
+    }
+    assert.equal(readDescriptor(dir)?.instanceId, previous.instanceId);
+    writeFileSync(join(barrier, 'release'), '');
+    const next = await ready(dir, supervisor, previous.instanceId);
+    assert.equal(next.pid, marker.pid);
+    assert.equal(
+      next.supervisor?.generationId,
+      marker.supervisor?.generationId
+    );
+    assert.notEqual(next.bearerToken, previous.bearerToken);
+    await cliCommand(dir, 'stop');
+    owned = undefined;
+    await supervisor.exited;
+    assertStoppedRecords(dir);
+    console.log(
+      'feature-enabled fixed-port bind-before-publication proof passed'
+    );
+  } finally {
+    if (supervisor.exitCode === null) {
+      if (owned !== undefined) killChild(owned, supervisor.pid);
+      supervisor.kill();
+      await supervisor.exited;
+    }
+  }
+}
+
+async function defaultBuildIgnoresBarrier(): Promise<void> {
+  const dir = directory();
+  const barrier = directory();
+  writeFileSync(join(barrier, 'arm'), '');
+  const supervisor = Bun.spawn(
+    [
+      process.execPath,
+      cli,
+      'coordinator',
+      'start',
+      '--foreground',
+      '--port',
+      '0',
+    ],
+    {
+      env: { ...environment(dir), HAN_PROOF_STARTUP_BARRIER: barrier },
+      stdout: 'pipe',
+      stderr: 'pipe',
+    }
+  );
+  children.push(supervisor);
+  let owned: number | undefined;
+  try {
+    const current = await ready(dir, supervisor);
+    owned = current.pid;
+    assertChild(current.pid, supervisor.pid);
+    assert.equal(existsSync(join(barrier, 'bound.json')), false);
+    await cliCommand(dir, 'stop');
+    owned = undefined;
+    await supervisor.exited;
+    assertStoppedRecords(dir);
+    console.log('default build ignored the proof barrier');
+  } finally {
+    if (supervisor.exitCode === null) {
+      if (owned !== undefined) killChild(owned, supervisor.pid);
+      supervisor.kill();
+      await supervisor.exited;
+    }
+  }
+}
+
 try {
-  await intentionalStopAndRestart();
-  await supervisorRecovery();
-  await replacementSurvivesOldOwner();
-  await replacementWinsStartupRace();
-  await replacementWinsSupervisorRetry();
-  await standaloneStopPreservesUnrelatedMarker();
-  await committedStopSurvivesFailure('child');
-  await committedStopSurvivesFailure('requester');
-  await preDispatchFailure('stale-request');
-  await preDispatchFailure('dead-requester');
-  await stopDuringStartup();
+  if (process.env.HAN_PROOF_BARRIER_ONLY === '1') {
+    await fixedPortPublicationBarrier();
+  } else {
+    await defaultBuildIgnoresBarrier();
+    await intentionalStopAndRestart();
+    await deadOwnerRecovery('stop');
+    await deadOwnerRecovery('restart');
+    await deadOwnerRecovery('orphan');
+    await supervisorRecovery();
+    await replacementSurvivesOldOwner();
+    await replacementWinsStartupRace();
+    await replacementWinsSupervisorRetry();
+    await standaloneStopPreservesUnrelatedMarker();
+    await committedStopSurvivesFailure('child');
+    await committedStopSurvivesFailure('requester');
+    await committedStopSurvivesFailure('both');
+    await preDispatchFailure('stale-request');
+    await preDispatchFailure('dead-requester');
+    await stopDuringStartup();
+  }
 } finally {
   for (const child of children) if (child.exitCode === null) child.kill();
   await Promise.all(children.map((child) => child.exited));
