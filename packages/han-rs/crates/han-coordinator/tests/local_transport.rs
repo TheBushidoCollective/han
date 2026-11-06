@@ -134,6 +134,18 @@ async fn supervised_shutdown_is_authenticated_and_commits_intent_before_response
     let rejected = client.post(&url).header("content-type", "application/grpc-web+proto")
         .bearer_auth("wrong").body(body.clone()).send().await.unwrap();
     assert_eq!(rejected.headers().get("grpc-status").unwrap(), "16");
+    let missing = client.post(&url).header("content-type", "application/grpc-web+proto")
+        .body(body.clone()).send().await.unwrap();
+    assert_eq!(missing.headers().get("grpc-status").unwrap(), "16");
+    let origin = client.post(&url).header("content-type", "application/grpc-web+proto")
+        .header("origin", "https://example.com").bearer_auth(d["bearerToken"].as_str().unwrap())
+        .body(body.clone()).send().await.unwrap();
+    assert_eq!(origin.status(), reqwest::StatusCode::FORBIDDEN);
+    let authority = client.post(&url).header("content-type", "application/grpc-web+proto")
+        .header("host", format!("evil.example:{}", d["grpcPort"].as_u64().unwrap()))
+        .bearer_auth(d["bearerToken"].as_str().unwrap()).body(body.clone()).send().await.unwrap();
+    assert_eq!(authority.status(), reqwest::StatusCode::MISDIRECTED_REQUEST);
+    assert!(daemon.0.try_wait().unwrap().is_none());
     assert!(active.exists());
     assert!(!marker.exists());
     let accepted = client.post(&url).header("content-type", "application/grpc-web+proto")

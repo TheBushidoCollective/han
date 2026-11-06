@@ -180,6 +180,35 @@ async function supervisorRecovery(): Promise<void> {
         tls: { ca: initial.certificatePem, rejectUnauthorized: true },
       } as RequestInit)
     );
+    const shutdown = `https://127.0.0.1:${replacement.grpcPort}/han.coordinator.CoordinatorService/Shutdown`;
+    const staleShutdown = await fetch(shutdown, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/grpc-web+proto',
+        Authorization: `Bearer ${initial.bearerToken}`,
+      },
+      body: new Uint8Array(5),
+      tls: { ca: replacement.certificatePem, rejectUnauthorized: true },
+    } as RequestInit);
+    assert.equal(staleShutdown.headers.get('grpc-status'), '16');
+    await assert.rejects(
+      fetch(shutdown, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/grpc-web+proto',
+          Authorization: `Bearer ${replacement.bearerToken}`,
+        },
+        body: new Uint8Array(5),
+        tls: { ca: initial.certificatePem, rejectUnauthorized: true },
+      } as RequestInit)
+    );
+    assert.equal(await healthy(replacement), true);
+    assert.equal(
+      readdirSync(join(dir, 'runtime')).some((name) =>
+        name.startsWith('coordinator.stopping.')
+      ),
+      false
+    );
     console.log(
       'supervisor restarted its crashed child with a new authenticated identity'
     );
