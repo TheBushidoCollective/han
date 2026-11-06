@@ -236,10 +236,12 @@ async function supervisorRecovery(): Promise<void> {
 async function replacementSurvivesOldOwner(): Promise<void> {
   const dir = directory();
   const flag = join(dir, 'stop-owner');
+  const started = join(dir, 'owner-started');
   const script = `
-    const { existsSync } = await import('node:fs');
+    const { existsSync, writeFileSync } = await import('node:fs');
     const { startCoordinatorService, stopCoordinatorService } = await import(${JSON.stringify(service)});
     await startCoordinatorService();
+    writeFileSync(${JSON.stringify(started)}, 'started');
     while (!existsSync(${JSON.stringify(flag)})) await Bun.sleep(50);
     const result = await startCoordinatorService();
     if (result.kind !== 'attached') throw new Error('cached owner claimed a replacement');
@@ -257,6 +259,11 @@ async function replacementSurvivesOldOwner(): Promise<void> {
     const initial = await ready(dir, owner);
     ownedPid = initial.pid;
     assertChild(initial.pid, owner.pid);
+    await waitFor('old owner startup complete', () => {
+      if (owner.exitCode !== null)
+        throw new Error('old owner exited before startup completed');
+      return existsSync(started) ? true : undefined;
+    });
     killChild(initial.pid, owner.pid);
     await waitFor('old child exit', () => {
       try {
@@ -289,7 +296,13 @@ async function replacementSurvivesOldOwner(): Promise<void> {
     await waitFor('old owner exit', () =>
       owner.exitCode !== null ? owner.exitCode : undefined
     );
-    assert.equal(owner.exitCode, 0);
+    if (owner.exitCode !== 0) {
+      const stdout = await new Response(owner.stdout as ReadableStream).text();
+      const stderr = await new Response(owner.stderr as ReadableStream).text();
+      throw new Error(
+        `old owner exited ${owner.exitCode}\n${stdout}\n${stderr}`
+      );
+    }
     assert.equal(replacement.exitCode, null);
     assert.equal(
       await healthy(current),

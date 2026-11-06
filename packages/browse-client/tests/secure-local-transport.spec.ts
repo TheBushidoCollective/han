@@ -680,6 +680,7 @@ test("real launcher, gateway and live GraphQL subscriptions with security contro
 		await expect(session).toBeVisible();
 		expect(navigations).toBe(0);
 		await session.click();
+		await page.getByText(/^Messages(?: \(\d+\))?$/).click();
 		await until(
 			() => observed.subscriptions.has("messages"),
 			"detail subscription",
@@ -732,6 +733,7 @@ test("real launcher, gateway and live GraphQL subscriptions with security contro
 			).toBe(200);
 			await until(() => interrupted, "deliberately interrupted WebSocket");
 			await brokenPage.locator(`a[href="/sessions/${id}"]`).click();
+			await brokenPage.getByText(/^Messages(?: \(\d+\))?$/).click();
 			await expect(
 				brokenPage.getByText(message, { exact: false }),
 			).toBeVisible();
