@@ -370,30 +370,55 @@ async function replacementWinsStartupRace(): Promise<void> {
 
 async function replacementWinsSupervisorRetry(): Promise<void> {
   const dir = directory();
-  const supervisor = Bun.spawn(
-    [
-      process.execPath,
-      cli,
-      'coordinator',
-      'start',
-      '--foreground',
-      '--port',
-      '0',
-    ],
-    { env: environment(dir), stdout: 'pipe', stderr: 'pipe' }
+  const arm = join(dir, 'arm-retry');
+  const barrier = join(dir, 'retry-held');
+  const release = join(dir, 'retry-release');
+  const running = join(dir, 'supervisor-running');
+  const daemon = resolve(
+    import.meta.dir,
+    '../lib/commands/coordinator/daemon.ts'
   );
+  const script = `
+    const fs = await import('node:fs');
+    const log = console.log;
+    console.log = (...args) => {
+      if (String(args[0]).includes('[coordinator] Running.')) fs.writeFileSync(${JSON.stringify(running)}, 'running');
+      log(...args);
+    };
+    const sleep = Bun.sleep;
+    Bun.sleep = (ms) => {
+      if (ms !== 2000 || !fs.existsSync(${JSON.stringify(arm)})) return sleep(ms);
+      fs.writeFileSync(${JSON.stringify(barrier)}, 'held');
+      return (async () => { while (!fs.existsSync(${JSON.stringify(release)})) await sleep(20); })();
+    };
+    const { startDaemon } = await import(${JSON.stringify(daemon)});
+    try { await startDaemon({ port: 0, foreground: true }); } catch (e) { console.error(e); process.exitCode = 1; }
+  `;
+  const supervisor = Bun.spawn([process.execPath, '-e', script], {
+    env: environment(dir),
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
   children.push(supervisor);
   let ownedPid: number | undefined;
   let replacement: Bun.Subprocess | undefined;
-  let paused = false;
   try {
     const original = await ready(dir, supervisor);
     ownedPid = original.pid;
     assertChild(original.pid, supervisor.pid);
-    supervisor.kill('SIGSTOP');
-    paused = true;
+    await waitFor('owned supervisor running', () =>
+      existsSync(running) ? true : undefined
+    );
+    writeFileSync(arm, 'armed');
     killChild(original.pid, supervisor.pid);
     ownedPid = undefined;
+    await waitFor('retry barrier', () => {
+      if (supervisor.exitCode !== null)
+        throw new Error('supervisor exited before retry barrier');
+      return existsSync(barrier) && !existsSync(`/proc/${original.pid}`)
+        ? true
+        : undefined;
+    });
     replacement = Bun.spawn(
       [
         binary,
@@ -411,8 +436,7 @@ async function replacementWinsSupervisorRetry(): Promise<void> {
     children.push(replacement);
     const current = await ready(dir, replacement, original.instanceId);
     assert.equal(current.pid, replacement.pid);
-    supervisor.kill('SIGCONT');
-    paused = false;
+    writeFileSync(release, 'release');
     await waitFor('old supervisor to attach and exit', () =>
       supervisor.exitCode !== null ? supervisor.exitCode : undefined
     );
@@ -425,7 +449,6 @@ async function replacementWinsSupervisorRetry(): Promise<void> {
       'retrying supervisor attached to the replacement and released its claim'
     );
   } finally {
-    if (paused && supervisor.exitCode === null) supervisor.kill('SIGCONT');
     if (ownedPid !== undefined && supervisor.exitCode === null)
       killChild(ownedPid, supervisor.pid);
     if (supervisor.exitCode === null) supervisor.kill();
