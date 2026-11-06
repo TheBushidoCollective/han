@@ -23,13 +23,15 @@ struct AppState {
 
 async fn guard(State(state): State<Arc<AppState>>, request: Request, next: Next) -> Response {
     let headers = request.headers();
-    let hosts: Vec<_> = headers.get_all(header::HOST).iter().collect();
-    if hosts.len() > 1 {
+    let all_hosts = headers.get_all(header::HOST);
+    let mut hosts = all_hosts.iter();
+    let first_host = hosts.next();
+    if hosts.next().is_some() {
         return StatusCode::BAD_REQUEST.into_response();
     }
-    let host = hosts.first().and_then(|h| h.to_str().ok());
+    let host = first_host.and_then(|h| h.to_str().ok());
     let authority = request.uri().authority().map(|a| a.as_str());
-    if (!hosts.is_empty() && host.is_none()) || (host.is_none() && authority.is_none()) {
+    if (first_host.is_some() && host.is_none()) || (host.is_none() && authority.is_none()) {
         return StatusCode::BAD_REQUEST.into_response();
     }
     if host.is_some_and(|h| h != state.authority) || authority.is_some_and(|a| a != state.authority) {
@@ -39,8 +41,10 @@ async fn guard(State(state): State<Arc<AppState>>, request: Request, next: Next)
         return StatusCode::FORBIDDEN.into_response();
     }
     for key in ["sec-fetch-site", "sec-fetch-mode", "sec-fetch-dest"] {
-        let values: Vec<_> = headers.get_all(key).iter().collect();
-        if values.len() > 1 || values.first().is_some_and(|v| match key {
+        let all_values = headers.get_all(key);
+        let mut values = all_values.iter();
+        let value = values.next();
+        if values.next().is_some() || value.is_some_and(|v| match key {
             "sec-fetch-site" => v != "same-origin" && v != "none",
             "sec-fetch-mode" => v != "same-origin" && v != "cors" && v != "websocket",
             _ => v != "empty" && v != "websocket",
@@ -48,16 +52,18 @@ async fn guard(State(state): State<Arc<AppState>>, request: Request, next: Next)
             return StatusCode::FORBIDDEN.into_response();
         }
     }
-    let auth: Vec<_> = headers.get_all(header::AUTHORIZATION).iter().collect();
-    let expected = format!("Bearer {}", state.bearer);
-    let valid = auth.len() == 1
-        && bool::from(auth[0].as_bytes().ct_eq(expected.as_bytes()));
+    let all_auth = headers.get_all(header::AUTHORIZATION);
+    let mut auth = all_auth.iter();
+    let valid = auth.next().is_some_and(|v| bool::from(v.as_bytes().ct_eq(state.bearer.as_bytes())))
+        && auth.next().is_none();
     if !valid {
         return StatusCode::UNAUTHORIZED.into_response();
     }
     if request.uri().path() == "/graphql" && request.method() == Method::POST {
-        let types: Vec<_> = headers.get_all(header::CONTENT_TYPE).iter().collect();
-        if types.len() != 1 || !types[0].to_str().ok().is_some_and(|v| v.split(';').next().is_some_and(|v| v.trim().eq_ignore_ascii_case("application/json"))) {
+        let all_types = headers.get_all(header::CONTENT_TYPE);
+        let mut types = all_types.iter();
+        let valid = types.next().and_then(|v| v.to_str().ok()).is_some_and(|v| v.split(';').next().is_some_and(|v| v.trim().eq_ignore_ascii_case("application/json")));
+        if !valid || types.next().is_some() {
             return StatusCode::UNSUPPORTED_MEDIA_TYPE.into_response();
         }
     }
@@ -96,13 +102,20 @@ async fn graphql_ws_handler(State(state): State<Arc<AppState>>, headers: axum::h
         }
         if sink.send(Message::Text(serde_json::json!({"type":"connection_ack"}).to_string().into())).await.is_err() { return; }
         let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(64);
-        let sender = tokio::spawn(async move {
+        let mut sender = tokio::spawn(async move {
             while let Some(msg) = rx.recv().await {
                 if sink.send(Message::Text(msg.into())).await.is_err() { break; }
             }
         });
         let mut operations: HashMap<String, tokio::task::JoinHandle<()>> = HashMap::new();
-        while let Some(Ok(msg)) = stream.next().await {
+        loop {
+            let msg = tokio::select! {
+                result = stream.next() => match result {
+                    Some(Ok(msg)) => msg,
+                    _ => break,
+                },
+                _ = &mut sender => break,
+            };
             match msg {
                 Message::Text(text) => {
                     let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) else { break; };
@@ -110,16 +123,18 @@ async fn graphql_ws_handler(State(state): State<Arc<AppState>>, headers: axum::h
                         Some("connection_init") => break,
                         Some("subscribe") => {
                             let Some(id) = value.get("id").and_then(|v| v.as_str()) else { break; };
+                            operations.retain(|_, handle| !handle.is_finished());
                             if operations.get(id).is_some_and(|handle| !handle.is_finished()) { break; }
                             let Some(payload) = value.get("payload") else { break; };
                             let Some(query) = payload.get("query").and_then(|v| v.as_str()) else { break; };
                             let mut request = async_graphql::Request::new(query);
                             if let Some(vars) = payload.get("variables") { request = request.variables(async_graphql::Variables::from_json(vars.clone())); }
                             if let Some(name) = payload.get("operationName").and_then(|v| v.as_str()) { request = request.operation_name(name); }
-                            let mut responses = schema.execute_stream(request);
+                            let schema = schema.clone();
                             let tx = tx.clone();
                             let operation_id = id.to_owned();
                             let handle = tokio::spawn(async move {
+                                let mut responses = schema.execute_stream(request);
                                 while let Some(response) = responses.next().await {
                                     let next = serde_json::json!({"id":operation_id,"type":"next","payload":response});
                                     if tx.send(next.to_string()).await.is_err() { return; }
@@ -148,7 +163,7 @@ async fn graphql_ws_handler(State(state): State<Arc<AppState>>, headers: axum::h
 }
 
 pub fn build_router(schema: HanSchema, start_time: Instant, port: u16, bearer: String) -> Router {
-    let state = Arc::new(AppState { schema, start_time, authority: format!("127.0.0.1:{port}"), bearer });
+    let state = Arc::new(AppState { schema, start_time, authority: format!("127.0.0.1:{port}"), bearer: format!("Bearer {bearer}") });
     Router::new()
         .route("/health", get(health_handler))
         .route("/graphql", post(graphql_handler).get(graphql_ws_handler))
@@ -192,5 +207,42 @@ mod tests {
         assert_eq!(app().oneshot(request).await.unwrap().status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
         let request = Request::builder().method("OPTIONS").uri("/graphql").header("host", "127.0.0.1:41957").header("access-control-request-private-network", "true").body(Body::empty()).unwrap();
         assert_eq!(app().oneshot(request).await.unwrap().status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn complete_and_disconnect_cancel_subscription_tasks() {
+        use futures_util::{SinkExt, StreamExt};
+        use tokio_tungstenite::tungstenite::{client::IntoClientRequest, Message};
+        let (tx, _) = broadcast::channel::<DbChangeEvent>(16);
+        let schema = async_graphql::Schema::build(han_api::query::QueryRoot, han_api::mutation::MutationRoot, han_api::subscription::SubscriptionRoot).data(tx.clone()).finish();
+        let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let app = build_router(schema, Instant::now(), port, "secret".into());
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let mut request = format!("ws://127.0.0.1:{port}/graphql").into_client_request().unwrap();
+        request.headers_mut().insert("authorization", "Bearer secret".parse().unwrap());
+        request.headers_mut().insert("sec-websocket-protocol", "graphql-transport-ws".parse().unwrap());
+        let (mut socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
+        socket.send(Message::Text(r#"{"type":"connection_init"}"#.into())).await.unwrap();
+        let ack = socket.next().await.unwrap().unwrap().into_text().unwrap();
+        assert!(ack.contains("connection_ack"));
+        let subscribe = r#"{"id":"1","type":"subscribe","payload":{"query":"subscription { nodeUpdated(id: \"x\") { id } }"}}"#;
+        socket.send(Message::Text(subscribe.into())).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(5), async {
+            while tx.receiver_count() != 1 { tokio::task::yield_now().await; }
+        }).await.unwrap();
+        socket.send(Message::Text(r#"{"id":"1","type":"complete"}"#.into())).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(5), async {
+            while tx.receiver_count() != 0 { tokio::task::yield_now().await; }
+        }).await.unwrap();
+        socket.send(Message::Text(subscribe.into())).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(5), async {
+            while tx.receiver_count() != 1 { tokio::task::yield_now().await; }
+        }).await.unwrap();
+        socket.close(None).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(5), async {
+            while tx.receiver_count() != 0 { tokio::task::yield_now().await; }
+        }).await.unwrap();
+        server.abort();
     }
 }

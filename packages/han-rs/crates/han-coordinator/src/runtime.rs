@@ -2,7 +2,7 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use rand::{rngs::OsRng, RngCore};
 use serde::{Deserialize, Serialize};
-use std::{fs, io::{self, Write}, path::{Path, PathBuf}};
+use std::{fs, io::{self, Read, Write}, path::{Path, PathBuf}};
 
 pub const LOCAL_TRANSPORT_VERSION: u32 = 1;
 
@@ -36,7 +36,13 @@ pub fn data_dir(explicit: Option<&Path>) -> io::Result<PathBuf> {
 #[cfg(unix)]
 pub fn prepare(dir: &Path) -> io::Result<PathBuf> {
     use std::os::unix::fs::{DirBuilderExt, MetadataExt, PermissionsExt};
-    fs::create_dir_all(dir)?;
+    fs::DirBuilder::new().recursive(true).mode(0o700).create(dir)?;
+    let data_metadata = fs::symlink_metadata(dir)?;
+    if !data_metadata.is_dir() || data_metadata.file_type().is_symlink()
+        || data_metadata.uid() != unsafe { libc::geteuid() } || data_metadata.permissions().mode() & 0o022 != 0
+    {
+        return Err(io::Error::new(io::ErrorKind::PermissionDenied, "data directory must be user-owned and not writable by others or a symlink"));
+    }
     let runtime = dir.join("runtime");
     match fs::DirBuilder::new().mode(0o700).create(&runtime) {
         Ok(()) => {},
@@ -54,6 +60,28 @@ pub fn prepare(dir: &Path) -> io::Result<PathBuf> {
 pub fn prepare(_dir: &Path) -> io::Result<PathBuf> {
     Err(io::Error::new(io::ErrorKind::Unsupported, "secure runtime directory ACL support is required on this platform"))
 }
+
+#[cfg(unix)]
+pub fn read_descriptor(runtime: &Path) -> io::Result<Descriptor> {
+    use std::os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt};
+    let file = fs::OpenOptions::new().read(true).custom_flags(libc::O_NOFOLLOW)
+        .open(runtime.join("coordinator.json"))?;
+    let metadata = file.metadata()?;
+    if !metadata.is_file() || metadata.uid() != unsafe { libc::geteuid() }
+        || metadata.permissions().mode() & 0o077 != 0
+    {
+        return Err(io::Error::new(io::ErrorKind::PermissionDenied, "insecure coordinator descriptor"));
+    }
+    let mut data = Vec::new();
+    file.take(64 * 1024).read_to_end(&mut data)?;
+    serde_json::from_slice(&data).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+}
+
+#[cfg(not(unix))]
+pub fn read_descriptor(_runtime: &Path) -> io::Result<Descriptor> {
+    Err(io::Error::new(io::ErrorKind::Unsupported, "secure descriptor ACL support is required on this platform"))
+}
+
 
 pub struct PublishedDescriptor { path: PathBuf, instance_id: String }
 impl PublishedDescriptor {
@@ -80,7 +108,7 @@ impl PublishedDescriptor {
 }
 impl Drop for PublishedDescriptor {
     fn drop(&mut self) {
-        if fs::read(&self.path).ok().and_then(|b| serde_json::from_slice::<Descriptor>(&b).ok()).is_some_and(|d| d.instance_id == self.instance_id) {
+        if self.path.parent().and_then(|parent| read_descriptor(parent).ok()).is_some_and(|d| d.instance_id == self.instance_id) {
             let _ = fs::remove_file(&self.path);
         }
     }
@@ -110,5 +138,29 @@ mod tests {
         let target = tempfile::tempdir().unwrap();
         std::os::unix::fs::symlink(target.path(), temp.path().join("runtime")).unwrap();
         assert!(prepare(temp.path()).is_err());
+    }
+    #[cfg(windows)]
+    #[test]
+    fn windows_refuses_runtime_without_acl_implementation() {
+        let temp = tempfile::tempdir().unwrap();
+        let error = prepare(temp.path()).unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::Unsupported);
+        assert!(!temp.path().join("runtime").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn descriptor_reader_rejects_symlinks_and_public_modes() {
+        use std::os::unix::fs::PermissionsExt;
+        let temp = tempfile::tempdir().unwrap();
+        let runtime = prepare(temp.path()).unwrap();
+        let target = temp.path().join("outside");
+        fs::write(&target, "{}").unwrap();
+        std::os::unix::fs::symlink(&target, runtime.join("coordinator.json")).unwrap();
+        assert!(read_descriptor(&runtime).is_err());
+        fs::remove_file(runtime.join("coordinator.json")).unwrap();
+        fs::write(runtime.join("coordinator.json"), "{}").unwrap();
+        fs::set_permissions(runtime.join("coordinator.json"), fs::Permissions::from_mode(0o644)).unwrap();
+        assert_eq!(read_descriptor(&runtime).err().unwrap().kind(), io::ErrorKind::PermissionDenied);
     }
 }
