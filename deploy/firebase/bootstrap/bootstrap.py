@@ -871,22 +871,21 @@ def capable_members(policy: dict) -> list[str]:
 
 
 def shared_pool_set(member: str) -> bool:
-    """Fail closed on unparseable principal sets; compare pool components, not string prefixes."""
-    prefix = "principalSet://"
-    if not member.startswith(prefix):
+    """Keep legacy route restrictions; use the complete v2 grammar otherwise."""
+    if not member.startswith("principalSet://"):
         return False
-    target = member[len(prefix):]
-    match = re.fullmatch(
-        r"iam\.googleapis\.com/projects/([^/]+)/locations/([^/]+)/workloadIdentityPools/([^/]+)(?:/(.+))?",
-        target,
+    legacy = re.fullmatch(
+        r"principalSet://iam\.googleapis\.com/projects/([0-9]+|-|\*)/"
+        r"locations/(global|-|\*)/workloadIdentityPools/github(?:/(.+))?", member
     )
-    if match is None:
+    if legacy and legacy.group(1) in (PROJECT_NUMBER, "-", "*"):
         return True
-    project, location, pool, _selector = match.groups()
-    if project not in (PROJECT_NUMBER, "-", "*") or location not in ("global", "-", "*"):
-        return False
-    execution_pool_id = EXECUTION_POOL.rsplit("/", 1)[-1]
-    return pool in ("github", execution_pool_id, "-", "*")
+    if ACTIVE_EXECUTION is None:
+        return True
+    try:
+        return execution.allow_coverage.classify(member, ACTIVE_EXECUTION) == "candidate"
+    except execution.allow_coverage.CoverageError:
+        return True
 
 
 def is_approved_grant(binding: dict, approved: str) -> bool:

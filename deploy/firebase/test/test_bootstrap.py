@@ -1596,6 +1596,34 @@ class StateBucketIsOurs(unittest.TestCase):
 
 
 class ExecutionBoundary(unittest.TestCase):
+    def test_disjoint_principal_sets_survive_complete_execute_and_revoke(self):
+        members = (
+            "principalSet://cloudresourcemanager.googleapis.com/projects/123/type/ServiceAccount",
+            "principalSet://iam.googleapis.com/locations/global/workforcePools/contractors/group/team",
+            "principalSet://iam.googleapis.com/locations/global/workforcePools/contractors/*",
+            "principalSet://agents.global.org-123456789012.system.id.goog/*",
+        )
+        for member in members:
+            for operation in ("execute", "revoke"):
+                with self.subTest(member=member, operation=operation):
+                    fake = FakeCloud()
+                    fake.policy["bindings"].append({"role": "roles/viewer", "members": [member]})
+                    rc, _, err = execute(fake) if operation == "execute" else ci_run(fake, *REVOKE_ARGS)
+                    self.assertEqual(rc, 0, err)
+                    self.assertIn(member, fake.members())
+                    self.assertFalse(bootstrap.holders(fake.policy))
+
+    def test_unknown_principal_set_fails_closed_in_execute_and_revoke(self):
+        member = "principalSet://unknown.example/unsupported"
+        for operation in ("execute", "revoke"):
+            with self.subTest(operation=operation):
+                fake = FakeCloud()
+                fake.policy["bindings"].append({"role": "roles/viewer", "members": [member]})
+                rc, _, err = execute(fake) if operation == "execute" else ci_run(fake, *REVOKE_ARGS)
+                self.assertEqual(rc, 1, err)
+                self.assertTrue(all("remove-iam-policy-binding" in a for a in fake.writes))
+                self.assertIn(member, fake.members())
+
     def test_wrong_provider_refuses_before_resource_mutation(self):
         fake = FakeCloud()
         original_read = fake._read

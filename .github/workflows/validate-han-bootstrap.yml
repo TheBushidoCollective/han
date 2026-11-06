@@ -3,6 +3,7 @@ name: Validate Han Bootstrap
 on:
   pull_request:
     paths:
+      - 'PATH.md'
       - 'deploy/firebase/bootstrap/**'
       - 'deploy/firebase/test/test_bootstrap.py'
       - 'deploy/firebase/test/test_bootstrap_execution.py'
@@ -16,6 +17,7 @@ on:
   push:
     branches: [main]
     paths:
+      - 'PATH.md'
       - 'deploy/firebase/bootstrap/**'
       - 'deploy/firebase/test/test_bootstrap.py'
       - 'deploy/firebase/test/test_bootstrap_execution.py'
