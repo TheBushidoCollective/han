@@ -4,7 +4,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
-  realpathSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -106,13 +106,13 @@ test.skipIf(process.platform !== 'win32')(
 
       const sibling = join(bin, 'han-coordinator.exe');
       writeFileSync(sibling, 'installed helper');
-      expect(realpathSync(discover())).toBe(realpathSync(sibling));
+      expect(readFileSync(discover(), 'utf8')).toBe('installed helper');
       rmSync(sibling);
 
       const homeHelper = join(home, '.han', 'bin', 'han-coordinator.exe');
       mkdirSync(dirname(homeHelper), { recursive: true });
       writeFileSync(homeHelper, 'user installation');
-      expect(realpathSync(discover())).toBe(realpathSync(homeHelper));
+      expect(readFileSync(discover(), 'utf8')).toBe('user installation');
       rmSync(homeHelper);
 
       const developmentHelper = join(
@@ -126,8 +126,8 @@ test.skipIf(process.platform !== 'win32')(
       );
       mkdirSync(dirname(developmentHelper), { recursive: true });
       writeFileSync(developmentHelper, 'development helper');
-      expect(realpathSync(discover(tsEntry))).toBe(
-        realpathSync(developmentHelper)
+      expect(readFileSync(discover(tsEntry), 'utf8')).toBe(
+        'development helper'
       );
       expect(discover()).toBeNull();
     } finally {
