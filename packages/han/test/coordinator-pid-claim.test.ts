@@ -441,8 +441,10 @@ test('delayed removal of an empty reservation cannot remove a successor', async 
     const fs = await import('node:fs');
     const real = { ...fs };
     const { mock } = await import('bun:test');
+    let paused = false;
     mock.module('node:fs', () => ({ ...real, rmdirSync(path) {
-      if (path === ${JSON.stringify(reservation)}) {
+      if (path === ${JSON.stringify(reservation)} && !paused) {
+        paused = true;
         console.log('PAUSED');
         while (!real.existsSync(${JSON.stringify(resume)})) {}
       }

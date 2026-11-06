@@ -96,10 +96,20 @@ try {
   );
   const output = result.stdout.toString() + result.stderr.toString();
   console.log(output);
+  const expectedAssertion: Record<string, string> = {
+    emptyPublication: 'expect(claimSupervisorPid(path)).toEqual',
+    unguardedPid: 'expect(claimSupervisorPid(path)).toEqual',
+    recursiveReclaim: 'expect(existsSync(reservation)).toBe(true)',
+    ageSteal: 'expect(claimSupervisorPid(path)).toEqual',
+    staleRelease: 'expect(existsSync(path)).toBe(true)',
+    probeFailure: 'expect(claimSupervisorPid(path)).toEqual',
+    exhaustion: 'UNEXPECTED_OWNERSHIP',
+  };
   if (
     result.exitCode === 0 ||
     !output.includes(`(fail) ${mutation.test}`) ||
     !output.includes('error: expect(') ||
+    !output.includes(expectedAssertion[name]) ||
     output.includes('timed out')
   ) {
     throw new Error(
