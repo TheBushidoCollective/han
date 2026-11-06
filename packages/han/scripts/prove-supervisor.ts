@@ -126,26 +126,41 @@ function killChild(pid: number, parent: number): void {
       throw error;
   }
 }
+function observedSupervisor(dir: string, running: string): Bun.Subprocess {
+  const daemon = resolve(
+    import.meta.dir,
+    '../lib/commands/coordinator/daemon.ts'
+  );
+  const script = `
+    const fs = await import('node:fs');
+    const log = console.log;
+    console.log = (...args) => {
+      if (String(args[0]).includes('[coordinator] Running.')) fs.writeFileSync(${JSON.stringify(running)}, 'running');
+      log(...args);
+    };
+    const { startDaemon } = await import(${JSON.stringify(daemon)});
+    try { await startDaemon({ port: 0, foreground: true }); } catch (e) { console.error(e); process.exitCode = 1; }
+  `;
+  return Bun.spawn([process.execPath, '-e', script], {
+    env: environment(dir),
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+}
+
 async function supervisorRecovery(): Promise<void> {
   const dir = directory();
-  const supervisor = Bun.spawn(
-    [
-      process.execPath,
-      cli,
-      'coordinator',
-      'start',
-      '--foreground',
-      '--port',
-      '0',
-    ],
-    { env: environment(dir), stdout: 'pipe', stderr: 'pipe' }
-  );
+  const running = join(dir, 'supervisor-running');
+  const supervisor = observedSupervisor(dir, running);
   children.push(supervisor);
   let ownedPid: number | undefined;
   try {
     const initial = await ready(dir, supervisor);
     ownedPid = initial.pid;
     assertChild(initial.pid, supervisor.pid);
+    await waitFor('supervisor running before crash', () =>
+      existsSync(running) ? true : undefined
+    );
     assert.equal(
       readFileSync(join(dir, 'coordinator.pid'), 'utf8'),
       String(supervisor.pid)
@@ -822,18 +837,8 @@ async function preDispatchFailure(
     const { stopDaemon } = await import(${JSON.stringify(daemon)});
     try { await stopDaemon(0); } catch { process.exitCode = 1; }
   `;
-  const supervisor = Bun.spawn(
-    [
-      process.execPath,
-      cli,
-      'coordinator',
-      'start',
-      '--foreground',
-      '--port',
-      '0',
-    ],
-    { env: environment(dir), stdout: 'pipe', stderr: 'pipe' }
-  );
+  const running = join(dir, 'supervisor-running');
+  const supervisor = observedSupervisor(dir, running);
   children.push(supervisor);
   let ownedPid: number | undefined;
   let requester: Bun.Subprocess | undefined;
@@ -841,6 +846,9 @@ async function preDispatchFailure(
     const original = await ready(dir, supervisor);
     ownedPid = original.pid;
     assertChild(original.pid, supervisor.pid);
+    await waitFor('supervisor running before stop race', () =>
+      existsSync(running) ? true : undefined
+    );
     requester = Bun.spawn([process.execPath, '-e', script], {
       env: environment(dir),
       stdout: 'pipe',
