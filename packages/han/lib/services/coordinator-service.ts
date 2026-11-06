@@ -468,8 +468,9 @@ export async function startCoordinatorService(
           stderr: 'ignore',
         }
       );
-      // Don't keep parent alive
-      state.process.unref();
+      // A foreground supervisor must stay alive until it reaps its child and
+      // releases the generation's shutdown intent and ownership records.
+      if (!options.supervisor) state.process.unref();
       state.ownsProcess = true;
 
       const child = state.process;

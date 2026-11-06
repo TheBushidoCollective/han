@@ -322,6 +322,34 @@ describe('cross-process spawn guard', () => {
 // state.ownsProcess === true — the behavioral test file's existsSync-false
 // mock never gets past findCoordinatorBinary to a spawn attempt at all.
 describe('stopCoordinatorService ownership', () => {
+  test('retains a supervised child until the supervisor can reap it', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const supervisor = {
+      pid: process.pid,
+      nonce: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      generationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    };
+    const child = { pid: 4242, exitCode: null, unref: mock(), kill: mock() };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    mockDescriptor.mockImplementation(
+      () =>
+        ({
+          transportVersion: 1,
+          instanceId: 'owned',
+          pid: child.pid,
+          httpsPort: 41957,
+          grpcPort: 41958,
+          certificatePem: 'certificate',
+          bearerToken: 'token',
+          supervisor,
+        }) as never
+    );
+    const result = await cs.startCoordinatorService({ supervisor });
+    expect(result.kind).toBe('owned');
+    expect(child.unref).not.toHaveBeenCalled();
+  });
+
   test('a coordinator this process actually spawned still gets a graceful shutdown', async () => {
     mockHealth.mockReset();
     mockHealth.mockResolvedValueOnce(false); // not already running
