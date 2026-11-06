@@ -663,7 +663,7 @@ async function main() {
             id: request.id,
             result,
           };
-          process.stdout.write(JSON.stringify(response) + '\n');
+          process.stdout.write(`${JSON.stringify(response)}\n`);
         } catch (err) {
           const response = {
             jsonrpc: '2.0',
@@ -678,7 +678,7 @@ async function main() {
               isError: true,
             },
           };
-          process.stdout.write(JSON.stringify(response) + '\n');
+          process.stdout.write(`${JSON.stringify(response)}\n`);
         }
         return;
       }
@@ -694,7 +694,7 @@ async function main() {
         id: request.id,
         error: { code: -32601, message: `Method not found: ${request.method}` },
       };
-      process.stdout.write(JSON.stringify(response) + '\n');
+      process.stdout.write(`${JSON.stringify(response)}\n`);
     } catch (err) {
       console.error(`${PREFIX} Parse error:`, err);
     }
