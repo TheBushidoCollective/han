@@ -47,6 +47,21 @@ jobs:
       - name: Install CLI dependencies
         working-directory: packages/han
         run: bun install --frozen-lockfile
+      - name: Test Windows bridge and security controls
+        working-directory: packages/han
+        shell: pwsh
+        run: |
+          $tests = @(
+            'test/coordinator-binary-windows.test.ts',
+            'test/coordinator-windows-runtime.test.ts',
+            'test/coordinator-windows-health.test.ts',
+            'test/coordinator-windows-startup.test.ts',
+            'test/windows-proof-diagnostics.test.ts'
+          )
+          foreach ($test in $tests) {
+            bun test $test
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
       - name: Compile Windows CLI for acceptance
         working-directory: packages/han
         run: bun scripts/build-bundle.js bun-windows-x64
