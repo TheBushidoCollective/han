@@ -13,6 +13,7 @@ import {
   coordinatorFetch,
   type LocalCoordinatorDescriptor,
   readCoordinatorDescriptor,
+  sameCoordinator,
 } from '../coordinator/connection.ts';
 import {
   CoordinatorService,
@@ -49,12 +50,7 @@ export function createCoordinatorClients(
         const current = readCoordinatorDescriptor();
         if (
           expected &&
-          (current.instanceId !== expected.instanceId ||
-            current.pid !== expected.pid ||
-            current.grpcPort !== expected.grpcPort ||
-            current.httpsPort !== expected.httpsPort ||
-            current.certificatePem !== expected.certificatePem ||
-            current.bearerToken !== expected.bearerToken)
+          !sameCoordinator(current, expected)
         )
           throw new CoordinatorSecurityError(
             'Coordinator instance changed before request'

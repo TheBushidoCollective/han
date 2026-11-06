@@ -11,6 +11,33 @@ import { join, resolve } from 'node:path';
 import WebSocket from 'ws';
 
 export const LOCAL_TRANSPORT_VERSION = 1;
+export interface SupervisorBinding {
+  pid: number;
+  nonce: string;
+  generationId: string;
+}
+
+export function validSupervisorBinding(value: unknown): value is SupervisorBinding {
+  if (!value || typeof value !== 'object') return false;
+  const b = value as SupervisorBinding;
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+  return Number.isSafeInteger(b.pid) && b.pid > 0 &&
+    typeof b.nonce === 'string' && uuid.test(b.nonce) &&
+    typeof b.generationId === 'string' && uuid.test(b.generationId);
+}
+
+export function sameSupervisor(a: SupervisorBinding | null, b: SupervisorBinding | null): boolean {
+  return a === null ? b === null : b !== null &&
+    a.pid === b.pid && a.nonce === b.nonce && a.generationId === b.generationId;
+}
+
+export function sameCoordinator(a: LocalCoordinatorDescriptor, b: LocalCoordinatorDescriptor): boolean {
+  return a.transportVersion === b.transportVersion && a.instanceId === b.instanceId &&
+    a.pid === b.pid && a.httpsPort === b.httpsPort && a.grpcPort === b.grpcPort &&
+    a.certificatePem === b.certificatePem && a.bearerToken === b.bearerToken &&
+    sameSupervisor(a.supervisor, b.supervisor);
+}
+
 export interface LocalCoordinatorDescriptor {
   transportVersion: 1;
   instanceId: string;
@@ -19,6 +46,7 @@ export interface LocalCoordinatorDescriptor {
   grpcPort: number | null;
   certificatePem: string;
   bearerToken: string;
+  supervisor: SupervisorBinding | null;
 }
 
 export class CoordinatorSecurityError extends Error {
@@ -37,14 +65,13 @@ export function getCoordinatorDataDir(): string {
   );
 }
 
-export function readCoordinatorDescriptor(): LocalCoordinatorDescriptor {
+export function readCoordinatorDescriptor(path = join(getCoordinatorDataDir(), 'runtime', 'coordinator.json')): LocalCoordinatorDescriptor {
   if (process.platform === 'win32') {
     throw new CoordinatorSecurityError(
       'Windows coordinator descriptor ACL and reparse-point verification is not available'
     );
   }
   const runtime = join(getCoordinatorDataDir(), 'runtime');
-  const path = join(runtime, 'coordinator.json');
   let fd: number | undefined;
   try {
     const directory = lstatSync(runtime);
@@ -81,6 +108,7 @@ export function readCoordinatorDescriptor(): LocalCoordinatorDescriptor {
       typeof d.certificatePem !== 'string' ||
       !d.certificatePem.includes('-----BEGIN CERTIFICATE-----') ||
       typeof d.bearerToken !== 'string' ||
+      !(d.supervisor === null || validSupervisorBinding(d.supervisor)) ||
       !/^[A-Za-z0-9_-]{43}$/.test(d.bearerToken)
     )
       throw new CoordinatorSecurityError('Invalid coordinator descriptor');
