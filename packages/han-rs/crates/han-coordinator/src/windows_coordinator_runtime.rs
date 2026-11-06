@@ -261,8 +261,8 @@ mod tests {
         first.cleanup();
         let guard = lease.guard().unwrap();
         let current = guard.read(OsStr::new(ACTIVE)).unwrap().unwrap();
-        assert_eq!(current, second.snapshot);
-        assert_eq!(parse_descriptor(&current.bytes).unwrap(), replacement);
+        assert!(current == second.snapshot);
+        assert!(parse_descriptor(&current.bytes).unwrap() == replacement);
         drop(guard);
         second.cleanup();
         assert!(lease.guard().unwrap().read(OsStr::new(ACTIVE)).unwrap().is_none());

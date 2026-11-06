@@ -448,6 +448,31 @@ mod tests {
             assert!(guard.read(OsStr::new(r)).unwrap().is_none());
         }
     }
+
+    #[test]
+    fn unanchored_malformed_and_conflicting_partials_are_preserved() {
+        for shape in 0..3 {
+            let temp = tempfile::tempdir().unwrap();
+            let dir = directory(&temp.path().join("data"), true).unwrap();
+            let guard = RecordGuard::open(&dir).unwrap();
+            let owner = Owner { version: 1, nonce: uuid::Uuid::new_v4().to_string(), process: processes::current_identity().unwrap() };
+            let bytes = serde_json::to_vec(&owner).unwrap();
+            let (r, o, _) = names("supervisor");
+            match shape {
+                0 => { guard.create_if_absent(OsStr::new(o), &bytes).unwrap(); }
+                1 => { guard.create_if_absent(OsStr::new(r), b"{").unwrap(); }
+                _ => {
+                    guard.create_if_absent(OsStr::new(r), &bytes).unwrap();
+                    guard.create_if_absent(OsStr::new(o), b"conflict").unwrap();
+                }
+            }
+            let before_r = guard.read(OsStr::new(r)).unwrap();
+            let before_o = guard.read(OsStr::new(o)).unwrap();
+            assert!(incomplete(&guard, "supervisor").is_err());
+            assert!(guard.read(OsStr::new(r)).unwrap() == before_r);
+            assert!(guard.read(OsStr::new(o)).unwrap() == before_o);
+        }
+    }
     use super::*;
 
     #[test]
