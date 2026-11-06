@@ -197,7 +197,7 @@ function generateRoutesCode(
 	const flatRoutes = flattenRoutes(routes);
 	const routeObjects = flatRoutes.map((r) => generateRouteObject(r, true));
 
-	return `import { createElement } from "${reactPath}";
+	return `import { createElement } from ${JSON.stringify(reactPath)};
 ${imports.join("\n")}
 
 const routes = [
