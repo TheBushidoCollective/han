@@ -506,6 +506,84 @@ test.skipIf(process.platform !== 'win32')(
     ).not.toThrow();
   }
 );
+test('assertRecoveryFence rejects differing stopping generation and added authorities', async () => {
+  // Load after installing mock.module boundary above.
+  const recovery = await import('../lib/coordinator/recovery-runtime.ts');
+  const baseSnapshot = {
+    platform: 'windows' as const,
+    target: { kind: 'active' as const },
+    active: {
+      identity: file,
+      bytes: Buffer.from(JSON.stringify(descriptor)).toString('base64'),
+    },
+    selected: {
+      identity: file,
+      bytes: Buffer.from(JSON.stringify(descriptor)).toString('base64'),
+    },
+    reservation: { identity: file, bytes: '' },
+    ownerFile: {
+      identity: file,
+      bytes: Buffer.from(
+        JSON.stringify({ version: 1, nonce, process: processIdentity })
+      ).toString('base64'),
+    },
+    pidFile: { identity: file, bytes: Buffer.from('4242').toString('base64') },
+    stoppingNames: [],
+    stopping: [],
+    authorities: [
+      {
+        name: `supervisor.authority.${nonce}.json`,
+        record: {
+          identity: file,
+          bytes: Buffer.from(
+            JSON.stringify({ version: 1, nonce, process: processIdentity })
+          ).toString('base64'),
+        },
+      },
+    ],
+  };
+
+  const differentStoppingSnapshot = {
+    ...baseSnapshot,
+    stopping: [
+      {
+        name: 'coordinator.stopping.00000000-0000-4000-8000-000000000099.00000000-0000-4000-8000-000000000099.json',
+        record: {
+          identity: file,
+          bytes: Buffer.from('different').toString('base64'),
+        },
+      },
+    ],
+  };
+  expect(() =>
+    recovery.assertRecoveryFence(
+      baseSnapshot,
+      differentStoppingSnapshot,
+      descriptor.supervisor
+    )
+  ).toThrow(bridge.CoordinatorSecurityError);
+
+  const addedAuthoritySnapshot = {
+    ...baseSnapshot,
+    authorities: [
+      ...baseSnapshot.authorities,
+      {
+        name: 'supervisor.authority.00000000-0000-4000-8000-000000000099.json',
+        record: {
+          identity: file,
+          bytes: Buffer.from('added').toString('base64'),
+        },
+      },
+    ],
+  };
+  expect(() =>
+    recovery.assertRecoveryFence(
+      baseSnapshot,
+      addedAuthoritySnapshot,
+      descriptor.supervisor
+    )
+  ).toThrow(bridge.CoordinatorSecurityError);
+});
 
 function mockChildWithStdout(bytes: Uint8Array, childPid = descriptor.pid) {
   const stream = new ReadableStream<Uint8Array>({

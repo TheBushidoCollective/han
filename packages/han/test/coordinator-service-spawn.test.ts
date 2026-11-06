@@ -720,7 +720,7 @@ describe('stopCoordinatorService ownership', () => {
       await expect(cs.startCoordinatorService({ supervisor })).rejects.toThrow(
         'Coordinator rejected authenticated request'
       );
-      expect(mockHealth).toHaveBeenCalledTimes(1);
+      expect(mockHealth).toHaveBeenCalledTimes(2);
     } finally {
       realFs.rmSync(intentPath, { force: true });
     }

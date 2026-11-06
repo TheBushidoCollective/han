@@ -28,6 +28,7 @@ import {
   readCoordinatorDescriptor,
   type SupervisorBinding,
   sameCoordinator,
+  sameSupervisor,
 } from '../../coordinator/connection.ts';
 import {
   assertRecoveryFence,
@@ -437,7 +438,7 @@ export async function stopDaemon(_port?: number): Promise<void> {
         throw new CoordinatorSecurityError(
           'A different shutdown generation appeared'
         );
-      if (!selected.descriptor && active.stoppingBindings.length)
+      if (selected.stoppingBindings.some((b) => !sameSupervisor(b, binding)))
         throw new CoordinatorSecurityError(
           'A different shutdown generation appeared'
         );
