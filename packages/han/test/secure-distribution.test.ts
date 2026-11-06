@@ -12,6 +12,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { assertRuntime, parseOptions } from '../scripts/prove-installed-coordinator.ts';
 
 const root = resolve(import.meta.dir, '../../..');
 const scratch: string[] = [];
@@ -26,6 +27,20 @@ afterEach(() => {
 });
 
 describe('distribution', () => {
+  test('installed proof requires explicit artifacts and exact embedded runtime', () => {
+    const args = ['--cli', '/artifact/han', '--coordinator', '/artifact/han-coordinator',
+      '--bun-version', '1.4.4', '--bun-revision', 'abc123', '--evidence-dir', '/evidence'];
+    expect(parseOptions(args).coordinator).toBe('/artifact/han-coordinator');
+    expect(() => parseOptions(args.slice(0, -2))).toThrow();
+    expect(() => parseOptions([...args, '--cli', '/another'])).toThrow();
+    expect(() => parseOptions([...args, '--unknown', 'value'])).toThrow();
+    const output = 'han 1.0.0\n  Bun: 1.4.4 (abc123)\n';
+    expect(() => assertRuntime(output, '1.4.4', 'abc123')).not.toThrow();
+    expect(() => assertRuntime(output, '1.4.5', 'abc123')).toThrow();
+    expect(() => assertRuntime(output, '1.4.4', 'wrong')).toThrow();
+    expect(() => assertRuntime('han 1.4.4 (abc123)', '1.4.4', 'abc123')).toThrow();
+  });
+
   test.each([
     ['linux-x64', 'han-linux-x64', ''],
     ['linux-arm64', 'han-linux-arm64', ''],
