@@ -32,7 +32,7 @@ if [ ! -s "${BACKUP_DIR}/${BACKUP_FILE}" ]; then
   exit 1
 fi
 
-BACKUP_SIZE=$(find "${BACKUP_DIR}/${BACKUP_FILE}" -prune -exec ls -lh {} \; | awk '{print $5}')
+BACKUP_SIZE=$(find "${BACKUP_DIR}/${BACKUP_FILE}" -prune -exec ls -lh {} + | awk '{print $5}')
 echo "Backup completed successfully: ${BACKUP_SIZE}"
 
 # Upload to S3 if bucket specified
@@ -67,4 +67,4 @@ echo "Backup completed at $(date)"
 # List recent backups
 echo ""
 echo "Recent backups:"
-find "$BACKUP_DIR" -prune -exec ls -lht {} \; | head -10
+find "$BACKUP_DIR" -prune -exec ls -lht {} + | head -10
