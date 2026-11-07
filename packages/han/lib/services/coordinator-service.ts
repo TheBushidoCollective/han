@@ -455,7 +455,8 @@ export async function startCoordinatorService(
         ) => Promise<LocalCoordinatorDescriptor | null>)
       | null = null;
     try {
-      // Keep the actual daemon as our child so ownership and shutdown remain reliable.
+      // On Windows, Bun otherwise puts the child in a kill-on-close job.
+      // Detaching lets the coordinator survive a supervisor crash for recovery.
       state.process = Bun.spawn(
         [
           binaryPath,
@@ -479,6 +480,7 @@ export async function startCoordinatorService(
             : []),
         ],
         {
+          detached: process.platform === 'win32',
           stdout: process.platform === 'win32' ? 'pipe' : 'ignore',
           stderr: 'ignore',
         }
