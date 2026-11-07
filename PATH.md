@@ -145,3 +145,14 @@ From `packages/han`, run `bun test test/hosted-proxy.test.ts`. From
 `bunx playwright test --config playwright.transport.config.ts`. The browser
 proof opens the file launcher and exercises the local session, GraphQL, and
 subscription transport using disposable state.
+
+## Native release proof path
+
+On native CI runners (`ubuntu-latest`, `ubuntu-24.04-arm`, `macos-latest`, `macos-15-intel`, `windows-latest`), each candidate release artifact undergoes native acceptance testing before publication:
+
+1. `prove-installer.ts`: Verifies fresh curl installation, layout in `.han-releases` or Windows sibling directory, executable verification, and pair pruning.
+2. `prove-installed-coordinator`: Verifies native daemon lifecycle, descriptor exchange, and process isolation.
+3. `prove-installed-hooks.ts`: Verifies hook execution with the installed binary.
+4. Browser transport: Playwright end-to-end suite against the installed standalone binary (`HAN_TRANSPORT_CLI`).
+5. `prove-legacy-upgrade.ts`: Verifies migration from legacy v3.22.0 files.
+6. Leak check: Asserts zero orphaned background processes.

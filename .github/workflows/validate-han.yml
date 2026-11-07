@@ -546,6 +546,7 @@ jobs:
           cat > lib/build-info.generated.ts << 'EOF'
           // Auto-generated stub for CI
           export const HAN_VERSION = "0.0.0-ci";
+          export const COORDINATOR_SHA256: string | null = null;
           export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
           export const version = "0.0.0-ci";
           export const gitCommit = "ci";
@@ -615,3 +616,31 @@ jobs:
 
       - name: Run isolated backup and restore fixture tests
         run: bash deploy/scripts/test-backup-restore.sh
+
+  release-test-gate:
+    name: Release Test Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup toolchain
+        uses: ./.github/actions/setup-han-toolchain
+
+      - name: Run release test gate
+        run: ./.github/scripts/release-test-gate.sh
+
+  pr-release-build:
+    name: PR Release Build
+    uses: ./.github/workflows/release-build.yml
+    with:
+      ref: ${{ github.sha }}
+      version: han-pr.${{ github.run_number }}
+
+  pr-release-proofs:
+    name: PR Release Proofs
+    needs: pr-release-build
+    uses: ./.github/workflows/release-proofs.yml
+    with:
+      version: han-pr.${{ github.run_number }}

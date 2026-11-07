@@ -7,37 +7,22 @@ summary: Han browse command architecture - remote dashboard with local GraphQL c
 
 ## Overview
 
-`han browse` provides a web-based dashboard for viewing Claude Code sessions. The architecture splits between:
+`han browse` provides a web-based dashboard for viewing Claude Code sessions.
 
-- **Remote Dashboard**: Static site hosted on Railway at `dashboard.local.han.guru`
-- **Local Coordinator**: GraphQL server + indexing daemon running on user's machine
-
-This hybrid approach enables:
-- Zero-installation dashboard access (just open the URL)
-- Secure local data (never leaves the machine)
-- Real-time updates via GraphQL subscriptions
-- Cross-platform compatibility (React Native Web)
-
-## Deployment Modes
-
-### Default Mode (Remote Dashboard)
+The architecture uses an embedded local dashboard served directly from the CLI on loopback with a single-use launcher capability and token-authenticated local gateway.
 
 ```bash
 han browse
-# Opens https://dashboard.local.han.guru
-# Dashboard connects back to local coordinator for data
+# Starts local gateway and opens launcher
 ```
 
 **Flow:**
-1. Ensures local coordinator is running (lazy start on port 41956/41957)
-2. Opens remote dashboard URL in browser
-3. Dashboard detects coordinator via TLS (coordinator.local.han.guru)
-4. GraphQL queries/subscriptions flow over HTTPS/WSS to local coordinator
-
-**Benefits:**
-- No local build/install needed
-- Always latest dashboard version
-- Fast startup (no bundling)
+1. Ensures local coordinator is running on loopback (default port 41957)
+2. Starts local gateway on loopback
+3. Generates owner-protected single-use launcher HTML file
+4. Opens launcher in default browser
+5. Dashboard exchanges launch capability for session access token
+6. GraphQL queries and subscriptions flow securely over local loopback
 - Works from any device on local network
 
 ### Local Mode (--local)
@@ -63,11 +48,10 @@ The coordinator is a long-running process that provides:
 
 ### GraphQL API
 
-- **Endpoint**: `https://coordinator.local.han.guru:41957/graphql`
-- **Transport**: HTTPS with TLS certificates
-- **Subscriptions**: WebSocket (WSS) on same port
+- **Endpoint**: `http://127.0.0.1:41957/graphql`
+- **Transport**: HTTP with bearer token authentication
+- **Subscriptions**: WebSocket (WS) on same port
 - **Schema**: Relay-compatible with Cursor pagination
-
 Built with:
 - Pothos GraphQL for type-safe schema
 - DataLoader for batching and caching
@@ -182,9 +166,8 @@ bun run build
 
 **Service**: `han-dashboard`  
 **Repository**: thebushidocollective/han  
-**Root Directory**: `/packages/browse-client`  
-**Domain**: `dashboard.local.han.guru`
-
+**Root Directory**: `/packages/browse-client`
+**Embedded Build**: Compiled into `han` CLI binary with assets embedded
 ### Build Process
 
 ```dockerfile
@@ -216,9 +199,7 @@ CMD ["bun", "serve.ts"]
 1. Push to `main` branch
 2. GitHub Actions CI runs tests
 3. Railway waits for all CI checks to pass
-4. Railway pulls repo and runs Dockerfile
-5. Deploys to `dashboard.local.han.guru`
-
+4. Assets bundled directly into the standalone binary
 **Note:** Railway auto-skips deployments if CI fails.
 
 ## Frontend Architecture
@@ -355,8 +336,7 @@ const running = await isCoordinatorRunning(coordinatorPort);
 
 // Health check with protocol detection
 const health = await checkHealthHttps(coordinatorPort);
-// Returns: { protocol: 'https', host: 'coordinator.local.han.guru' }
-
+// Returns: { protocol: 'https', host: '127.0.0.1' }
 // Ensure coordinator (lazy start)
 const status = await ensureCoordinator(coordinatorPort);
 // Starts daemon if not running, waits for health check
@@ -487,11 +467,7 @@ npx relay-compiler
 ```
 
 ### TLS Certificate Issues
-
-**Symptom**: Browser warns about invalid certificate for `coordinator.local.han.guru`.
-
-**Fix**: Coordinator uses self-signed cert. Add exception in browser or use `--local` mode.
-
+**Local Transport**: Coordinator and dashboard communicate strictly over local loopback (127.0.0.1) with cryptographic token exchange.
 ### Build Failures on Linux
 
 **Known Issue**: Bun HTML bundler assigns wrong entry chunk on Linux.
