@@ -1,12 +1,14 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
-import * as buildInfo from '../build-info.generated.ts';
-
-const COORDINATOR_SHA256: string | null =
-  'COORDINATOR_SHA256' in buildInfo
-    ? (buildInfo.COORDINATOR_SHA256 as string | null)
-    : null;
+let COORDINATOR_SHA256: string | null = null;
+try {
+  const buildInfo = await import('../build-info.generated.ts');
+  COORDINATOR_SHA256 =
+    'COORDINATOR_SHA256' in buildInfo
+      ? (buildInfo.COORDINATOR_SHA256 as string | null)
+      : null;
+} catch {}
 
 const hashCache = new Map<string, string>();
 

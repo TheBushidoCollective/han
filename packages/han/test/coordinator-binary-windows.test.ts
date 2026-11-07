@@ -40,6 +40,10 @@ test.skipIf(process.platform !== 'win32')(
         join(import.meta.dir, '..', 'lib', 'coordinator', 'binary.ts'),
         modulePath
       );
+      writeFileSync(
+        join(moduleDir, '..', 'build-info.generated.ts'),
+        'export const COORDINATOR_SHA256: string | null = null;\n'
+      );
       const jsEntry = join(root, 'entry.js');
       const tsEntry = join(root, 'entry.ts');
       const script = `import { findCoordinatorBinary } from ${JSON.stringify(pathToFileURL(modulePath).href)};\nconsole.log(JSON.stringify(findCoordinatorBinary()));\n`;
