@@ -411,7 +411,8 @@ async function main(): Promise<void> {
     const arch =
       process.arch === 'arm64' ? 'arm64' : process.arch === 'x64' ? 'x64' : '';
     if (!arch) throw new Error('Unsupported architecture');
-    const platform = `linux-${arch}`;
+    const os = process.platform === 'darwin' ? 'darwin' : 'linux';
+    const platform = `${os}-${arch}`;
     const packageWork = join(root, 'platform');
     mkdirSync(join(packageWork, 'artifact'), { recursive: true });
     copyFileSync(cliArtifact, join(packageWork, 'artifact', `han-${platform}`));
