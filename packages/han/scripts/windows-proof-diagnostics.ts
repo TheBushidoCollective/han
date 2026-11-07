@@ -242,6 +242,7 @@ const processDiagnosticKeys = [
   'helperMarkerStatus',
   'helperDiagnostic',
 ];
+const processLivenessValues = ['alive', 'dead', 'mismatched', 'unknown'];
 const descriptorStates = ['present', 'absent', 'mismatched', 'unknown'];
 const supervisorStatusValues = ['alive', 'dead', 'mismatched', 'unknown'];
 const markerFileValues = [
@@ -602,7 +603,9 @@ export function safeProcessDiagnostic(
     item.helperMarkerStatus !== undefined &&
     item.helperMarkerStatus !== null &&
     (typeof item.helperMarkerStatus !== 'string' ||
-      !helperMarkerStatusValues.includes(item.helperMarkerStatus))
+      !(helperMarkerStatusValues as readonly string[]).includes(
+        item.helperMarkerStatus
+      ))
   )
     return undefined;
   if (
@@ -611,6 +614,7 @@ export function safeProcessDiagnostic(
     !validateHelperDiagnostic(item.helperDiagnostic)
   )
     return undefined;
+  const result: SafeProcessDiagnostic = {};
   if (item.childPid !== undefined && item.childPid !== null) {
     result.childPid = item.childPid as number;
   }
