@@ -243,6 +243,23 @@ const errorCategoryValues = [
   'connection_refused',
   'timeout',
   'security_error',
+  'sec_runtime_helper_failed',
+  'sec_spawn_claim_missing',
+  'sec_runtime_response_invalid',
+  'sec_descriptor_target_invalid',
+  'sec_descriptor_invalid',
+  'sec_process_identity_missing',
+  'sec_receipt_pid_mismatch',
+  'sec_receipt_supervisor_mismatch',
+  'sec_receipt_envelope_invalid',
+  'sec_receipt_json_malformed',
+  'sec_stdout_stream_missing',
+  'sec_intent_child_mismatch',
+  'sec_coordinator_changed',
+  'sec_predecessor_alive',
+  'sec_port_mismatch',
+  'sec_health_identity_mismatch',
+  'sec_health_rejected',
   'child_exit_error',
   'pid_claim_failed',
   'health_check_failed',
@@ -273,7 +290,28 @@ export function classifySupervisorError(
   if (name === 'SyntaxError') return 'syntax_error';
   if (name === 'AssertionError') return 'assertion_error';
 
-  // 1. Connection refused checks (including CoordinatorConnectionRefusedError and nested cause)
+  // 1. Windows local-runtime helper failure (check fixed prefix before arbitrary embedded JSON data)
+  if (
+    msg.startsWith('windows local-runtime helper failed') ||
+    msg.includes(
+      'windows local-runtime helper failed han_windows_runtime_diagnostic='
+    )
+  ) {
+    return 'sec_runtime_helper_failed';
+  }
+
+  // 2. Specific coordinator health security errors (check before general health check strings)
+  if (
+    name === 'CoordinatorSecurityError' ||
+    msg.includes('coordinatorsecurityerror')
+  ) {
+    if (msg.includes('coordinator health identity mismatch'))
+      return 'sec_health_identity_mismatch';
+    if (msg.includes('coordinator health rejected'))
+      return 'sec_health_rejected';
+  }
+
+  // 3. Connection refused checks (including CoordinatorConnectionRefusedError and nested cause)
   if (
     name === 'CoordinatorConnectionRefusedError' ||
     code === 'ECONNREFUSED' ||
@@ -284,7 +322,7 @@ export function classifySupervisorError(
     return 'connection_refused';
   }
 
-  // 2. Timeout checks (including startup receipt, listener probe, and general timeouts)
+  // 4. Timeout checks (including startup receipt, listener probe, and general timeouts)
   if (
     code === 'ETIMEDOUT' ||
     causeCode === 'ETIMEDOUT' ||
@@ -294,7 +332,7 @@ export function classifySupervisorError(
     return 'timeout';
   }
 
-  // 3. Child exit errors
+  // 5. Child exit errors
   if (
     name === 'CoordinatorChildExitError' ||
     msg.includes('coordinator child exited')
@@ -302,7 +340,7 @@ export function classifySupervisorError(
     return 'child_exit_error';
   }
 
-  // 4. Missing binary or module
+  // 6. Missing binary or module
   if (
     msg.includes('binary not found') ||
     msg.includes('binary_missing') ||
@@ -318,7 +356,7 @@ export function classifySupervisorError(
     return 'module_not_found';
   }
 
-  // 5. PID claim errors
+  // 7. PID claim errors
   if (
     msg.includes('supervisor claim') ||
     msg.includes('malformed supervisor pid') ||
@@ -329,7 +367,7 @@ export function classifySupervisorError(
     return 'pid_claim_failed';
   }
 
-  // 6. Health check specific failures
+  // 8. Health check specific failures (non-security or general health monitoring)
   if (
     msg.includes('coordinator health') ||
     msg.includes('coordinator stopped responding') ||
@@ -339,12 +377,40 @@ export function classifySupervisorError(
   ) {
     return 'health_check_failed';
   }
-
-  // 7. General security errors
   if (
     name === 'CoordinatorSecurityError' ||
     msg.includes('coordinatorsecurityerror')
   ) {
+    if (msg.includes('windows local-runtime helper failed'))
+      return 'sec_runtime_helper_failed';
+    if (msg.includes('missing windows spawn claim'))
+      return 'sec_spawn_claim_missing';
+    if (msg.includes('invalid windows local-runtime response'))
+      return 'sec_runtime_response_invalid';
+    if (msg.includes('invalid windows descriptor target'))
+      return 'sec_descriptor_target_invalid';
+    if (msg.includes('invalid coordinator descriptor'))
+      return 'sec_descriptor_invalid';
+    if (msg.includes('missing windows process identity'))
+      return 'sec_process_identity_missing';
+    if (msg.includes('startup receipt pid mismatch'))
+      return 'sec_receipt_pid_mismatch';
+    if (msg.includes('startup receipt supervisor mismatch'))
+      return 'sec_receipt_supervisor_mismatch';
+    if (msg.includes('invalid startup receipt envelope'))
+      return 'sec_receipt_envelope_invalid';
+    if (msg.includes('malformed startup receipt json'))
+      return 'sec_receipt_json_malformed';
+    if (msg.includes('missing child stdout stream'))
+      return 'sec_stdout_stream_missing';
+    if (msg.includes('shutdown intent child identity mismatch'))
+      return 'sec_intent_child_mismatch';
+    if (msg.includes('coordinator changed during startup'))
+      return 'sec_coordinator_changed';
+    if (msg.includes('previous coordinator is still alive'))
+      return 'sec_predecessor_alive';
+    if (msg.includes('coordinator descriptor port does not match'))
+      return 'sec_port_mismatch';
     return 'security_error';
   }
 
@@ -384,6 +450,23 @@ export type SafeProcessDiagnostic = {
     | 'connection_refused'
     | 'timeout'
     | 'security_error'
+    | 'sec_runtime_helper_failed'
+    | 'sec_spawn_claim_missing'
+    | 'sec_runtime_response_invalid'
+    | 'sec_descriptor_target_invalid'
+    | 'sec_descriptor_invalid'
+    | 'sec_process_identity_missing'
+    | 'sec_receipt_pid_mismatch'
+    | 'sec_receipt_supervisor_mismatch'
+    | 'sec_receipt_envelope_invalid'
+    | 'sec_receipt_json_malformed'
+    | 'sec_stdout_stream_missing'
+    | 'sec_intent_child_mismatch'
+    | 'sec_coordinator_changed'
+    | 'sec_predecessor_alive'
+    | 'sec_port_mismatch'
+    | 'sec_health_identity_mismatch'
+    | 'sec_health_rejected'
     | 'child_exit_error'
     | 'pid_claim_failed'
     | 'health_check_failed'

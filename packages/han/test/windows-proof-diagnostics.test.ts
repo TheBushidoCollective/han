@@ -316,6 +316,23 @@ describe('installed Windows proof diagnostics', () => {
       'connection_refused',
       'timeout',
       'security_error',
+      'sec_runtime_helper_failed',
+      'sec_spawn_claim_missing',
+      'sec_runtime_response_invalid',
+      'sec_descriptor_target_invalid',
+      'sec_descriptor_invalid',
+      'sec_process_identity_missing',
+      'sec_receipt_pid_mismatch',
+      'sec_receipt_supervisor_mismatch',
+      'sec_receipt_envelope_invalid',
+      'sec_receipt_json_malformed',
+      'sec_stdout_stream_missing',
+      'sec_intent_child_mismatch',
+      'sec_coordinator_changed',
+      'sec_predecessor_alive',
+      'sec_port_mismatch',
+      'sec_health_identity_mismatch',
+      'sec_health_rejected',
       'child_exit_error',
       'pid_claim_failed',
       'health_check_failed',
@@ -453,7 +470,195 @@ describe('installed Windows proof diagnostics', () => {
       )
     ).toBe('health_check_failed');
 
-    // 7. General security error (catch-all for other security failures)
+    // 7. Discriminated CoordinatorSecurityError production origins
+    expect(
+      classifySupervisorError(
+        Object.assign(
+          new Error(
+            `Windows local-runtime helper failed HAN_WINDOWS_RUNTIME_DIAGNOSTIC={"operation":"test","category":"timed_out"} ${secret}`
+          ),
+          { name: 'CoordinatorSecurityError' }
+        )
+      )
+    ).toBe('sec_runtime_helper_failed');
+
+    expect(
+      classifySupervisorError(
+        Object.assign(new Error(`Missing Windows spawn claim: ${secret}`), {
+          name: 'CoordinatorSecurityError',
+        })
+      )
+    ).toBe('sec_spawn_claim_missing');
+
+    expect(
+      classifySupervisorError(
+        Object.assign(
+          new Error(`Invalid Windows local-runtime response: ${secret}`),
+          {
+            name: 'CoordinatorSecurityError',
+          }
+        )
+      )
+    ).toBe('sec_runtime_response_invalid');
+
+    expect(
+      classifySupervisorError(
+        Object.assign(
+          new Error(`Invalid Windows descriptor target: ${secret}`),
+          {
+            name: 'CoordinatorSecurityError',
+          }
+        )
+      )
+    ).toBe('sec_descriptor_target_invalid');
+
+    expect(
+      classifySupervisorError(
+        Object.assign(new Error(`Invalid coordinator descriptor: ${secret}`), {
+          name: 'CoordinatorSecurityError',
+        })
+      )
+    ).toBe('sec_descriptor_invalid');
+
+    expect(
+      classifySupervisorError(
+        Object.assign(
+          new Error(`Missing Windows process identity: ${secret}`),
+          {
+            name: 'CoordinatorSecurityError',
+          }
+        )
+      )
+    ).toBe('sec_process_identity_missing');
+
+    expect(
+      classifySupervisorError(
+        Object.assign(
+          new Error(
+            `Missing Windows process identity in startup receipt: ${secret}`
+          ),
+          {
+            name: 'CoordinatorSecurityError',
+          }
+        )
+      )
+    ).toBe('sec_process_identity_missing');
+
+    expect(
+      classifySupervisorError(
+        Object.assign(new Error(`Startup receipt PID mismatch: ${secret}`), {
+          name: 'CoordinatorSecurityError',
+        })
+      )
+    ).toBe('sec_receipt_pid_mismatch');
+
+    expect(
+      classifySupervisorError(
+        Object.assign(
+          new Error(`Startup receipt supervisor mismatch: ${secret}`),
+          {
+            name: 'CoordinatorSecurityError',
+          }
+        )
+      )
+    ).toBe('sec_receipt_supervisor_mismatch');
+
+    expect(
+      classifySupervisorError(
+        Object.assign(
+          new Error(`Invalid startup receipt envelope: ${secret}`),
+          {
+            name: 'CoordinatorSecurityError',
+          }
+        )
+      )
+    ).toBe('sec_receipt_envelope_invalid');
+
+    expect(
+      classifySupervisorError(
+        Object.assign(new Error(`Malformed startup receipt JSON: ${secret}`), {
+          name: 'CoordinatorSecurityError',
+        })
+      )
+    ).toBe('sec_receipt_json_malformed');
+
+    expect(
+      classifySupervisorError(
+        Object.assign(new Error(`Missing child stdout stream: ${secret}`), {
+          name: 'CoordinatorSecurityError',
+        })
+      )
+    ).toBe('sec_stdout_stream_missing');
+
+    expect(
+      classifySupervisorError(
+        Object.assign(
+          new Error(`Shutdown intent child identity mismatch: ${secret}`),
+          {
+            name: 'CoordinatorSecurityError',
+          }
+        )
+      )
+    ).toBe('sec_intent_child_mismatch');
+
+    expect(
+      classifySupervisorError(
+        Object.assign(
+          new Error(`Coordinator changed during startup: ${secret}`),
+          {
+            name: 'CoordinatorSecurityError',
+          }
+        )
+      )
+    ).toBe('sec_coordinator_changed');
+
+    expect(
+      classifySupervisorError(
+        Object.assign(
+          new Error(`Previous coordinator is still alive: ${secret}`),
+          {
+            name: 'CoordinatorSecurityError',
+          }
+        )
+      )
+    ).toBe('sec_predecessor_alive');
+
+    expect(
+      classifySupervisorError(
+        Object.assign(
+          new Error(
+            `Coordinator descriptor port does not match requested port: ${secret}`
+          ),
+          {
+            name: 'CoordinatorSecurityError',
+          }
+        )
+      )
+    ).toBe('sec_port_mismatch');
+
+    expect(
+      classifySupervisorError(
+        Object.assign(
+          new Error(`Coordinator health identity mismatch: ${secret}`),
+          {
+            name: 'CoordinatorSecurityError',
+          }
+        )
+      )
+    ).toBe('sec_health_identity_mismatch');
+
+    expect(
+      classifySupervisorError(
+        Object.assign(
+          new Error(`Coordinator health rejected (500): ${secret}`),
+          {
+            name: 'CoordinatorSecurityError',
+          }
+        )
+      )
+    ).toBe('sec_health_rejected');
+
+    // General security error (catch-all for other security failures)
     expect(
       classifySupervisorError(
         Object.assign(new Error(`Unknown security check failed: ${secret}`), {
@@ -461,7 +666,6 @@ describe('installed Windows proof diagnostics', () => {
         })
       )
     ).toBe('security_error');
-
     // 8. Standard runtime errors
     expect(classifySupervisorError(new ReferenceError(secret))).toBe(
       'reference_error'
