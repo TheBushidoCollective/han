@@ -53,6 +53,21 @@ jobs:
           name: ${{ matrix.artifact }}
           path: artifacts/
 
+      - name: Start local proof server and curl shim
+        shell: bash
+        run: |
+          chmod +x artifacts/* 2>/dev/null || true
+          chmod +x packages/han/scripts/release-proof/curl-shim/curl
+          mkdir -p release-assets
+          cp -r artifacts/* release-assets/ 2>/dev/null || true
+          bun packages/han/scripts/release-proof/serve-release.ts release-assets --tag "v${{ inputs.version }}" --port 41999 &
+          echo "SERVER_PID=$!" >> $GITHUB_ENV
+          echo "${{ github.workspace }}/packages/han/scripts/release-proof/curl-shim" >> $GITHUB_PATH
+          echo "HAN_PROOF_SERVER=http://127.0.0.1:41999" >> $GITHUB_ENV
+          echo "HAN_RELEASE_DOWNLOAD_BASE=http://127.0.0.1:41999/TheBushidoCollective/han/releases/download" >> $GITHUB_ENV
+          echo "HAN_VERSION=${{ inputs.version }}" >> $GITHUB_ENV
+          sleep 2
+
       - name: Install dependencies for proof runners
         shell: bash
         run: |
@@ -65,34 +80,41 @@ jobs:
       - name: 1. Prove Installer
         shell: bash
         run: |
-          chmod +x artifacts/* 2>/dev/null || true
           bun packages/han/scripts/release-proof/prove-installer.ts
 
       - name: 2. Prove Installed Coordinator
         shell: bash
         run: |
           if [[ "${{ matrix.os }}" == *windows* ]]; then
-            bun packages/han/scripts/prove-installed-windows-coordinator.ts
+            bun packages/han/scripts/prove-installed-windows-coordinator.ts "artifacts/${{ matrix.binary_name }}" "artifacts/${{ matrix.coordinator_binary }}"
           else
-            bun packages/han/scripts/prove-installed-coordinator.ts
+            mkdir -p "$RUNNER_TEMP/evidence"
+            bun packages/han/scripts/prove-installed-coordinator.ts \
+              --cli "${{ github.workspace }}/artifacts/${{ matrix.binary_name }}" \
+              --coordinator "${{ github.workspace }}/artifacts/${{ matrix.coordinator_binary }}" \
+              --bun-version 1.4.4 \
+              --bun-revision "$(bun --revision)" \
+              --evidence-dir "$RUNNER_TEMP/evidence"
           fi
 
       - name: 3. Prove Installed Hooks
         shell: bash
+        env:
+          HAN_INSTALLED_BIN: ${{ github.workspace }}/artifacts/${{ matrix.binary_name }}
         run: |
           bun packages/han/scripts/release-proof/prove-installed-hooks.ts
 
       - name: 4. Browser Transport against Installed Binary
         shell: bash
         run: |
-          suffix=""
-          if [[ "${{ matrix.os }}" == *windows* ]]; then suffix=".exe"; fi
           INSTALLED_CLI="${{ github.workspace }}/artifacts/${{ matrix.binary_name }}"
           cd packages/browse-client
           HAN_TRANSPORT_CLI="$INSTALLED_CLI" bunx playwright test --config playwright.transport.config.ts
 
       - name: 5. Prove Legacy Upgrade
         shell: bash
+        env:
+          HAN_INSTALLED_BIN: ${{ github.workspace }}/artifacts/${{ matrix.binary_name }}
         run: |
           bun packages/han/scripts/release-proof/prove-legacy-upgrade.ts
 

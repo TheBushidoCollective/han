@@ -23,10 +23,16 @@ for arg in "$@"; do
   fi
 done
 
-# Run actual curl binary if available
-SYSTEM_CURL="/usr/bin/curl"
-if [ ! -x "$SYSTEM_CURL" ]; then
-  SYSTEM_CURL="$(which -a curl | grep -v "curl-shim" | head -1 || echo "")"
+# Run actual system curl binary
+SYSTEM_CURL=""
+for c in "/usr/bin/curl" "/usr/local/bin/curl" "/c/Windows/system32/curl.exe" "C:/Windows/System32/curl.exe"; do
+  if [ -x "$c" ]; then
+    SYSTEM_CURL="$c"
+    break
+  fi
+done
+if [ -z "$SYSTEM_CURL" ]; then
+  SYSTEM_CURL="$(which -a curl 2>/dev/null | grep -v "curl-shim" | head -1 || echo "")"
 fi
 
 if [ -n "$SYSTEM_CURL" ] && [ -x "$SYSTEM_CURL" ]; then

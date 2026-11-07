@@ -100,7 +100,8 @@ fi
 
 echo -e "${GREEN}Installing han v$LATEST_VERSION...${NC}"
 
-BASE_URL="https://github.com/TheBushidoCollective/han/releases/download/v${LATEST_VERSION}"
+DOWNLOAD_BASE="${HAN_RELEASE_DOWNLOAD_BASE:-https://github.com/TheBushidoCollective/han/releases/download}"
+BASE_URL="${DOWNLOAD_BASE}/v${LATEST_VERSION}"
 TEMP_DIR=$(mktemp -d "${BIN_DIR}/.han-install.XXXXXXXX")
 RELEASE_DIR=""
 cleanup() {
