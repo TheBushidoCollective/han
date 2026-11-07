@@ -15,9 +15,17 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { COORDINATOR_SHA256, HAN_VERSION } from '../build-info.generated.ts';
 import { getCoordinatorDataDir } from './connection.ts';
 import { CoordinatorSecurityError } from './errors.ts';
+
+let HAN_VERSION = '0.0.0-dev';
+let COORDINATOR_SHA256: string | null = null;
+try {
+  const buildInfo = await import('../build-info.generated.ts');
+  if (buildInfo.HAN_VERSION) HAN_VERSION = buildInfo.HAN_VERSION;
+  if ('COORDINATOR_SHA256' in buildInfo)
+    COORDINATOR_SHA256 = buildInfo.COORDINATOR_SHA256 ?? null;
+} catch {}
 
 const MAX_DOWNLOAD_SIZE = 256 * 1024 * 1024; // 256 MiB
 const SIX_HOURS_MS = 6 * 3600 * 1000;

@@ -2,7 +2,11 @@ import { existsSync, lstatSync, readFileSync, unlinkSync } from 'node:fs';
 import { connect } from 'node:net';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { HAN_VERSION } from '../build-info.generated.ts';
+let HAN_VERSION = '0.0.0-dev';
+try {
+  const buildInfo = await import('../build-info.generated.ts');
+  if (buildInfo.HAN_VERSION) HAN_VERSION = buildInfo.HAN_VERSION;
+} catch {}
 import { getCoordinatorDataDir } from './connection.ts';
 import { CoordinatorSecurityError } from './errors.ts';
 

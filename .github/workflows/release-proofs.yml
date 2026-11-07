@@ -71,8 +71,15 @@ jobs:
           echo "HAN_PROOF_SERVER=http://127.0.0.1:41999" >> $GITHUB_ENV
           echo "HAN_RELEASE_DOWNLOAD_BASE=http://127.0.0.1:41999/TheBushidoCollective/han/releases/download" >> $GITHUB_ENV
           echo "HAN_VERSION=${{ inputs.version }}" >> $GITHUB_ENV
+          cat > packages/han/lib/build-info.generated.ts << 'EOF'
+          export const HAN_VERSION = "${{ inputs.version }}";
+          export const COORDINATOR_SHA256: string | null = null;
+          export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
+          EOF
+          cat > packages/han/lib/commands/browse/embedded-dashboard.generated.ts << 'EOF'
+          export const EMBEDDED_DASHBOARD_ASSETS: Record<string, string> = {};
+          EOF
           sleep 2
-
       - name: Install dependencies for proof runners
         shell: bash
         run: |
