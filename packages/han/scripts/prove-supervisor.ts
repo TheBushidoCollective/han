@@ -1203,7 +1203,18 @@ async function fixedPortPublicationBarrier(): Promise<void> {
     assertChild(previous.pid, supervisor.pid);
     writeFileSync(join(barrier, 'arm'), '');
     killChild(previous.pid, supervisor.pid);
-    const marker = await waitFor('bound replacement', () => {
+    const marker = await waitFor('bound replacement', async () => {
+      if (supervisor.exitCode !== null) {
+        const stdout = await new Response(
+          supervisor.stdout as ReadableStream
+        ).text();
+        const stderr = await new Response(
+          supervisor.stderr as ReadableStream
+        ).text();
+        throw new Error(
+          `Supervisor exited ${supervisor.exitCode}\nstdout:\n${stdout}\nstderr:\n${stderr}`
+        );
+      }
       if (!existsSync(join(barrier, 'bound.json'))) return undefined;
       return JSON.parse(readFileSync(join(barrier, 'bound.json'), 'utf8')) as {
         pid: number;
