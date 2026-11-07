@@ -44,9 +44,17 @@ export function findCoordinatorBinary(): string | null {
     (process.platform === 'win32' ? '' : '/tmp');
   const binaryName =
     process.platform === 'win32' ? 'han-coordinator.exe' : 'han-coordinator';
+  const os = process.platform === 'darwin' ? 'darwin' : 'linux';
+  const suffixedBinary =
+    process.platform === 'win32'
+      ? 'han-coordinator-windows-x64.exe'
+      : `han-coordinator-${os}-${process.arch}`;
   try {
-    const sibling = join(dirname(realpathSync(process.execPath)), binaryName);
+    const siblingDir = dirname(realpathSync(process.execPath));
+    const sibling = join(siblingDir, binaryName);
     if (existsSync(sibling) && verifyCandidateHash(sibling)) return sibling;
+    const suffixed = join(siblingDir, suffixedBinary);
+    if (existsSync(suffixed) && verifyCandidateHash(suffixed)) return suffixed;
   } catch {}
   const isRelease =
     typeof COORDINATOR_SHA256 === 'string' && COORDINATOR_SHA256.length === 64;

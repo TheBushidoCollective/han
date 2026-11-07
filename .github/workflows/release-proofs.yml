@@ -60,6 +60,11 @@ jobs:
           chmod +x packages/han/scripts/release-proof/curl-shim/curl
           mkdir -p release-assets
           cp -r artifacts/* release-assets/ 2>/dev/null || true
+          if [[ "${{ matrix.os }}" == *windows* ]]; then
+            cp "artifacts/${{ matrix.coordinator_binary }}" "artifacts/han-coordinator.exe" 2>/dev/null || true
+          else
+            cp "artifacts/${{ matrix.coordinator_binary }}" "artifacts/han-coordinator" 2>/dev/null || true
+          fi
           bun packages/han/scripts/release-proof/serve-release.ts release-assets --tag "v${{ inputs.version }}" --port 41999 &
           echo "SERVER_PID=$!" >> $GITHUB_ENV
           echo "${{ github.workspace }}/packages/han/scripts/release-proof/curl-shim" >> $GITHUB_PATH
