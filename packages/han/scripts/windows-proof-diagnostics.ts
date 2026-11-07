@@ -746,17 +746,6 @@ export function safeProofFailure(
     command?.diagnostic ?? null;
   if (
     !helperDiagnostic &&
-    processDiagnostic &&
-    typeof processDiagnostic === 'object' &&
-    'helperDiagnostic' in processDiagnostic
-  ) {
-    const fromProc = (processDiagnostic as { helperDiagnostic?: unknown })
-      .helperDiagnostic;
-    const validated = validateHelperDiagnostic(fromProc);
-    if (validated) helperDiagnostic = validated;
-  }
-  if (
-    !helperDiagnostic &&
     error &&
     typeof error === 'object' &&
     'diagnostic' in error
