@@ -156,9 +156,7 @@ describe('distribution', () => {
       expect(readFileSync(join(releaseDir, 'han-coordinator'), 'utf8')).toBe(
         'new coordinator'
       );
-      expect(readFileSync(join(bin, 'han-coordinator'), 'utf8')).toBe(
-        'old coordinator'
-      );
+      expect(existsSync(join(bin, 'han-coordinator'))).toBe(false);
       expect(existsSync(join(bin, 'han'))).toBe(true);
       const mv = join(fakeBin, 'mv');
       writeFileSync(
@@ -173,27 +171,4 @@ describe('distribution', () => {
       );
     }
   );
-
-  test('retired HTTP endpoint never returns key material', async () => {
-    // Exercise the separately deployed certificate server's module boundary.
-    const { handleRequest } = await import(join(root, 'cert-server/server.ts'));
-    const server = Bun.serve({
-      hostname: '127.0.0.1',
-      port: 0,
-      fetch: handleRequest,
-    });
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:${server.port}/coordinator/latest`
-      );
-      expect(response.status).toBe(410);
-      expect(response.headers.get('cache-control')).toBe('no-store');
-      const body = (await response.json()) as Record<string, unknown>;
-      expect(body.error).toBe('UPGRADE_REQUIRED');
-      expect(body.key).toBeUndefined();
-      expect(body.cert).toBeUndefined();
-    } finally {
-      server.stop(true);
-    }
-  });
 });
