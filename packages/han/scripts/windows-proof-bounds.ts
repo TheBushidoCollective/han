@@ -958,7 +958,8 @@ export function sweepRootSync(root: string, timeoutMs = 15000): SweepResult {
   return parseSweepOutput(res.stdout || '');
 }
 
-export const PROBE_PRELUDE = "$ErrorActionPreference='Stop'; ";
+export const PROBE_PRELUDE =
+  "$ErrorActionPreference='Stop'; $PSModuleAutoLoadingPreference='None'; ";
 
 function assertPid(pid: number): void {
   if (!Number.isSafeInteger(pid) || pid <= 0 || pid > 0xffffffff) {
@@ -966,14 +967,16 @@ function assertPid(pid: number): void {
   }
 }
 
+// 0 image+time match (and with kill: terminated or already exited); 3 no such process; 4 image mismatch; 5 time mismatch; 6 anything else
 export function identityProbeScript(pid: number, kill: boolean): string {
   assertPid(pid);
   const stop = kill
-    ? 'Stop-Process -InputObject $p -Force -ErrorAction Stop;'
+    ? 'if (-not $p.HasExited) { try { $p.Kill() } catch { if (-not $p.HasExited) { exit 6 } } }; '
     : '';
-  return `${PROBE_PRELUDE}try { $p=Get-Process -Id ${pid} -ErrorAction Stop } catch { if ($_.FullyQualifiedErrorId -like 'NoProcessFoundForGivenId*') { exit 3 }; exit 6 }; try { $actual=[System.IO.Path]::GetFullPath($p.Path); $expected=[System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $env:HAN_PROOF_IMAGE).Path); if ($actual -ne $expected) { exit 4 }; if ($p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString() -ne $env:HAN_PROOF_TIME) { exit 5 }; ${stop} exit 0 } catch { exit 6 }`;
+  return `${PROBE_PRELUDE}try { $p=[System.Diagnostics.Process]::GetProcessById(${pid}); try { $null=$p.Handle } catch { $e=$_.Exception; if ($e.InnerException) { $e=$e.InnerException }; if ($e -is [System.InvalidOperationException]) { exit 3 }; exit 6 } } catch { $e=$_.Exception; if ($e.InnerException) { $e=$e.InnerException }; if ($e -is [System.ArgumentException]) { exit 3 }; exit 6 }; try { $actual=[System.IO.Path]::GetFullPath($p.MainModule.FileName); if (-not [System.IO.File]::Exists($env:HAN_PROOF_IMAGE)) { exit 6 }; $expected=[System.IO.Path]::GetFullPath($env:HAN_PROOF_IMAGE); if ($actual -ne $expected) { exit 4 }; if ($p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString() -ne $env:HAN_PROOF_TIME) { exit 5 }; ${stop}exit 0 } catch { exit 6 }`;
 }
 
+// stdout creation FILETIME + exit 0; 4 parent mismatch; 5 image mismatch; 1 on any error
 export function barrierIdentityScript(pid: number, parentPid: number): string {
   assertPid(pid);
   if (
@@ -983,21 +986,22 @@ export function barrierIdentityScript(pid: number, parentPid: number): string {
   ) {
     throw new Error('Invalid parent process id');
   }
-  return `${PROBE_PRELUDE}$p=Get-Process -Id ${pid} -ErrorAction Stop; $w=Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}'; if ($w.ParentProcessId -ne ${parentPid}) { exit 4 }; if ([System.IO.Path]::GetFullPath($p.Path) -ne [System.IO.Path]::GetFullPath($env:HAN_PROOF_IMAGE)) { exit 5 }; $p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString()`;
+  return `${PROBE_PRELUDE}$p=[System.Diagnostics.Process]::GetProcessById(${pid}); $parent=$null; foreach ($w in ([wmisearcher]'SELECT ParentProcessId FROM Win32_Process WHERE ProcessId=${pid}').Get()) { $parent=$w['ParentProcessId'] }; if ($parent -ne ${parentPid}) { exit 4 }; if ([System.IO.Path]::GetFullPath($p.MainModule.FileName) -ne [System.IO.Path]::GetFullPath($env:HAN_PROOF_IMAGE)) { exit 5 }; [Console]::Out.WriteLine($p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString()); exit 0`;
 }
 
+// 1 established 127.0.0.1:port connection exists; 0 none; 2 query failed
 export function establishedConnectionScript(port: number): string {
   if (!Number.isSafeInteger(port) || port < 1 || port > 65535) {
     throw new Error('Invalid port');
   }
-  return `${PROBE_PRELUDE}try { $c=Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort ${port} -State Established; if ($c) { exit 1 }; exit 0 } catch { if ($_.CategoryInfo.Category -eq 'ObjectNotFound' -or $_.FullyQualifiedErrorId -like 'CmdletizationQuery_NotFound*') { exit 0 }; exit 2 }`;
+  return `${PROBE_PRELUDE}try { foreach ($c in [System.Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpConnections()) { if ($c.State -eq [System.Net.NetworkInformation.TcpState]::Established -and $c.LocalEndPoint.Port -eq ${port} -and $c.LocalEndPoint.Address.Equals([System.Net.IPAddress]::Loopback)) { exit 1 } }; exit 0 } catch { exit 2 }`;
 }
 
 export function sleepFixtureScript(seconds: number): string {
   if (!Number.isSafeInteger(seconds) || seconds <= 0 || seconds > 3600) {
     throw new Error('Invalid sleep duration');
   }
-  return `${PROBE_PRELUDE}Start-Sleep -Seconds ${seconds}`;
+  return `${PROBE_PRELUDE}[System.Threading.Thread]::Sleep(${seconds * 1000}); exit 0`;
 }
 
 export function restrictedProofEnv({

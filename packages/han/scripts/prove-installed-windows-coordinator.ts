@@ -435,6 +435,7 @@ async function main(): Promise<void> {
     );
     assert.ok(/^[1-9][0-9]{0,19}$/.test(identity.creationTime));
     const script = identityProbeScript(identity.pid, kill);
+    const t0 = Date.now();
     const res = await spawnBounded(
       [powershell, '-NoProfile', '-NonInteractive', '-Command', script],
       {
@@ -476,6 +477,7 @@ async function main(): Promise<void> {
       return 'unknown';
     const script = identityProbeScript(identity.pid, false);
     try {
+      const t0 = Date.now();
       const res = await spawnBounded(
         [powershell, '-NoProfile', '-NonInteractive', '-Command', script],
         {
@@ -829,6 +831,7 @@ async function main(): Promise<void> {
       writeFileSync(join(barrier, 'release'), '');
       current = await started(previous);
       assert.equal(current.pid, marker.pid);
+      assert.equal(current.process.creationTime, creationTime);
       assert.equal(
         current.supervisor?.generationId,
         marker.supervisor?.generationId

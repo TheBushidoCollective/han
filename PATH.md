@@ -56,6 +56,8 @@ modeled PID reuse, and fast-exit startup receipt validation. The modeled case ch
 live fixture process with a different creation time; it does not claim an
 actual OS PID recycle.
 
+PowerShell probes (identity and kill checks, the barrier parent check, the loopback connection check) and the modeled-PID-reuse fixture run under the proof's private environment with `$PSModuleAutoLoadingPreference='None'` and call only .NET APIs, so no launch performs module discovery. `test/windows-proof-bounds.test.ts` runs each under that environment and fails if a launch takes 5 seconds or more (10 seconds for the WMI parent check).
+
 ### Output contract
 
 Proof progress and diagnostic output is emitted to stderr in structured JSON lines:
