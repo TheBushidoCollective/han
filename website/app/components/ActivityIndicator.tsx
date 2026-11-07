@@ -1,5 +1,5 @@
-'use client';
+"use client";
 
 export function ActivityIndicator() {
-  return null;
+	return null;
 }
