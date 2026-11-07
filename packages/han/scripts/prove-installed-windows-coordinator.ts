@@ -14,19 +14,19 @@ import { createConnection, createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
-  ownedProcessScript,
-  ProofProbeDiagnosticComplete,
-  runProbeDiagnostic,
-} from './windows-probe-diagnostic.ts';
-import {
   abortableSleep,
+  barrierIdentityScript,
   type BoundedChild,
   waitFor as boundsWaitFor,
   createProofClock,
+  establishedConnectionScript,
+  identityProbeScript,
   ProofDeadlineError,
   ProofOutputRetained,
   ProofSubprocessTimeout,
   readProofBudget,
+  restrictedProofEnv,
+  sleepFixtureScript,
   spawnBounded,
   startBounded,
   sweepRoot,
@@ -266,14 +266,6 @@ async function main(): Promise<void> {
     watchdogMarginMs: 60000,
   });
 
-  const barrierProof = process.env.HAN_PROOF_BARRIER_ONLY === '1';
-  const probeDiagnostic = process.env.HAN_PROOF_PROBE_DIAGNOSTIC === '1';
-  if (probeDiagnostic && barrierProof) {
-    throw new Error(
-      'Cannot combine HAN_PROOF_PROBE_DIAGNOSTIC and HAN_PROOF_BARRIER_ONLY'
-    );
-  }
-
   const root = mkdtempSync(join(tmpdir(), 'han-windows-installed-'));
   const bin = join(root, 'bin');
   const data = join(root, 'data');
@@ -284,24 +276,9 @@ async function main(): Promise<void> {
   mkdirSync(join(root, 'claude'));
   copyFileSync(resolve(process.argv[2]), cli);
   copyFileSync(resolve(process.argv[3]), coordinator);
-  const env: Record<string, string> = {
-    SystemRoot: systemRoot,
-    WINDIR: systemRoot,
-    PATH: `${bin};${join(systemRoot, 'System32')};${systemRoot}`,
-    HOME: root,
-    USERPROFILE: root,
-    APPDATA: join(root, 'appdata'),
-    LOCALAPPDATA: join(root, 'localappdata'),
-    TEMP: join(root, 'tmp'),
-    TMP: join(root, 'tmp'),
-    HAN_DATA_DIR: data,
-    CLAUDE_CONFIG_DIR: join(root, 'claude'),
-    HAN_COORDINATOR_PORT: '0',
-    HAN_COORDINATOR_TIMEOUT: '60000',
-    CI: 'true',
-    CLAUDE_CODE_ENABLE_TELEMETRY: '0',
-  };
+  const env = restrictedProofEnv({ root, bin, data, systemRoot });
   const barrier = join(root, 'startup-barrier');
+  const barrierProof = process.env.HAN_PROOF_BARRIER_ONLY === '1';
   if (barrierProof) {
     mkdirSync(barrier);
     env.HAN_PROOF_STARTUP_BARRIER = barrier;
@@ -451,10 +428,13 @@ async function main(): Promise<void> {
     image: string,
     kill: boolean
   ): Promise<boolean> => {
-    assert.ok(Number.isSafeInteger(identity.pid) && identity.pid > 0);
+    assert.ok(
+      Number.isSafeInteger(identity.pid) &&
+        identity.pid > 0 &&
+        identity.pid <= 0xffffffff
+    );
     assert.ok(/^[1-9][0-9]{0,19}$/.test(identity.creationTime));
-    const script = ownedProcessScript(identity.pid, kill);
-    const t0 = Date.now();
+    const script = identityProbeScript(identity.pid, kill);
     const res = await spawnBounded(
       [powershell, '-NoProfile', '-NonInteractive', '-Command', script],
       {
@@ -490,11 +470,11 @@ async function main(): Promise<void> {
     if (
       !Number.isSafeInteger(identity.pid) ||
       identity.pid <= 0 ||
+      identity.pid > 0xffffffff ||
       !/^[1-9][0-9]{0,19}$/.test(identity.creationTime)
     )
       return 'unknown';
-    const script = `$ErrorActionPreference='Stop'; try { $p=Get-Process -Id ${identity.pid} -ErrorAction Stop } catch { if ($_.FullyQualifiedErrorId -like 'NoProcessFoundForGivenId*') { exit 3 }; exit 6 }; try { $actual=[System.IO.Path]::GetFullPath($p.Path); $expected=[System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $env:HAN_PROOF_IMAGE).Path); if ($actual -ne $expected) { exit 4 }; if ($p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString() -ne $env:HAN_PROOF_TIME) { exit 5 }; exit 0 } catch { exit 6 }`;
-    const t0 = Date.now();
+    const script = identityProbeScript(identity.pid, false);
     try {
       const res = await spawnBounded(
         [powershell, '-NoProfile', '-NonInteractive', '-Command', script],
@@ -720,20 +700,6 @@ async function main(): Promise<void> {
     const supervisor = register(d);
     if (phase === 'initial-start-registration')
       setPhase('initial-start-coordinator');
-    if (probeDiagnostic && phase === 'initial-start-coordinator') {
-      await runProbeDiagnostic({
-        powershell,
-        systemRoot,
-        root,
-        proofEnv: env,
-        runnerEnv: process.env,
-        identity: d.process,
-        image: coordinator,
-        signal: clock.phaseSignal,
-        emit: (l) => writeSync(2, `Installed Windows probe diagnostic: ${l}\n`),
-      });
-      throw new ProofProbeDiagnosticComplete();
-    }
     assert.ok(await ownedProcess(d.process, coordinator, false));
     if (phase === 'initial-start-coordinator')
       setPhase('initial-start-supervisor');
@@ -811,7 +777,7 @@ async function main(): Promise<void> {
             '-NoProfile',
             '-NonInteractive',
             '-Command',
-            `$p=Get-Process -Id ${marker.pid} -ErrorAction Stop; $w=Get-CimInstance Win32_Process -Filter 'ProcessId=${marker.pid}'; if ($w.ParentProcessId -ne ${previous.supervisor?.pid ?? 0}) { exit 4 }; if ([System.IO.Path]::GetFullPath($p.Path) -ne [System.IO.Path]::GetFullPath($env:HAN_PROOF_IMAGE)) { exit 5 }; $p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString()`,
+            barrierIdentityScript(marker.pid, previous.supervisor?.pid ?? 0),
           ],
           root,
           { ...env, HAN_PROOF_IMAGE: coordinator },
@@ -835,7 +801,7 @@ async function main(): Promise<void> {
             '-NoProfile',
             '-NonInteractive',
             '-Command',
-            `$ErrorActionPreference='Stop'; try { $c=Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort ${marker.httpsPort} -State Established; if ($c) { exit 1 }; exit 0 } catch { if ($_.CategoryInfo.Category -eq 'ObjectNotFound' -or $_.FullyQualifiedErrorId -like 'CmdletizationQuery_NotFound*') { exit 0 }; exit 2 }`,
+            establishedConnectionScript(marker.httpsPort),
           ],
           {
             cwd: root,
@@ -1021,7 +987,7 @@ async function main(): Promise<void> {
           '-NoProfile',
           '-NonInteractive',
           '-Command',
-          'Start-Sleep -Seconds 300',
+          sleepFixtureScript(300),
         ],
         {
           cwd: root,

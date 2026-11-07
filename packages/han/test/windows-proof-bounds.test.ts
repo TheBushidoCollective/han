@@ -8,18 +8,26 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
+import { type AddressInfo, createConnection, createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
   abortableSleep,
+  barrierIdentityScript,
   createProofClock,
+  establishedConnectionScript,
   findPowershell,
+  identityProbeScript,
+  PROBE_PRELUDE,
   ProofDeadlineError,
   ProofOutputRetained,
   ProofSubprocessTimeout,
   ProofWatchdogError,
   readProofBudget,
+  restrictedProofEnv,
+  sleepFixtureScript,
   spawnBounded,
+  startBounded,
   sweepRoot,
   sweepRootSync,
   validateSweepRoots,
@@ -210,6 +218,43 @@ describe('windows-proof-bounds budget and unit contracts', () => {
     expect(() => sweepRootSync('')).toThrow();
     expect(() => sweepRootSync('C:\\')).toThrow();
     expect(() => sweepRootSync('C:\\Windows')).toThrow();
+  });
+  test('probe script builders reject invalid identifiers', () => {
+    for (const invalidPid of [0, -1, 1.5, Number.NaN, 2 ** 32]) {
+      expect(() => identityProbeScript(invalidPid, false)).toThrow(
+        'Invalid process id'
+      );
+      expect(() => barrierIdentityScript(invalidPid, 1)).toThrow(
+        'Invalid process id'
+      );
+    }
+    expect(() => barrierIdentityScript(1, -1)).toThrow(
+      'Invalid parent process id'
+    );
+    expect(() => barrierIdentityScript(1, 2 ** 32)).toThrow(
+      'Invalid parent process id'
+    );
+    expect(() => establishedConnectionScript(0)).toThrow('Invalid port');
+    expect(() => establishedConnectionScript(65536)).toThrow('Invalid port');
+    expect(() => sleepFixtureScript(0)).toThrow('Invalid sleep duration');
+    expect(() => sleepFixtureScript(-1)).toThrow('Invalid sleep duration');
+  });
+
+  test('probe scripts start with the autoload-disabled prelude and invoke no cmdlets', () => {
+    expect(PROBE_PRELUDE).toBe(
+      "$ErrorActionPreference='Stop'; $PSModuleAutoLoadingPreference='None'; "
+    );
+    const scripts = [
+      identityProbeScript(1234, false),
+      identityProbeScript(1234, true),
+      barrierIdentityScript(1234, 5678),
+      establishedConnectionScript(8080),
+      sleepFixtureScript(10),
+    ];
+    for (const s of scripts) {
+      expect(s.startsWith(PROBE_PRELUDE)).toBe(true);
+      expect(s).not.toMatch(/\b[A-Z][a-z]+-[A-Z][A-Za-z]+\b/);
+    }
   });
 });
 
@@ -559,4 +604,396 @@ fs.writeFileSync(${JSON.stringify(markerFile2)}, 'started');
       );
     }
   }, 120000);
+});
+
+describeWindows('Windows restricted-environment PowerShell probes', () => {
+  const createTestEnv = () => {
+    const root = mkdtempSync(join(tmpdir(), 'han-probe-test-'));
+    const bin = join(root, 'bin');
+    const data = join(root, 'data');
+    mkdirSync(bin);
+    mkdirSync(join(root, 'tmp'));
+    mkdirSync(join(root, 'claude'));
+    const systemRoot = process.env.SystemRoot ?? 'C:\\Windows';
+    const env = restrictedProofEnv({ root, bin, data, systemRoot });
+    return { root, bin, data, systemRoot, env };
+  };
+
+  test('identity probes keep their exit-code contract and finish under 5 s in the proof environment', async () => {
+    const { root, env } = createTestEnv();
+    const powershell = findPowershell();
+    let sleeper: ReturnType<typeof startBounded> | undefined;
+
+    try {
+      sleeper = startBounded(
+        [
+          powershell,
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          sleepFixtureScript(120),
+        ],
+        { cwd: root, env }
+      );
+      expect(sleeper.pid).toBeGreaterThan(0);
+
+      // 2. barrierIdentityScript(sleeper.pid, process.pid) with HAN_PROOF_IMAGE set to powershell path
+      const tBarrier = Date.now();
+      const barrierRes = await spawnBounded(
+        [
+          powershell,
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          barrierIdentityScript(sleeper.pid, process.pid),
+        ],
+        {
+          cwd: root,
+          env: { ...env, HAN_PROOF_IMAGE: powershell },
+          timeoutMs: 60000,
+          capture: true,
+        }
+      );
+      const barrierMs = Date.now() - tBarrier;
+      expect(barrierRes.timedOut).toBe(false);
+      expect(barrierRes.pipeRetained).toBe(false);
+      expect(barrierRes.exitCode).toBe(0);
+      expect(barrierMs).toBeLessThan(10000);
+      const fileTime = barrierRes.output.trim();
+      expect(fileTime).toMatch(/^[1-9][0-9]{0,19}$/);
+
+      // 3. identityProbeScript(sleeper.pid, false): expect 0
+      const t3 = Date.now();
+      const res3 = await spawnBounded(
+        [
+          powershell,
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          identityProbeScript(sleeper.pid, false),
+        ],
+        {
+          cwd: root,
+          env: {
+            ...env,
+            HAN_PROOF_IMAGE: powershell,
+            HAN_PROOF_TIME: fileTime,
+          },
+          timeoutMs: 60000,
+          capture: true,
+        }
+      );
+      expect(res3.timedOut).toBe(false);
+      expect(res3.pipeRetained).toBe(false);
+      expect(res3.exitCode).toBe(0);
+      expect(Date.now() - t3).toBeLessThan(5000);
+
+      // 4. The same with HAN_PROOF_TIME='1': expect 5
+      const t4 = Date.now();
+      const res4 = await spawnBounded(
+        [
+          powershell,
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          identityProbeScript(sleeper.pid, false),
+        ],
+        {
+          cwd: root,
+          env: {
+            ...env,
+            HAN_PROOF_IMAGE: powershell,
+            HAN_PROOF_TIME: '1',
+          },
+          timeoutMs: 60000,
+          capture: true,
+        }
+      );
+      expect(res4.timedOut).toBe(false);
+      expect(res4.pipeRetained).toBe(false);
+      expect(res4.exitCode).toBe(5);
+      expect(Date.now() - t4).toBeLessThan(5000);
+
+      // 5. identityProbeScript(process.pid, false): expect 4
+      const t5 = Date.now();
+      const res5 = await spawnBounded(
+        [
+          powershell,
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          identityProbeScript(process.pid, false),
+        ],
+        {
+          cwd: root,
+          env: {
+            ...env,
+            HAN_PROOF_IMAGE: powershell,
+            HAN_PROOF_TIME: fileTime,
+          },
+          timeoutMs: 60000,
+          capture: true,
+        }
+      );
+      expect(res5.timedOut).toBe(false);
+      expect(res5.pipeRetained).toBe(false);
+      expect(res5.exitCode).toBe(4);
+      expect(Date.now() - t5).toBeLessThan(5000);
+
+      // 6. identityProbeScript(2147483644, false): expect 3
+      const t6 = Date.now();
+      const res6 = await spawnBounded(
+        [
+          powershell,
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          identityProbeScript(2147483644, false),
+        ],
+        {
+          cwd: root,
+          env: {
+            ...env,
+            HAN_PROOF_IMAGE: powershell,
+            HAN_PROOF_TIME: fileTime,
+          },
+          timeoutMs: 60000,
+          capture: true,
+        }
+      );
+      expect(res6.timedOut).toBe(false);
+      expect(res6.pipeRetained).toBe(false);
+      expect(res6.exitCode).toBe(3);
+      expect(Date.now() - t6).toBeLessThan(5000);
+
+      // 7. barrierIdentityScript(sleeper.pid, 0): expect 4
+      const t7 = Date.now();
+      const res7 = await spawnBounded(
+        [
+          powershell,
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          barrierIdentityScript(sleeper.pid, 0),
+        ],
+        {
+          cwd: root,
+          env: { ...env, HAN_PROOF_IMAGE: powershell },
+          timeoutMs: 60000,
+          capture: true,
+        }
+      );
+      expect(res7.timedOut).toBe(false);
+      expect(res7.pipeRetained).toBe(false);
+      expect(res7.exitCode).toBe(4);
+      expect(Date.now() - t7).toBeLessThan(10000);
+
+      // 8. barrierIdentityScript with HAN_PROOF_IMAGE set to process.execPath: expect 5
+      const t8 = Date.now();
+      const res8 = await spawnBounded(
+        [
+          powershell,
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          barrierIdentityScript(sleeper.pid, process.pid),
+        ],
+        {
+          cwd: root,
+          env: { ...env, HAN_PROOF_IMAGE: process.execPath },
+          timeoutMs: 60000,
+          capture: true,
+        }
+      );
+      expect(res8.timedOut).toBe(false);
+      expect(res8.pipeRetained).toBe(false);
+      expect(res8.exitCode).toBe(5);
+      expect(Date.now() - t8).toBeLessThan(10000);
+
+      // 9. identityProbeScript(sleeper.pid, true): expect 0, and the sleeper exits within 10 s
+      const t9 = Date.now();
+      const res9 = await spawnBounded(
+        [
+          powershell,
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          identityProbeScript(sleeper.pid, true),
+        ],
+        {
+          cwd: root,
+          env: {
+            ...env,
+            HAN_PROOF_IMAGE: powershell,
+            HAN_PROOF_TIME: fileTime,
+          },
+          timeoutMs: 60000,
+          capture: true,
+        }
+      );
+      expect(res9.timedOut).toBe(false);
+      expect(res9.pipeRetained).toBe(false);
+      expect(res9.exitCode).toBe(0);
+      expect(Date.now() - t9).toBeLessThan(5000);
+
+      const exitStatus = await Promise.race([
+        sleeper.exited,
+        new Promise<'timeout'>((resolve) =>
+          setTimeout(() => resolve('timeout'), 10000)
+        ),
+      ]);
+      expect(exitStatus).not.toBe('timeout');
+    } finally {
+      if (sleeper && sleeper.exitCode === null) {
+        try {
+          sleeper.kill();
+          await sleeper.exited;
+        } catch {}
+      }
+      try {
+        rmSync(root, {
+          recursive: true,
+          force: true,
+          maxRetries: 5,
+          retryDelay: 200,
+        });
+      } catch {}
+    }
+  }, 120000);
+
+  test('cmdlets are unreachable under the probe prelude', async () => {
+    const { root, env } = createTestEnv();
+    const powershell = findPowershell();
+    try {
+      const t1 = Date.now();
+      const res1 = await spawnBounded(
+        [
+          powershell,
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          `${PROBE_PRELUDE}exit 0`,
+        ],
+        { cwd: root, env, timeoutMs: 60000, capture: true }
+      );
+      expect(res1.timedOut).toBe(false);
+      expect(res1.pipeRetained).toBe(false);
+      expect(res1.exitCode).toBe(0);
+      expect(Date.now() - t1).toBeLessThan(5000);
+
+      const t2 = Date.now();
+      const res2 = await spawnBounded(
+        [
+          powershell,
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          `${PROBE_PRELUDE}$null = Get-Process -Id $PID; exit 0`,
+        ],
+        { cwd: root, env, timeoutMs: 60000, capture: true }
+      );
+      expect(res2.timedOut).toBe(false);
+      expect(res2.pipeRetained).toBe(false);
+      expect(res2.exitCode).not.toBe(0);
+      expect(Date.now() - t2).toBeLessThan(5000);
+    } finally {
+      try {
+        rmSync(root, {
+          recursive: true,
+          force: true,
+          maxRetries: 5,
+          retryDelay: 200,
+        });
+      } catch {}
+    }
+  }, 60000);
+
+  test('established-connection probe distinguishes listener from accepted connection under 5 s', async () => {
+    const { root, env } = createTestEnv();
+    const powershell = findPowershell();
+    const server = createServer();
+    const listening = Promise.withResolvers<void>();
+    server.once('error', listening.reject);
+    server.listen(0, '127.0.0.1', listening.resolve);
+    await listening.promise;
+    const addr = server.address();
+    expect(addr && typeof addr !== 'string').toBe(true);
+    const port = (addr as AddressInfo).port;
+    let client: ReturnType<typeof createConnection> | undefined;
+
+    try {
+      // 0 with no client
+      const t0 = Date.now();
+      const res0 = await spawnBounded(
+        [
+          powershell,
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          establishedConnectionScript(port),
+        ],
+        { cwd: root, env, timeoutMs: 60000, capture: true }
+      );
+      expect(res0.timedOut).toBe(false);
+      expect(res0.pipeRetained).toBe(false);
+      expect(res0.exitCode).toBe(0);
+      expect(Date.now() - t0).toBeLessThan(5000);
+
+      // connect client
+      client = createConnection({ host: '127.0.0.1', port });
+      const connected = Promise.withResolvers<void>();
+      client.once('connect', connected.resolve);
+      client.once('error', connected.reject);
+      await connected.promise;
+
+      // wait briefly for connection establishment in OS
+      await new Promise((r) => setTimeout(r, 200));
+
+      const t1 = Date.now();
+      const res1 = await spawnBounded(
+        [
+          powershell,
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          establishedConnectionScript(port),
+        ],
+        { cwd: root, env, timeoutMs: 60000, capture: true }
+      );
+      expect(res1.timedOut).toBe(false);
+      expect(res1.pipeRetained).toBe(false);
+      expect(res1.exitCode).toBe(1);
+      expect(Date.now() - t1).toBeLessThan(5000);
+    } finally {
+      client?.destroy();
+      const closed = Promise.withResolvers<void>();
+      server.close(() => closed.resolve());
+      await closed.promise;
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 60000);
+
+  test('sleep fixture script runs without module discovery', async () => {
+    const { root, env } = createTestEnv();
+    const powershell = findPowershell();
+    try {
+      const t0 = Date.now();
+      const res = await spawnBounded(
+        [
+          powershell,
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          sleepFixtureScript(1),
+        ],
+        { cwd: root, env, timeoutMs: 60000, capture: true }
+      );
+      expect(res.timedOut).toBe(false);
+      expect(res.pipeRetained).toBe(false);
+      expect(res.exitCode).toBe(0);
+      expect(Date.now() - t0).toBeLessThan(5000);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 60000);
 });

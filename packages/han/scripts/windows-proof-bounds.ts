@@ -957,3 +957,75 @@ export function sweepRootSync(root: string, timeoutMs = 15000): SweepResult {
 
   return parseSweepOutput(res.stdout || '');
 }
+
+export const PROBE_PRELUDE = "$ErrorActionPreference='Stop'; ";
+
+function assertPid(pid: number): void {
+  if (!Number.isSafeInteger(pid) || pid <= 0 || pid > 0xffffffff) {
+    throw new Error('Invalid process id');
+  }
+}
+
+export function identityProbeScript(pid: number, kill: boolean): string {
+  assertPid(pid);
+  const stop = kill
+    ? 'Stop-Process -InputObject $p -Force -ErrorAction Stop;'
+    : '';
+  return `${PROBE_PRELUDE}try { $p=Get-Process -Id ${pid} -ErrorAction Stop } catch { if ($_.FullyQualifiedErrorId -like 'NoProcessFoundForGivenId*') { exit 3 }; exit 6 }; try { $actual=[System.IO.Path]::GetFullPath($p.Path); $expected=[System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $env:HAN_PROOF_IMAGE).Path); if ($actual -ne $expected) { exit 4 }; if ($p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString() -ne $env:HAN_PROOF_TIME) { exit 5 }; ${stop} exit 0 } catch { exit 6 }`;
+}
+
+export function barrierIdentityScript(pid: number, parentPid: number): string {
+  assertPid(pid);
+  if (
+    !Number.isSafeInteger(parentPid) ||
+    parentPid < 0 ||
+    parentPid > 0xffffffff
+  ) {
+    throw new Error('Invalid parent process id');
+  }
+  return `${PROBE_PRELUDE}$p=Get-Process -Id ${pid} -ErrorAction Stop; $w=Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}'; if ($w.ParentProcessId -ne ${parentPid}) { exit 4 }; if ([System.IO.Path]::GetFullPath($p.Path) -ne [System.IO.Path]::GetFullPath($env:HAN_PROOF_IMAGE)) { exit 5 }; $p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString()`;
+}
+
+export function establishedConnectionScript(port: number): string {
+  if (!Number.isSafeInteger(port) || port < 1 || port > 65535) {
+    throw new Error('Invalid port');
+  }
+  return `${PROBE_PRELUDE}try { $c=Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort ${port} -State Established; if ($c) { exit 1 }; exit 0 } catch { if ($_.CategoryInfo.Category -eq 'ObjectNotFound' -or $_.FullyQualifiedErrorId -like 'CmdletizationQuery_NotFound*') { exit 0 }; exit 2 }`;
+}
+
+export function sleepFixtureScript(seconds: number): string {
+  if (!Number.isSafeInteger(seconds) || seconds <= 0 || seconds > 3600) {
+    throw new Error('Invalid sleep duration');
+  }
+  return `${PROBE_PRELUDE}Start-Sleep -Seconds ${seconds}`;
+}
+
+export function restrictedProofEnv({
+  root,
+  bin,
+  data,
+  systemRoot,
+}: {
+  root: string;
+  bin: string;
+  data: string;
+  systemRoot: string;
+}): Record<string, string> {
+  return {
+    SystemRoot: systemRoot,
+    WINDIR: systemRoot,
+    PATH: `${bin};${join(systemRoot, 'System32')};${systemRoot}`,
+    HOME: root,
+    USERPROFILE: root,
+    APPDATA: join(root, 'appdata'),
+    LOCALAPPDATA: join(root, 'localappdata'),
+    TEMP: join(root, 'tmp'),
+    TMP: join(root, 'tmp'),
+    HAN_DATA_DIR: data,
+    CLAUDE_CONFIG_DIR: join(root, 'claude'),
+    HAN_COORDINATOR_PORT: '0',
+    HAN_COORDINATOR_TIMEOUT: '60000',
+    CI: 'true',
+    CLAUDE_CODE_ENABLE_TELEMETRY: '0',
+  };
+}

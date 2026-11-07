@@ -45,7 +45,6 @@ bun test test/coordinator-windows-startup.test.ts
 bun test test/windows-proof-diagnostics.test.ts
 bun test test/coordinator-windows-receipt.test.ts
 bun test test/windows-proof-bounds.test.ts
-bun test test/windows-probe-diagnostic.test.ts
 bun scripts/build-bundle.js bun-windows-x64
 bun scripts/prove-installed-windows-coordinator.ts <han.exe> <han-coordinator.exe>
 ```
@@ -64,10 +63,9 @@ Proof progress and diagnostic output is emitted to stderr in structured JSON lin
 - Progress: `Installed Windows proof progress: {"phase","elapsedMs","previous":{"phase","ms","cliCount","cliMs","cliMaxMs","probeCount","probeMs"}}`
 - Cleanup: `Installed Windows proof cleanup: {"step","ms","ok","terminated?","remaining?"}` where step is one of `fixture`, `stop`, `fast-exit-stop`, `sweep`, `remove`, `complete`
 - Failure: `Installed Windows proof failure: {"phase","exitStatus","diagnostic","process?","reason"}`
-- Diagnostic: `Installed Windows probe diagnostic: {"variant","at20s?","ps?","traceBytes?","otherTraceLines?","osPoll?","osExitMs?","bunExitMs?","exitCode?","killedAtCap?","reaped","pipeRetained?","bunExitedBeforeCheck?","classified?"}`
 - Pass (on stdout): `Installed Windows CLI: authenticated transport, crash recovery, restart, stop, missing lock, partial claim, modeled PID reuse, and fast-exit receipt passed`
 
-Output lines contain only allowlisted phase and cleanup step names, integers, and booleans. Diagnostic error payloads may include validated process metadata (such as `childPid` and `supervisorPid`), while probe diagnostic records strictly exclude PIDs, process arguments, and paths. Across all records, no raw paths, backslashes, certificates (`BEGIN CERTIFICATE`), or bearer tokens are leaked. Validated failure reasons include `deadline`, `subprocess_timeout`, `output_handle_retained`, `watchdog`, `probe_diagnostic`, and helper error categories.
+Output lines contain only allowlisted phase and cleanup step names, integers, and booleans. Diagnostic error payloads may include validated process metadata (such as `childPid` and `supervisorPid`), but no secrets, credentials, certificates (`BEGIN CERTIFICATE`), or bearer tokens are leaked. Validated failure reasons include `deadline`, `subprocess_timeout`, `output_handle_retained`, `watchdog`, and helper error categories.
 ### Budgets and environment variables
 
 The proof execution is bounded by strict timing hierarchy:
@@ -75,29 +73,7 @@ The proof execution is bounded by strict timing hierarchy:
 - `HAN_PROOF_DEADLINE_MS`: soft execution deadline in milliseconds. Defaults to 2100000 (35 minutes) for the default proof, 420000 (7 minutes) for startup barrier proof, and 60000 for negative control. Accepts integer strings from 30000 to 3600000. Exceeding this budget aborts the active phase with reason `deadline`.
 - `HAN_PROOF_CLEANUP_MS`: cleanup budget in milliseconds. Defaults to 180000 (3 minutes). Accepts integer strings from 30000 to 3600000. Governs teardown of fixtures, graceful stops, temp root process sweeps, and file deletion.
 - Watchdog: automatically arms at soft deadline + cleanup budget + 60000 ms (39 minutes in default proof). If triggered, it emits a failure line with reason `watchdog`, runs a synchronous root sweep, and calls `process.exit(1)`.
-- Step timeouts: 42 minutes for the default proof, 17 minutes for probe diagnostic replay, 12 minutes for barrier proof, 8 minutes for negative control. Build steps have a 20-minute timeout. Job timeout is 75 minutes, keeping watchdog < step timeout < job timeout.
-
-### Diagnostic probe replay
-
-Before the negative control, CI can execute a diagnostic probe replay experiment by setting `HAN_PROOF_PROBE_DIAGNOSTIC=1`, `HAN_PROOF_DEADLINE_MS=660000`, and `HAN_PROOF_CLEANUP_MS=180000` (under a 17-minute step timeout).
-
-The diagnostic step replays the failing `ownedProcess(kill=false)` probe against the live coordinator at `initial-start-coordinator` across five controlled variants:
-1. `proof-hidden-traced`
-2. `os-liveness-control`
-3. `proof-fresh-hidden-untraced`
-4. `proof-fresh-visible-traced`
-5. `runner-hidden-traced`
-
-The diagnostic step asserts:
-- Exit code 1
-- Exactly 1 failure line with `phase == 'initial-start-coordinator'` and `reason == 'probe_diagnostic'`
-- Exactly 5 diagnostic records matching the variant sequence, with `reaped == true` on every record
-- Exactly 1 cleanup record with `step: complete` and `ok: true`, with no cleanup failures (`ok: false`)
-- Every non-empty output line matches `^Installed Windows (proof (progress|failure|cleanup)|probe diagnostic): \{.*\}$`
-- No line contains forbidden tokens (`BEGIN CERTIFICATE`, `Bearer`) or backslashes (`\`)
-- Followed by a clean leak check reporting 0 leftover installed-root processes (the diagnostic children `powershell.exe` and `cmd.exe` reside in `System32` outside the installed-root pattern `\han-windows-installed-`, with termination enforced by the finite child timeouts, explicit `reaped: true` assertion, and workspace deletion lock failure)
-
-Note on disposable runner state: the `runner-hidden-traced` variant executes under `process.env`, which permits PowerShell to write module analysis cache data into the runner's `%LOCALAPPDATA%`, matching the behavior of `sweepRoot` on a disposable hosted runner.
+- Step timeouts: 42 minutes for the default proof, 12 minutes for barrier proof, 8 minutes for negative control. Build steps have a 20-minute timeout. Job timeout is 75 minutes, keeping watchdog < step timeout < job timeout.
 
 ### Negative control
 
@@ -131,7 +107,7 @@ The `windows-native-primitives` job runs both paths on Windows.
 ### Leak check
 
 After the negative control and after each proof step, a post-execution PowerShell
-check for leftover coordinator/CLI binaries inside the disposable root runs with `if: always()` and a 2-minute timeout:
+check runs with `if: always()` and a 2-minute timeout:
 
 ```pwsh
 $m = '\han-windows-installed-'
