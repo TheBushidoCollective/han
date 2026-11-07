@@ -188,7 +188,8 @@ export async function checkHealth(
     }
     if (error instanceof CoordinatorSecurityError) throw error;
     throw new CoordinatorSecurityError(
-      `Coordinator TLS or authentication failed: ${error instanceof Error ? error.message : String(error)}`
+      `Coordinator TLS or authentication failed: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error }
     );
   }
 }

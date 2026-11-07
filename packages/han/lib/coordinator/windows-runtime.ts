@@ -9,8 +9,8 @@ import {
 import { findCoordinatorBinary, spawnSync } from './windows-helper.ts';
 
 export class CoordinatorSecurityError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
     this.name = 'CoordinatorSecurityError';
   }
 }

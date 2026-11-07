@@ -9,6 +9,7 @@ import {
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import WebSocket from 'ws';
+import { ConnectError } from '@connectrpc/connect';
 import {
   CoordinatorSecurityError,
   validWindowsProcessIdentity,
@@ -18,6 +19,12 @@ import {
 
 export { CoordinatorSecurityError } from './windows-runtime.ts';
 
+export class CoordinatorConnectionRefusedError extends CoordinatorSecurityError {
+  constructor(message: string, options: ErrorOptions) {
+    super(message, options);
+    this.name = 'CoordinatorConnectionRefusedError';
+  }
+}
 export const LOCAL_TRANSPORT_VERSION = 1;
 export interface SupervisorBinding {
   pid: number;
@@ -189,13 +196,25 @@ export async function coordinatorFetch(
   try {
     response = await fetch(`https://127.0.0.1:${port}${path}`, {
       ...init,
+      proxy: false as unknown as undefined,
       headers,
       redirect: 'error',
       tls: { ca: descriptor.certificatePem, rejectUnauthorized: true },
     } as RequestInit);
   } catch (error) {
+    if (
+      error instanceof Error &&
+      Object.hasOwn(error, 'code') &&
+      (error as { code?: unknown }).code === 'ECONNREFUSED'
+    ) {
+      throw new CoordinatorConnectionRefusedError(
+        `Coordinator connection failed: ${error.message}`,
+        { cause: error }
+      );
+    }
     throw new CoordinatorSecurityError(
-      `Coordinator connection failed: ${error instanceof Error ? error.message : String(error)}`
+      `Coordinator connection failed: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error }
     );
   }
   if (
@@ -210,56 +229,11 @@ export async function coordinatorFetch(
 }
 
 export function isExplicitConnectionRefusal(error: unknown): boolean {
-  if (!error) return false;
-  const seen = new Set<unknown>();
-  let hasRefusal = false;
-  let curr: unknown = error;
-  while (curr && !seen.has(curr)) {
-    seen.add(curr);
-    if (
-      typeof curr === 'object' &&
-      curr !== null &&
-      'code' in curr &&
-      typeof (curr as { code: unknown }).code === 'number'
-    ) {
-      const code = (curr as { code: number }).code;
-      if (code === 16 || code === 7) return false;
-    }
-    if (curr instanceof Error) {
-      const code = (curr as NodeJS.ErrnoException).code;
-      if (code === 'ECONNREFUSED') hasRefusal = true;
-      const msg = curr.message.toLowerCase();
-      if (
-        msg.includes('rejected authenticated request') ||
-        msg.includes('identity mismatch') ||
-        msg.includes('descriptor') ||
-        msg.includes('port does not match') ||
-        msg.includes('tls') ||
-        msg.includes('certificate') ||
-        msg.includes('cert_has_expired') ||
-        msg.includes('unable_to_verify') ||
-        msg.includes('self_signed') ||
-        msg.includes('depth_zero') ||
-        msg.includes('handshake') ||
-        msg.includes('upgrade_required') ||
-        msg.includes('cannot authenticate') ||
-        msg.includes('unauthenticated') ||
-        msg.includes('permission') ||
-        msg.includes('invalid')
-      ) {
-        return false;
-      }
-      if (msg.includes('econnrefused') || msg.includes('connection refused')) {
-        hasRefusal = true;
-      }
-    }
-    if (typeof curr === 'object' && curr !== null && 'cause' in curr) {
-      curr = (curr as { cause?: unknown }).cause;
-    } else {
-      break;
-    }
-  }
-  return hasRefusal;
+  return (
+    error instanceof CoordinatorConnectionRefusedError ||
+    (error instanceof ConnectError &&
+      error.cause instanceof CoordinatorConnectionRefusedError)
+  );
 }
 
 export function coordinatorRequest(

@@ -441,9 +441,18 @@ async function replacementWinsSupervisorRetry(): Promise<void> {
     writeFileSync(arm, 'armed');
     killChild(original.pid, supervisor.pid);
     ownedPid = undefined;
-    await waitFor('retry barrier', () => {
-      if (supervisor.exitCode !== null)
-        throw new Error('supervisor exited before retry barrier');
+    await waitFor('retry barrier', async () => {
+      if (supervisor.exitCode !== null) {
+        const stdout = await new Response(
+          supervisor.stdout as ReadableStream
+        ).text();
+        const stderr = await new Response(
+          supervisor.stderr as ReadableStream
+        ).text();
+        throw new Error(
+          `supervisor exited ${supervisor.exitCode} before retry barrier\nstdout:\n${stdout}\nstderr:\n${stderr}`
+        );
+      }
       return existsSync(barrier) && !existsSync(`/proc/${original.pid}`)
         ? true
         : undefined;

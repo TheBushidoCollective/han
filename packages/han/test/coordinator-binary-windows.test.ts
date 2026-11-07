@@ -103,7 +103,11 @@ test.skipIf(process.platform !== 'win32')(
           discover(jsEntry, { ...env, HOME: '', USERPROFILE: '' })
         ).toBeNull();
       } finally {
-        if (rootHelperCreated) rmSync(rootHelper, { force: true });
+        if (rootHelperCreated) {
+          try {
+            rmSync(rootHelper, { force: true, maxRetries: 5, retryDelay: 100 });
+          } catch {}
+        }
       }
 
       const sibling = join(bin, 'han-coordinator.exe');
@@ -133,7 +137,12 @@ test.skipIf(process.platform !== 'win32')(
       );
       expect(discover()).toBeNull();
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      rmSync(root, {
+        recursive: true,
+        force: true,
+        maxRetries: 30,
+        retryDelay: 100,
+      });
     }
   }
 );

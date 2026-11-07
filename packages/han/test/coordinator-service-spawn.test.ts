@@ -779,8 +779,14 @@ describe('stopCoordinatorService ownership', () => {
     };
     mockBunSpawn.mockImplementationOnce(() => child as never);
     await cs.startCoordinatorService();
-    const refusalError = new realConnection.CoordinatorSecurityError(
-      'Coordinator connection failed: ECONNREFUSED: Unable to connect'
+    const cause = new TypeError('fetch failed');
+    Object.defineProperty(cause, 'code', {
+      value: 'ECONNREFUSED',
+      enumerable: true,
+    });
+    const refusalError = new realConnection.CoordinatorConnectionRefusedError(
+      'Coordinator connection failed: ECONNREFUSED: Unable to connect',
+      { cause }
     );
     mockShutdown.mockImplementationOnce(() => {
       child.exitCode = 1;
@@ -855,13 +861,24 @@ describe('stopCoordinatorService ownership', () => {
 });
 
 describe('isExplicitConnectionRefusal classifier', () => {
-  test('rejects CoordinatorChildExitError', async () => {
+  test('rejects CoordinatorChildExitError even with typed refusal cause', async () => {
     const { CoordinatorChildExitError } = await import(
       '../lib/commands/coordinator/daemon.ts'
     );
+    const cause = new TypeError('fetch failed');
+    Object.defineProperty(cause, 'code', {
+      value: 'ECONNREFUSED',
+      enumerable: true,
+    });
+    const refusalError = new realConnection.CoordinatorConnectionRefusedError(
+      'Coordinator connection failed: ECONNREFUSED',
+      { cause }
+    );
     expect(
       realConnection.isExplicitConnectionRefusal(
-        new CoordinatorChildExitError()
+        new CoordinatorChildExitError('Coordinator child exited', {
+          cause: refusalError,
+        })
       )
     ).toBe(false);
   });
@@ -903,9 +920,15 @@ describe('isExplicitConnectionRefusal classifier', () => {
     expect(realConnection.isExplicitConnectionRefusal(certError)).toBe(false);
   });
 
-  test('accepts explicit connection refusal and terminates on cyclic causes', () => {
-    const refusal = new realConnection.CoordinatorSecurityError(
-      'Coordinator connection failed: ECONNREFUSED: Unable to connect'
+  test('accepts explicit connection refusal and rejects other errors', () => {
+    const cause = new TypeError('fetch failed');
+    Object.defineProperty(cause, 'code', {
+      value: 'ECONNREFUSED',
+      enumerable: true,
+    });
+    const refusal = new realConnection.CoordinatorConnectionRefusedError(
+      'Coordinator connection failed: ECONNREFUSED: Unable to connect',
+      { cause }
     );
     expect(realConnection.isExplicitConnectionRefusal(refusal)).toBe(true);
 
@@ -920,11 +943,25 @@ describe('isExplicitConnectionRefusal classifier', () => {
       true
     );
 
-    // Cyclic cause protection
-    const cyclicA = new Error('error A');
-    const cyclicB = new Error('error B');
-    (cyclicA as { cause?: unknown }).cause = cyclicB;
-    (cyclicB as { cause?: unknown }).cause = cyclicA;
-    expect(realConnection.isExplicitConnectionRefusal(cyclicA)).toBe(false);
+    // Plain CoordinatorSecurityError with ECONNREFUSED in message is NOT typed refusal
+    const untypedRefusal = new realConnection.CoordinatorSecurityError(
+      'Coordinator connection failed: ECONNREFUSED: Unable to connect'
+    );
+    expect(realConnection.isExplicitConnectionRefusal(untypedRefusal)).toBe(
+      false
+    );
+
+    // ConnectError wrapping untyped refusal is NOT typed refusal
+    expect(
+      realConnection.isExplicitConnectionRefusal(
+        new ConnectError(
+          'wrapped untyped',
+          Code.Unknown,
+          undefined,
+          undefined,
+          untypedRefusal
+        )
+      )
+    ).toBe(false);
   });
 });
