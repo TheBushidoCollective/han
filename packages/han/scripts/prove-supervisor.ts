@@ -140,7 +140,7 @@ function observedSupervisor(dir: string, running: string): Bun.Subprocess {
       log(...args);
     };
     const { startDaemon } = await import(${JSON.stringify(daemon)});
-    try { await startDaemon({ port: 0, foreground: true }); } catch (e) { console.error(e); process.exitCode = 1; }
+    try { await startDaemon({ port: 0, foreground: true }); } catch (e) { console.error(e); process.exit(1); }
   `;
   return Bun.spawn([process.execPath, '-e', script], {
     env: environment(dir),
@@ -1285,7 +1285,8 @@ async function securityFailureTerminatesSupervisor(): Promise<void> {
     };
     writeFileSync(
       join(dir, 'runtime/coordinator.json'),
-      JSON.stringify(tampered)
+      JSON.stringify(tampered),
+      { mode: 0o600 }
     );
     await waitFor('supervisor security termination', () =>
       supervisor.exitCode !== null ? supervisor.exitCode : undefined

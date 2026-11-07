@@ -36,7 +36,10 @@ jobs:
           bun-version: "1.4.4"
       - uses: dtolnay/rust-toolchain@stable
       - name: Install protoc
-        run: choco install protoc --no-progress -y
+        uses: taiki-e/install-action@v2
+        with:
+          tool: protoc
+          fallback: none
       - name: Test native security primitives
         working-directory: packages/han-rs
         run: cargo test --locked -p han-coordinator windows_
