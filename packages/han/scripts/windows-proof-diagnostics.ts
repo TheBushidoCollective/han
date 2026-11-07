@@ -197,6 +197,181 @@ export function safeHelperDiagnostic(
   return undefined;
 }
 
+const terminationMarker = 'HAN_ORPHAN_TERMINATION=';
+const terminationKeys = [
+  'observer',
+  'jobProbe',
+  'childInSupervisorJob',
+  'jobContainsSupervisor',
+  'childAliveBeforeKill',
+  'supervisorExited',
+  'childExited',
+  'supervisorJobHandles',
+  'jobActiveProcesses',
+  'jobHandleCount',
+  'jobLimitFlags',
+  'supervisorExitCode',
+  'childExitCode',
+  'exitDeltaMs',
+];
+const observerValues = [
+  'complete',
+  'child_absent',
+  'child_unverified',
+  'supervisor_absent',
+  'supervisor_mismatched',
+  'unavailable',
+];
+const jobProbeValues = [
+  'complete',
+  'no_job_type',
+  'no_snapshot',
+  'failed',
+  'skipped',
+];
+
+export type SafeTerminationDiagnostic = {
+  observer:
+    | 'complete'
+    | 'child_absent'
+    | 'child_unverified'
+    | 'supervisor_absent'
+    | 'supervisor_mismatched'
+    | 'unavailable';
+  jobProbe?:
+    | 'complete'
+    | 'no_job_type'
+    | 'no_snapshot'
+    | 'failed'
+    | 'skipped'
+    | null;
+  childInSupervisorJob?: boolean | null;
+  jobContainsSupervisor?: boolean | null;
+  childAliveBeforeKill?: boolean | null;
+  supervisorExited?: boolean | null;
+  childExited?: boolean | null;
+  supervisorJobHandles?: number | null;
+  jobActiveProcesses?: number | null;
+  jobHandleCount?: number | null;
+  jobLimitFlags?: number | null;
+  supervisorExitCode?: number | null;
+  childExitCode?: number | null;
+  exitDeltaMs?: number | null;
+};
+
+export function safeTerminationDiagnostic(
+  value: unknown
+): SafeTerminationDiagnostic | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    return undefined;
+  const item = value as Record<string, unknown>;
+  if (Object.keys(item).some((key) => !terminationKeys.includes(key)))
+    return undefined;
+  if (
+    typeof item.observer !== 'string' ||
+    !observerValues.includes(item.observer)
+  )
+    return undefined;
+  if (
+    item.jobProbe !== undefined &&
+    item.jobProbe !== null &&
+    (typeof item.jobProbe !== 'string' ||
+      !jobProbeValues.includes(item.jobProbe))
+  )
+    return undefined;
+
+  for (const boolKey of [
+    'childInSupervisorJob',
+    'jobContainsSupervisor',
+    'childAliveBeforeKill',
+    'supervisorExited',
+    'childExited',
+  ]) {
+    if (
+      item[boolKey] !== undefined &&
+      item[boolKey] !== null &&
+      typeof item[boolKey] !== 'boolean'
+    )
+      return undefined;
+  }
+
+  for (const u32Key of [
+    'supervisorJobHandles',
+    'jobActiveProcesses',
+    'jobHandleCount',
+    'jobLimitFlags',
+    'supervisorExitCode',
+    'childExitCode',
+  ]) {
+    if (
+      item[u32Key] !== undefined &&
+      item[u32Key] !== null &&
+      (!Number.isSafeInteger(item[u32Key]) ||
+        (item[u32Key] as number) < 0 ||
+        (item[u32Key] as number) > 0xffffffff)
+    )
+      return undefined;
+  }
+
+  if (
+    item.exitDeltaMs !== undefined &&
+    item.exitDeltaMs !== null &&
+    (!Number.isSafeInteger(item.exitDeltaMs) ||
+      (item.exitDeltaMs as number) < -600000 ||
+      (item.exitDeltaMs as number) > 600000)
+  )
+    return undefined;
+
+  const result: SafeTerminationDiagnostic = {
+    observer: item.observer as SafeTerminationDiagnostic['observer'],
+  };
+  if (item.jobProbe !== undefined && item.jobProbe !== null) {
+    result.jobProbe = item.jobProbe as SafeTerminationDiagnostic['jobProbe'];
+  }
+  for (const boolKey of [
+    'childInSupervisorJob',
+    'jobContainsSupervisor',
+    'childAliveBeforeKill',
+    'supervisorExited',
+    'childExited',
+  ] as const) {
+    if (item[boolKey] !== undefined && item[boolKey] !== null) {
+      result[boolKey] = item[boolKey] as boolean;
+    }
+  }
+  for (const u32Key of [
+    'supervisorJobHandles',
+    'jobActiveProcesses',
+    'jobHandleCount',
+    'jobLimitFlags',
+    'supervisorExitCode',
+    'childExitCode',
+  ] as const) {
+    if (item[u32Key] !== undefined && item[u32Key] !== null) {
+      result[u32Key] = item[u32Key] as number;
+    }
+  }
+  if (item.exitDeltaMs !== undefined && item.exitDeltaMs !== null) {
+    result.exitDeltaMs = item.exitDeltaMs as number;
+  }
+  return result;
+}
+
+export function safeTerminationMarker(
+  output: string
+): SafeTerminationDiagnostic | undefined {
+  let latest: SafeTerminationDiagnostic | undefined;
+  for (const line of output.split(/\r?\n/)) {
+    if (!line.startsWith(terminationMarker) || line.length > 4096) continue;
+    try {
+      const parsed: unknown = JSON.parse(line.slice(terminationMarker.length));
+      const valid = safeTerminationDiagnostic(parsed);
+      if (valid) latest = valid;
+    } catch {}
+  }
+  return latest;
+}
+
 const processDiagnosticKeys = [
   'childPid',
   'childCreationTime',
@@ -207,6 +382,7 @@ const processDiagnosticKeys = [
   'supervisorCreationTime',
   'supervisorStatusBefore',
   'supervisorStatusAfter',
+  'termination',
 ];
 const processLivenessValues = ['alive', 'dead', 'mismatched', 'unknown'];
 const descriptorStates = ['present', 'absent', 'mismatched', 'unknown'];
@@ -222,8 +398,8 @@ export type SafeProcessDiagnostic = {
   supervisorCreationTime?: string | null;
   supervisorStatusBefore?: 'alive' | 'dead' | 'mismatched' | 'unknown' | null;
   supervisorStatusAfter?: 'alive' | 'dead' | 'mismatched' | 'unknown' | null;
+  termination?: SafeTerminationDiagnostic | null;
 };
-
 export function safeProcessDiagnostic(
   value: unknown
 ): SafeProcessDiagnostic | undefined {
@@ -334,6 +510,13 @@ export function safeProcessDiagnostic(
   ) {
     result.supervisorStatusAfter =
       item.supervisorStatusAfter as SafeProcessDiagnostic['supervisorStatusAfter'];
+  }
+  if (item.termination !== undefined && item.termination !== null) {
+    const term = safeTerminationDiagnostic(item.termination);
+    if (!term) return undefined;
+    result.termination = term;
+  } else if (item.termination === null) {
+    result.termination = null;
   }
   return result;
 }

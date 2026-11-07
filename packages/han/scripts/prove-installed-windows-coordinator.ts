@@ -14,7 +14,9 @@ import { join, resolve } from 'node:path';
 import {
   ProofCommandError,
   type SafeProcessDiagnostic,
+  type SafeTerminationDiagnostic,
   safeProofFailure,
+  safeTerminationMarker,
 } from './windows-proof-diagnostics.ts';
 
 // Run only on a disposable Windows CI runner against the freshly built artifacts:
@@ -246,6 +248,7 @@ async function main(): Promise<void> {
     | 'unknown'
     | undefined;
   let expectedDescriptorInstance: string | undefined;
+  let orphanTermination: SafeTerminationDiagnostic | undefined;
   let current: Descriptor | undefined;
   let fixture:
     | {
@@ -285,6 +288,200 @@ async function main(): Promise<void> {
     if (code === 3 || code === 4 || code === 5) return false;
     if (code !== 0) throw new ProofCommandError(code, '');
     return true;
+  };
+  const JOB_PROBE_SOURCE = [
+    'using System;',
+    'using System.Runtime.InteropServices;',
+    'public static class HanJobProbe {',
+    '  [DllImport("kernel32.dll", SetLastError = true)] static extern IntPtr CreateJobObjectW(IntPtr a, IntPtr n);',
+    '  [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] static extern bool CloseHandle(IntPtr h);',
+    '  [DllImport("kernel32.dll")] static extern IntPtr GetCurrentProcess();',
+    '  [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] static extern bool DuplicateHandle(IntPtr sp, IntPtr sh, IntPtr tp, out IntPtr th, uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, uint options);',
+    '  [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] static extern bool IsProcessInJob(IntPtr p, IntPtr j, [MarshalAs(UnmanagedType.Bool)] out bool r);',
+    '  [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] static extern bool QueryInformationJobObject(IntPtr j, int c, IntPtr i, uint l, out uint r);',
+    '  [DllImport("ntdll.dll")] static extern int NtQueryInformationProcess(IntPtr p, int c, IntPtr i, int l, out int r);',
+    '  const int Mismatch = unchecked((int)0xC0000004);',
+    '  static IntPtr Snapshot(IntPtr p, out long count) {',
+    '    int len = 0x10000;',
+    '    for (int a = 0; a < 8; a++) {',
+    '      IntPtr b = Marshal.AllocHGlobal(len); int ret;',
+    '      int s = NtQueryInformationProcess(p, 51, b, len, out ret);',
+    '      if (s == 0) { count = Marshal.ReadInt64(b, 0); return b; }',
+    '      Marshal.FreeHGlobal(b); if (s != Mismatch) break; len = Math.Max(len * 2, ret + 4096);',
+    '    }',
+    '    count = 0; return IntPtr.Zero;',
+    '  }',
+    '  static int JobType() {',
+    '    IntPtr job = CreateJobObjectW(IntPtr.Zero, IntPtr.Zero); if (job == IntPtr.Zero) return -1;',
+    '    try { long n; IntPtr b = Snapshot(GetCurrentProcess(), out n); if (b == IntPtr.Zero) return -1;',
+    '      try { for (long i = 0; i < n; i++) { int o = 16 + (int)i * 40; if (Marshal.ReadIntPtr(b, o) == job) return Marshal.ReadInt32(b, o + 28); } return -1; }',
+    '      finally { Marshal.FreeHGlobal(b); } }',
+    '    finally { CloseHandle(job); }',
+    '  }',
+    '  // [status, jobHandles, childFound, limitFlags, supervisorInJob, activeProcesses, handleCount]',
+    '  public static long[] Probe(IntPtr sup, IntPtr child) {',
+    '    long[] r = new long[] { 0, 0, 0, -1, -1, -1, -1 };',
+    '    int t = JobType(); if (t < 0) { r[0] = 1; return r; }',
+    '    long n; IntPtr b = Snapshot(sup, out n); if (b == IntPtr.Zero) { r[0] = 2; return r; }',
+    '    IntPtr info = Marshal.AllocHGlobal(144);',
+    '    try {',
+    '      for (long i = 0; i < n; i++) {',
+    '        int o = 16 + (int)i * 40;',
+    '        if (Marshal.ReadInt32(b, o + 28) != t) continue;',
+    '        r[1]++; IntPtr d;',
+    '        if (!DuplicateHandle(sup, Marshal.ReadIntPtr(b, o), GetCurrentProcess(), out d, 0x0004, false, 0)) continue;',
+    '        try {',
+    '          bool m; if (!IsProcessInJob(child, d, out m) || !m) continue;',
+    '          r[2] = 1; r[6] = Marshal.ReadInt64(b, o + 8); uint q;',
+    '          if (QueryInformationJobObject(d, 9, info, 144, out q)) r[3] = (uint)Marshal.ReadInt32(info, 16);',
+    '          bool sm; if (IsProcessInJob(sup, d, out sm)) r[4] = sm ? 1 : 0;',
+    '          if (QueryInformationJobObject(d, 1, info, 48, out q)) r[5] = (uint)Marshal.ReadInt32(info, 40);',
+    '        } finally { CloseHandle(d); }',
+    '      }',
+    '    } finally { Marshal.FreeHGlobal(info); Marshal.FreeHGlobal(b); }',
+    '    return r;',
+    '  }',
+    '}',
+  ].join('\n');
+
+  const OBSERVER_SCRIPT_LINES = [
+    '$p = Get-Process -Id SUP_PID -ErrorAction SilentlyContinue; if (!$p) { exit 3 }',
+    '$null = $p.Handle',
+    '$actual = [System.IO.Path]::GetFullPath($p.Path); $expected = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $env:HAN_PROOF_IMAGE).Path); if ($actual -ne $expected) { exit 4 }',
+    'if ($p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString() -ne $env:HAN_PROOF_TIME) { exit 5 }',
+    "$o = [ordered]@{ observer = 'complete'; jobProbe = 'skipped'; supervisorJobHandles = $null; childInSupervisorJob = $null; jobLimitFlags = $null; jobContainsSupervisor = $null; jobActiveProcesses = $null; jobHandleCount = $null; childAliveBeforeKill = $null; supervisorExited = $null; supervisorExitCode = $null; childExited = $null; childExitCode = $null; exitDeltaMs = $null }",
+    '$c = Get-Process -Id CHILD_PID -ErrorAction SilentlyContinue',
+    "if (!$c) { $o.observer = 'child_absent' } else { try { $null = $c.Handle; $ca = [System.IO.Path]::GetFullPath($c.Path); $ce = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $env:HAN_PROOF_CHILD_IMAGE).Path); $ct = $c.StartTime.ToUniversalTime().ToFileTimeUtc().ToString(); if ($ca -ne $ce -or $ct -ne $env:HAN_PROOF_CHILD_TIME) { throw 'identity' } } catch { $c = $null; $o.observer = 'child_unverified' } }",
+    "if ($c) { $o.childAliveBeforeKill = -not $c.HasExited; try { Add-Type -TypeDefinition $env:HAN_PROOF_JOB_PROBE -ErrorAction Stop; $r = [HanJobProbe]::Probe($p.Handle, $c.Handle); $o.jobProbe = @('complete', 'no_job_type', 'no_snapshot')[[int]$r[0]]; if ($r[0] -eq 0) { $o.supervisorJobHandles = $r[1]; $o.childInSupervisorJob = ($r[2] -eq 1); if ($r[3] -ge 0) { $o.jobLimitFlags = $r[3] }; if ($r[4] -ge 0) { $o.jobContainsSupervisor = ($r[4] -eq 1) }; if ($r[5] -ge 0) { $o.jobActiveProcesses = $r[5] }; if ($r[6] -ge 0) { $o.jobHandleCount = $r[6] } } } catch { $o.jobProbe = 'failed' } }",
+    'Stop-Process -InputObject $p -Force -ErrorAction Stop',
+    '$o.supervisorExited = $p.WaitForExit(60000); if ($o.supervisorExited) { $o.supervisorExitCode = ([int64]$p.ExitCode) -band 4294967295 }',
+    'if ($c) { $o.childExited = $c.WaitForExit(10000); if ($o.childExited) { $o.childExitCode = ([int64]$c.ExitCode) -band 4294967295; if ($o.supervisorExited) { $o.exitDeltaMs = [int64][math]::Floor(($c.ExitTime.ToFileTimeUtc() - $p.ExitTime.ToFileTimeUtc()) / 10000) } } }',
+    "'HAN_ORPHAN_TERMINATION=' + (ConvertTo-Json -InputObject $o -Compress)",
+    'exit 0',
+  ];
+
+  const cancelStdout = async (proc: Bun.Subprocess) => {
+    if (!proc.stdout) return;
+    try {
+      const stream = proc.stdout as ReadableStream<Uint8Array>;
+      if (typeof stream.cancel === 'function') {
+        await stream.cancel();
+      }
+    } catch {}
+  };
+
+  const readBoundedStdout = async (
+    proc: Bun.Subprocess,
+    timeoutMs = 5000,
+    maxBytes = 65536
+  ): Promise<string> => {
+    if (!proc.stdout) return '';
+    const stream = proc.stdout as ReadableStream<Uint8Array>;
+    if (typeof stream.getReader !== 'function') {
+      return '';
+    }
+    const reader = stream.getReader();
+    const decoder = new TextDecoder();
+    let text = '';
+    let totalBytes = 0;
+    try {
+      const deadline = Date.now() + timeoutMs;
+      while (true) {
+        const remainingMs = deadline - Date.now();
+        if (remainingMs <= 0) break;
+        const timer = Promise.withResolvers<never>();
+        const timeoutId = setTimeout(() => {
+          timer.reject(new Error('timeout'));
+        }, remainingMs);
+        try {
+          const { done, value } = await Promise.race([
+            reader.read(),
+            timer.promise,
+          ]);
+          if (done) break;
+          if (value) {
+            totalBytes += value.byteLength;
+            if (totalBytes > maxBytes) {
+              const allowed = value.subarray(
+                0,
+                value.byteLength - (totalBytes - maxBytes)
+              );
+              text += decoder.decode(allowed, { stream: false });
+              break;
+            }
+            text += decoder.decode(value, { stream: true });
+          }
+        } catch {
+          break;
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      }
+    } finally {
+      try {
+        await reader.cancel();
+      } catch {}
+      reader.releaseLock();
+    }
+    return text;
+  };
+
+  const observeSupervisorKill = async (
+    supervisor: Identity,
+    child: Identity
+  ): Promise<SafeTerminationDiagnostic> => {
+    assert.ok(Number.isSafeInteger(supervisor.pid) && supervisor.pid > 0);
+    assert.ok(/^[1-9][0-9]{0,19}$/.test(supervisor.creationTime));
+    assert.ok(Number.isSafeInteger(child.pid) && child.pid > 0);
+    assert.ok(/^[1-9][0-9]{0,19}$/.test(child.creationTime));
+    const script = OBSERVER_SCRIPT_LINES.join('\n')
+      .replaceAll('SUP_PID', String(supervisor.pid))
+      .replaceAll('CHILD_PID', String(child.pid));
+    try {
+      const proc = Bun.spawn(
+        [powershell, '-NoProfile', '-NonInteractive', '-Command', script],
+        {
+          cwd: root,
+          env: {
+            ...env,
+            HAN_PROOF_IMAGE: cli,
+            HAN_PROOF_TIME: supervisor.creationTime,
+            HAN_PROOF_CHILD_IMAGE: coordinator,
+            HAN_PROOF_CHILD_TIME: child.creationTime,
+            HAN_PROOF_JOB_PROBE: JOB_PROBE_SOURCE,
+          },
+          stdout: 'pipe',
+          stderr: 'ignore',
+        }
+      );
+      const timer = setTimeout(() => {
+        try {
+          proc.kill();
+        } catch {}
+      }, 180000);
+      try {
+        const code = await proc.exited;
+        if (code === 3) {
+          await cancelStdout(proc);
+          return { observer: 'supervisor_absent' };
+        }
+        if (code === 4 || code === 5) {
+          await cancelStdout(proc);
+          return { observer: 'supervisor_mismatched' };
+        }
+        if (code !== 0) {
+          await cancelStdout(proc);
+          return { observer: 'unavailable' };
+        }
+        const stdoutText = await readBoundedStdout(proc, 5000, 65536);
+        return safeTerminationMarker(stdoutText) ?? { observer: 'unavailable' };
+      } finally {
+        clearTimeout(timer);
+        await cancelStdout(proc);
+      }
+    } catch {
+      return { observer: 'unavailable' };
+    }
   };
   const inspectProcess = async (
     identity: Identity,
@@ -352,6 +549,7 @@ async function main(): Promise<void> {
       supervisorCreationTime: orphanSupervisorIdentity?.creationTime ?? null,
       supervisorStatusBefore: orphanSupervisorStatusBefore ?? null,
       supervisorStatusAfter: orphanSupervisorStatusAfter ?? null,
+      termination: orphanTermination ?? null,
     };
   };
   const register = (d: Descriptor) => {
@@ -566,6 +764,10 @@ async function main(): Promise<void> {
     orphanSupervisorIdentity = deadSupervisor;
     orphanSupervisorStatusBefore = await inspectProcess(deadSupervisor, cli);
     phase = 'orphan-kill-supervisor';
+    orphanTermination = await observeSupervisorKill(
+      deadSupervisor,
+      orphan.process
+    );
     await ensureStopped(deadSupervisor, cli);
     orphanSupervisorStatusAfter = await inspectProcess(deadSupervisor, cli);
     phase = 'orphan-live';
@@ -588,6 +790,7 @@ async function main(): Promise<void> {
     orphanSupervisorStatusBefore = undefined;
     orphanSupervisorStatusAfter = undefined;
     expectedDescriptorInstance = undefined;
+    orphanTermination = undefined;
     phase = 'orphan-restart';
     await command('coordinator', 'restart');
     phase = 'orphan-restart-started';
