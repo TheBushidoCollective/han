@@ -524,7 +524,7 @@ def preflight(r: Runner) -> None:
 
 
 def postcheck(r: Runner) -> None:
-    """Read-only checks after the steps, before the revoke. Any failure stops the run."""
+    """Read-only checks after the steps. Any failure stops the run."""
     # After the steps: the state bucket exists now, and must be private and versioned.
     rc, out, err = r._read(["gcloud", "storage", "buckets", "list", f"--project={PROJECT}", "--format=json"])
     if rc != 0:
@@ -658,8 +658,7 @@ def _strings(value) -> set[str]:
 
 
 def pinned_identity_error(commit: str, plan_sha: str) -> str | None:
-    """The approved commit and plan that name the one grant revoke may remove. Both are well formed or
-    nothing runs. A grant naming any other commit or plan is never removed."""
+    """Validate the commit and plan sha256 formatting. Both must be well formed or nothing runs."""
     if re.fullmatch(r"[0-9a-f]{40}", commit or "") is None:
         return f"the approved commit {commit!r} is not a 40-character lowercase commit; nothing ran"
     if re.fullmatch(r"[0-9a-f]{64}", plan_sha or "") is None:

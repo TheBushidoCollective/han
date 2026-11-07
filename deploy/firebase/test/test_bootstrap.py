@@ -122,13 +122,6 @@ class FakeCloud:
         return {"name": name, "uniform_bucket_level_access": True,
                 "public_access_prevention": "enforced", "versioning_enabled": True}
 
-    def set_sign_in(self, binding: dict) -> None:
-        """Replace the reviewed sign-in binding, or add it when absent."""
-        kept = [b for b in self.policy["bindings"]
-                if not (b.get("role") == bootstrap.SIGNIN_ROLE
-                        and (b.get("condition") or {}).get("title") == bootstrap.SIGNIN_TITLE)]
-        self.policy["bindings"] = [*kept, binding]
-
     def _remove_binding(self, argv: list[str]) -> tuple[int, str, str]:
         """Models gcloud's exact match: the member, the role, and the whole condition in the file."""
         self.removes.append(argv)
