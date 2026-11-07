@@ -127,11 +127,16 @@ function killChild(pid: number, parent: number): void {
       throw error;
   }
 }
-function observedSupervisor(dir: string, running: string): Bun.Subprocess {
+function observedSupervisor(
+  dir: string,
+  running: string,
+  options: { port?: number; env?: Record<string, string> } = {}
+): Bun.Subprocess {
   const daemon = resolve(
     import.meta.dir,
     '../lib/commands/coordinator/daemon.ts'
   );
+  const port = options.port ?? 0;
   const script = `
     const fs = await import('node:fs');
     const log = console.log;
@@ -140,10 +145,10 @@ function observedSupervisor(dir: string, running: string): Bun.Subprocess {
       log(...args);
     };
     const { startDaemon } = await import(${JSON.stringify(daemon)});
-    try { await startDaemon({ port: 0, foreground: true }); } catch (e) { console.error(e); process.exit(1); }
+    try { await startDaemon({ port: ${port}, foreground: true }); } catch (e) { console.error(e); process.exit(1); }
   `;
   return Bun.spawn([process.execPath, '-e', script], {
-    env: environment(dir),
+    env: { ...environment(dir), ...(options.env ?? {}) },
     stdout: 'pipe',
     stderr: 'pipe',
   });
@@ -858,18 +863,8 @@ async function committedStopSurvivesFailure(
   failure: 'child' | 'requester' | 'both'
 ): Promise<void> {
   const dir = directory();
-  const supervisor = Bun.spawn(
-    [
-      process.execPath,
-      cli,
-      'coordinator',
-      'start',
-      '--foreground',
-      '--port',
-      '0',
-    ],
-    { env: environment(dir), stdout: 'pipe', stderr: 'pipe' }
-  );
+  const running = join(dir, 'supervisor-running');
+  const supervisor = observedSupervisor(dir, running);
   children.push(supervisor);
   let ownedPid: number | undefined;
   let requester: Bun.Subprocess | undefined;
@@ -880,6 +875,9 @@ async function committedStopSurvivesFailure(
     assertChild(descriptor.pid, supervisor.pid);
     assert.ok(descriptor.supervisor);
     assert.equal(descriptor.supervisor.pid, supervisor.pid);
+    await waitFor('supervisor running before committed stop', () =>
+      existsSync(running) ? true : undefined
+    );
     supervisor.kill('SIGSTOP');
     paused = true;
     requester = Bun.spawn(
@@ -1186,23 +1184,14 @@ async function fixedPortPublicationBarrier(): Promise<void> {
   const closed = Promise.withResolvers<void>();
   listener.close((error) => (error ? closed.reject(error) : closed.resolve()));
   await closed.promise;
-  const env = {
-    ...environment(dir),
-    HAN_COORDINATOR_PORT: String(port),
-    HAN_PROOF_STARTUP_BARRIER: barrier,
-  };
-  const supervisor = Bun.spawn(
-    [
-      process.execPath,
-      cli,
-      'coordinator',
-      'start',
-      '--foreground',
-      '--port',
-      String(port),
-    ],
-    { env, stdout: 'pipe', stderr: 'pipe' }
-  );
+  const running = join(dir, 'supervisor-running');
+  const supervisor = observedSupervisor(dir, running, {
+    port,
+    env: {
+      HAN_COORDINATOR_PORT: String(port),
+      HAN_PROOF_STARTUP_BARRIER: barrier,
+    },
+  });
   children.push(supervisor);
   let owned: number | undefined;
   try {
@@ -1210,6 +1199,20 @@ async function fixedPortPublicationBarrier(): Promise<void> {
     owned = previous.pid;
     assert.equal(previous.httpsPort, port);
     assertChild(previous.pid, supervisor.pid);
+    await waitFor('supervisor running before barrier arm', async () => {
+      if (supervisor.exitCode !== null) {
+        const stdout = await new Response(
+          supervisor.stdout as ReadableStream
+        ).text();
+        const stderr = await new Response(
+          supervisor.stderr as ReadableStream
+        ).text();
+        throw new Error(
+          `Supervisor exited ${supervisor.exitCode} before running marker\nstdout:\n${stdout}\nstderr:\n${stderr}`
+        );
+      }
+      return existsSync(running) ? true : undefined;
+    });
     writeFileSync(join(barrier, 'arm'), '');
     killChild(previous.pid, supervisor.pid);
     const marker = await waitFor('bound replacement', async () => {
@@ -1270,6 +1273,19 @@ async function fixedPortPublicationBarrier(): Promise<void> {
     await cliCommand(dir, 'stop');
     owned = undefined;
     await supervisor.exited;
+    assert.equal(supervisor.exitCode, 0);
+    const supervisorStderr = await new Response(
+      supervisor.stderr as ReadableStream
+    ).text();
+    assert.equal(
+      (
+        supervisorStderr.match(
+          /\[coordinator\] Server crashed \(attempt 1\/5\)/g
+        ) || []
+      ).length,
+      1,
+      'expected exactly one server crashed attempt in supervisor stderr'
+    );
     assertStoppedRecords(dir);
     console.log(
       'feature-enabled fixed-port bind-before-publication proof passed'

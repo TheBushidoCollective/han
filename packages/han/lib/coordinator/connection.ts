@@ -8,8 +8,8 @@ import {
 } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import WebSocket from 'ws';
 import { ConnectError } from '@connectrpc/connect';
+import WebSocket from 'ws';
 import {
   CoordinatorConnectionRefusedError,
   CoordinatorSecurityError,

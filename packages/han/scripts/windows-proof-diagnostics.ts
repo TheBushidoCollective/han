@@ -87,6 +87,12 @@ const phases = [
   'orphan-started',
   'orphan-kill-supervisor',
   'orphan-live',
+  'orphan-live-https',
+  'orphan-live-unauth',
+  'orphan-live-badtoken',
+  'orphan-live-grpc',
+  'orphan-live-grpc-denied',
+  'orphan-live-untrusted-ca',
   'orphan-stop',
   'orphan-wait-exit',
   'orphan-assert-stopped',
@@ -184,8 +190,30 @@ export function safeProofFailure(phase: string, error: unknown): string {
   } else if (error instanceof Error) {
     if (error.name === 'AssertionError') {
       reason = 'assertion_failure';
-    } else if (/timed?\s*out/i.test(error.message)) {
-      reason = 'timeout';
+    } else {
+      const msg = error.message.toLowerCase();
+      const code = (error as { code?: unknown }).code;
+      if (
+        code === 'ECONNREFUSED' ||
+        msg.includes('econnrefused') ||
+        msg.includes('connection refused')
+      ) {
+        reason = 'connection_refused';
+      } else if (
+        code === 'ECONNRESET' ||
+        msg.includes('econnreset') ||
+        msg.includes('connection reset')
+      ) {
+        reason = 'connection_reset';
+      } else if (/timed?\s*out/i.test(error.message)) {
+        reason = 'timeout';
+      } else if (/cert|tls|handshake|self_signed/i.test(msg)) {
+        reason = 'tls_error';
+      } else if (error.name === 'TypeError' || msg.includes('fetch failed')) {
+        reason = 'fetch_failure';
+      } else if (msg.includes('process')) {
+        reason = 'process_state_error';
+      }
     }
   }
   return JSON.stringify({

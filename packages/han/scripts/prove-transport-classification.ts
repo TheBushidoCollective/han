@@ -1,6 +1,5 @@
 import { strict as assert } from 'node:assert';
 import {
-  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -11,6 +10,7 @@ import { createConnection, createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { ConnectError } from '@connectrpc/connect';
+import { checkHealth } from '../lib/commands/coordinator/health.ts';
 import {
   type LocalCoordinatorDescriptor,
   CoordinatorConnectionRefusedError,
@@ -18,7 +18,6 @@ import {
   coordinatorFetch,
   isExplicitConnectionRefusal,
 } from '../lib/coordinator/connection.ts';
-import { checkHealth } from '../lib/commands/coordinator/health.ts';
 import { createCoordinatorClients } from '../lib/grpc/client.ts';
 
 if (process.env.CI !== 'true' || process.platform !== 'linux') {

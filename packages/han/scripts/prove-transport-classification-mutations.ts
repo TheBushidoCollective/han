@@ -25,9 +25,13 @@ const mutations: Record<
   untypedRefusal: {
     file: connectionPath,
     anchor:
-      'throw new CoordinatorConnectionRefusedError(\n        `Coordinator connection failed: ${error.message}`,\n        { cause: error }\n      );',
+      'throw new CoordinatorConnectionRefusedError(\n        `Coordinator connection failed: ' +
+      '$' +
+      '{error.message}`,\n        { cause: error }\n      );',
     replacement:
-      'throw new CoordinatorSecurityError(\n        `Coordinator connection failed: ${error.message}`,\n        { cause: error }\n      );',
+      'throw new CoordinatorSecurityError(\n        `Coordinator connection failed: ' +
+      '$' +
+      '{error.message}`,\n        { cause: error }\n      );',
     expectedFailure: 'refused-https: not CoordinatorConnectionRefusedError',
   },
   refusalNotSecurity: {

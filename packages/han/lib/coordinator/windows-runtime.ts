@@ -6,8 +6,8 @@ import {
   validateCoordinatorDescriptor,
   validSupervisorBinding,
 } from './connection.ts';
-import { findCoordinatorBinary, spawnSync } from './windows-helper.ts';
 import { CoordinatorSecurityError } from './errors.ts';
+import { findCoordinatorBinary, spawnSync } from './windows-helper.ts';
 
 export {
   CoordinatorConnectionRefusedError,

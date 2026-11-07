@@ -111,6 +111,28 @@ describe('installed Windows proof diagnostics', () => {
     expect(assertReport.includes(secret)).toBe(false);
   });
 
+  test('classifies AssertionError containing certificatePem as assertion_failure not tls_error', () => {
+    const tlsAssertionError = Object.assign(
+      new Error(
+        `AssertionError: expected descriptor.certificatePem to be defined: ${secret}`
+      ),
+      {
+        name: 'AssertionError',
+      }
+    );
+    const report = safeProofFailure(
+      'initial-start-descriptor',
+      tlsAssertionError
+    );
+    expect(JSON.parse(report)).toEqual({
+      phase: 'initial-start-descriptor',
+      exitStatus: null,
+      diagnostic: null,
+      reason: 'assertion_failure',
+    });
+    expect(report.includes(secret)).toBe(false);
+  });
+
   test('keeps cleanup reporting separate from the initiating failure', () => {
     const primary = safeProofFailure(
       'initial-start',

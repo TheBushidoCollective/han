@@ -1,10 +1,10 @@
 import { resolve } from 'node:path';
-import { describe, expect, test, afterEach } from 'bun:test';
-import { ConnectError, Code } from '@connectrpc/connect';
+import { afterEach, describe, expect, test } from 'bun:test';
+import { Code, ConnectError } from '@connectrpc/connect';
 import {
-  coordinatorFetch,
   CoordinatorConnectionRefusedError,
   CoordinatorSecurityError,
+  coordinatorFetch,
   isExplicitConnectionRefusal,
   type LocalCoordinatorDescriptor,
 } from '../lib/coordinator/connection.ts';
@@ -34,9 +34,9 @@ describe('coordinator transport error classification', () => {
         value: 'ECONNREFUSED',
         enumerable: true,
       });
-      globalThis.fetch = async () => {
+      globalThis.fetch = (async () => {
         throw refusal;
-      };
+      }) as unknown as typeof fetch;
 
       await expect(
         coordinatorFetch(descriptor, 41957, '/health')
@@ -62,9 +62,9 @@ describe('coordinator transport error classification', () => {
       const proto = { code: 'ECONNREFUSED' };
       const inherited = Object.create(proto);
       inherited.message = 'fetch failed';
-      globalThis.fetch = async () => {
+      globalThis.fetch = (async () => {
         throw inherited;
-      };
+      }) as unknown as typeof fetch;
 
       try {
         await coordinatorFetch(descriptor, 41957, '/health');
@@ -86,9 +86,9 @@ describe('coordinator transport error classification', () => {
         value: 'ECONNRESET',
         enumerable: true,
       });
-      globalThis.fetch = async () => {
+      globalThis.fetch = (async () => {
         throw reset;
-      };
+      }) as unknown as typeof fetch;
 
       try {
         await coordinatorFetch(descriptor, 41957, '/health');
@@ -112,9 +112,9 @@ describe('coordinator transport error classification', () => {
         value: 'EPROTO',
         enumerable: true,
       });
-      globalThis.fetch = async () => {
+      globalThis.fetch = (async () => {
         throw otherCode;
-      };
+      }) as unknown as typeof fetch;
 
       try {
         await coordinatorFetch(descriptor, 41957, '/health');
@@ -159,8 +159,8 @@ describe('coordinator transport error classification', () => {
 
     try {
       await coordinatorFetch(descriptor, 41957, '/health', {
-        proxy: 'http://evil.proxy:8080' as unknown as undefined,
-      });
+        proxy: 'http://evil.proxy:8080',
+      } as unknown as RequestInit);
       expect((capturedInit as { proxy?: unknown })?.proxy).toBe(false);
     } finally {
       globalThis.fetch = originalFetch;

@@ -94,9 +94,13 @@ async function request(
   } as RequestInit);
 }
 
-async function live(d: Descriptor): Promise<void> {
+async function live(
+  d: Descriptor,
+  setPhase?: (p: string) => void
+): Promise<void> {
   assert.ok(d.supervisor, 'coordinator has no supervisor binding');
   assert.ok(d.httpsPort > 0 && d.grpcPort > 0);
+  if (setPhase) setPhase('orphan-live-https');
   const health = await request(d, d.httpsPort, '/health', d.bearerToken);
   assert.equal(health.status, 200);
   const healthBody: unknown = await health.json();
@@ -104,8 +108,11 @@ async function live(d: Descriptor): Promise<void> {
     healthBody && typeof healthBody === 'object' && 'pid' in healthBody
   );
   assert.equal(healthBody.pid, d.pid);
+  if (setPhase) setPhase('orphan-live-unauth');
   assert.equal((await request(d, d.httpsPort, '/health')).status, 401);
+  if (setPhase) setPhase('orphan-live-badtoken');
   assert.equal((await request(d, d.httpsPort, '/health', 'wrong')).status, 401);
+  if (setPhase) setPhase('orphan-live-grpc');
   const grpcPath = '/han.coordinator.CoordinatorService/Health';
   const frame = new Uint8Array(5);
   const grpc = await request(d, d.grpcPort, grpcPath, d.bearerToken, frame);
@@ -123,8 +130,10 @@ async function live(d: Descriptor): Promise<void> {
   assert.ok(messageLength >= 2 && bytes.length >= 5 + messageLength);
   assert.equal(bytes[5], 8, 'gRPC health response lacks healthy field');
   assert.equal(bytes[6], 1, 'gRPC coordinator reports unhealthy');
+  if (setPhase) setPhase('orphan-live-grpc-denied');
   const denied = await request(d, d.grpcPort, grpcPath, 'wrong', frame);
   assert.equal(denied.headers.get('grpc-status'), '16');
+  if (setPhase) setPhase('orphan-live-untrusted-ca');
   await assert.rejects(
     fetch(`https://127.0.0.1:${d.httpsPort}/health`, {
       headers: { Authorization: `Bearer ${d.bearerToken}` },
@@ -470,7 +479,9 @@ async function main(): Promise<void> {
     phase = 'orphan-kill-supervisor';
     await ensureStopped(deadSupervisor, cli);
     phase = 'orphan-live';
-    await live(orphan);
+    await live(orphan, (p) => {
+      phase = p;
+    });
     phase = 'orphan-stop';
     await command('coordinator', 'stop');
     phase = 'orphan-wait-exit';
