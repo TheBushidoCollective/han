@@ -461,25 +461,33 @@ async function main(): Promise<void> {
     current = await started(beforeDeadRestart);
     await stop(current);
 
-    phase = 'orphan-stop-and-restart';
+    phase = 'orphan-start';
     await command('coordinator', 'start');
+    phase = 'orphan-started';
     current = await started(beforeDeadRestart);
     const orphan = current;
     const deadSupervisor = register(orphan);
+    phase = 'orphan-kill-supervisor';
     await ensureStopped(deadSupervisor, cli);
+    phase = 'orphan-live';
     await live(orphan);
+    phase = 'orphan-stop';
     await command('coordinator', 'stop');
+    phase = 'orphan-wait-exit';
     await waitFor('orphan coordinator exit', async () =>
       !(await ownedProcess(orphan.process, coordinator, false))
         ? true
         : undefined
     );
+    phase = 'orphan-assert-stopped';
     assert.equal(readDescriptor(data), undefined);
     assert.ok(!existsSync(reservation));
+    phase = 'orphan-restart';
     await command('coordinator', 'restart');
+    phase = 'orphan-restart-started';
     current = await started(orphan);
+    phase = 'orphan-restart-stop';
     await stop(current);
-
     phase = 'missing-lock-status';
     rmSync(lock);
     await run([cli, 'coordinator', 'status'], root, env, true);
