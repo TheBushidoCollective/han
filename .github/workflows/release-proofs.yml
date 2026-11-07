@@ -108,9 +108,9 @@ jobs:
         shell: bash
         run: |
           INSTALLED_CLI="${{ github.workspace }}/artifacts/${{ matrix.binary_name }}"
+          INSTALLED_COORD="${{ github.workspace }}/artifacts/${{ matrix.coordinator_binary }}"
           cd packages/browse-client
-          HAN_TRANSPORT_CLI="$INSTALLED_CLI" bunx playwright test --config playwright.transport.config.ts
-
+          HAN_TRANSPORT_CLI="$INSTALLED_CLI" HAN_TRANSPORT_COORDINATOR="$INSTALLED_COORD" bunx playwright test --config playwright.transport.config.ts
       - name: 5. Prove Legacy Upgrade
         shell: bash
         env:
