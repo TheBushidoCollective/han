@@ -93,7 +93,7 @@ jobs:
               --cli "${{ github.workspace }}/artifacts/${{ matrix.binary_name }}" \
               --coordinator "${{ github.workspace }}/artifacts/${{ matrix.coordinator_binary }}" \
               --bun-version 1.4.4 \
-              --bun-revision "$(bun --revision)" \
+              --bun-revision "$(bun -p 'Bun.revision')" \
               --evidence-dir "$RUNNER_TEMP/evidence"
           fi
 
