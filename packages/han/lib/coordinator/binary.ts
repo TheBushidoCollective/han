@@ -1,7 +1,12 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
-import { COORDINATOR_SHA256 } from '../build-info.generated.ts';
+import * as buildInfo from '../build-info.generated.ts';
+
+const COORDINATOR_SHA256: string | null =
+  'COORDINATOR_SHA256' in buildInfo
+    ? (buildInfo.COORDINATOR_SHA256 as string | null)
+    : null;
 
 const hashCache = new Map<string, string>();
 

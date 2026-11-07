@@ -402,6 +402,7 @@ jobs:
           export const platform = "linux";
           export const arch = "x64";
           EOF
+      - name: Prove transport classification rejects mutation
         working-directory: packages/han
         run: bun run scripts/prove-transport-classification-mutations.ts "${{ matrix.mutation }}"
 
@@ -487,6 +488,7 @@ jobs:
           export const platform = "linux";
           export const arch = "x64";
           EOF
+      - name: Install browse dependencies
         working-directory: packages/browse-client
         run: bun install --frozen-lockfile
       - name: Install headless Chromium
