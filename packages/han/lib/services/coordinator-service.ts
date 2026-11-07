@@ -379,7 +379,7 @@ export async function startCoordinatorService(
   const predecessor = selected && descriptorIsDead(selected) ? selected : null;
   if (!predecessor && (await isCoordinatorServing(port))) {
     state.isRunning = true;
-    state.port = (selected ?? readCoordinatorDescriptor()).httpsPort;
+    state.port = selected ? selected.httpsPort : port;
     state.ownsProcess = false;
     state.ownedDescriptor = null;
     console.log(
@@ -409,7 +409,7 @@ export async function startCoordinatorService(
     const healthy = await waitForHealthy(port, budgetMs, predecessor);
     if (healthy) {
       state.isRunning = true;
-      state.port = readCoordinatorDescriptor().httpsPort;
+      state.port = readOptionalDescriptor()?.httpsPort ?? port;
       state.ownsProcess = false;
       state.ownedDescriptor = null;
       console.log('[coordinator] Coordinator started and healthy');

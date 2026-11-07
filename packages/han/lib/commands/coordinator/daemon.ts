@@ -569,7 +569,12 @@ async function runForeground(port: number): Promise<void> {
           if (observeIntent()) break;
           if (child.exitCode !== null)
             throw new CoordinatorChildExitError('Coordinator child exited');
-          if (!healthy) throw new Error('Coordinator stopped responding');
+          if (!healthy) {
+            await Promise.race([child.exited, Bun.sleep(2000)]);
+            if (child.exitCode !== null)
+              throw new CoordinatorChildExitError('Coordinator child exited');
+            throw new Error('Coordinator stopped responding');
+          }
           await Bun.sleep(1000);
         }
         if (signal || observeIntent()) break;
