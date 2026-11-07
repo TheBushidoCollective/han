@@ -48,40 +48,39 @@ export function findCoordinatorBinary(): string | null {
     const sibling = join(dirname(realpathSync(process.execPath)), binaryName);
     if (existsSync(sibling) && verifyCandidateHash(sibling)) return sibling;
   } catch {}
-  // Windows local-runtime requests carry privileged data. Windows stays
-  // sibling-only, with the same hash check.
-  if (process.platform === 'win32') return null;
-
   const isRelease =
     typeof COORDINATOR_SHA256 === 'string' && COORDINATOR_SHA256.length === 64;
-  if (!isRelease) {
-    const mainFile = process.argv[1] || '';
-    if (
-      (mainFile.endsWith('.ts') || mainFile.endsWith('.tsx')) &&
-      isAbsolute(import.meta.dir)
-    ) {
-      try {
-        const moduleDir = import.meta.dir;
-        const pkgRoot = resolve(moduleDir, '..', '..', '..');
-        for (const profile of ['release', 'debug']) {
-          const localBin = join(
-            pkgRoot,
-            'han-rs',
-            'target',
-            profile,
-            binaryName
-          );
-          if (existsSync(localBin)) return localBin;
-        }
-      } catch {}
-    }
+  // In release builds, Windows stays sibling-only, with the same hash check.
+  if (isRelease && process.platform === 'win32') return null;
+
+  const mainFile = process.argv[1] || '';
+  if (
+    (mainFile.endsWith('.ts') || mainFile.endsWith('.tsx')) &&
+    (process.platform !== 'win32' || isAbsolute(import.meta.dir))
+  ) {
+    try {
+      const moduleDir =
+        process.platform === 'win32'
+          ? realpathSync(import.meta.dir)
+          : import.meta.dir;
+      const pkgRoot = resolve(moduleDir, '..', '..', '..');
+      for (const profile of ['release', 'debug']) {
+        const localBin = join(pkgRoot, 'han-rs', 'target', profile, binaryName);
+        if (existsSync(localBin) && verifyCandidateHash(localBin))
+          return localBin;
+      }
+    } catch {}
   }
-  const hanBin = isAbsolute(home) ? join(home, '.han', 'bin', binaryName) : '';
+  const hanBin =
+    process.platform !== 'win32' || isAbsolute(home)
+      ? join(home, '.han', 'bin', binaryName)
+      : '';
   if (existsSync(hanBin) && verifyCandidateHash(hanBin)) return hanBin;
   // Windows local-runtime requests carry privileged data. `where` searches the
   // working directory, and package resolution can also depend on the caller's
   // environment. Installed Windows packages put the native binary beside the
   // executable; do not fall back to either search mechanism there.
+  if (process.platform === 'win32') return null;
   try {
     const pkgName = `@thebushidocollective/han-${process.platform}-${process.arch}`;
     const pkgJsonPath = require.resolve(`${pkgName}/package.json`);
