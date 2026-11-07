@@ -192,7 +192,10 @@ describe('installed Windows proof diagnostics', () => {
       supervisorStatusBefore: 'alive' as const,
       supervisorStatusAfter: 'dead' as const,
       supervisorExitCode: 0,
+      supervisorProofKilled: false,
       markerFile: 'receipt-held' as const,
+      errorCategory: 'none' as const,
+      helperDiagnostic: valid,
     };
     expect(safeProcessDiagnostic(validProcess)).toEqual(validProcess);
 
@@ -218,6 +221,8 @@ describe('installed Windows proof diagnostics', () => {
       'supervisorCreationTime',
       'supervisorStatusBefore',
       'supervisorStatusAfter',
+      'markerFile',
+      'errorCategory',
       'unexpected',
     ]) {
       const tainted = { ...validProcess, [key]: secret };
@@ -239,6 +244,59 @@ describe('installed Windows proof diagnostics', () => {
         safeProcessDiagnostic({ ...validProcess, supervisorPid: invalidPid })
       ).toBeUndefined();
     }
+
+    for (const invalidExitCode of [1.5, Number.NaN, '0']) {
+      expect(
+        safeProcessDiagnostic({
+          ...validProcess,
+          supervisorExitCode: invalidExitCode as unknown as number,
+        })
+      ).toBeUndefined();
+    }
+
+    for (const invalidProofKilled of ['true', 1, null, 'false']) {
+      expect(
+        safeProcessDiagnostic({
+          ...validProcess,
+          supervisorProofKilled: invalidProofKilled as unknown as boolean,
+        })
+      ).toBeUndefined();
+    }
+
+    for (const invalidMarker of ['invalid-marker', 'held', 'ok', secret]) {
+      expect(
+        safeProcessDiagnostic({
+          ...validProcess,
+          markerFile: invalidMarker as unknown as 'none',
+        })
+      ).toBeUndefined();
+    }
+
+    for (const invalidCategory of ['invalid-cat', 'error', 'Error', secret]) {
+      expect(
+        safeProcessDiagnostic({
+          ...validProcess,
+          errorCategory: invalidCategory as unknown as 'none',
+        })
+      ).toBeUndefined();
+    }
+
+    expect(
+      safeProcessDiagnostic({
+        ...validProcess,
+        helperDiagnostic: { ...valid, operation: 'secret_leak' },
+      })
+    ).toBeUndefined();
+    // When supervisor was killed by proof cleanup (supervisorProofKilled: true),
+    // supervisorExitCode should be null to avoid misleading attribution of the proof kill
+    const proofKilledProcess = {
+      ...validProcess,
+      supervisorExitCode: null,
+      supervisorProofKilled: true,
+    };
+    expect(safeProcessDiagnostic(proofKilledProcess)).toEqual(
+      proofKilledProcess
+    );
   });
 
   test('reports helper diagnostic and process diagnostic together without collision', () => {

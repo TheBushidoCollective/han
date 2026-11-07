@@ -264,6 +264,8 @@ async function main(): Promise<void> {
         exited: Promise<number>;
       }
     | undefined;
+  let feSupervisorExitCodeBeforeCleanup: number | null = null;
+  let feSupervisorProofKilled = false;
   let stopRequester:
     | {
         pid: number;
@@ -350,12 +352,62 @@ async function main(): Promise<void> {
         marker = 'receipt-released';
       } else if (existsSync(join(fastExitData, 'receipt-held'))) {
         marker = 'receipt-held';
+      } else if (existsSync(join(fastExitData, 'start-daemon-called'))) {
+        marker = 'start-daemon-called';
+      } else if (existsSync(join(fastExitData, 'daemon-imported'))) {
+        marker = 'daemon-imported';
+      } else if (existsSync(join(fastExitData, 'runtime-imported'))) {
+        marker = 'runtime-imported';
       } else if (existsSync(join(fastExitData, 'mock-installed'))) {
         marker = 'mock-installed';
       }
+
+      let errorCat: SafeProcessDiagnostic['errorCategory'] = 'none';
+      const errorCatFile = join(fastExitData, 'error-category');
+      if (existsSync(errorCatFile)) {
+        try {
+          const raw = readFileSync(errorCatFile, 'utf8').trim();
+          const allowed = [
+            'reference_error',
+            'type_error',
+            'syntax_error',
+            'module_not_found',
+            'binary_missing',
+            'assertion_error',
+            'connection_refused',
+            'timeout',
+            'generic_error',
+          ] as const;
+          if (allowed.includes(raw as (typeof allowed)[number])) {
+            errorCat = raw as SafeProcessDiagnostic['errorCategory'];
+          } else {
+            errorCat = 'generic_error';
+          }
+        } catch {
+          errorCat = 'generic_error';
+        }
+      }
+
+      let helperDiag: SafeHelperDiagnostic | null = null;
+      const helperDiagFile = join(fastExitData, 'runtime-diagnostic.json');
+      if (existsSync(helperDiagFile)) {
+        try {
+          const rawDiag = JSON.parse(readFileSync(helperDiagFile, 'utf8'));
+          const validated = validateHelperDiagnostic(rawDiag);
+          if (validated) helperDiag = validated;
+        } catch {}
+      }
+
       return {
-        supervisorExitCode: feSupervisor?.exitCode ?? null,
+        supervisorExitCode: feSupervisorProofKilled
+          ? null
+          : (feSupervisorExitCodeBeforeCleanup ??
+            feSupervisor?.exitCode ??
+            null),
+        supervisorProofKilled: feSupervisorProofKilled,
         markerFile: marker,
+        errorCategory: errorCat,
+        helperDiagnostic: helperDiag,
       };
     }
     if (!phase.startsWith('orphan-')) return undefined;
@@ -722,48 +774,80 @@ async function main(): Promise<void> {
       import.meta.dir,
       '../lib/commands/coordinator/daemon.ts'
     );
+    const diagModPath = resolve(
+      import.meta.dir,
+      './windows-proof-diagnostics.ts'
+    );
     const fastExitSupervisorScript = `
       const fs = await import('node:fs');
-      const { mock } = await import('bun:test');
-      const binaryModPath = ${JSON.stringify(resolve(import.meta.dir, '../lib/coordinator/binary.ts'))};
-      const realBinary = await import(binaryModPath);
-      mock.module(binaryModPath, () => ({
-        ...realBinary,
-        findCoordinatorBinary: () => ${JSON.stringify(coordinator)},
-      }));
-      const realHelper = await import(${JSON.stringify(helperModPath)});
-      mock.module(${JSON.stringify(helperModPath)}, () => ({
-        ...realHelper,
-        findCoordinatorBinary: () => ${JSON.stringify(coordinator)},
-      }));
-      fs.writeFileSync(${JSON.stringify(join(fastExitData, 'mock-installed'))}, 'ok');
-      const realRuntime = await import(${JSON.stringify(runtimeModPath)});
-      const origRead = realRuntime.readWindowsChildDescriptor;
-      mock.module(${JSON.stringify(runtimeModPath)}, () => ({
-        ...realRuntime,
-        async readWindowsChildDescriptor(...args) {
-          const result = await origRead(...args);
-          if (result && result.process && result.process.pid > 0) {
-            // Write only safe non-sensitive process identity metadata, never tokens or certificates
-            const safeIdentity = {
-              pid: result.process.pid,
-              creationTime: result.process.creationTime,
-              userSid: result.process.userSid,
-            };
-            fs.writeFileSync(${JSON.stringify(receiptHoldBarrier)}, JSON.stringify(safeIdentity));
-            while (!fs.existsSync(${JSON.stringify(receiptReleaseSignal)})) {
-              await Bun.sleep(20);
-            }
-          }
-          return result;
-        },
-      }));
-      const { startDaemon } = await import(${JSON.stringify(daemonModPath)});
+      const { safeHelperDiagnostic } = await import(${JSON.stringify(diagModPath)});
+      const classifyError = (err) => {
+        if (!err) return 'none';
+        const name = err.name || '';
+        const msg = String(err.message || '').toLowerCase();
+        if (name === 'ReferenceError' || msg.includes('is not defined')) return 'reference_error';
+        if (name === 'TypeError') return 'type_error';
+        if (name === 'SyntaxError') return 'syntax_error';
+        if (msg.includes('cannot find module') || msg.includes('module_not_found') || err.code === 'ERR_MODULE_NOT_FOUND') return 'module_not_found';
+        if (msg.includes('binary not found') || msg.includes('binary_missing')) return 'binary_missing';
+        if (name === 'AssertionError') return 'assertion_error';
+        if (err.code === 'ECONNREFUSED' || msg.includes('econnrefused')) return 'connection_refused';
+        if (msg.includes('timed out') || msg.includes('timeout')) return 'timeout';
+        return 'generic_error';
+      };
       try {
+        const { mock } = await import('bun:test');
+        const binaryModPath = ${JSON.stringify(resolve(import.meta.dir, '../lib/coordinator/binary.ts'))};
+        const realBinary = await import(binaryModPath);
+        mock.module(binaryModPath, () => ({
+          ...realBinary,
+          findCoordinatorBinary: () => ${JSON.stringify(coordinator)},
+        }));
+        const realHelper = await import(${JSON.stringify(helperModPath)});
+        mock.module(${JSON.stringify(helperModPath)}, () => ({
+          ...realHelper,
+          findCoordinatorBinary: () => ${JSON.stringify(coordinator)},
+        }));
+        fs.writeFileSync(${JSON.stringify(join(fastExitData, 'mock-installed'))}, 'ok');
+
+        const realRuntime = await import(${JSON.stringify(runtimeModPath)});
+        fs.writeFileSync(${JSON.stringify(join(fastExitData, 'runtime-imported'))}, 'ok');
+        const origRead = realRuntime.readWindowsChildDescriptor;
+        mock.module(${JSON.stringify(runtimeModPath)}, () => ({
+          ...realRuntime,
+          async readWindowsChildDescriptor(...args) {
+            const result = await origRead(...args);
+            if (result && result.process && result.process.pid > 0) {
+              const safeIdentity = {
+                pid: result.process.pid,
+                creationTime: result.process.creationTime,
+                userSid: result.process.userSid,
+              };
+              fs.writeFileSync(${JSON.stringify(receiptHoldBarrier)}, JSON.stringify(safeIdentity));
+              while (!fs.existsSync(${JSON.stringify(receiptReleaseSignal)})) {
+                await Bun.sleep(20);
+              }
+            }
+            return result;
+          },
+        }));
+
+        const { startDaemon } = await import(${JSON.stringify(daemonModPath)});
+        fs.writeFileSync(${JSON.stringify(join(fastExitData, 'daemon-imported'))}, 'ok');
+
+        fs.writeFileSync(${JSON.stringify(join(fastExitData, 'start-daemon-called'))}, 'ok');
         await startDaemon({ port: 0, foreground: true });
         fs.writeFileSync(${JSON.stringify(join(fastExitData, 'startup-completed'))}, 'ok');
       } catch (e) {
-        console.error(e);
+        try {
+          fs.writeFileSync(${JSON.stringify(join(fastExitData, 'error-category'))}, classifyError(e));
+          if (e && e.message) {
+            const helper = safeHelperDiagnostic(String(e.message));
+            if (helper) {
+              fs.writeFileSync(${JSON.stringify(join(fastExitData, 'runtime-diagnostic.json'))}, JSON.stringify(helper));
+            }
+          }
+        } catch {}
         process.exit(1);
       }
     `;
@@ -862,12 +946,16 @@ async function main(): Promise<void> {
         );
         assert.equal(leftoverStopping.length, 0);
       }
+    } catch (fastExitErr) {
+      feSupervisorExitCodeBeforeCleanup = feSupervisor?.exitCode ?? null;
+      throw fastExitErr;
     } finally {
       if (stopRequester && stopRequester.exitCode === null) {
         stopRequester.kill();
         await stopRequester.exited;
       }
       if (feSupervisor && feSupervisor.exitCode === null) {
+        feSupervisorProofKilled = true;
         feSupervisor.kill();
         await feSupervisor.exited;
       }

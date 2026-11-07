@@ -214,7 +214,10 @@ const processDiagnosticKeys = [
   'supervisorStatusBefore',
   'supervisorStatusAfter',
   'supervisorExitCode',
+  'supervisorProofKilled',
   'markerFile',
+  'errorCategory',
+  'helperDiagnostic',
 ];
 const processLivenessValues = ['alive', 'dead', 'mismatched', 'unknown'];
 const descriptorStates = ['present', 'absent', 'mismatched', 'unknown'];
@@ -222,9 +225,24 @@ const supervisorStatusValues = ['alive', 'dead', 'mismatched', 'unknown'];
 const markerFileValues = [
   'none',
   'mock-installed',
+  'runtime-imported',
+  'daemon-imported',
+  'start-daemon-called',
   'receipt-held',
   'receipt-released',
   'startup-completed',
+];
+const errorCategoryValues = [
+  'none',
+  'reference_error',
+  'type_error',
+  'syntax_error',
+  'module_not_found',
+  'binary_missing',
+  'assertion_error',
+  'connection_refused',
+  'timeout',
+  'generic_error',
 ];
 
 export type SafeProcessDiagnostic = {
@@ -238,15 +256,31 @@ export type SafeProcessDiagnostic = {
   supervisorStatusBefore?: 'alive' | 'dead' | 'mismatched' | 'unknown' | null;
   supervisorStatusAfter?: 'alive' | 'dead' | 'mismatched' | 'unknown' | null;
   supervisorExitCode?: number | null;
+  supervisorProofKilled?: boolean | null;
   markerFile?:
     | 'none'
     | 'mock-installed'
+    | 'runtime-imported'
+    | 'daemon-imported'
+    | 'start-daemon-called'
     | 'receipt-held'
     | 'receipt-released'
     | 'startup-completed'
     | null;
+  errorCategory?:
+    | 'none'
+    | 'reference_error'
+    | 'type_error'
+    | 'syntax_error'
+    | 'module_not_found'
+    | 'binary_missing'
+    | 'assertion_error'
+    | 'connection_refused'
+    | 'timeout'
+    | 'generic_error'
+    | null;
+  helperDiagnostic?: SafeHelperDiagnostic | null;
 };
-
 export function safeProcessDiagnostic(
   value: unknown
 ): SafeProcessDiagnostic | undefined {
@@ -323,10 +357,29 @@ export function safeProcessDiagnostic(
   )
     return undefined;
   if (
+    item.supervisorProofKilled !== undefined &&
+    item.supervisorProofKilled !== null &&
+    typeof item.supervisorProofKilled !== 'boolean'
+  )
+    return undefined;
+  if (
     item.markerFile !== undefined &&
     item.markerFile !== null &&
     (typeof item.markerFile !== 'string' ||
       !markerFileValues.includes(item.markerFile))
+  )
+    return undefined;
+  if (
+    item.errorCategory !== undefined &&
+    item.errorCategory !== null &&
+    (typeof item.errorCategory !== 'string' ||
+      !errorCategoryValues.includes(item.errorCategory))
+  )
+    return undefined;
+  if (
+    item.helperDiagnostic !== undefined &&
+    item.helperDiagnostic !== null &&
+    !validateHelperDiagnostic(item.helperDiagnostic)
   )
     return undefined;
   const result: SafeProcessDiagnostic = {};
@@ -376,8 +429,21 @@ export function safeProcessDiagnostic(
   ) {
     result.supervisorExitCode = item.supervisorExitCode as number;
   }
+  if (
+    item.supervisorProofKilled !== undefined &&
+    item.supervisorProofKilled !== null
+  ) {
+    result.supervisorProofKilled = item.supervisorProofKilled as boolean;
+  }
   if (item.markerFile !== undefined && item.markerFile !== null) {
     result.markerFile = item.markerFile as SafeProcessDiagnostic['markerFile'];
+  }
+  if (item.errorCategory !== undefined && item.errorCategory !== null) {
+    result.errorCategory =
+      item.errorCategory as SafeProcessDiagnostic['errorCategory'];
+  }
+  if (item.helperDiagnostic !== undefined && item.helperDiagnostic !== null) {
+    result.helperDiagnostic = validateHelperDiagnostic(item.helperDiagnostic);
   }
   return result;
 }
