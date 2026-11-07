@@ -1076,10 +1076,11 @@ async function stopDuringStartup(): Promise<void> {
       },
     }));
     const originalIntent = await import(${JSON.stringify(intent)});
+    const readIntent = originalIntent.readShutdownIntent;
     mock.module(${JSON.stringify(intent)}, () => ({
       ...originalIntent,
       readShutdownIntent(...args) {
-        const result = originalIntent.readShutdownIntent(...args);
+        const result = readIntent(...args);
         if (result && args[2]) fs.writeFileSync(${JSON.stringify(observed)}, 'observed');
         return result;
       },
