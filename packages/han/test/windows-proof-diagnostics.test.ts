@@ -65,8 +65,11 @@ describe('installed Windows proof diagnostics', () => {
         ).includes(secret)
       ).toBe(false);
     }
-    expect(safeProofFailure(secret, new Error(secret))).toBe(
-      '{"phase":"setup","exitStatus":null,"diagnostic":null}'
+    expect(
+      safeProofFailure(secret, new Error('unexpected generic message'))
+    ).toBe('{"phase":"setup","exitStatus":null,"diagnostic":null}');
+    expect(safeProofFailure(secret, new Error(secret)).includes(secret)).toBe(
+      false
     );
   });
 
@@ -78,6 +81,34 @@ describe('installed Windows proof diagnostics', () => {
     );
     expect(JSON.parse(report).reason).toBe('startup_timeout');
     expect(report.includes(secret)).toBe(false);
+  });
+  test('classifies wait timeout and assertion failures safely', () => {
+    const timeoutReport = safeProofFailure(
+      'dead-pair-stop',
+      new Error(`Timed out waiting for descriptor withdrawal ${secret}`)
+    );
+    expect(JSON.parse(timeoutReport)).toEqual({
+      phase: 'dead-pair-stop',
+      exitStatus: null,
+      diagnostic: null,
+      reason: 'timeout',
+    });
+    expect(timeoutReport.includes(secret)).toBe(false);
+
+    const assertionError = Object.assign(
+      new Error(`assertion failed: ${secret}`),
+      {
+        name: 'AssertionError',
+      }
+    );
+    const assertReport = safeProofFailure('modeled-pid-reuse', assertionError);
+    expect(JSON.parse(assertReport)).toEqual({
+      phase: 'modeled-pid-reuse',
+      exitStatus: null,
+      diagnostic: null,
+      reason: 'assertion_failure',
+    });
+    expect(assertReport.includes(secret)).toBe(false);
   });
 
   test('keeps cleanup reporting separate from the initiating failure', () => {

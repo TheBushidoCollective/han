@@ -79,12 +79,17 @@ const phases = [
   'crash-recovery',
   'restart',
   'stop',
+  'fixed-port-bind-before-publication',
+  'dead-pair-stop',
+  'dead-pair-restart',
+  'orphan-stop-and-restart',
   'partial-claim-kill',
   'missing-lock-status',
   'missing-lock-start',
   'partial-claim-status',
   'partial-claim-start',
   'modeled-pid-reuse',
+  'fast-exit-receipt',
   'cleanup',
 ];
 
@@ -163,11 +168,20 @@ export class ProofCommandError extends Error {
 
 export function safeProofFailure(phase: string, error: unknown): string {
   const command = error instanceof ProofCommandError ? error : undefined;
-  const startupTimeout = command?.startupTimeout === true;
+  let reason: string | undefined;
+  if (command?.startupTimeout === true) {
+    reason = 'startup_timeout';
+  } else if (error instanceof Error) {
+    if (error.name === 'AssertionError') {
+      reason = 'assertion_failure';
+    } else if (/timed?\s*out/i.test(error.message)) {
+      reason = 'timeout';
+    }
+  }
   return JSON.stringify({
     phase: phases.includes(phase) ? phase : 'setup',
     exitStatus: command?.exitStatus ?? null,
     diagnostic: command?.diagnostic ?? null,
-    ...(startupTimeout ? { reason: 'startup_timeout' } : {}),
+    ...(reason ? { reason } : {}),
   });
 }

@@ -599,7 +599,7 @@ async function main(): Promise<void> {
         await startDaemon({ port: 0, foreground: true });
       } catch (e) {
         console.error(e);
-        process.exitCode = 1;
+        process.exit(1);
       }
     `;
     const fastExitSupervisorFile = join(
