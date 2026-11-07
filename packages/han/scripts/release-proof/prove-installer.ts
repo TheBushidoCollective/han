@@ -15,9 +15,9 @@ try {
   console.log('Testing fresh install...');
   const env = {
     ...process.env,
-    HOME: testHome,
-    USERPROFILE: testHome,
-    HAN_INSTALL_DIR: testBin,
+    HOME: testHome.replaceAll('\\', '/'),
+    USERPROFILE: testHome.replaceAll('\\', '/'),
+    HAN_INSTALL_DIR: testBin.replaceAll('\\', '/'),
   };
 
   const proc1 = Bun.spawnSync(['bash', installerPath], {
