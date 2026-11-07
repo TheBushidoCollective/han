@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import {
-  ProofCommandError,
   classifySupervisorError,
   cleanupSteps,
   evaluateHelperMarkerStatus,
   phases,
+  ProofCommandError,
   safeHelperDiagnostic,
   safeProcessDiagnostic,
   safeProofCleanup,

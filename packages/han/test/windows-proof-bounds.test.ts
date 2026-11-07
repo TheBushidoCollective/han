@@ -21,6 +21,7 @@ import {
   readProofBudget,
   spawnBounded,
   sweepRoot,
+  sweepRootSync,
   validateSweepRoots,
 } from '../scripts/windows-proof-bounds.ts';
 
@@ -206,6 +207,9 @@ describe('windows-proof-bounds budget and unit contracts', () => {
     await expect(sweepRoot('')).rejects.toThrow();
     await expect(sweepRoot('C:\\')).rejects.toThrow();
     await expect(sweepRoot('C:\\Windows')).rejects.toThrow();
+    expect(() => sweepRootSync('')).toThrow();
+    expect(() => sweepRootSync('C:\\')).toThrow();
+    expect(() => sweepRootSync('C:\\Windows')).toThrow();
   });
 });
 
@@ -447,4 +451,112 @@ fs.writeFileSync(${JSON.stringify(markerFile2)}, 'started');
     expect(parsed.reason).toBe('watchdog');
     expect(parsed.phase).toBeDefined();
   }, 35000);
+
+  test('four-variant execution (capture true/false x windowsHide true/false) for PowerShell and Bun with exit 7', async () => {
+    const powershell = findPowershell();
+    const variants = [
+      { capture: false, windowsHide: true },
+      { capture: true, windowsHide: true },
+      { capture: false, windowsHide: false },
+      { capture: true, windowsHide: false },
+    ] as const;
+
+    interface VariantResult {
+      kind: 'powershell' | 'bun';
+      capture: boolean;
+      windowsHide: boolean;
+      exitCode: number | null;
+      timedOut: boolean;
+      ms: number;
+      error?: string;
+    }
+
+    const results: VariantResult[] = [];
+
+    for (const { capture, windowsHide } of variants) {
+      // 1. PowerShell exit 7
+      try {
+        const psStart = Date.now();
+        const psRes = await spawnBounded(
+          [powershell, '-NoProfile', '-NonInteractive', '-Command', 'exit 7'],
+          {
+            capture,
+            windowsHide,
+            timeoutMs: 20000,
+          }
+        );
+        results.push({
+          kind: 'powershell',
+          capture,
+          windowsHide,
+          exitCode: psRes.exitCode,
+          timedOut: psRes.timedOut,
+          ms: Date.now() - psStart,
+        });
+      } catch (err) {
+        results.push({
+          kind: 'powershell',
+          capture,
+          windowsHide,
+          exitCode: null,
+          timedOut: false,
+          ms: -1,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+
+      // 2. Bun exit 7
+      try {
+        const bunStart = Date.now();
+        const bunRes = await spawnBounded(
+          [process.execPath, '-e', 'process.exit(7)'],
+          {
+            capture,
+            windowsHide,
+            timeoutMs: 20000,
+          }
+        );
+        results.push({
+          kind: 'bun',
+          capture,
+          windowsHide,
+          exitCode: bunRes.exitCode,
+          timedOut: bunRes.timedOut,
+          ms: Date.now() - bunStart,
+        });
+      } catch (err) {
+        results.push({
+          kind: 'bun',
+          capture,
+          windowsHide,
+          exitCode: null,
+          timedOut: false,
+          ms: -1,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
+    const tableHeader =
+      'kind       | capture | windowsHide | exitCode | timedOut | ms    | error\n';
+    const tableRows = results
+      .map(
+        (r) =>
+          `${r.kind.padEnd(10)} | ${String(r.capture).padEnd(7)} | ${String(r.windowsHide).padEnd(11)} | ${String(r.exitCode).padEnd(8)} | ${String(r.timedOut).padEnd(8)} | ${String(r.ms).padEnd(5)} | ${r.error || 'none'}`
+      )
+      .join('\n');
+    const fullTable = `\n${tableHeader}${tableRows}\n`;
+
+    expect(results.length).toBe(8);
+
+    const failures = results.filter(
+      (r) => r.exitCode !== 7 || r.timedOut || r.ms >= 15000 || r.error
+    );
+
+    if (failures.length > 0) {
+      throw new Error(
+        `Variant execution test failed for ${failures.length}/8 combinations:${fullTable}`
+      );
+    }
+  }, 120000);
 });

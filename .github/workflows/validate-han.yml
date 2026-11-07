@@ -102,11 +102,40 @@ jobs:
           }
           $fails = @($lines | Where-Object { $_.StartsWith('Installed Windows proof failure: ') })
           if ($fails.Count -ne 1) { throw "Expected exactly 1 failure line, got $($fails.Count)" }
-          if (-not $fails[0].Contains('"reason":"deadline"')) { throw "Expected reason:deadline in failure line: $($fails[0])" }
-          $completeOk = @($lines | Where-Object { $_ -match '^Installed Windows proof cleanup:.*"step":"complete".*"ok":true' })
-          if ($completeOk.Count -ne 1) { throw "Expected exactly 1 cleanup complete ok:true line, got $($completeOk.Count)" }
-          $cleanupFails = @($lines | Where-Object { $_ -match '^Installed Windows proof (failure:.*cleanup|cleanup:.*"ok":false)' })
-          if ($cleanupFails.Count -gt 0) { throw "Negative control cleanup failed: $($cleanupFails -join '; ')" }
+          $failureJson = $fails[0] -replace '^Installed Windows proof failure:\s*', '' | ConvertFrom-Json
+          if ($failureJson.reason -ne 'deadline') { throw "Expected reason 'deadline', got '$($failureJson.reason)'" }
+
+          $phasesJson = & bun -e "import { phases } from './packages/han/scripts/windows-proof-diagnostics.ts'; console.log(JSON.stringify(phases))"
+          if ($LASTEXITCODE -ne 0 -or -not $phasesJson) {
+            throw "Failed to load authoritative phases from windows-proof-diagnostics.ts"
+          }
+          $allowedPhases = @($phasesJson | ConvertFrom-Json)
+          if ($allowedPhases.Count -eq 0) {
+            throw "Authoritative phases list is empty"
+          }
+          if ($allowedPhases -notcontains $failureJson.phase) {
+            throw "Phase '$($failureJson.phase)' is not in allowlisted phases"
+          }
+
+          $progressRecords = @($lines | Where-Object { $_.StartsWith('Installed Windows proof progress: ') } | ForEach-Object {
+            $_ -replace '^Installed Windows proof progress:\s*', '' | ConvertFrom-Json
+          })
+          $healthIndex = $allowedPhases.IndexOf('initial-start-health')
+          $healthProgress = @($progressRecords | Where-Object {
+            $allowedPhases.IndexOf($_.phase) -ge $healthIndex -and $_.previous -and $_.previous.probeCount -ge 1
+          })
+          if ($healthProgress.Count -lt 1) {
+            throw "Expected progress at initial-start-health or later with previous probeCount >= 1"
+          }
+
+          $cleanupRecords = @($lines | Where-Object { $_.StartsWith('Installed Windows proof cleanup: ') } | ForEach-Object {
+            $_ -replace '^Installed Windows proof cleanup:\s*', '' | ConvertFrom-Json
+          })
+          $completeOk = @($cleanupRecords | Where-Object { $_.step -eq 'complete' -and $_.ok -eq $true })
+          if ($completeOk.Count -ne 1) { throw "Expected exactly 1 cleanup record with step:complete and ok:true, got $($completeOk.Count)" }
+          $cleanupFails = @($cleanupRecords | Where-Object { $_.ok -ne $true })
+          if ($cleanupFails.Count -gt 0) { throw "Negative control cleanup failed on step(s): $(($cleanupFails | ForEach-Object { $_.step }) -join ', ')" }
+
           if ($sw.Elapsed.TotalSeconds -gt 270) { throw "Wall time exceeded 270s: $($sw.Elapsed.TotalSeconds)s" }
           exit 0
       - name: Check for leftover processes after negative control

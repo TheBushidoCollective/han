@@ -793,6 +793,7 @@ $remaining = @(Get-Process | Where-Object {
 }).Count
 
 [Console]::Out.WriteLine(([ordered]@{ terminated = $terminatedCount; remaining = $remaining } | ConvertTo-Json -Compress))
+exit 0
 `.trim();
 }
 
@@ -896,10 +897,10 @@ export async function sweepRoot(
   root: string,
   timeoutMs = 30000
 ): Promise<SweepResult> {
+  const targetRoots = validateSweepRoots(root);
   if (process.platform !== 'win32') {
     return { terminated: 0, remaining: 0 };
   }
-  const targetRoots = validateSweepRoots(root);
   const powershell = findPowershell();
   const script = buildSweepScript(targetRoots);
 
@@ -929,10 +930,10 @@ export async function sweepRoot(
 }
 
 export function sweepRootSync(root: string, timeoutMs = 15000): SweepResult {
+  const targetRoots = validateSweepRoots(root);
   if (process.platform !== 'win32') {
     return { terminated: 0, remaining: 0 };
   }
-  const targetRoots = validateSweepRoots(root);
   const powershell = findPowershell();
   const script = buildSweepScript(targetRoots);
 

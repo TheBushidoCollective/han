@@ -441,7 +441,7 @@ async function main(): Promise<void> {
   ): Promise<boolean> => {
     assert.ok(Number.isSafeInteger(identity.pid) && identity.pid > 0);
     assert.ok(/^[1-9][0-9]{0,19}$/.test(identity.creationTime));
-    const script = `$p=Get-Process -Id ${identity.pid} -ErrorAction SilentlyContinue; if (!$p) { exit 3 }; $actual=[System.IO.Path]::GetFullPath($p.Path); $expected=[System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $env:HAN_PROOF_IMAGE).Path); if ($actual -ne $expected) { exit 4 }; if ($p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString() -ne $env:HAN_PROOF_TIME) { exit 5 }; ${kill ? 'Stop-Process -InputObject $p -Force -ErrorAction Stop' : ''}`;
+    const script = `$ErrorActionPreference='Stop'; try { $p=Get-Process -Id ${identity.pid} -ErrorAction Stop } catch { if ($_.FullyQualifiedErrorId -like 'NoProcessFoundForGivenId*') { exit 3 }; exit 6 }; try { $actual=[System.IO.Path]::GetFullPath($p.Path); $expected=[System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $env:HAN_PROOF_IMAGE).Path); if ($actual -ne $expected) { exit 4 }; if ($p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString() -ne $env:HAN_PROOF_TIME) { exit 5 }; ${kill ? 'Stop-Process -InputObject $p -Force -ErrorAction Stop;' : ''} exit 0 } catch { exit 6 }`;
     const t0 = Date.now();
     const res = await spawnBounded(
       [powershell, '-NoProfile', '-NonInteractive', '-Command', script],
@@ -454,7 +454,7 @@ async function main(): Promise<void> {
         },
         timeoutMs: 20000,
         signal: clock.phaseSignal,
-        capture: false,
+        capture: true,
       }
     );
     const elapsed = Date.now() - t0;
@@ -481,7 +481,7 @@ async function main(): Promise<void> {
       !/^[1-9][0-9]{0,19}$/.test(identity.creationTime)
     )
       return 'unknown';
-    const script = `$p=Get-Process -Id ${identity.pid} -ErrorAction SilentlyContinue; if (!$p) { exit 3 }; $actual=[System.IO.Path]::GetFullPath($p.Path); $expected=[System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $env:HAN_PROOF_IMAGE).Path); if ($actual -ne $expected) { exit 4 }; if ($p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString() -ne $env:HAN_PROOF_TIME) { exit 5 }; exit 0`;
+    const script = `$ErrorActionPreference='Stop'; try { $p=Get-Process -Id ${identity.pid} -ErrorAction Stop } catch { if ($_.FullyQualifiedErrorId -like 'NoProcessFoundForGivenId*') { exit 3 }; exit 6 }; try { $actual=[System.IO.Path]::GetFullPath($p.Path); $expected=[System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $env:HAN_PROOF_IMAGE).Path); if ($actual -ne $expected) { exit 4 }; if ($p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString() -ne $env:HAN_PROOF_TIME) { exit 5 }; exit 0 } catch { exit 6 }`;
     const t0 = Date.now();
     try {
       const res = await spawnBounded(
@@ -495,7 +495,7 @@ async function main(): Promise<void> {
           },
           timeoutMs: 20000,
           signal,
-          capture: false,
+          capture: true,
         }
       );
       const elapsed = Date.now() - t0;
@@ -809,14 +809,14 @@ async function main(): Promise<void> {
             '-NoProfile',
             '-NonInteractive',
             '-Command',
-            `$c=Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort ${marker.httpsPort} -State Established -ErrorAction SilentlyContinue; if ($c) { exit 1 }`,
+            `$ErrorActionPreference='Stop'; try { $c=Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort ${marker.httpsPort} -State Established; if ($c) { exit 1 }; exit 0 } catch { if ($_.CategoryInfo.Category -eq 'ObjectNotFound' -or $_.FullyQualifiedErrorId -like 'CmdletizationQuery_NotFound*') { exit 0 }; exit 2 }`,
           ],
           {
             cwd: root,
             env,
             timeoutMs: 30000,
             signal: clock.phaseSignal,
-            capture: false,
+            capture: true,
           }
         );
         const elapsed = Date.now() - t0;
@@ -825,7 +825,12 @@ async function main(): Promise<void> {
         if (check.aborted) throw new ProofDeadlineError();
         if (check.timedOut) throw new ProofSubprocessTimeout();
         if (check.pipeRetained) throw new ProofOutputRetained();
-        assert.equal(check.exitCode, 0, 'request reached unpublished listener');
+        assert.notEqual(
+          check.exitCode,
+          1,
+          'request reached unpublished listener'
+        );
+        assert.equal(check.exitCode, 0, 'TCP connection probe query failed');
         assert.equal(readDescriptor(data)?.instanceId, previous.instanceId);
         await abortableSleep(100, clock.phaseSignal);
       }

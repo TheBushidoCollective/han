@@ -82,6 +82,7 @@ Before the default proof, CI runs a negative control against the real built pair
 - Exit code 1
 - Wall time is 270 seconds or less
 - Exactly one failure line with reason `deadline` and an allowlisted phase
+- Progress reaches `initial-start-health` or later with `previous.probeCount >= 1`
 - Cleanup reaches step `complete` with `ok: true`, and no cleanup step reports failure (`ok: false`)
 - Every line matches `^Installed Windows proof (progress|failure|cleanup): \{.*\}$`
 - No line contains forbidden tokens (`BEGIN CERTIFICATE` or `Bearer`)
