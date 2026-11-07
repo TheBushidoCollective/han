@@ -202,6 +202,28 @@ export function safeHelperDiagnostic(
   }
   return undefined;
 }
+export const helperMarkerStatusValues = [
+  'none',
+  'marker_present_valid',
+  'marker_present_invalid_json',
+  'marker_present_invalid_schema',
+  'no_marker_in_error',
+] as const;
+
+export function evaluateHelperMarkerStatus(
+  output: string
+): (typeof helperMarkerStatusValues)[number] {
+  const index = output.indexOf(marker);
+  if (index < 0) return 'no_marker_in_error';
+  try {
+    const raw = output.slice(index + marker.length).split(/\r?\n/)[0];
+    const parsed: unknown = JSON.parse(raw);
+    const valid = validateHelperDiagnostic(parsed);
+    return valid ? 'marker_present_valid' : 'marker_present_invalid_schema';
+  } catch {
+    return 'marker_present_invalid_json';
+  }
+}
 
 const processDiagnosticKeys = [
   'childPid',
@@ -217,9 +239,9 @@ const processDiagnosticKeys = [
   'supervisorProofKilled',
   'markerFile',
   'errorCategory',
+  'helperMarkerStatus',
   'helperDiagnostic',
 ];
-const processLivenessValues = ['alive', 'dead', 'mismatched', 'unknown'];
 const descriptorStates = ['present', 'absent', 'mismatched', 'unknown'];
 const supervisorStatusValues = ['alive', 'dead', 'mismatched', 'unknown'];
 const markerFileValues = [
@@ -472,6 +494,13 @@ export type SafeProcessDiagnostic = {
     | 'health_check_failed'
     | 'generic_error'
     | null;
+  helperMarkerStatus?:
+    | 'none'
+    | 'marker_present_valid'
+    | 'marker_present_invalid_json'
+    | 'marker_present_invalid_schema'
+    | 'no_marker_in_error'
+    | null;
   helperDiagnostic?: SafeHelperDiagnostic | null;
 };
 export function safeProcessDiagnostic(
@@ -570,12 +599,18 @@ export function safeProcessDiagnostic(
   )
     return undefined;
   if (
+    item.helperMarkerStatus !== undefined &&
+    item.helperMarkerStatus !== null &&
+    (typeof item.helperMarkerStatus !== 'string' ||
+      !helperMarkerStatusValues.includes(item.helperMarkerStatus))
+  )
+    return undefined;
+  if (
     item.helperDiagnostic !== undefined &&
     item.helperDiagnostic !== null &&
     !validateHelperDiagnostic(item.helperDiagnostic)
   )
     return undefined;
-  const result: SafeProcessDiagnostic = {};
   if (item.childPid !== undefined && item.childPid !== null) {
     result.childPid = item.childPid as number;
   }
@@ -634,6 +669,13 @@ export function safeProcessDiagnostic(
   if (item.errorCategory !== undefined && item.errorCategory !== null) {
     result.errorCategory =
       item.errorCategory as SafeProcessDiagnostic['errorCategory'];
+  }
+  if (
+    item.helperMarkerStatus !== undefined &&
+    item.helperMarkerStatus !== null
+  ) {
+    result.helperMarkerStatus =
+      item.helperMarkerStatus as SafeProcessDiagnostic['helperMarkerStatus'];
   }
   if (item.helperDiagnostic !== undefined && item.helperDiagnostic !== null) {
     result.helperDiagnostic = validateHelperDiagnostic(item.helperDiagnostic);
@@ -698,6 +740,17 @@ export function safeProofFailure(
   }
   let helperDiagnostic: SafeHelperDiagnostic | null =
     command?.diagnostic ?? null;
+  if (
+    !helperDiagnostic &&
+    processDiagnostic &&
+    typeof processDiagnostic === 'object' &&
+    'helperDiagnostic' in processDiagnostic
+  ) {
+    const fromProc = (processDiagnostic as { helperDiagnostic?: unknown })
+      .helperDiagnostic;
+    const validated = validateHelperDiagnostic(fromProc);
+    if (validated) helperDiagnostic = validated;
+  }
   if (
     !helperDiagnostic &&
     error &&

@@ -408,8 +408,8 @@ async function main(): Promise<void> {
           errorCat = 'generic_error';
         }
       }
-
       let helperDiag: SafeHelperDiagnostic | null = null;
+      let helperStatus: SafeProcessDiagnostic['helperMarkerStatus'] = 'none';
       const helperDiagFile = join(fastExitData, 'runtime-diagnostic.json');
       if (existsSync(helperDiagFile)) {
         try {
@@ -417,6 +417,32 @@ async function main(): Promise<void> {
           const validated = validateHelperDiagnostic(rawDiag);
           if (validated) helperDiag = validated;
         } catch {}
+      }
+
+      const helperStatusFile = join(fastExitData, 'runtime-marker-status');
+      if (existsSync(helperStatusFile)) {
+        try {
+          const rawStatus = readFileSync(helperStatusFile, 'utf8').trim();
+          const allowedStatus = [
+            'none',
+            'marker_present_valid',
+            'marker_present_invalid_json',
+            'marker_present_invalid_schema',
+            'no_marker_in_error',
+          ] as const;
+          if (
+            allowedStatus.includes(rawStatus as (typeof allowedStatus)[number])
+          ) {
+            helperStatus =
+              rawStatus as SafeProcessDiagnostic['helperMarkerStatus'];
+          } else {
+            helperStatus = 'marker_present_invalid_schema';
+          }
+        } catch {
+          helperStatus = 'none';
+        }
+      } else {
+        helperStatus = 'none';
       }
 
       return {
@@ -428,6 +454,7 @@ async function main(): Promise<void> {
         supervisorProofKilled: feSupervisorProofKilled,
         markerFile: marker,
         errorCategory: errorCat,
+        helperMarkerStatus: helperStatus,
         helperDiagnostic: helperDiag,
       };
     }
@@ -801,7 +828,7 @@ async function main(): Promise<void> {
     );
     const fastExitSupervisorScript = `
       const fs = await import('node:fs');
-      const { safeHelperDiagnostic, classifySupervisorError } = await import(${JSON.stringify(diagModPath)});
+      const { safeHelperDiagnostic, classifySupervisorError, evaluateHelperMarkerStatus } = await import(${JSON.stringify(diagModPath)});
       try {
         const { mock } = await import('bun:test');
         const binaryModPath = ${JSON.stringify(resolve(import.meta.dir, '../lib/coordinator/binary.ts'))};
@@ -848,11 +875,11 @@ async function main(): Promise<void> {
       } catch (e) {
         try {
           fs.writeFileSync(${JSON.stringify(join(fastExitData, 'error-category'))}, classifySupervisorError(e));
-          if (e && e.message) {
-            const helper = safeHelperDiagnostic(String(e.message));
-            if (helper) {
-              fs.writeFileSync(${JSON.stringify(join(fastExitData, 'runtime-diagnostic.json'))}, JSON.stringify(helper));
-            }
+          const errMsg = e instanceof Error ? (e.name + ': ' + e.message) : String(e);
+          fs.writeFileSync(${JSON.stringify(join(fastExitData, 'runtime-marker-status'))}, evaluateHelperMarkerStatus(errMsg));
+          const helper = safeHelperDiagnostic(errMsg);
+          if (helper) {
+            fs.writeFileSync(${JSON.stringify(join(fastExitData, 'runtime-diagnostic.json'))}, JSON.stringify(helper));
           }
         } catch {}
         process.exit(1);

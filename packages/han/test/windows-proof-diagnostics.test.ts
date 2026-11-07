@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
   classifySupervisorError,
+  evaluateHelperMarkerStatus,
   ProofCommandError,
   safeHelperDiagnostic,
   safeProcessDiagnostic,
@@ -196,6 +197,7 @@ describe('installed Windows proof diagnostics', () => {
       supervisorProofKilled: false,
       markerFile: 'receipt-held' as const,
       errorCategory: 'none' as const,
+      helperMarkerStatus: 'marker_present_valid' as const,
       helperDiagnostic: valid,
     };
     expect(safeProcessDiagnostic(validProcess)).toEqual(validProcess);
@@ -342,6 +344,20 @@ describe('installed Windows proof diagnostics', () => {
         safeProcessDiagnostic({ ...validProcess, errorCategory: category })
           ?.errorCategory
       ).toBe(category);
+    }
+    for (const markerStatus of [
+      'none',
+      'marker_present_valid',
+      'marker_present_invalid_json',
+      'marker_present_invalid_schema',
+      'no_marker_in_error',
+    ] as const) {
+      expect(
+        safeProcessDiagnostic({
+          ...validProcess,
+          helperMarkerStatus: markerStatus,
+        })?.helperMarkerStatus
+      ).toBe(markerStatus);
     }
   });
 
@@ -678,5 +694,37 @@ describe('installed Windows proof diagnostics', () => {
     expect(
       classifySupervisorError(new Error('something completely generic'))
     ).toBe('generic_error');
+  });
+  test('evaluateHelperMarkerStatus classifies marker presence and validity accurately without leaking secrets', () => {
+    // Exact production string format from CoordinatorSecurityError: Windows local-runtime helper failed HAN_WINDOWS_RUNTIME_DIAGNOSTIC=...
+    expect(
+      evaluateHelperMarkerStatus(
+        `CoordinatorSecurityError: Windows local-runtime helper failed ${prefix}${JSON.stringify(valid)}\n${secret}`
+      )
+    ).toBe('marker_present_valid');
+
+    expect(
+      evaluateHelperMarkerStatus(
+        `Windows local-runtime helper failed ${prefix}${JSON.stringify(valid)}\n${secret}`
+      )
+    ).toBe('marker_present_valid');
+
+    expect(
+      evaluateHelperMarkerStatus(
+        `CoordinatorSecurityError: Windows local-runtime helper failed ${prefix}{invalid-json\n${secret}`
+      )
+    ).toBe('marker_present_invalid_json');
+
+    expect(
+      evaluateHelperMarkerStatus(
+        `CoordinatorSecurityError: Windows local-runtime helper failed ${prefix}${JSON.stringify({ ...valid, operation: 'unknown_op' })}\n${secret}`
+      )
+    ).toBe('marker_present_invalid_schema');
+
+    expect(
+      evaluateHelperMarkerStatus(
+        `CoordinatorSecurityError: Windows local-runtime helper failed without any marker\n${secret}`
+      )
+    ).toBe('no_marker_in_error');
   });
 });
