@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import {
   ProofCommandError,
   safeHelperDiagnostic,
+  safeProcessDiagnostic,
   safeProofFailure,
+  validateHelperDiagnostic,
 } from '../scripts/windows-proof-diagnostics.ts';
 
 const secret = 'SENTINEL_SECRET_token_certificate_path_nonce_sid';
@@ -153,5 +155,116 @@ describe('installed Windows proof diagnostics', () => {
       diagnostic: null,
     });
     expect(`${primary}${cleanup}`.includes(secret)).toBe(false);
+  });
+
+  test('validateHelperDiagnostic strictly validates all fields and rejects secrets', () => {
+    expect(validateHelperDiagnostic(valid)).toEqual(valid);
+    for (const key of [
+      'operation',
+      'category',
+      'exitStatus',
+      'spawnCode',
+      'stage',
+      'kind',
+      'win32Code',
+      'unexpected',
+    ]) {
+      expect(
+        validateHelperDiagnostic({ ...valid, [key]: secret })
+      ).toBeUndefined();
+    }
+    for (const invalidCode of [-1, 1.5, 0x100000000, Number.NaN, '5']) {
+      expect(
+        validateHelperDiagnostic({ ...valid, win32Code: invalidCode })
+      ).toBeUndefined();
+    }
+  });
+
+  test('reports validated process diagnostics and rejects secrets in every field', () => {
+    const validProcess = {
+      childPid: 1234,
+      childCreationTime: '133748291029384756',
+      childLiveness: 'alive' as const,
+      descriptorMatches: true,
+      descriptorState: 'present' as const,
+      supervisorPid: 5678,
+      supervisorCreationTime: '133748291020000000',
+      supervisorStatusBefore: 'alive' as const,
+      supervisorStatusAfter: 'dead' as const,
+    };
+    expect(safeProcessDiagnostic(validProcess)).toEqual(validProcess);
+
+    const report = safeProofFailure(
+      'orphan-live-https',
+      Object.assign(new TypeError('fetch failed'), { code: 'ECONNREFUSED' }),
+      validProcess
+    );
+    expect(JSON.parse(report)).toEqual({
+      phase: 'orphan-live-https',
+      exitStatus: null,
+      diagnostic: null,
+      process: validProcess,
+      reason: 'connection_refused',
+    });
+    expect(report.includes(secret)).toBe(false);
+
+    for (const key of [
+      'childCreationTime',
+      'childLiveness',
+      'descriptorMatches',
+      'descriptorState',
+      'supervisorCreationTime',
+      'supervisorStatusBefore',
+      'supervisorStatusAfter',
+      'unexpected',
+    ]) {
+      const tainted = { ...validProcess, [key]: secret };
+      expect(safeProcessDiagnostic(tainted)).toBeUndefined();
+      const safeReport = safeProofFailure(
+        'orphan-live-https',
+        Object.assign(new TypeError('fetch failed'), { code: 'ECONNREFUSED' }),
+        tainted
+      );
+      expect(safeReport.includes(secret)).toBe(false);
+      expect(JSON.parse(safeReport).process).toBeUndefined();
+    }
+
+    for (const invalidPid of [-1, 0, 1.5, Number.NaN, '1234']) {
+      expect(
+        safeProcessDiagnostic({ ...validProcess, childPid: invalidPid })
+      ).toBeUndefined();
+      expect(
+        safeProcessDiagnostic({ ...validProcess, supervisorPid: invalidPid })
+      ).toBeUndefined();
+    }
+  });
+
+  test('reports helper diagnostic and process diagnostic together without collision', () => {
+    const command = new ProofCommandError(
+      1,
+      `${prefix}${JSON.stringify(valid)}`
+    );
+    const validProcess = {
+      childPid: 1234,
+      childCreationTime: '133748291029384756',
+      childLiveness: 'alive' as const,
+      descriptorMatches: true,
+      descriptorState: 'present' as const,
+      supervisorPid: 5678,
+      supervisorCreationTime: '133748291020000000',
+      supervisorStatusBefore: 'alive' as const,
+      supervisorStatusAfter: 'dead' as const,
+    };
+    const report = safeProofFailure(
+      'orphan-kill-supervisor',
+      command,
+      validProcess
+    );
+    expect(JSON.parse(report)).toEqual({
+      phase: 'orphan-kill-supervisor',
+      exitStatus: 1,
+      diagnostic: valid,
+      process: validProcess,
+    });
   });
 });

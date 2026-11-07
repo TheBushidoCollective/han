@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
   ProofCommandError,
+  type SafeProcessDiagnostic,
   safeProofFailure,
 } from './windows-proof-diagnostics.ts';
 
@@ -230,6 +231,22 @@ async function main(): Promise<void> {
   const lock = join(runtime, 'descriptor-publication.lock');
   type Identity = Descriptor['process'];
   const owned: { identity: Identity; image: string }[] = [];
+  let orphanChildIdentity: Identity | undefined;
+  let orphanSupervisorIdentity: Identity | undefined;
+  let orphanSupervisorStatusBefore:
+    | 'alive'
+    | 'dead'
+    | 'mismatched'
+    | 'unknown'
+    | undefined;
+  let orphanSupervisorStatusAfter:
+    | 'alive'
+    | 'dead'
+    | 'mismatched'
+    | 'unknown'
+    | undefined;
+  let expectedDescriptorInstance: string | undefined;
+  let current: Descriptor | undefined;
   let fixture:
     | {
         pid: number;
@@ -268,6 +285,74 @@ async function main(): Promise<void> {
     if (code === 3 || code === 4 || code === 5) return false;
     if (code !== 0) throw new ProofCommandError(code, '');
     return true;
+  };
+  const inspectProcess = async (
+    identity: Identity,
+    image: string
+  ): Promise<'alive' | 'dead' | 'mismatched' | 'unknown'> => {
+    if (
+      !Number.isSafeInteger(identity.pid) ||
+      identity.pid <= 0 ||
+      !/^[1-9][0-9]{0,19}$/.test(identity.creationTime)
+    )
+      return 'unknown';
+    const script = `$p=Get-Process -Id ${identity.pid} -ErrorAction SilentlyContinue; if (!$p) { exit 3 }; $actual=[System.IO.Path]::GetFullPath($p.Path); $expected=[System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $env:HAN_PROOF_IMAGE).Path); if ($actual -ne $expected) { exit 4 }; if ($p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString() -ne $env:HAN_PROOF_TIME) { exit 5 }; exit 0`;
+    try {
+      const child = Bun.spawn(
+        [powershell, '-NoProfile', '-NonInteractive', '-Command', script],
+        {
+          cwd: root,
+          env: {
+            ...env,
+            HAN_PROOF_IMAGE: image,
+            HAN_PROOF_TIME: identity.creationTime,
+          },
+          stdout: 'ignore',
+          stderr: 'ignore',
+        }
+      );
+      const code = await child.exited;
+      if (code === 0) return 'alive';
+      if (code === 3) return 'dead';
+      if (code === 4 || code === 5) return 'mismatched';
+      return 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  };
+  const collectDiagnostic = async (): Promise<
+    SafeProcessDiagnostic | undefined
+  > => {
+    if (!phase.startsWith('orphan-')) return undefined;
+    const targetChild = orphanChildIdentity;
+    if (!targetChild) return undefined;
+    const childLiveness = await inspectProcess(targetChild, coordinator);
+    const diskDescriptor = readDescriptor(data);
+    let descriptorMatches: boolean | null = null;
+    let descriptorState: 'present' | 'absent' | 'mismatched' | 'unknown' =
+      'unknown';
+    if (!diskDescriptor) {
+      descriptorState = 'absent';
+      descriptorMatches = false;
+    } else if (expectedDescriptorInstance) {
+      descriptorMatches =
+        diskDescriptor.instanceId === expectedDescriptorInstance;
+      descriptorState = descriptorMatches ? 'present' : 'mismatched';
+    } else {
+      descriptorState = 'unknown';
+      descriptorMatches = null;
+    }
+    return {
+      childPid: targetChild.pid,
+      childCreationTime: targetChild.creationTime,
+      childLiveness,
+      descriptorMatches,
+      descriptorState,
+      supervisorPid: orphanSupervisorIdentity?.pid ?? null,
+      supervisorCreationTime: orphanSupervisorIdentity?.creationTime ?? null,
+      supervisorStatusBefore: orphanSupervisorStatusBefore ?? null,
+      supervisorStatusAfter: orphanSupervisorStatusAfter ?? null,
+    };
   };
   const register = (d: Descriptor) => {
     const claim = JSON.parse(readFileSync(reservation, 'utf8')) as {
@@ -335,7 +420,7 @@ async function main(): Promise<void> {
     phase = 'initial-start-command';
     await command('coordinator', 'start');
     phase = 'initial-start-descriptor';
-    let current = await started();
+    current = await started();
     phase = 'initial-start-status';
     assert.ok(
       /Coordinator: running/.test(await command('coordinator', 'status'))
@@ -476,8 +561,13 @@ async function main(): Promise<void> {
     current = await started(beforeDeadRestart);
     const orphan = current;
     const deadSupervisor = register(orphan);
+    orphanChildIdentity = orphan.process;
+    expectedDescriptorInstance = orphan.instanceId;
+    orphanSupervisorIdentity = deadSupervisor;
+    orphanSupervisorStatusBefore = await inspectProcess(deadSupervisor, cli);
     phase = 'orphan-kill-supervisor';
     await ensureStopped(deadSupervisor, cli);
+    orphanSupervisorStatusAfter = await inspectProcess(deadSupervisor, cli);
     phase = 'orphan-live';
     await live(orphan, (p) => {
       phase = p;
@@ -493,6 +583,11 @@ async function main(): Promise<void> {
     phase = 'orphan-assert-stopped';
     assert.equal(readDescriptor(data), undefined);
     assert.ok(!existsSync(reservation));
+    orphanChildIdentity = undefined;
+    orphanSupervisorIdentity = undefined;
+    orphanSupervisorStatusBefore = undefined;
+    orphanSupervisorStatusAfter = undefined;
+    expectedDescriptorInstance = undefined;
     phase = 'orphan-restart';
     await command('coordinator', 'restart');
     phase = 'orphan-restart-started';
@@ -692,8 +787,16 @@ async function main(): Promise<void> {
     }
   } catch (error) {
     failed = true;
+    let diagnostic: SafeProcessDiagnostic | undefined;
+    try {
+      diagnostic = await collectDiagnostic();
+    } catch {}
     console.error(
-      `Installed Windows proof failure: ${safeProofFailure(phase, error)}`
+      `Installed Windows proof failure: ${safeProofFailure(
+        phase,
+        error,
+        diagnostic
+      )}`
     );
   } finally {
     if (fixture && fixture.exitCode === null) {

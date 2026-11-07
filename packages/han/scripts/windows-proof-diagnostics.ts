@@ -110,6 +110,76 @@ const phases = [
 ];
 
 export type SafeHelperDiagnostic = Record<string, string | number | null>;
+
+export function validateHelperDiagnostic(
+  value: unknown
+): SafeHelperDiagnostic | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    return undefined;
+  const item = value as Record<string, unknown>;
+  if (Object.keys(item).some((key) => !keys.includes(key))) return undefined;
+  if (
+    typeof item.operation !== 'string' ||
+    !operations.includes(item.operation) ||
+    typeof item.category !== 'string' ||
+    !categories.includes(item.category)
+  )
+    return undefined;
+  if (
+    item.exitStatus !== undefined &&
+    item.exitStatus !== null &&
+    (!Number.isSafeInteger(item.exitStatus) || (item.exitStatus as number) < 0)
+  )
+    return undefined;
+  if (
+    item.spawnCode !== undefined &&
+    item.spawnCode !== null &&
+    (typeof item.spawnCode !== 'string' || !spawnCodes.includes(item.spawnCode))
+  )
+    return undefined;
+  if (
+    item.stage !== undefined &&
+    item.stage !== null &&
+    (typeof item.stage !== 'string' || !stages.includes(item.stage))
+  )
+    return undefined;
+  if (
+    item.kind !== undefined &&
+    item.kind !== null &&
+    (typeof item.kind !== 'string' || !kinds.includes(item.kind))
+  )
+    return undefined;
+  if (
+    item.win32Code !== undefined &&
+    item.win32Code !== null &&
+    (!Number.isSafeInteger(item.win32Code) ||
+      (item.win32Code as number) < 0 ||
+      (item.win32Code as number) > 0xffffffff)
+  )
+    return undefined;
+
+  const result: SafeHelperDiagnostic = {
+    operation: item.operation,
+    category: item.category,
+  };
+  if (item.exitStatus !== undefined && item.exitStatus !== null) {
+    result.exitStatus = item.exitStatus as number;
+  }
+  if (item.spawnCode !== undefined && item.spawnCode !== null) {
+    result.spawnCode = item.spawnCode as string;
+  }
+  if (item.stage !== undefined && item.stage !== null) {
+    result.stage = item.stage as string;
+  }
+  if (item.kind !== undefined && item.kind !== null) {
+    result.kind = item.kind as string;
+  }
+  if (item.win32Code !== undefined && item.win32Code !== null) {
+    result.win32Code = item.win32Code as number;
+  }
+  return result;
+}
+
 export function safeHelperDiagnostic(
   output: string
 ): SafeHelperDiagnostic | undefined {
@@ -117,53 +187,155 @@ export function safeHelperDiagnostic(
     const index = line.indexOf(marker);
     if (index < 0) continue;
     try {
-      const value: unknown = JSON.parse(line.slice(index + marker.length));
-      if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
-      const item = value as Record<string, unknown>;
-      if (
-        Object.keys(item).some((key) => !keys.includes(key)) ||
-        typeof item.operation !== 'string' ||
-        !operations.includes(item.operation) ||
-        typeof item.category !== 'string' ||
-        !categories.includes(item.category)
-      )
-        continue;
-      if (
-        item.exitStatus !== undefined &&
-        (!Number.isSafeInteger(item.exitStatus) ||
-          (item.exitStatus as number) < 0)
-      )
-        continue;
-      if (
-        item.spawnCode !== undefined &&
-        (typeof item.spawnCode !== 'string' ||
-          !spawnCodes.includes(item.spawnCode))
-      )
-        continue;
-      if (
-        item.stage !== undefined &&
-        (typeof item.stage !== 'string' || !stages.includes(item.stage))
-      )
-        continue;
-      if (
-        item.kind !== undefined &&
-        (typeof item.kind !== 'string' || !kinds.includes(item.kind))
-      )
-        continue;
-      if (
-        item.win32Code !== undefined &&
-        item.win32Code !== null &&
-        (!Number.isSafeInteger(item.win32Code) ||
-          (item.win32Code as number) < 0 ||
-          (item.win32Code as number) > 0xffffffff)
-      )
-        continue;
-      return item as Record<string, string | number | null>;
+      const parsed: unknown = JSON.parse(line.slice(index + marker.length));
+      const valid = validateHelperDiagnostic(parsed);
+      if (valid) return valid;
     } catch {
       // An invalid or truncated marker is not a diagnostic.
     }
   }
   return undefined;
+}
+
+const processDiagnosticKeys = [
+  'childPid',
+  'childCreationTime',
+  'childLiveness',
+  'descriptorMatches',
+  'descriptorState',
+  'supervisorPid',
+  'supervisorCreationTime',
+  'supervisorStatusBefore',
+  'supervisorStatusAfter',
+];
+const processLivenessValues = ['alive', 'dead', 'mismatched', 'unknown'];
+const descriptorStates = ['present', 'absent', 'mismatched', 'unknown'];
+const supervisorStatusValues = ['alive', 'dead', 'mismatched', 'unknown'];
+
+export type SafeProcessDiagnostic = {
+  childPid?: number | null;
+  childCreationTime?: string | null;
+  childLiveness?: 'alive' | 'dead' | 'mismatched' | 'unknown' | null;
+  descriptorMatches?: boolean | null;
+  descriptorState?: 'present' | 'absent' | 'mismatched' | 'unknown' | null;
+  supervisorPid?: number | null;
+  supervisorCreationTime?: string | null;
+  supervisorStatusBefore?: 'alive' | 'dead' | 'mismatched' | 'unknown' | null;
+  supervisorStatusAfter?: 'alive' | 'dead' | 'mismatched' | 'unknown' | null;
+};
+
+export function safeProcessDiagnostic(
+  value: unknown
+): SafeProcessDiagnostic | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    return undefined;
+  const item = value as Record<string, unknown>;
+  if (Object.keys(item).some((key) => !processDiagnosticKeys.includes(key)))
+    return undefined;
+  if (
+    item.childPid !== undefined &&
+    item.childPid !== null &&
+    (!Number.isSafeInteger(item.childPid) || (item.childPid as number) <= 0)
+  )
+    return undefined;
+  if (
+    item.childCreationTime !== undefined &&
+    item.childCreationTime !== null &&
+    (typeof item.childCreationTime !== 'string' ||
+      !/^[1-9][0-9]{0,19}$/.test(item.childCreationTime))
+  )
+    return undefined;
+  if (
+    item.childLiveness !== undefined &&
+    item.childLiveness !== null &&
+    (typeof item.childLiveness !== 'string' ||
+      !processLivenessValues.includes(item.childLiveness))
+  )
+    return undefined;
+  if (
+    item.descriptorMatches !== undefined &&
+    item.descriptorMatches !== null &&
+    typeof item.descriptorMatches !== 'boolean'
+  )
+    return undefined;
+  if (
+    item.descriptorState !== undefined &&
+    item.descriptorState !== null &&
+    (typeof item.descriptorState !== 'string' ||
+      !descriptorStates.includes(item.descriptorState))
+  )
+    return undefined;
+  if (
+    item.supervisorPid !== undefined &&
+    item.supervisorPid !== null &&
+    (!Number.isSafeInteger(item.supervisorPid) ||
+      (item.supervisorPid as number) <= 0)
+  )
+    return undefined;
+  if (
+    item.supervisorCreationTime !== undefined &&
+    item.supervisorCreationTime !== null &&
+    (typeof item.supervisorCreationTime !== 'string' ||
+      !/^[1-9][0-9]{0,19}$/.test(item.supervisorCreationTime))
+  )
+    return undefined;
+  if (
+    item.supervisorStatusBefore !== undefined &&
+    item.supervisorStatusBefore !== null &&
+    (typeof item.supervisorStatusBefore !== 'string' ||
+      !supervisorStatusValues.includes(item.supervisorStatusBefore))
+  )
+    return undefined;
+  if (
+    item.supervisorStatusAfter !== undefined &&
+    item.supervisorStatusAfter !== null &&
+    (typeof item.supervisorStatusAfter !== 'string' ||
+      !supervisorStatusValues.includes(item.supervisorStatusAfter))
+  )
+    return undefined;
+
+  const result: SafeProcessDiagnostic = {};
+  if (item.childPid !== undefined && item.childPid !== null) {
+    result.childPid = item.childPid as number;
+  }
+  if (item.childCreationTime !== undefined && item.childCreationTime !== null) {
+    result.childCreationTime = item.childCreationTime as string;
+  }
+  if (item.childLiveness !== undefined && item.childLiveness !== null) {
+    result.childLiveness =
+      item.childLiveness as SafeProcessDiagnostic['childLiveness'];
+  }
+  if (item.descriptorMatches !== undefined && item.descriptorMatches !== null) {
+    result.descriptorMatches = item.descriptorMatches as boolean;
+  }
+  if (item.descriptorState !== undefined && item.descriptorState !== null) {
+    result.descriptorState =
+      item.descriptorState as SafeProcessDiagnostic['descriptorState'];
+  }
+  if (item.supervisorPid !== undefined && item.supervisorPid !== null) {
+    result.supervisorPid = item.supervisorPid as number;
+  }
+  if (
+    item.supervisorCreationTime !== undefined &&
+    item.supervisorCreationTime !== null
+  ) {
+    result.supervisorCreationTime = item.supervisorCreationTime as string;
+  }
+  if (
+    item.supervisorStatusBefore !== undefined &&
+    item.supervisorStatusBefore !== null
+  ) {
+    result.supervisorStatusBefore =
+      item.supervisorStatusBefore as SafeProcessDiagnostic['supervisorStatusBefore'];
+  }
+  if (
+    item.supervisorStatusAfter !== undefined &&
+    item.supervisorStatusAfter !== null
+  ) {
+    result.supervisorStatusAfter =
+      item.supervisorStatusAfter as SafeProcessDiagnostic['supervisorStatusAfter'];
+  }
+  return result;
 }
 
 export class ProofCommandError extends Error {
@@ -182,7 +354,11 @@ export class ProofCommandError extends Error {
   }
 }
 
-export function safeProofFailure(phase: string, error: unknown): string {
+export function safeProofFailure(
+  phase: string,
+  error: unknown,
+  processDiagnostic?: unknown
+): string {
   const command = error instanceof ProofCommandError ? error : undefined;
   let reason: string | undefined;
   if (command?.startupTimeout === true) {
@@ -217,10 +393,31 @@ export function safeProofFailure(phase: string, error: unknown): string {
       reason = 'fetch_failure';
     }
   }
+  let helperDiagnostic: SafeHelperDiagnostic | null =
+    command?.diagnostic ?? null;
+  if (
+    !helperDiagnostic &&
+    error &&
+    typeof error === 'object' &&
+    'diagnostic' in error
+  ) {
+    const validated = validateHelperDiagnostic(error.diagnostic);
+    if (validated) helperDiagnostic = validated;
+  }
+  let errorProcess: unknown;
+  if (error && typeof error === 'object' && 'process' in error) {
+    errorProcess = error.process;
+  }
+  const rawProcess = processDiagnostic ?? errorProcess;
+  const validatedProcess = rawProcess
+    ? safeProcessDiagnostic(rawProcess)
+    : undefined;
+
   return JSON.stringify({
     phase: phases.includes(phase) ? phase : 'setup',
     exitStatus: command?.exitStatus ?? null,
-    diagnostic: command?.diagnostic ?? null,
+    diagnostic: helperDiagnostic,
+    ...(validatedProcess ? { process: validatedProcess } : {}),
     ...(reason ? { reason } : {}),
   });
 }
