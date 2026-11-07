@@ -65,8 +65,8 @@ async fn add_extra_watch_paths(
     db: DatabaseConnection,
     event_tx: broadcast::Sender<DbChangeEvent>,
 ) {
-    let default_claude = dirs::home_dir()
-        .map(|h| h.join(".claude").to_string_lossy().to_string())
+    let default_claude = han_indexer::WatcherService::default_watch_path()
+        .and_then(|path| path.parent().map(|parent| parent.to_string_lossy().to_string()))
         .unwrap_or_default();
 
     let roots = extra_config_dirs

@@ -11,34 +11,44 @@
  * file watching, JSONL indexing, SQLite, FTS, subscriptions.
  */
 
+import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  unlinkSync,
-  writeFileSync,
-} from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { checkHealth } from '../commands/coordinator/health.ts';
-import { ensureCertificates } from '../commands/coordinator/tls.ts';
+  checkDescriptorHealth,
+  checkHealth,
+  checkStartupObserver,
+  descriptorIsDead,
+  readOptionalDescriptor,
+} from '../commands/coordinator/health.ts';
+import { readShutdownIntent } from '../commands/coordinator/shutdown-intent.ts';
+import { getCoordinatorPort } from '../commands/coordinator/types.ts';
 import { getHanDataDir } from '../config/claude-settings.ts';
+import { findCoordinatorBinary } from '../coordinator/binary.ts';
+import {
+  CoordinatorSecurityError,
+  getCoordinatorDataDir,
+  isExplicitConnectionRefusal,
+  type LocalCoordinatorDescriptor,
+  readCoordinatorDescriptor,
+  type SupervisorBinding,
+  sameCoordinator,
+  sameSupervisor,
+} from '../coordinator/connection.ts';
+import { posixPrepare } from '../coordinator/recovery-runtime.ts';
+import {
+  readWindowsChildDescriptor,
+  validWindowsProcessIdentity,
+  type WindowsChildDescriptor,
+  type WindowsClaim,
+  windowsAcquire,
+  windowsPrepareRuntime,
+  windowsProcessState,
+  windowsRelease,
+} from '../coordinator/windows-runtime.ts';
 import { createCoordinatorClients } from '../grpc/client.ts';
 
-/**
- * Is a coordinator serving on this port?
- *
- * Asks the HTTPS `/health` route, which the Rust coordinator actually
- * mounts (see han-rs/crates/han-coordinator/src/server.rs: `/health`,
- * `/graphql`, `/graphiql`). It deliberately does not use the gRPC client's
- * `isCoordinatorHealthy`: that sends a Connect RPC to
- * `https://coordinator.local.han.guru:<https-port>/han.coordinator.CoordinatorService/Health`,
- * which the HTTPS router has no route for and answers 404, while the real
- * RPC surface is plain h2c gRPC on the separate gRPC port. So that probe
- * returned false against a perfectly healthy coordinator, every time, and
- * every han invocation concluded there was none and spawned another one.
- */
 async function isCoordinatorServing(port: number): Promise<boolean> {
-  return (await checkHealth(port)) !== null;
+  return Boolean(await checkHealth(port));
 }
 
 const DEFAULT_PORT = 41957;
@@ -65,6 +75,7 @@ interface CoordinatorState {
   version: string;
   process: Bun.Subprocess | null;
   port: number;
+  ownedDescriptor: LocalCoordinatorDescriptor | null;
   /**
    * True only when *this* process actually spawned the coordinator (the
    * Bun.spawn call succeeded and the resulting process is tracked in
@@ -73,6 +84,7 @@ interface CoordinatorState {
    * Only an owner may send it a shutdown; see stopCoordinatorService.
    */
   ownsProcess: boolean;
+  restartTimer: NodeJS.Timeout | null;
 }
 
 const state: CoordinatorState = {
@@ -80,82 +92,30 @@ const state: CoordinatorState = {
   version: COORDINATOR_VERSION,
   process: null,
   port: DEFAULT_PORT,
+  ownedDescriptor: null,
   ownsProcess: false,
+  restartTimer: null,
 };
+
+export type CoordinatorStartResult =
+  | {
+      kind: 'owned';
+      child: Bun.Subprocess;
+      descriptor: LocalCoordinatorDescriptor;
+    }
+  | { kind: 'attached' }
+  | {
+      kind: 'shutdown-requested';
+      child: Bun.Subprocess;
+      descriptor: LocalCoordinatorDescriptor;
+    };
 
 /**
  * Get the effective coordinator port.
  * Reads HAN_COORDINATOR_PORT at call time (set by server.ts before startup).
  */
 function getEffectivePort(): number {
-  return parseInt(process.env.HAN_COORDINATOR_PORT || '', 10) || state.port;
-}
-
-// ============================================================================
-// Binary Discovery
-// ============================================================================
-
-/**
- * Find the han-coordinator binary.
- * Search order:
- * 0. Local Rust build output (dev mode only)
- * 1. ~/.han/bin/han-coordinator
- * 2. npm platform package bundled binary
- * 3. PATH
- */
-function findCoordinatorBinary(): string | null {
-  const home = process.env.HOME || process.env.USERPROFILE || '/tmp';
-
-  // 0. Local Rust build (dev mode: running from .ts source)
-  const mainFile = process.argv[1] || '';
-  if (mainFile.endsWith('.ts') || mainFile.endsWith('.tsx')) {
-    // packages/han/lib/services/ -> packages/han-rs/target/
-    const pkgRoot = resolve(import.meta.dir, '..', '..', '..');
-    for (const profile of ['release', 'debug']) {
-      const localBin = join(
-        pkgRoot,
-        'han-rs',
-        'target',
-        profile,
-        'han-coordinator'
-      );
-      if (existsSync(localBin)) return localBin;
-    }
-  }
-
-  // 1. ~/.han/bin/han-coordinator
-  const hanBin = join(home, '.han', 'bin', 'han-coordinator');
-  if (existsSync(hanBin)) return hanBin;
-
-  // 2. npm platform package
-  // Resolve via package.json since the binary has no extension and
-  // can't be loaded as a sub-path module via require.resolve directly.
-  const arch = process.arch;
-  const platform = process.platform;
-  try {
-    const pkgName = `@thebushidocollective/han-${platform}-${arch}`;
-    const pkgJsonPath = require.resolve(`${pkgName}/package.json`);
-    const pkgPath = join(dirname(pkgJsonPath), 'han-coordinator');
-    if (existsSync(pkgPath)) return pkgPath;
-  } catch {
-    // Package not installed
-  }
-
-  // 3. PATH lookup via which/where
-  try {
-    const result = Bun.spawnSync(
-      [process.platform === 'win32' ? 'where' : 'which', 'han-coordinator'],
-      { stdout: 'pipe', stderr: 'ignore' }
-    );
-    if (result.exitCode === 0) {
-      const path = result.stdout.toString().trim();
-      if (path && existsSync(path)) return path;
-    }
-  } catch {
-    // Not in PATH
-  }
-
-  return null;
+  return getCoordinatorPort();
 }
 
 // ============================================================================
@@ -184,12 +144,13 @@ function getHealthBudgetMs(): number {
  */
 async function waitForHealthy(
   port: number,
-  budgetMs = getHealthBudgetMs()
+  budgetMs = getHealthBudgetMs(),
+  predecessor: LocalCoordinatorDescriptor | null = null
 ): Promise<boolean> {
   const deadline = Date.now() + budgetMs;
   let delay = 100;
   while (Date.now() < deadline) {
-    if (await isCoordinatorServing(port)) {
+    if (await checkStartupObserver(port, predecessor)) {
       return true;
     }
     await Bun.sleep(Math.min(delay, deadline - Date.now()));
@@ -278,7 +239,11 @@ function writeSpawnGuard(guardPath: string): boolean {
  * claims this guard actually spawns; everyone else falls through to
  * waitForHealthy instead. Returns true if this call now owns the guard.
  */
-function claimSpawnGuard(): boolean {
+function claimSpawnGuard(): boolean | WindowsClaim {
+  if (process.platform === 'win32') {
+    const result = windowsAcquire(getCoordinatorDataDir(), 'spawn');
+    return result.status === 'blocked' ? false : result.claim;
+  }
   const guardPath = join(getHanDataDir(), SPAWN_GUARD_FILENAME);
   try {
     mkdirSync(dirname(guardPath), { recursive: true });
@@ -311,7 +276,13 @@ function claimSpawnGuard(): boolean {
  * claimed it after we went stale) and must never be unlinked out from under
  * them.
  */
-function releaseSpawnGuard(): void {
+function releaseSpawnGuard(claim: boolean | WindowsClaim): void {
+  if (process.platform === 'win32') {
+    if (typeof claim !== 'object')
+      throw new CoordinatorSecurityError('Missing Windows spawn claim');
+    windowsRelease(getCoordinatorDataDir(), 'spawn', claim);
+    return;
+  }
   const guardPath = join(getHanDataDir(), SPAWN_GUARD_FILENAME);
   const existing = readSpawnGuard(guardPath);
   if (existing?.pid === process.pid) {
@@ -331,6 +302,8 @@ function releaseSpawnGuard(): void {
  * actionable ("is there already a live-but-unresponsive incumbent?").
  */
 function readIncumbentCoordinatorPid(): number | null {
+  // Windows lock PIDs are informational and do not establish process identity.
+  if (process.platform === 'win32') return null;
   try {
     const lockPath = join(getHanDataDir(), 'coordinator.lock');
     const parsed = JSON.parse(readFileSync(lockPath, 'utf-8'));
@@ -351,7 +324,7 @@ function buildHealthFailureMessage(port: number, budgetMs: number): string {
     : '';
   return (
     `[coordinator] Coordinator on port ${port} failed its health check ` +
-    `after ${budgetMs}ms.${incumbentNote} See ${join(getHanDataDir(), 'coordinator.log')} for details.`
+    `after ${budgetMs}ms.${incumbentNote} See ${join(process.platform === 'win32' ? getCoordinatorDataDir() : getHanDataDir(), 'coordinator.log')} for details.`
   );
 }
 
@@ -365,31 +338,85 @@ function buildHealthFailureMessage(port: number, budgetMs: number): string {
  * If the coordinator is already running (another process), this just
  * verifies connectivity. Otherwise, spawns the Rust binary as a daemon.
  */
-export async function startCoordinatorService(): Promise<void> {
-  if (state.isRunning) {
-    console.log('[coordinator] Already running');
-    return;
-  }
-
+export async function startCoordinatorService(
+  options: { supervisor?: SupervisorBinding } = {}
+): Promise<CoordinatorStartResult> {
+  if (process.platform === 'win32')
+    windowsPrepareRuntime(getCoordinatorDataDir());
+  else posixPrepare(getCoordinatorDataDir());
   const port = getEffectivePort();
-
-  // Check if coordinator is already running (from another process)
-  if (await isCoordinatorServing(port)) {
-    console.log('[coordinator] Coordinator already running, connecting...');
+  const cachedDescriptor = state.isRunning ? readOptionalDescriptor() : null;
+  if (
+    state.isRunning &&
+    cachedDescriptor &&
+    !descriptorIsDead(cachedDescriptor)
+  ) {
+    let cachedHealthy = false;
+    try {
+      await checkDescriptorHealth(cachedDescriptor, port);
+      const current = readOptionalDescriptor();
+      if (!current || !sameCoordinator(current, cachedDescriptor)) {
+        throw new CoordinatorSecurityError(
+          'Coordinator descriptor changed during health check'
+        );
+      }
+      cachedHealthy = true;
+    } catch (error) {
+      if (!isExplicitConnectionRefusal(error)) {
+        throw error;
+      }
+    }
+    if (cachedHealthy) {
+      if (state.ownsProcess && state.process && state.ownedDescriptor) {
+        if (
+          state.process.exitCode === null &&
+          sameCoordinator(cachedDescriptor, state.ownedDescriptor) &&
+          sameSupervisor(
+            cachedDescriptor.supervisor,
+            options.supervisor ?? null
+          )
+        ) {
+          return {
+            kind: 'owned',
+            child: state.process,
+            descriptor: state.ownedDescriptor,
+          };
+        }
+        // The healthy instance is not this generation's child. Relinquish the
+        // old handle without signalling either process.
+        if (state.process.exitCode === null) state.process.unref();
+        state.process = null;
+        state.ownsProcess = false;
+        state.ownedDescriptor = null;
+        state.port = cachedDescriptor.httpsPort;
+      }
+      return { kind: 'attached' };
+    }
+  }
+  state.isRunning = false;
+  const selected = readOptionalDescriptor();
+  const predecessor = selected && descriptorIsDead(selected) ? selected : null;
+  if (!predecessor && (await isCoordinatorServing(port))) {
+    const current = readOptionalDescriptor();
+    if (selected && (!current || !sameCoordinator(current, selected))) {
+      throw new CoordinatorSecurityError(
+        'Coordinator descriptor changed during health check'
+      );
+    }
     state.isRunning = true;
-    state.port = port;
+    state.port = selected ? selected.httpsPort : (current?.httpsPort ?? port);
     state.ownsProcess = false;
-    return;
+    state.ownedDescriptor = null;
+    console.log(
+      '[coordinator] Already running, connected to existing coordinator'
+    );
+    return { kind: 'attached' };
   }
 
   // Find the binary
   const binaryPath = findCoordinatorBinary();
   if (!binaryPath) {
-    console.error(
-      '[coordinator] han-coordinator binary not found. ' +
-        'Install via: curl -fsSL https://han.guru/install.sh | bash'
-    );
-    return;
+    throw new Error('[coordinator] han-coordinator binary not found');
   }
 
   // Cross-process spawn guard. An unhealthy coordinator doesn't mean no one
@@ -398,84 +425,225 @@ export async function startCoordinatorService(): Promise<void> {
   // about to spawn its own han-coordinator against the same database. Only
   // the process that claims this guard spawns; everyone else waits on
   // health instead of piling on more processes.
-  if (!claimSpawnGuard()) {
+  const spawnClaim = claimSpawnGuard();
+  if (!spawnClaim) {
     console.log(
       '[coordinator] Another process is already starting the coordinator, waiting for it to become healthy...'
     );
     const budgetMs = getHealthBudgetMs();
-    const healthy = await waitForHealthy(port, budgetMs);
+    const healthy = await waitForHealthy(port, budgetMs, predecessor);
     if (healthy) {
       state.isRunning = true;
-      state.port = port;
+      state.port = readOptionalDescriptor()?.httpsPort ?? port;
       state.ownsProcess = false;
+      state.ownedDescriptor = null;
       console.log('[coordinator] Coordinator started and healthy');
     } else {
-      console.error(buildHealthFailureMessage(port, budgetMs));
+      throw new Error(buildHealthFailureMessage(port, budgetMs));
     }
-    return;
+    return { kind: 'attached' };
   }
 
   try {
     console.log(`[coordinator] Starting ${binaryPath} on port ${port}`);
 
-    // Cache real Let's Encrypt certificates before the Rust binary reads them.
-    // han-coordinator only *reads* ~/.claude/han/certs and self-signs when that
-    // cache is empty, and a self-signed cert is one the dashboard's browser
-    // refuses, leaving it stuck on "Connecting to Han Coordinator...". Fetching
-    // is best-effort: on failure the coordinator still starts, just self-signed.
-    const credentials = await ensureCertificates();
-    if (!credentials) {
-      console.error(
-        '[coordinator] No trusted certificate available; the dashboard may not ' +
-          'be able to connect. Falling back to a self-signed certificate.'
-      );
-    }
-
+    // The daemon creates an ephemeral certificate and publishes its public descriptor.
+    state.ownedDescriptor = null;
+    let stopping:
+      | ((
+          expectedCandidate?: LocalCoordinatorDescriptor
+        ) => Promise<LocalCoordinatorDescriptor | null>)
+      | null = null;
     try {
-      // Spawn Rust coordinator binary (daemonizes by default, no --daemon flag)
+      // On Windows, Bun otherwise puts the child in a kill-on-close job.
+      // Detaching lets the coordinator survive a supervisor crash for recovery.
       state.process = Bun.spawn(
-        [binaryPath, '--port', String(port), '--scan-on-start'],
+        [
+          binaryPath,
+          '--foreground',
+          ...(process.platform === 'win32' ? ['--startup-receipt'] : []),
+          '--port',
+          String(port),
+          ...(port === 0 ? ['--grpc-port', '0'] : []),
+          '--data-dir',
+          getCoordinatorDataDir(),
+          '--scan-on-start',
+          ...(options.supervisor
+            ? [
+                '--supervisor-pid',
+                String(options.supervisor.pid),
+                '--supervisor-nonce',
+                options.supervisor.nonce,
+                '--supervisor-generation',
+                options.supervisor.generationId,
+              ]
+            : []),
+        ],
         {
-          stdout: 'ignore',
+          detached: process.platform === 'win32',
+          stdout: process.platform === 'win32' ? 'pipe' : 'ignore',
           stderr: 'ignore',
         }
       );
-      // Don't keep parent alive
-      state.process.unref();
+      // A foreground supervisor must stay alive until it reaps its child and
+      // releases the generation's shutdown intent and ownership records.
+      if (!options.supervisor) state.process.unref();
       state.ownsProcess = true;
 
-      // Wait for it to become healthy
+      const child = state.process;
       const budgetMs = getHealthBudgetMs();
-      const healthy = await waitForHealthy(port, budgetMs);
-      if (healthy) {
-        state.isRunning = true;
-        state.port = port;
-        console.log('[coordinator] Coordinator started and healthy');
-      } else {
-        // Don't leak an orphaned child running a full --scan-on-start against
-        // a multi-GB database; kill it before dropping the handle.
-        try {
-          state.process?.kill();
-        } catch {
-          // Best-effort — process may have already exited.
+      const deadline = Date.now() + budgetMs;
+      const receiptPromise =
+        process.platform === 'win32'
+          ? readWindowsChildDescriptor(
+              child,
+              options.supervisor ?? null,
+              deadline
+            )
+          : Promise.resolve(null);
+      let spawnDescriptor: WindowsChildDescriptor | null = null;
+      let receiptResolved = false;
+      const getSpawnDescriptor =
+        async (): Promise<WindowsChildDescriptor | null> => {
+          if (!receiptResolved) {
+            spawnDescriptor = await receiptPromise;
+            receiptResolved = true;
+          }
+          return spawnDescriptor;
+        };
+      const matchesChild = (
+        descriptor: LocalCoordinatorDescriptor,
+        expected?: WindowsChildDescriptor | null,
+        allowExited = false
+      ): boolean => {
+        if (
+          (!allowExited && child.exitCode !== null) ||
+          descriptor.pid !== child.pid ||
+          !sameSupervisor(descriptor.supervisor, options.supervisor ?? null)
+        )
+          return false;
+        if (process.platform !== 'win32') return true;
+        if (!expected || !sameCoordinator(descriptor, expected)) return false;
+        const state = windowsProcessState(
+          getCoordinatorDataDir(),
+          expected.process
+        );
+        return allowExited || state === 'alive';
+      };
+      let delay = 100;
+      stopping = async (expectedCandidate?: LocalCoordinatorDescriptor) => {
+        if (!options.supervisor) return null;
+        const expected =
+          process.platform === 'win32'
+            ? await getSpawnDescriptor()
+            : (expectedCandidate ?? state.ownedDescriptor ?? undefined);
+        if (process.platform === 'win32' && !expected) return null;
+        const intent = readShutdownIntent(
+          options.supervisor,
+          child.pid,
+          expected ?? undefined
+        );
+        if (
+          intent &&
+          !matchesChild(intent, expected as WindowsChildDescriptor | null, true)
+        )
+          throw new CoordinatorSecurityError(
+            'Shutdown intent child identity mismatch'
+          );
+        return intent;
+      };
+      while (Date.now() < deadline) {
+        const intent = await stopping();
+        if (intent)
+          return { kind: 'shutdown-requested', child, descriptor: intent };
+        const descriptor = readOptionalDescriptor();
+        if (
+          descriptor &&
+          predecessor &&
+          sameCoordinator(descriptor, predecessor)
+        ) {
+          if (!descriptorIsDead(predecessor))
+            throw new CoordinatorSecurityError(
+              'Previous coordinator is still alive'
+            );
+        } else if (
+          descriptor &&
+          matchesChild(
+            descriptor,
+            process.platform === 'win32' ? await getSpawnDescriptor() : null
+          )
+        ) {
+          await checkDescriptorHealth(descriptor, port);
+          const current = readOptionalDescriptor();
+          if (current && !sameCoordinator(current, descriptor))
+            throw new CoordinatorSecurityError(
+              'Coordinator changed during startup'
+            );
+          const committed = await stopping(descriptor);
+          if (committed)
+            return { kind: 'shutdown-requested', child, descriptor: committed };
+          const activeSpawn =
+            process.platform === 'win32' ? await getSpawnDescriptor() : null;
+          if (
+            !current ||
+            !sameCoordinator(current, descriptor) ||
+            !matchesChild(descriptor, activeSpawn)
+          )
+            throw new CoordinatorSecurityError(
+              'Coordinator changed during startup'
+            );
+          state.ownedDescriptor = descriptor;
+          state.isRunning = true;
+          state.port = descriptor.httpsPort;
+          return { kind: 'owned', child, descriptor };
+        } else if (child.exitCode !== null) {
+          const intent = await stopping();
+          if (intent)
+            return { kind: 'shutdown-requested', child, descriptor: intent };
+          if (descriptor && (await checkStartupObserver(port, predecessor))) {
+            state.process = null;
+            state.ownsProcess = false;
+            state.isRunning = true;
+            state.port = (descriptor ?? readCoordinatorDescriptor()).httpsPort;
+            return { kind: 'attached' };
+          }
+          throw new Error('Coordinator child exited during startup');
         }
-        console.error(buildHealthFailureMessage(port, budgetMs));
-        state.process = null;
-        state.ownsProcess = false;
+        await Bun.sleep(Math.min(delay, Math.max(0, deadline - Date.now())));
+        delay = Math.min(delay * 2, 2000);
       }
+      throw new Error(buildHealthFailureMessage(port, budgetMs));
     } catch (error) {
-      console.error('[coordinator] Failed to start coordinator:', error);
+      if (
+        options.supervisor &&
+        state.process &&
+        stopping &&
+        isExplicitConnectionRefusal(error)
+      ) {
+        try {
+          const intent = await stopping();
+          if (intent)
+            return {
+              kind: 'shutdown-requested',
+              child: state.process,
+              descriptor: intent,
+            };
+        } catch {}
+      }
+      if (state.process && state.process.exitCode === null)
+        state.process.unref();
       state.process = null;
       state.ownsProcess = false;
+      throw error;
     }
   } finally {
-    releaseSpawnGuard();
+    releaseSpawnGuard(spawnClaim);
   }
 }
 
 /**
  * Stop the coordinator service.
- * Sends graceful shutdown via gRPC, falls back to process kill.
+ * Sends an authenticated graceful shutdown to the owned coordinator.
  *
  * Only sends the shutdown when this process actually owns the coordinator
  * process (i.e. it spawned it). On the attach path — where an
@@ -484,11 +652,15 @@ export async function startCoordinatorService(): Promise<void> {
  * `han` invocation is relying on.
  */
 export async function stopCoordinatorService(): Promise<void> {
-  if (!state.isRunning) return;
-
-  state.isRunning = false;
+  if (state.restartTimer) {
+    clearTimeout(state.restartTimer);
+    state.restartTimer = null;
+  }
+  if (!state.isRunning && !state.ownsProcess) return;
 
   if (!state.ownsProcess) {
+    state.isRunning = false;
+    state.ownedDescriptor = null;
     state.process = null;
     console.log(
       '[coordinator] Detached (did not own the coordinator process; leaving it running)'
@@ -496,23 +668,74 @@ export async function stopCoordinatorService(): Promise<void> {
     return;
   }
 
+  const owned = state.ownedDescriptor;
+  const child = state.process;
+  if (!owned || !child) {
+    state.isRunning = false;
+    state.ownsProcess = false;
+    state.ownedDescriptor = null;
+    state.process = null;
+    return;
+  }
+
+  if (child.exitCode !== null) {
+    state.isRunning = false;
+    state.ownsProcess = false;
+    state.ownedDescriptor = null;
+    state.process = null;
+    return;
+  }
+
+  let current: LocalCoordinatorDescriptor | null = null;
   try {
-    const clients = createCoordinatorClients(state.port);
+    current = readCoordinatorDescriptor();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  if (current && !sameCoordinator(current, owned)) {
+    state.isRunning = false;
+    state.ownsProcess = false;
+    state.ownedDescriptor = null;
+    state.process = null;
+    return;
+  }
+
+  try {
+    const clients = createCoordinatorClients(owned.httpsPort, owned);
     await clients.coordinator.shutdown({
       graceful: true,
       timeoutSeconds: 5,
     });
     console.log('[coordinator] Graceful shutdown sent');
-  } catch {
-    // If gRPC shutdown fails, kill the process directly
-    if (state.process) {
-      state.process.kill();
-      console.log('[coordinator] Process killed');
+  } catch (error) {
+    if (!isExplicitConnectionRefusal(error)) {
+      throw error;
+    }
+    const committed =
+      owned.supervisor && state.process
+        ? readShutdownIntent(owned.supervisor, state.process.pid, owned)
+        : null;
+    const childIsDead =
+      process.platform === 'win32'
+        ? !!owned.process &&
+          validWindowsProcessIdentity(owned.process) &&
+          windowsProcessState(getCoordinatorDataDir(), owned.process) === 'gone'
+        : state.process
+          ? state.process.exitCode !== null
+          : false;
+    if (!committed && !childIsDead) {
+      throw error;
     }
   }
 
-  state.process = null;
+  state.isRunning = false;
   state.ownsProcess = false;
+  state.ownedDescriptor = null;
+  state.process = null;
+  state.port = DEFAULT_PORT;
   console.log('[coordinator] Service stopped');
 }
 
@@ -567,11 +790,24 @@ export function checkClientVersion(clientVersion: string): boolean {
     console.log(
       `[coordinator] Client version ${clientVersion} > coordinator version ${state.version}, scheduling restart`
     );
+    if (state.restartTimer) {
+      clearTimeout(state.restartTimer);
+      state.restartTimer = null;
+    }
     // Schedule restart after a short delay
-    setTimeout(async () => {
-      console.log('[coordinator] Restarting for version upgrade...');
-      await stopCoordinatorService();
-      await startCoordinatorService();
+    state.restartTimer = setTimeout(async () => {
+      try {
+        console.log('[coordinator] Restarting for version upgrade...');
+        await stopCoordinatorService();
+        await startCoordinatorService();
+      } catch (err) {
+        console.error(
+          '[coordinator] Failed to restart for version upgrade:',
+          err
+        );
+      } finally {
+        state.restartTimer = null;
+      }
     }, 1000);
     return true;
   }
@@ -600,7 +836,10 @@ export async function indexFile(filePath: string): Promise<void> {
  * Returns true if coordinator is available.
  */
 export async function ensureCoordinator(): Promise<boolean> {
-  if (state.isRunning && (await isCoordinatorServing(state.port))) {
+  if (process.platform === 'win32')
+    windowsPrepareRuntime(getCoordinatorDataDir());
+  const configuredPort = getEffectivePort();
+  if (state.isRunning && (await isCoordinatorServing(configuredPort))) {
     return true;
   }
 

@@ -123,13 +123,12 @@ pub struct WatcherService {
 
 impl WatcherService {
     /// Create a new watcher service.
-    /// Defaults to `~/.claude/projects` if no path is given.
+    /// Defaults to the configured Claude projects directory when no path is given.
     pub fn new(watch_path: Option<PathBuf>) -> WatcherResult<Self> {
         let path = if let Some(p) = watch_path {
             p
         } else {
-            let home = dirs::home_dir().ok_or(WatcherError::NoHomeDir)?;
-            home.join(".claude").join("projects")
+            Self::default_watch_path().ok_or(WatcherError::NoHomeDir)?
         };
 
         if !path.exists() {
@@ -256,10 +255,24 @@ impl WatcherService {
         self.running.load(Ordering::Relaxed)
     }
 
-    /// Get the default watch path (`~/.claude/projects`).
+    /// Get the default watch path.
+    ///
+    /// An absolute `CLAUDE_CONFIG_DIR` wins. On Windows, `dirs::home_dir`
+    /// ignores `HOME` and `USERPROFILE`, so the explicit config directory is
+    /// the isolated path tests and launchers actually write.
     pub fn default_watch_path() -> Option<PathBuf> {
-        dirs::home_dir().map(|h| h.join(".claude").join("projects"))
+        claude_config_dir().map(|config| config.join("projects"))
     }
+}
+
+fn claude_config_dir() -> Option<PathBuf> {
+    if let Some(value) = std::env::var_os("CLAUDE_CONFIG_DIR") {
+        let path = PathBuf::from(value);
+        if path.is_absolute() {
+            return Some(path);
+        }
+    }
+    dirs::home_dir().map(|home| home.join(".claude"))
 }
 
 impl Drop for WatcherService {

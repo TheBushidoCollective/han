@@ -26,9 +26,586 @@ on:
   workflow_dispatch:
 
 jobs:
-  validate:
+  windows-native-primitives:
+    runs-on: windows-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install protoc
+        uses: taiki-e/install-action@v2
+        with:
+          tool: protoc
+          fallback: none
+      - name: Test native security primitives
+        working-directory: packages/han-rs
+        run: cargo test --locked -p han-coordinator windows_
+      - name: Test complete native wire integration
+        working-directory: packages/han-rs
+        run: cargo test --locked -p han-coordinator --test windows_local_transport
+      - name: Prove distinct-user isolation
+        shell: pwsh
+        run: ./packages/han-rs/crates/han-coordinator/tests/windows_cross_user.ps1 -Coordinator ./packages/han-rs/target/debug/han-coordinator.exe
+      - name: Install CLI dependencies
+        working-directory: packages/han
+        run: bun install --frozen-lockfile
+      - name: Compile Windows CLI for acceptance
+        timeout-minutes: 20
+        working-directory: packages/han
+        run: bun scripts/build-bundle.js bun-windows-x64
+      - name: Test Windows bridge and security controls
+        working-directory: packages/han
+        shell: pwsh
+        run: |
+          $tests = @(
+            'test/coordinator-binary-windows.test.ts',
+            'test/coordinator-windows-runtime.test.ts',
+            'test/coordinator-windows-health.test.ts',
+            'test/coordinator-windows-startup.test.ts',
+            'test/windows-proof-diagnostics.test.ts',
+            'test/coordinator-windows-receipt.test.ts',
+            'test/windows-proof-bounds.test.ts',
+            'test/windows-probe-diagnostic.test.ts'
+          )
+          foreach ($test in $tests) {
+            bun test $test
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Diagnostic replay installed Windows probe
+        timeout-minutes: 17
+        shell: pwsh
+        env:
+          HAN_PROOF_PROBE_DIAGNOSTIC: "1"
+          HAN_PROOF_DEADLINE_MS: "660000"
+          HAN_PROOF_CLEANUP_MS: "180000"
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $cli = @(Get-ChildItem packages/han/dist/binaries/han-windows-x64*)
+          if ($cli.Count -ne 1) { throw "Expected exactly one Windows CLI binary" }
+          $sw = [System.Diagnostics.Stopwatch]::StartNew()
+          $raw = [System.Collections.Generic.List[string]]::new()
+          & bun packages/han/scripts/prove-installed-windows-coordinator.ts $cli[0].FullName packages/han-rs/target/debug/han-coordinator.exe 2>&1 | ForEach-Object { $raw.Add("$_") }
+          $code = $LASTEXITCODE
+          $sw.Stop()
+          Write-Host "Diagnostic replay elapsed time: $($sw.Elapsed.TotalSeconds)s"
+          if ($code -ne 1) { throw "Expected exit code 1" }
+          $lines = @($raw | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
+          if ($lines.Count -eq 0) { throw "Diagnostic replay produced no output lines" }
+          foreach ($line in $lines) {
+            if ($line -notmatch '^Installed Windows (proof (progress|failure|cleanup)|probe diagnostic): \{.*\}$') {
+              throw "Unexpected line format in diagnostic replay output"
+            }
+            if ($line -match 'BEGIN CERTIFICATE' -or $line -match 'Bearer' -or $line.Contains('\')) {
+              throw "Forbidden token or backslash found in diagnostic replay output"
+            }
+            Write-Host $line
+          }
+          $fails = @($lines | Where-Object { $_.StartsWith('Installed Windows proof failure: ') })
+          if ($fails.Count -ne 1) { throw "Expected exactly 1 failure line in diagnostic replay" }
+          $failureJson = $fails[0] -replace '^Installed Windows proof failure:\s*', '' | ConvertFrom-Json
+          if ($failureJson.phase -ne 'initial-start-coordinator') { throw "Expected phase 'initial-start-coordinator' in diagnostic replay failure" }
+          if ($failureJson.reason -ne 'probe_diagnostic') { throw "Expected reason 'probe_diagnostic' in diagnostic replay failure" }
+
+          $expectedVariants = @(
+            'proof-hidden-traced',
+            'os-liveness-control',
+            'proof-fresh-hidden-untraced',
+            'proof-fresh-visible-traced',
+            'runner-hidden-traced'
+          )
+          $diagnosticRecords = @($lines | Where-Object { $_.StartsWith('Installed Windows probe diagnostic: ') } | ForEach-Object {
+            $_ -replace '^Installed Windows probe diagnostic:\s*', '' | ConvertFrom-Json
+          })
+          if ($diagnosticRecords.Count -ne $expectedVariants.Count) {
+            throw "Diagnostic records count does not match expected variants count"
+          }
+          for ($i = 0; $i -lt $expectedVariants.Count; $i++) {
+            $rec = $diagnosticRecords[$i]
+            if ($rec.variant -ne $expectedVariants[$i]) {
+              throw "Variant sequence mismatch at index $i"
+            }
+            if ($rec.reaped -ne $true) {
+              throw "Variant not reaped at index $i"
+            }
+            if ($rec.variant -eq 'os-liveness-control') {
+              if ($rec.classified -ne 'exited' -or $rec.bunExitedBeforeCheck -ne $false) {
+                throw "OS liveness control failed validity check"
+              }
+            } else {
+              if ($rec.exitCode -ne 0 -and $rec.killedAtCap -ne $true) {
+                throw "Diagnostic variant did not reach expected target coordinator status"
+              }
+            }
+          }
+
+          $cleanupRecords = @($lines | Where-Object { $_.StartsWith('Installed Windows proof cleanup: ') } | ForEach-Object {
+            $_ -replace '^Installed Windows proof cleanup:\s*', '' | ConvertFrom-Json
+          })
+          $completeOk = @($cleanupRecords | Where-Object { $_.step -eq 'complete' -and $_.ok -eq $true })
+          if ($completeOk.Count -ne 1) { throw "Expected exactly 1 cleanup record with step:complete and ok:true in diagnostic replay" }
+          $cleanupFails = @($cleanupRecords | Where-Object { $_.ok -ne $true })
+          if ($cleanupFails.Count -gt 0) { throw "Diagnostic replay cleanup failed on one or more steps" }
+          exit 0
+      - name: Check for leftover processes after diagnostic replay
+        if: always()
+        timeout-minutes: 2
+        shell: pwsh
+        run: |
+          $m = '\han-windows-installed-'
+          $left = @(Get-Process | Where-Object {
+            try {
+              $_.Path -and $_.Path.IndexOf($m, [StringComparison]::OrdinalIgnoreCase) -ge 0
+            } catch {
+              $false
+            }
+          })
+          "Installed Windows proof leftover processes: $($left.Count)"
+          if ($left.Count) {
+            $left | ForEach-Object { Stop-Process -InputObject $_ -Force -ErrorAction SilentlyContinue }
+            exit 1
+          }
+      - name: Negative control installed Windows pair
+        if: success() || failure()
+        timeout-minutes: 8
+        shell: pwsh
+        env:
+          HAN_PROOF_DEADLINE_MS: "60000"
+          HAN_PROOF_CLEANUP_MS: "180000"
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $cli = @(Get-ChildItem packages/han/dist/binaries/han-windows-x64*)
+          if ($cli.Count -ne 1) { throw "Expected exactly one Windows CLI binary" }
+          $sw = [System.Diagnostics.Stopwatch]::StartNew()
+          $raw = [System.Collections.Generic.List[string]]::new()
+          & bun packages/han/scripts/prove-installed-windows-coordinator.ts $cli[0].FullName packages/han-rs/target/debug/han-coordinator.exe 2>&1 | ForEach-Object { $raw.Add("$_") }
+          $code = $LASTEXITCODE
+          $sw.Stop()
+          Write-Host "Negative control elapsed time: $($sw.Elapsed.TotalSeconds)s"
+          if ($code -ne 1) { throw "Expected exit code 1" }
+          $lines = @($raw | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
+          if ($lines.Count -eq 0) { throw "Negative control produced no output lines" }
+          foreach ($line in $lines) {
+            if ($line -notmatch '^Installed Windows proof (progress|failure|cleanup): \{.*\}$') {
+              throw "Unexpected line format in negative control output"
+            }
+            if ($line -match 'BEGIN CERTIFICATE' -or $line -match 'Bearer') {
+              throw "Forbidden credential token found in negative control output"
+            }
+            Write-Host $line
+          }
+          $fails = @($lines | Where-Object { $_.StartsWith('Installed Windows proof failure: ') })
+          if ($fails.Count -ne 1) { throw "Expected exactly 1 failure line in negative control" }
+          $failureJson = $fails[0] -replace '^Installed Windows proof failure:\s*', '' | ConvertFrom-Json
+          if ($failureJson.reason -ne 'deadline') { throw "Expected reason 'deadline' in negative control" }
+
+          $phasesJson = & bun -e "import { phases } from './packages/han/scripts/windows-proof-diagnostics.ts'; console.log(JSON.stringify(phases))"
+          if ($LASTEXITCODE -ne 0 -or -not $phasesJson) {
+            throw "Failed to load authoritative phases from windows-proof-diagnostics.ts"
+          }
+          $allowedPhases = @($phasesJson | ConvertFrom-Json)
+          if ($allowedPhases.Count -eq 0) {
+            throw "Authoritative phases list is empty"
+          }
+          if ($allowedPhases -notcontains $failureJson.phase) {
+            throw "Phase in negative control is not in allowlisted phases"
+          }
+
+          $progressRecords = @($lines | Where-Object { $_.StartsWith('Installed Windows proof progress: ') } | ForEach-Object {
+            $_ -replace '^Installed Windows proof progress:\s*', '' | ConvertFrom-Json
+          })
+          $healthIndex = $allowedPhases.IndexOf('initial-start-health')
+          $healthProgress = @($progressRecords | Where-Object {
+            $allowedPhases.IndexOf($_.phase) -ge $healthIndex -and $_.previous -and $_.previous.probeCount -ge 1
+          })
+          if ($healthProgress.Count -lt 1) {
+            throw "Expected progress at initial-start-health or later with previous probeCount >= 1"
+          }
+
+          $cleanupRecords = @($lines | Where-Object { $_.StartsWith('Installed Windows proof cleanup: ') } | ForEach-Object {
+            $_ -replace '^Installed Windows proof cleanup:\s*', '' | ConvertFrom-Json
+          })
+          $completeOk = @($cleanupRecords | Where-Object { $_.step -eq 'complete' -and $_.ok -eq $true })
+          if ($completeOk.Count -ne 1) { throw "Expected exactly 1 cleanup record with step:complete and ok:true in negative control" }
+          $cleanupFails = @($cleanupRecords | Where-Object { $_.ok -ne $true })
+          if ($cleanupFails.Count -gt 0) { throw "Negative control cleanup failed on one or more steps" }
+
+          if ($sw.Elapsed.TotalSeconds -gt 270) { throw "Wall time exceeded 270s" }
+          exit 0
+      - name: Check for leftover processes after negative control
+        if: always()
+        timeout-minutes: 2
+        shell: pwsh
+        run: |
+          $m = '\han-windows-installed-'
+          $left = @(Get-Process | Where-Object {
+            try {
+              $_.Path -and $_.Path.IndexOf($m, [StringComparison]::OrdinalIgnoreCase) -ge 0
+            } catch {
+              $false
+            }
+          })
+          "Installed Windows proof leftover processes: $($left.Count)"
+          if ($left.Count) {
+            $left | ForEach-Object { Stop-Process -InputObject $_ -Force -ErrorAction SilentlyContinue }
+            exit 1
+          }
+      - name: Prove installed Windows pair
+        timeout-minutes: 42
+        shell: pwsh
+        env:
+          HAN_PROOF_DEADLINE_MS: "2100000"
+          HAN_PROOF_CLEANUP_MS: "180000"
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $cli = @(Get-ChildItem packages/han/dist/binaries/han-windows-x64*)
+          if ($cli.Count -ne 1) { throw "Expected exactly one Windows CLI binary" }
+          $raw = [System.Collections.Generic.List[string]]::new()
+          & bun packages/han/scripts/prove-installed-windows-coordinator.ts $cli[0].FullName packages/han-rs/target/debug/han-coordinator.exe 2>&1 | ForEach-Object { $line = "$_"; Write-Host $line; $raw.Add($line) }
+          $code = $LASTEXITCODE
+          if ($code -ne 0) { throw "Installed pair proof failed with exit code $code" }
+          $pass = @($raw | Where-Object { $_ -match '^Installed Windows CLI: authenticated transport' })
+          if ($pass.Count -ne 1) { throw "Expected explicit installed proof pass line, got $($pass.Count)" }
+          $cleanupFailures = @($raw | Where-Object { $_ -match '^Installed Windows proof (failure:.*cleanup|cleanup:.*"ok":false)' })
+          if ($cleanupFailures.Count -gt 0) { throw "Installed pair cleanup failed: $($cleanupFailures -join '; ')" }
+      - name: Check for leftover processes after installed pair
+        if: always()
+        timeout-minutes: 2
+        shell: pwsh
+        run: |
+          $m = '\han-windows-installed-'
+          $left = @(Get-Process | Where-Object {
+            try {
+              $_.Path -and $_.Path.IndexOf($m, [StringComparison]::OrdinalIgnoreCase) -ge 0
+            } catch {
+              $false
+            }
+          })
+          "Installed Windows proof leftover processes: $($left.Count)"
+          if ($left.Count) {
+            $left | ForEach-Object { Stop-Process -InputObject $_ -Force -ErrorAction SilentlyContinue }
+            exit 1
+          }
+      - name: Build feature-enabled startup barrier coordinator
+        timeout-minutes: 20
+        working-directory: packages/han-rs
+        run: cargo build --locked -p han-coordinator --features proof-startup-barrier
+      - name: Prove Windows fixed-port startup barrier
+        timeout-minutes: 12
+        shell: pwsh
+        env:
+          HAN_PROOF_BARRIER_ONLY: "1"
+          HAN_PROOF_DEADLINE_MS: "420000"
+          HAN_PROOF_CLEANUP_MS: "180000"
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $cli = @(Get-ChildItem packages/han/dist/binaries/han-windows-x64*)
+          if ($cli.Count -ne 1) { throw "Expected exactly one Windows CLI binary" }
+          $raw = [System.Collections.Generic.List[string]]::new()
+          & bun packages/han/scripts/prove-installed-windows-coordinator.ts $cli[0].FullName packages/han-rs/target/debug/han-coordinator.exe 2>&1 | ForEach-Object { $line = "$_"; Write-Host $line; $raw.Add($line) }
+          $code = $LASTEXITCODE
+          if ($code -ne 0) { throw "Startup barrier proof failed with exit code $code" }
+          $pass = @($raw | Where-Object { $_ -match '^Installed Windows CLI: fixed-port startup barrier passed' })
+          if ($pass.Count -ne 1) { throw "Expected explicit barrier pass line, got $($pass.Count)" }
+          $cleanupFailures = @($raw | Where-Object { $_ -match '^Installed Windows proof (failure:.*cleanup|cleanup:.*"ok":false)' })
+          if ($cleanupFailures.Count -gt 0) { throw "Startup barrier cleanup failed: $($cleanupFailures -join '; ')" }
+      - name: Check for leftover processes after startup barrier
+        if: always()
+        timeout-minutes: 2
+        shell: pwsh
+        run: |
+          $m = '\han-windows-installed-'
+          $left = @(Get-Process | Where-Object {
+            try {
+              $_.Path -and $_.Path.IndexOf($m, [StringComparison]::OrdinalIgnoreCase) -ge 0
+            } catch {
+              $false
+            }
+          })
+          "Installed Windows proof leftover processes: $($left.Count)"
+          if ($left.Count) {
+            $left | ForEach-Object { Stop-Process -InputObject $_ -Force -ErrorAction SilentlyContinue }
+            exit 1
+          }
+      - name: Restore default coordinator for browser proof
+        if: ${{ success() || failure() }}
+        timeout-minutes: 20
+        working-directory: packages/han-rs
+        run: cargo build --locked -p han-coordinator
+      - name: Install browser proof dependencies
+        if: ${{ success() || failure() }}
+        working-directory: packages/browse-client
+        run: bun install --frozen-lockfile
+      - name: Install isolated headless Chromium
+        if: ${{ success() || failure() }}
+        working-directory: packages/browse-client
+        run: bunx playwright install chromium
+      - name: Prove Windows launcher and live browser transport
+        if: ${{ success() || failure() }}
+        working-directory: packages/browse-client
+        env:
+          HAN_TRANSPORT_COORDINATOR: ${{ github.workspace }}\packages\han-rs\target\debug\han-coordinator.exe
+        run: bunx playwright test --config playwright.transport.config.ts
+  gateway-runtime-comparison:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        bun: ["1.2.23", "1.4.4"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ matrix.bun }}
+      - name: Install dependencies
+        working-directory: packages/han
+        run: bun install --frozen-lockfile
+      - name: Compare identical gateway fixture
+        working-directory: packages/han
+        env:
+          EXPECT_OLD_FAILURE: ${{ matrix.bun == '1.2.23' }}
+        shell: bash
+        run: |
+          set -o pipefail
+          bun --version
+          set +e
+          bun test test/hosted-proxy.test.ts 2>&1 | tee "$RUNNER_TEMP/gateway-test.log"
+          result=${PIPESTATUS[0]}
+          set -e
+          if [ "$EXPECT_OLD_FAILURE" = true ]; then
+            test "$result" -ne 0
+            grep -F 'Gateway cleanup 0 timed out' "$RUNNER_TEMP/gateway-test.log"
+            grep -F '(fail) local dashboard gateway > closes websocket before upstream connection when token is invalid' "$RUNNER_TEMP/gateway-test.log"
+          else
+            test "$result" -eq 0
+          fi
+
+  pid-mutation-controls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        mutation: [emptyPublication, unguardedPid, recursiveReclaim, ageSteal, staleRelease, probeFailure, exhaustion]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Build native coordinator
+        working-directory: packages/han-rs
+        run: cargo build --locked -p han-coordinator
+      - name: Install dependencies
+        working-directory: packages/han
+        run: bun install --frozen-lockfile
+      - name: Prove ownership guard rejects mutation
+        working-directory: packages/han
+        run: bun run scripts/prove-pid-claims.ts "${{ matrix.mutation }}"
+
+  supervisor-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Build coordinator
+        working-directory: packages/han-rs
+        run: cargo build --locked -p han-coordinator
+      - name: Test coordinator
+        working-directory: packages/han-rs
+        run: cargo test --locked -p han-coordinator
+      - name: Test indexer pagination
+        working-directory: packages/han-rs
+        run: cargo test --locked -p han-indexer test_read_page_unbounded_from_nonzero_offset
+      - name: Install CLI dependencies
+        working-directory: packages/han
+        run: bun install --frozen-lockfile
+      - name: Generate CLI build metadata
+        working-directory: packages/han
+        run: |
+          cat > lib/build-info.generated.ts << 'EOF'
+          export const HAN_VERSION = "0.0.0-ci";
+          export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
+          export const version = "0.0.0-ci";
+          export const gitCommit = "ci";
+          export const buildDate = new Date().toISOString();
+          export const platform = "linux";
+          export const arch = "x64";
+          EOF
+      - name: Prove transport classification
+        working-directory: packages/han
+        run: bun run scripts/prove-transport-classification.ts
+      - name: Prove transport classification with proxy environment
+        working-directory: packages/han
+        env:
+          HTTPS_PROXY: "http://127.0.0.1:9"
+        run: bun run scripts/prove-transport-classification.ts
+      - name: Prove supervisor crash recovery and replacement isolation
+        working-directory: packages/han
+        run: bun run scripts/prove-supervisor.ts
+      - name: Build feature-enabled startup barrier coordinator
+        working-directory: packages/han-rs
+        run: cargo build --locked -p han-coordinator --features proof-startup-barrier
+      - name: Prove Linux fixed-port startup barrier
+        working-directory: packages/han
+        env:
+          HAN_PROOF_BARRIER_ONLY: "1"
+        run: bun run scripts/prove-supervisor.ts
+
+  transport-classification-mutations:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        mutation: [untypedRefusal, refusalNotSecurity, anyCodeAsRefusal, securityAsRefusal, causeIgnored, proxyInherited]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Build coordinator
+        working-directory: packages/han-rs
+        run: cargo build --locked -p han-coordinator
+      - name: Install CLI dependencies
+        working-directory: packages/han
+        run: bun install --frozen-lockfile
+      - name: Generate CLI build metadata
+        working-directory: packages/han
+        run: |
+          cat > lib/build-info.generated.ts << 'EOF'
+          export const HAN_VERSION = "0.0.0-ci";
+          export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
+          export const version = "0.0.0-ci";
+          export const gitCommit = "ci";
+          export const buildDate = new Date().toISOString();
+          export const platform = "linux";
+          export const arch = "x64";
+          EOF
+      - name: Prove transport classification rejects mutation
+        working-directory: packages/han
+        run: bun run scripts/prove-transport-classification-mutations.ts "${{ matrix.mutation }}"
+
+  installed-coordinator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: "0.13.0"
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-zigbuild
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Build release coordinator
+        working-directory: packages/han-rs
+        run: cargo zigbuild --locked --release --target x86_64-unknown-linux-gnu -p han-coordinator
+      - name: Install CLI dependencies
+        working-directory: packages/han
+        run: bun install --frozen-lockfile
+      - name: Compile release CLI
+        working-directory: packages/han
+        run: bun scripts/build-bundle.js bun-linux-x64
+      - name: Prove installed release pair
+        working-directory: packages/han
+        shell: bash
+        run: |
+          bun run scripts/prove-installed-coordinator.ts \
+            --cli "$GITHUB_WORKSPACE/packages/han/dist/binaries/han-linux-x64" \
+            --coordinator "$GITHUB_WORKSPACE/packages/han-rs/target/x86_64-unknown-linux-gnu/release/han-coordinator" \
+            --bun-version 1.4.4 \
+            --bun-revision "$(bun -p 'Bun.revision')" \
+            --evidence-dir "$RUNNER_TEMP/han-installed-evidence"
+      - name: Record installed proof source revision
+        shell: bash
+        env:
+          PROOF_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          printf '{"revision":"%s","checkout":"%s"}\n' \
+            "$PROOF_HEAD_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/han-installed-evidence/revision.json"
+      - name: Upload installed proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: installed-coordinator-proof
+          path: ${{ runner.temp }}/han-installed-evidence/*.json
+          if-no-files-found: error
+
+  browser-transport:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Build coordinator
+        working-directory: packages/han-rs
+        run: cargo build --locked --release -p han-coordinator
+      - name: Install Han dependencies
+        working-directory: packages/han
+        run: bun install --frozen-lockfile
+      - name: Generate CLI build metadata
+        working-directory: packages/han
+        run: |
+          cat > lib/build-info.generated.ts << 'EOF'
+          export const HAN_VERSION = "0.0.0-ci";
+          export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
+          export const version = "0.0.0-ci";
+          export const gitCommit = "ci";
+          export const buildDate = new Date().toISOString();
+          export const platform = "linux";
+          export const arch = "x64";
+          EOF
+      - name: Install browse dependencies
+        working-directory: packages/browse-client
+        run: bun install --frozen-lockfile
+      - name: Install headless Chromium
+        working-directory: packages/browse-client
+        run: bunx playwright install --with-deps chromium
+      - name: Prove real browser transport and subscriptions
+        working-directory: packages/browse-client
+        run: bunx playwright test --config playwright.transport.config.ts
+      - name: Record sanitized proof result
+        shell: bash
+        env:
+          PROOF_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/han-browser-evidence"
+          printf '{"revision":"%s","checkout":"%s","proof":"real browser transport and subscriptions","result":"passed"}\n' \
+            "$PROOF_HEAD_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/han-browser-evidence/result.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: browser-transport-proof
+          path: ${{ runner.temp }}/han-browser-evidence/result.json
+          if-no-files-found: error
+
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -37,7 +614,13 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.2"
+          bun-version: "1.4.4"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Build native coordinator
+        working-directory: packages/han-rs
+        run: cargo build --locked -p han-coordinator
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -68,6 +651,10 @@ jobs:
 
       - name: TypeScript type check
         run: bun run tsc --noEmit
+        working-directory: ./packages/han
+
+      - name: Exercise supervisor PID ownership
+        run: bun test test/coordinator-pid-claim.test.ts
         working-directory: ./packages/han
 
       - name: Run tests

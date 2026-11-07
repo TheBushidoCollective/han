@@ -8,11 +8,11 @@
  * are properly coordinated across all Claude sessions.
  */
 
+import { checkHealth } from '../commands/coordinator/health.ts';
 import {
-  COORDINATOR_HOST,
-  COORDINATOR_PORT,
-  COORDINATOR_TLS_FETCH_OPTIONS,
-} from '../commands/coordinator/types.ts';
+  CoordinatorSecurityError,
+  coordinatorRequest,
+} from '../coordinator/connection.ts';
 
 /**
  * Debug logging
@@ -27,20 +27,7 @@ function debugLog(message: string): void {
  * Check if coordinator is available
  */
 async function isCoordinatorAvailable(): Promise<boolean> {
-  try {
-    const response = await fetch(
-      `https://${COORDINATOR_HOST}:${COORDINATOR_PORT}/health`,
-      {
-        signal: AbortSignal.timeout(1000),
-        ...COORDINATOR_TLS_FETCH_OPTIONS,
-      }
-    );
-    if (!response.ok) return false;
-    const data = (await response.json()) as Record<string, unknown>;
-    return data.status === 'ok';
-  } catch {
-    return false;
-  }
+  return (await checkHealth())?.status === 'ok';
 }
 
 /**
@@ -73,19 +60,15 @@ async function acquireFromCoordinator(
 			}
 		`;
 
-    const response = await fetch(
-      `https://${COORDINATOR_HOST}:${COORDINATOR_PORT}/graphql`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query,
-          variables: { sessionId, hookName, pid, pluginName },
-        }),
-        signal: AbortSignal.timeout(5000),
-        ...COORDINATOR_TLS_FETCH_OPTIONS,
-      }
-    );
+    const response = await coordinatorRequest('/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query,
+        variables: { sessionId, hookName, pid, pluginName },
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
 
     if (!response.ok) {
       debugLog(`Coordinator returned ${response.status}`);
@@ -109,6 +92,7 @@ async function acquireFromCoordinator(
       source: 'coordinator',
     };
   } catch (error) {
+    if (error instanceof CoordinatorSecurityError) throw error;
     debugLog(`Failed to acquire from coordinator: ${error}`);
     return null;
   }
@@ -131,19 +115,15 @@ async function releaseToCoordinator(
 			}
 		`;
 
-    const response = await fetch(
-      `https://${COORDINATOR_HOST}:${COORDINATOR_PORT}/graphql`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query,
-          variables: { slotId, pid },
-        }),
-        signal: AbortSignal.timeout(5000),
-        ...COORDINATOR_TLS_FETCH_OPTIONS,
-      }
-    );
+    const response = await coordinatorRequest('/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query,
+        variables: { slotId, pid },
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
 
     if (!response.ok) {
       debugLog(`Coordinator returned ${response.status}`);
@@ -163,6 +143,7 @@ async function releaseToCoordinator(
       >
     ).success as boolean;
   } catch (error) {
+    if (error instanceof CoordinatorSecurityError) throw error;
     debugLog(`Failed to release to coordinator: ${error}`);
     return false;
   }
@@ -349,16 +330,12 @@ export async function getSlotStatus(): Promise<{
 			}
 		`;
 
-    const response = await fetch(
-      `https://${COORDINATOR_HOST}:${COORDINATOR_PORT}/graphql`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-        signal: AbortSignal.timeout(5000),
-        ...COORDINATOR_TLS_FETCH_OPTIONS,
-      }
-    );
+    const response = await coordinatorRequest('/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+      signal: AbortSignal.timeout(5000),
+    });
 
     if (!response.ok) return null;
 
@@ -377,7 +354,8 @@ export async function getSlotStatus(): Promise<{
         heldForMs: number;
       }[];
     } | null;
-  } catch {
+  } catch (error) {
+    if (error instanceof CoordinatorSecurityError) throw error;
     return null;
   }
 }

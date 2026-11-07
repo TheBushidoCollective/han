@@ -727,10 +727,14 @@ async fn detect_repo_for_path(db: &DatabaseConnection, project_path: &str) -> Op
     }
 
     // Run git to get the remote URL
-    let output = std::process::Command::new("git")
-        .args(["-C", project_path, "remote", "get-url", "origin"])
-        .output()
-        .ok()?;
+    let mut git_cmd = std::process::Command::new("git");
+    git_cmd.args(["-C", project_path, "remote", "get-url", "origin"]);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        git_cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    }
+    let output = git_cmd.output().ok()?;
 
     if !output.status.success() {
         return None;

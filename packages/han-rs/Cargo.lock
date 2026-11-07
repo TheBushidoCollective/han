@@ -2014,6 +2014,7 @@ dependencies = [
  "async-graphql",
  "async-graphql-axum",
  "axum 0.8.8",
+ "base64",
  "chrono",
  "clap",
  "dirs",
@@ -2023,8 +2024,10 @@ dependencies = [
  "han-db",
  "han-indexer",
  "han-proto",
+ "libc",
  "nix",
  "prost",
+ "rand 0.8.5",
  "rcgen",
  "reqwest",
  "rustls",
@@ -2034,18 +2037,21 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "subtle",
  "tempfile",
  "thiserror 2.0.18",
  "time",
  "tokio",
  "tokio-rustls",
  "tokio-stream",
+ "tokio-tungstenite",
  "tonic",
+ "tonic-web",
  "tower 0.5.3",
- "tower-http",
  "tracing",
  "tracing-subscriber",
  "uuid",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2142,7 +2148,7 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tower 0.5.3",
- "tower-http",
+ "tower-http 0.6.8",
  "tracing",
  "tracing-subscriber",
  "uuid",
@@ -3890,7 +3896,7 @@ dependencies = [
  "tokio-native-tls",
  "tokio-rustls",
  "tower 0.5.3",
- "tower-http",
+ "tower-http 0.6.8",
  "tower-service",
  "url",
  "wasm-bindgen",
@@ -5099,8 +5105,10 @@ dependencies = [
  "percent-encoding",
  "pin-project",
  "prost",
+ "rustls-pemfile",
  "socket2 0.5.10",
  "tokio",
+ "tokio-rustls",
  "tokio-stream",
  "tower 0.4.13",
  "tower-layer",
@@ -5120,6 +5128,26 @@ dependencies = [
  "prost-types",
  "quote",
  "syn 2.0.116",
+]
+
+[[package]]
+name = "tonic-web"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5299dd20801ad736dccb4a5ea0da7376e59cd98f213bf1c3d478cf53f4834b58"
+dependencies = [
+ "base64",
+ "bytes",
+ "http",
+ "http-body",
+ "http-body-util",
+ "pin-project",
+ "tokio-stream",
+ "tonic",
+ "tower-http 0.5.2",
+ "tower-layer",
+ "tower-service",
+ "tracing",
 ]
 
 [[package]]
@@ -5156,6 +5184,22 @@ dependencies = [
  "tower-layer",
  "tower-service",
  "tracing",
+]
+
+[[package]]
+name = "tower-http"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e9cd434a998747dd2c4276bc96ee2e0c7a2eadf3cae88e52be55a05fa9053f5"
+dependencies = [
+ "bitflags 2.11.0",
+ "bytes",
+ "http",
+ "http-body",
+ "http-body-util",
+ "pin-project-lite",
+ "tower-layer",
+ "tower-service",
 ]
 
 [[package]]

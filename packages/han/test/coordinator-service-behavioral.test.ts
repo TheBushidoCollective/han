@@ -15,6 +15,8 @@ import {
 } from 'bun:test';
 import { realGrpcClient } from './setup.ts';
 
+const realFs = require('node:fs');
+
 // ============================================================================
 // Mock infrastructure
 // ============================================================================
@@ -60,16 +62,20 @@ mock.module('../lib/grpc/client.ts', () => ({
 const realHealthModule = require('../lib/commands/coordinator/health.ts');
 mock.module('../lib/commands/coordinator/health.ts', () => ({
   ...realHealthModule,
+  readOptionalDescriptor: () => null,
   checkHealth: async (port?: number) =>
     (await mockHealth(port))
       ? { status: 'ok', pid: 4242, uptime: 1, version: 'test' }
       : null,
 }));
+const realRecovery = require('../lib/coordinator/recovery-runtime.ts');
+mock.module('../lib/coordinator/recovery-runtime.ts', () => ({
+  ...realRecovery,
+  posixPrepare: () => {},
+}));
 
 // Mock existsSync so findCoordinatorBinary doesn't find real binaries
-mock.module('node:fs', () => ({
-  existsSync: () => false,
-}));
+mock.module('node:fs', () => ({ ...realFs, existsSync: () => false }));
 
 const cs = await import('../lib/services/coordinator-service.ts');
 
@@ -94,17 +100,18 @@ beforeEach(() => {
   };
 });
 
-afterEach(() => {
+afterEach(async () => {
   console.log = originalLog;
   console.error = originalError;
+  await cs.stopCoordinatorService().catch(() => {});
 });
 // Restore real node:fs and grpc/client after all tests so mocks don't
 // bleed into later test files.
 afterAll(() => {
-  const realFs = require('node:fs');
   mock.module('node:fs', () => realFs);
   mock.module('../lib/grpc/client.ts', () => realGrpcClient);
   mock.module('../lib/commands/coordinator/health.ts', () => realHealthModule);
+  mock.module('../lib/coordinator/recovery-runtime.ts', () => realRecovery);
 });
 
 // ============================================================================
@@ -176,18 +183,12 @@ describe('startCoordinatorService', () => {
     expect(hasConnectMsg).toBe(true);
   });
 
-  test('when binary not found and not healthy, logs error', async () => {
-    // Coordinator not running
+  test('when binary not found and not healthy, reports the error', async () => {
     mockHealth.mockResolvedValue(false);
-
-    // Reset state by stopping first
     await cs.stopCoordinatorService();
-    await cs.startCoordinatorService();
-
-    const hasBinaryNotFound = consoleOutput.some(
-      (msg) => msg.includes('not found') || msg.includes('Already running')
+    await expect(cs.startCoordinatorService()).rejects.toThrow(
+      'binary not found'
     );
-    expect(hasBinaryNotFound).toBe(true);
   });
 });
 
@@ -344,13 +345,6 @@ describe('ensureCoordinator', () => {
     await cs.stopCoordinatorService();
     mockHealth.mockResolvedValue(false);
 
-    const result = await cs.ensureCoordinator();
-    // Won't succeed since binary is mocked to not exist, but should attempt start
-    expect(typeof result).toBe('boolean');
-
-    const hasStartAttempt = consoleOutput.some(
-      (msg) => msg.includes('Starting') || msg.includes('not found')
-    );
-    expect(hasStartAttempt).toBe(true);
+    await expect(cs.ensureCoordinator()).rejects.toThrow('binary not found');
   });
 });

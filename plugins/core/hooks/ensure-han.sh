@@ -3,14 +3,15 @@
 # Ensure han binary is available and up-to-date for this session.
 # - Installs if missing via hosted install script
 # - Checks for updates daily and upgrades in-place
-# - Kills stale coordinator after upgrade (next hook restarts it)
+# - Requests a verified coordinator restart after upgrading
 # - Adds install dir to PATH via CLAUDE_ENV_FILE
 #
 
 HAN_CLAUDE_BIN="$HOME/.claude/bin/han"
 HAN_LOCAL_BIN="$HOME/.local/bin/han"
-HAN_DATA_DIR="$HOME/.claude/han"
-UPDATE_STATE_FILE="$HAN_DATA_DIR/.update-state"
+UPDATE_STATE_DIR="${HAN_DATA_DIR:-${CLAUDE_CONFIG_DIR:+${CLAUDE_CONFIG_DIR}/han}}"
+UPDATE_STATE_DIR="${UPDATE_STATE_DIR:-${HOME}/.han}"
+UPDATE_STATE_FILE="$UPDATE_STATE_DIR/.update-state"
 UPDATE_INTERVAL=86400  # 24 hours
 
 # --- Helpers ---
@@ -43,27 +44,10 @@ needs_update_check() {
 }
 
 save_update_state() {
-  mkdir -p "$HAN_DATA_DIR"
+  mkdir -p "$UPDATE_STATE_DIR"
   date +%s > "$UPDATE_STATE_FILE"
 }
 
-detect_platform() {
-  local os arch
-  os="$(uname -s)"
-  arch="$(uname -m)"
-  case "$os" in
-    Darwin)
-      case "$arch" in
-        arm64|aarch64) echo "darwin-arm64" ;;
-        x86_64|amd64)  echo "darwin-x64" ;;
-      esac ;;
-    Linux)
-      case "$arch" in
-        arm64|aarch64) echo "linux-arm64" ;;
-        x86_64|amd64)  echo "linux-x64" ;;
-      esac ;;
-  esac
-}
 
 get_latest_version() {
   curl -fsSL --max-time 5 \
@@ -72,46 +56,36 @@ get_latest_version() {
     sed -E 's/.*"v?([^"]+)".*/\1/'
 }
 
-# Update binary in-place, returns 0 on success
+# The hosted installer verifies and installs both executables from one release.
 update_binary() {
   local han_path="$1"
   local latest_version="$2"
-  local platform
-  platform=$(detect_platform)
-  [ -z "$platform" ] && return 1
-
-  local url="https://github.com/TheBushidoCollective/han/releases/download/v${latest_version}/han-${platform}"
-  local tmp
-  tmp=$(mktemp)
-
-  if curl -fsSL --max-time 60 "$url" -o "$tmp" 2>/dev/null; then
-    chmod +x "$tmp"
-    mv -f "$tmp" "$han_path"
-    return 0
-  else
-    rm -f "$tmp"
+  local installer
+  installer=$(mktemp) || return 1
+  if ! curl -fsSL --max-time 60 https://han.guru/install.sh -o "$installer"; then
+    rm -f "$installer"
     return 1
   fi
-}
-
-# Kill coordinator so next SessionStart hook restarts it with new binary
-kill_stale_coordinator() {
-  local pid_file="$HOME/.claude/.han-coordinator.pid"
-  [ -f "$pid_file" ] || return 0
-  local pid
-  pid=$(cat "$pid_file" 2>/dev/null)
-  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-    kill "$pid" 2>/dev/null || true
+  if HAN_INSTALL_DIR="$(dirname "$han_path")" \
+    HAN_INSTALL_TARGET="$(basename "$han_path")" \
+    HAN_VERSION="$latest_version" bash "$installer"; then
+    rm -f "$installer"
+    return 0
   fi
+  rm -f "$installer"
+  return 1
 }
 
 # --- Main ---
 
 han_path=$(resolve_han_path)
 
-# Not installed at all — install fresh
+# Not installed at all: install a verified pair.
 if [ -z "$han_path" ]; then
-  curl -fsSL https://han.guru/install.sh | bash 2>/dev/null
+  if ! update_binary "$HAN_LOCAL_BIN" ""; then
+    echo "Han installation failed." >&2
+    exit 1
+  fi
   save_update_state
 
   if [ -x "$HAN_LOCAL_BIN" ]; then
@@ -133,10 +107,15 @@ if needs_update_check; then
   latest_version=$(get_latest_version)
   save_update_state
 
+  # Package managers own their installed files and must upgrade the pair together.
   if [ -n "$latest_version" ] && [ -n "$current_version" ] && [ "$current_version" != "$latest_version" ]; then
-    if update_binary "$han_path" "$latest_version"; then
-      kill_stale_coordinator
-    fi
+    case "$han_path" in
+      "$HAN_CLAUDE_BIN"|"$HAN_LOCAL_BIN")
+        if update_binary "$han_path" "$latest_version"; then
+          "$han_path" coordinator restart || echo "Han coordinator restart requires your attention." >&2
+        fi
+        ;;
+    esac
   fi
 fi
 
