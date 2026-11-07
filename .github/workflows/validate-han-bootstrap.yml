@@ -5,24 +5,20 @@ on:
     paths:
       - 'deploy/firebase/bootstrap/**'
       - 'deploy/firebase/test/test_bootstrap.py'
-      - 'deploy/firebase/test/test_bootstrap_execution.py'
       - 'deploy/firebase/test/test_auto_fix_security.py'
       - 'deploy/firebase/test/test_failure_analysis_security.py'
       - '.github/workflows/test-failure-analysis.yml'
       - '.github/workflows/auto-fix-ci.yml'
-      - '.github/workflows/han-bootstrap.yml'
       - '.github/workflows/validate-han-bootstrap.yml'
   push:
     branches: [main]
     paths:
       - 'deploy/firebase/bootstrap/**'
       - 'deploy/firebase/test/test_bootstrap.py'
-      - 'deploy/firebase/test/test_bootstrap_execution.py'
       - 'deploy/firebase/test/test_auto_fix_security.py'
       - 'deploy/firebase/test/test_failure_analysis_security.py'
       - '.github/workflows/test-failure-analysis.yml'
       - '.github/workflows/auto-fix-ci.yml'
-      - '.github/workflows/han-bootstrap.yml'
       - '.github/workflows/validate-han-bootstrap.yml'
 
 permissions:
@@ -42,7 +38,7 @@ jobs:
       # This staging PR contains the bootstrap only, not the infrastructure
       # workflows, Terraform, or hosting scripts. Their integration tests run
       # on the complete platform PR. The classes below exercise the bootstrap
-      # itself, including plan provenance, IAM preflight, failure and revoke.
+      # itself, including plan provenance, caller identity preflight, and execution.
       - name: Bootstrap plan and guarded execution tests
         env:
           PYTHONPATH: deploy/firebase/test
@@ -50,13 +46,9 @@ jobs:
           python3 -B -m unittest -v \
             test_bootstrap.PlanMode test_bootstrap.FirstRun \
             test_bootstrap.IdempotentSecondRun test_bootstrap.NotFoundClassification \
-            test_bootstrap.Revoke test_bootstrap.PrincipalCoverage test_bootstrap.CapableMembers \
-            test_bootstrap.PolicyReadRetry test_bootstrap.FlagsAreCaptured test_bootstrap.RoleFiles \
+            test_bootstrap.FlagsAreCaptured test_bootstrap.RoleFiles \
             test_bootstrap.DatabasePasswordSequence test_bootstrap.CloudSdkFileLoggingIsOff \
-            test_bootstrap.CiOnly test_bootstrap.SignInProvenance test_bootstrap.StateBucketIsOurs \
-            test_bootstrap.WorkflowIsAnInput test_bootstrap.ExecutionBoundary
-      - name: Per-execution identity negative controls
-        run: python3 -B -m unittest discover -s deploy/firebase/test -p test_bootstrap_execution.py -v
+            test_bootstrap.CiOnly test_bootstrap.OwnerCaller test_bootstrap.StateBucketIsOurs
       - name: Authenticate auto-fix sources
         run: python3 -B -m unittest discover -s deploy/firebase/test -p test_auto_fix_security.py -v
       - name: Authenticate failure-analysis sources and retries

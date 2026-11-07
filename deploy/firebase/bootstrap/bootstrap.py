@@ -1,23 +1,20 @@
 #!/usr/bin/env python3
 """One-shot bootstrap for Han inside the existing project thebushido-co.
 
-Runs only from .github/workflows/han-bootstrap.yml, in the main-only
-han-bootstrap environment and an execution-specific federation route.
+Runs from the website repository's main-only han-bootstrap workflow
+(TheBushidoCollective/website/.github/workflows/han-bootstrap.yml@refs/heads/main),
+using the existing owner identity terraform-ci@thebushido-co.iam.gserviceaccount.com.
+No temporary sign-in grant is created or removed.
 
 Modes:
   (default)                      print the plan and its sha256. Reads nothing and
                                  touches no cloud API. The same code path prints
                                  the plan in every mode. The hash covers this file and
-                                 the roles, the condition and the workflow file it names.
+                                 the roles and the condition file it names.
   --execute --expect-sha256 H --expect-commit C
                                  run the plan, but only if its hash is exactly H and C is
-                                 GITHUB_SHA. Any other value refuses before a single call.
-  --revoke-only --expect-sha256 H --expect-commit C
-                                 remove the principal from the approved grant (the binding
-                                 whose description names C and H) and nothing else. C must be
-                                 GITHUB_SHA and H must be this checkout's plan hash; otherwise
-                                 it refuses before any call. The website's reviewed han-signin-retire job removes a
-                                 grant this run refuses. Runs in its own always-run workflow step.
+                                 HEAD of the Han repository. Any other value refuses
+                                 before a single call.
   --rotate-db-password           with --execute: generate a new database password and seed
                                  database-url with it. It changes the plan, so the hash
                                  covers the rotation. Never run on a normal rerun.
@@ -26,14 +23,7 @@ Every object is described first and created only if the describe says it is
 missing. Only a recognised not-found answer counts as missing. Any other error
 stops the run, so an uncertain answer never becomes a create or a grant.
 
-Preflight rejects the known legacy shared-pool subject, potentially matching
-shared or execution pool principal sets, wildcard pools and public members,
-even when their conditions have expired. Unparseable principal sets fail closed.
-The last act of every execute, success or failure, is revoke. It removes only
-this execution's approved member and verifies these routes are absent again.
-Legacy and unrelated grants are reported and left in place. A legacy grant
-requires separately authorized cleanup. The checks cover only the bootstrap
-service account's direct IAM policy, not inherited grants or delegation.
+Preflight checks that the active gcloud auth account is exactly CALLER_SA.
 
 The backend is injected. Tests use a fake backend. CI uses the real gcloud
 commands, authenticated by WIF.
@@ -62,10 +52,6 @@ HERE = Path(__file__).resolve().parent
 # The repository root. Plan lines name files relative to it, so the plan and its hash are
 # the same on any checkout, and every command runs from it.
 ROOT = HERE.parents[2]
-# Isolated Python mode omits the script directory; explicitly load the
-# co-reviewed execution contract from this checkout.
-sys.path.insert(0, str(HERE))
-import execution
 
 PROJECT = "thebushido-co"
 PROJECT_NUMBER = "911514101920"
@@ -79,43 +65,18 @@ PROVIDER = "han-github"
 ISSUER = "https://token.actions.githubusercontent.com"
 WORKFLOWS_ALLOWED_TO_SIGN_IN = ("han-infra.yml", "deploy-han-server.yml", "deploy-hosting.yml", "han-dns-import.yml")
 
-# The sign-in identity this job uses. The website's reviewed grant (contract C1) time-boxes it before the run
-# (PATH.md section 8). This run removes the principal from that grant again.
-BOOTSTRAP_SA = f"terraform-bootstrap@{PROJECT}.iam.gserviceaccount.com"
-# Legacy identity is independent of the execution-specific registration and is never removed here.
-LEGACY_POOL = f"projects/{PROJECT_NUMBER}/locations/global/workloadIdentityPools/github"
-LEGACY_PRINCIPAL = f"principal://iam.googleapis.com/{LEGACY_POOL}/subject/repo:{REPO}:environment:han-bootstrap"
-# Populated only from a validated execution manifest before credentialed work.
-BOOTSTRAP_PRINCIPAL = ""
-EXECUTION_POOL = ""
-ACTIVE_EXECUTION = None
+# The owner identity that executes this bootstrap from the website repo (contract C1).
+CALLER_SA = f"terraform-ci@{PROJECT}.iam.gserviceaccount.com"
+CALLER_REPOSITORY = "TheBushidoCollective/website"
+CALLER_WORKFLOW_REF = f"{CALLER_REPOSITORY}/.github/workflows/han-bootstrap.yml@refs/heads/main"
+CALLER_EVENTS = ("push", "workflow_dispatch")
 
-# The sign-in grant the website side creates, time-boxed (contract C1). Preflight matches all of it exactly. Revoke
-# matches the role, the title, the approved description and the principal, and passes the stored condition verbatim.
-# A binding with any other role, title or description is never touched.
-SIGNIN_ROLE = "roles/iam.workloadIdentityUser"
-SIGNIN_TITLE = "han-bootstrap-sign-in"
-SIGNIN_DESCRIPTION = "han-bootstrap commit={commit} plan={plan} run={run} attempt=1"
-SIGNIN_EXPRESSION = re.compile(r"request\.time < timestamp\('([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)'\)")
-MIN_REMAINING = timedelta(minutes=45)
-MAX_LEAD = timedelta(minutes=120)
-REVOKE_ATTEMPTS = 5
-# Policy reads retry with bounded exponential backoff: 1, then 2, then 4 seconds between four attempts.
-POLICY_READ_ATTEMPTS = 4
-POLICY_READ_BASE = 1.0
-POLICY_READ_MAX_BACKOFF = 8.0
-# The description contract C1 requires: a 40-hex commit and a 64-hex plan hash.
-CONTRACT_DESCRIPTION = re.compile(r"han-bootstrap commit=[0-9a-f]{40} plan=[0-9a-f]{64} run=[1-9][0-9]{0,19} attempt=1")
-CONTRACT_CONDITION_KEYS = frozenset({"title", "description", "expression"})
-WORKFLOW_REF = f"{REPO}/.github/workflows/han-bootstrap.yml@refs/heads/main"
-# --execute and --revoke-only run only from that workflow, on main, by dispatch, on a github-hosted runner.
 CI_ENVIRONMENT = {
     "GITHUB_ACTIONS": "true",
     "RUNNER_ENVIRONMENT": "github-hosted",
-    "GITHUB_REPOSITORY": REPO,
+    "GITHUB_REPOSITORY": CALLER_REPOSITORY,
     "GITHUB_REF": "refs/heads/main",
-    "GITHUB_EVENT_NAME": "workflow_dispatch",
-    "GITHUB_WORKFLOW_REF": WORKFLOW_REF,
+    "GITHUB_WORKFLOW_REF": CALLER_WORKFLOW_REF,
 }
 
 # The Terraform state bucket. han-infra.yml must name this same bucket.
@@ -229,30 +190,6 @@ def secret_id(name: str) -> str:
 def is_not_found(stderr: str, stdout: str = "") -> bool:
     text = stderr + stdout
     return any(marker in text for marker in NOT_FOUND_MARKERS)
-
-
-def is_contract_grant(binding: dict) -> bool:
-    """True only for the exact reviewed grant: this role, the principal as the sole member, and a condition
-    with exactly the contract's keys, the title, a well-formed description and the full expression.
-    A binding that merely looks alike is never the grant."""
-    cond = binding.get("condition")
-    if binding.get("role") != SIGNIN_ROLE or binding.get("members") != [BOOTSTRAP_PRINCIPAL]:
-        return False
-    if not isinstance(cond, dict) or set(cond) != CONTRACT_CONDITION_KEYS or cond.get("title") != SIGNIN_TITLE:
-        return False
-    description, expression = cond.get("description"), cond.get("expression")
-    if not isinstance(description, str) or CONTRACT_DESCRIPTION.fullmatch(description) is None:
-        return False
-    return isinstance(expression, str) and SIGNIN_EXPRESSION.fullmatch(expression) is not None
-
-
-def holders(policy: dict) -> list[dict]:
-    """Every binding that names the Han principal. Exact string equality, never a suffix."""
-    return [b for b in policy.get("bindings", []) if BOOTSTRAP_PRINCIPAL in b.get("members", [])]
-
-
-def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 # A backend answers (returncode, stdout, stderr). Reads and writes are kept apart,
@@ -570,72 +507,19 @@ def steps(r: Runner, rotate: bool = False) -> None:
              f"--member={plan_member}", "--role=roles/storage.objectViewer", "--quiet"])
 
 
-def revoke_plan(r: Runner) -> None:
-    r.plan.append(f"revoke: remove the reviewed per-execution sign-in binding from {BOOTSTRAP_SA}, "
-                  "then prove the principal is in no binding")
+def caller_plan(r: Runner) -> None:
+    r.plan.append(f"caller: {CALLER_SA} from {CALLER_WORKFLOW_REF} on push or workflow_dispatch; "
+                  "no sign-in grant is created or removed")
 
 
-def preflight(r: Runner, plan_sha: str, commit: str) -> set[tuple]:
-    """Read-only, before any mutation. Checks the bootstrap account's own IAM policy only: not inherited, project or
-    organisation bindings, and not delegation (reviewer scope note A). The identity, the one exact reviewed grant,
-    its window and its provenance must all hold, and no member may match the principal besides that grant."""
-    # The run must be signed in as the bootstrap account. A wrong identity stops it.
+def preflight(r: Runner) -> None:
+    """Read-only, before any mutation. Verifies the caller identity is exactly CALLER_SA."""
     rc, out, err = r._read(["gcloud", "auth", "list", "--format=json"])
     if rc != 0:
         raise StepError(f"cannot read the active account: {err}")
     active = [a.get("account") for a in json.loads(out) if a.get("status") == "ACTIVE"]
-    if active != [BOOTSTRAP_SA]:
-        raise StepError(f"refusing to continue as {active!r}; expected {BOOTSTRAP_SA}")
-    if ACTIVE_EXECUTION is None:
-        raise StepError("execution manifest missing; nothing ran")
-    pool = ACTIVE_EXECUTION["pool_id"]
-    rc, pool_out, _ = r._read(["gcloud", "iam", "workload-identity-pools", "describe", pool,
-                               "--location=global", f"--project={PROJECT}", "--format=json"])
-    if rc != 0:
-        raise StepError("cannot read the execution-specific pool; nothing ran")
-    rc, providers_out, _ = r._read(["gcloud", "iam", "workload-identity-pools", "providers", "list",
-                                    f"--workload-identity-pool={pool}", "--location=global",
-                                    f"--project={PROJECT}", "--show-deleted", "--format=json"])
-    if rc != 0:
-        raise StepError("cannot enumerate execution pool providers; nothing ran")
-    try:
-        execution.verify_pool(ACTIVE_EXECUTION, json.loads(pool_out), json.loads(providers_out))
-    except (ValueError, execution.Refuse) as exc:
-        raise StepError("execution pool is not the exact single-provider pool; nothing ran") from exc
-    rc, out, _ = r._read(["gcloud", "iam", "workload-identity-pools", "providers", "describe",
-                          ACTIVE_EXECUTION["provider_id"], f"--workload-identity-pool={ACTIVE_EXECUTION['pool_id']}",
-                          "--location=global", f"--project={PROJECT}", "--format=json"])
-    if rc != 0:
-        raise StepError("cannot read the execution-specific provider; nothing ran")
-    try:
-        execution.verify_provider(ACTIVE_EXECUTION, json.loads(out))
-    except (ValueError, execution.Refuse) as exc:
-        raise StepError("execution-specific provider does not match the contract; nothing ran") from exc
-    policy = read_policy(r, "cannot read the bootstrap policy before the run")
-    found = holders(policy)
-    if len(found) != 1:
-        raise StepError(f"expected exactly one binding for the bootstrap principal, found {len(found)}; nothing ran")
-    binding = found[0]
-    if not is_contract_grant(binding):
-        raise StepError("the bootstrap principal is not in the exact reviewed sign-in grant; nothing ran")
-    capable = capable_members(policy)
-    if capable:
-        raise StepError(f"a member could match the bootstrap principal: {capable[0]!r}; nothing ran")
-    match = SIGNIN_EXPRESSION.fullmatch(binding["condition"]["expression"])
-    try:
-        expiry = datetime.strptime(match.group(1), "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-    except ValueError as exc:
-        raise StepError(f"the sign-in expiry is not a real time: {exc}; nothing ran") from exc
-    remaining = expiry - utc_now()
-    if not MIN_REMAINING <= remaining <= MAX_LEAD:
-        raise StepError(f"the sign-in expires {remaining} from now; the window is 45 to 120 minutes; nothing ran")
-    if binding["condition"]["expression"] != f"request.time < timestamp('{ACTIVE_EXECUTION['T']}')":
-        raise StepError("the sign-in deadline does not match this execution; nothing ran")
-    expected = SIGNIN_DESCRIPTION.format(commit=commit, plan=plan_sha, run=ACTIVE_EXECUTION["R"])
-    if binding["condition"]["description"] != expected:
-        raise StepError("the sign-in does not name this commit and this plan; nothing ran")
-    # Preserve the direct policy baseline before any resource mutation.
-    return policy_tuples(policy)
+    if active != [CALLER_SA]:
+        raise StepError(f"refusing to continue as {active!r}; expected {CALLER_SA}")
 
 
 
@@ -773,96 +657,6 @@ def _strings(value) -> set[str]:
     return set()
 
 
-def read_policy(r: Runner, message: str) -> dict:
-    """The bootstrap account's policy. A failed or unparseable read is retried with bounded exponential
-    backoff, and the run fails after the last attempt. A conditional role the reader does not model stops it."""
-    argv = ["gcloud", "iam", "service-accounts", "get-iam-policy", BOOTSTRAP_SA, f"--project={PROJECT}",
-            "--format=json"]
-    last = "no attempt was made"
-    for attempt in range(POLICY_READ_ATTEMPTS):
-        if attempt:
-            time.sleep(min(POLICY_READ_MAX_BACKOFF, POLICY_READ_BASE * 2 ** (attempt - 1)))
-        rc, out, err = r._read(argv)
-        if rc != 0:
-            last = err
-            continue
-        try:
-            policy = json.loads(out)
-        except ValueError as exc:
-            last = f"policy is not JSON: {exc}"
-            continue
-        for binding in policy.get("bindings", []):
-            if "_withcond_" in str(binding.get("role", "")):
-                raise StepError(f"the policy has conditional role {binding['role']}; refusing to act on it")
-        return policy
-    raise StepError(f"{message}: {last}")
-
-
-def policy_tuples(policy: dict) -> set[tuple]:
-    """Every grant as (role, title, description, expression, member), to prove nothing else moved."""
-    found = set()
-    for binding in policy.get("bindings", []):
-        cond = binding.get("condition") or {}
-        key = (binding.get("role"), cond.get("title"), cond.get("description"), cond.get("expression"))
-        found.update((*key, member) for member in binding.get("members", []))
-    return found
-
-
-def capable_members(policy: dict) -> list[str]:
-    """Report legacy, public and potentially matching pool-set grants, regardless of condition."""
-    found = []
-    for binding in policy.get("bindings", []):
-        for member in binding.get("members", []):
-            if (member in ("allUsers", "allAuthenticatedUsers", LEGACY_PRINCIPAL)
-                    or shared_pool_set(member)):
-                found.append(member)
-    return found
-
-
-def shared_pool_set(member: str) -> bool:
-    """Fail closed on unparseable principal sets; compare pool components, not string prefixes."""
-    prefix = "principalSet://"
-    if not member.startswith(prefix):
-        return False
-    target = member[len(prefix):]
-    match = re.fullmatch(
-        r"iam\.googleapis\.com/projects/([^/]+)/locations/([^/]+)/workloadIdentityPools/([^/]+)(?:/(.+))?",
-        target,
-    )
-    if match is None:
-        return True
-    project, location, pool, _selector = match.groups()
-    if project not in (PROJECT_NUMBER, "-", "*") or location not in ("global", "-", "*"):
-        return False
-    execution_pool_id = EXECUTION_POOL.rsplit("/", 1)[-1]
-    return pool in ("github", execution_pool_id, "-", "*")
-
-
-def is_approved_grant(binding: dict, approved: str) -> bool:
-    """A binding revoke may clean up: this sign-in role and title, the approved description, and the principal as
-    a member. Its expression and other members are not checked. Cleanup removes only the principal, with the stored
-    condition passed verbatim, so a tampered expression still matches and other members stay. A binding with any
-    other description or role is never touched."""
-    cond = binding.get("condition")
-    return (binding.get("role") == SIGNIN_ROLE and isinstance(cond, dict)
-            and cond.get("title") == SIGNIN_TITLE and cond.get("description") == approved
-            and BOOTSTRAP_PRINCIPAL in binding.get("members", []))
-
-
-def remove_sign_in(r: Runner, binding: dict) -> None:
-    """Remove the bootstrap principal from one approved grant. The stored condition goes to gcloud verbatim, so
-    gcloud matches exactly this binding. The file is private and removed after the call."""
-    cond = binding["condition"]
-    fd, path = tempfile.mkstemp(suffix=".json")  # created with mode 0600
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            json.dump(cond, fh, ensure_ascii=False)
-        r.write(gcloud("iam", "service-accounts", "remove-iam-policy-binding", BOOTSTRAP_SA, f"--project={PROJECT}",
-                       f"--member={BOOTSTRAP_PRINCIPAL}", f"--role={SIGNIN_ROLE}", f"--condition-from-file={path}"))
-    finally:
-        Path(path).unlink(missing_ok=True)
-
-
 def pinned_identity_error(commit: str, plan_sha: str) -> str | None:
     """The approved commit and plan that name the one grant revoke may remove. Both are well formed or
     nothing runs. A grant naming any other commit or plan is never removed."""
@@ -873,62 +667,6 @@ def pinned_identity_error(commit: str, plan_sha: str) -> str | None:
     return None
 
 
-def revoke(r: Runner, commit: str, plan_sha: str, baseline: set[tuple] | None = None) -> None:
-    """Remove the bootstrap principal from the approved grant, the binding whose description names this commit
-    and plan, then prove the principal has no coverage left and that no other grant moved. Only the bootstrap
-    account's own policy is read: project and organisation bindings and delegation are not checked (scope note A).
-    Other descriptions and roles are never touched. Never set-iam-policy: each removal is gcloud's own
-    etag-guarded read-modify-write."""
-    if not r.execute:
-        revoke_plan(r)
-        return
-    approved = SIGNIN_DESCRIPTION.format(commit=commit, plan=plan_sha, run=ACTIVE_EXECUTION["R"])
-    policy = read_policy(r, "cannot read the bootstrap policy, so cannot prove the sign-in is revoked")
-    before = baseline if baseline is not None else policy_tuples(policy)
-    last_error = "none"
-    for _ in range(REVOKE_ATTEMPTS):
-        grants = [b for b in holders(policy) if is_approved_grant(b, approved)]
-        if not grants:
-            break
-        for binding in grants:
-            try:
-                remove_sign_in(r, binding)
-            except StepError as err:
-                last_error = str(err)  # a failed call leads to a re-read, never a give-up
-        policy = read_policy(r, "cannot re-read the bootstrap policy after revoke")
-    verify_revoked(policy, before, last_error, approved)
-
-
-def verify_revoked(policy: dict, before: set[tuple], last_error: str, approved: str) -> None:
-    """Fail unless the principal has no binding, no capable member remains, the approved grant binds no other
-    member, every other grant is still there, and no grant was added since the
-    supplied preflight baseline. Named, never deleted."""
-    left = holders(policy)
-    if left:
-        named = ", ".join(f"role {b.get('role')!r} (title {(b.get('condition') or {}).get('title')!r})" for b in left)
-        raise StepError(f"bootstrap sign-in member is still present after revoke: {named}; left in place; "
-                        f"last error: {last_error}")
-    others = sorted({m for b in policy.get("bindings", [])
-                     if b.get("role") == SIGNIN_ROLE and (b.get("condition") or {}).get("title") == SIGNIN_TITLE
-                     and (b.get("condition") or {}).get("description") == approved
-                     for m in b.get("members", [])})
-    if others:
-        raise StepError(f"the approved sign-in grant still binds other members after the principal was removed: "
-                        f"{', '.join(others)}; left in place")
-    capable = capable_members(policy)
-    if capable:
-        raise StepError(f"a member could still match the bootstrap principal: {capable[0]!r}; left in place")
-    lost = {t for t in before if t[-1] != BOOTSTRAP_PRINCIPAL} - policy_tuples(policy)
-    if lost:
-        raise StepError(f"revoke changed a binding it should not have; missing {sorted(lost)[0]}")
-    # The normal path supplies the read-only preflight baseline.
-    added = policy_tuples(policy) - before
-    if added:
-        named = ", ".join(f"{member} on {role}" for role, _title, _desc, _expr, member in sorted(added, key=str))
-        raise StepError(f"the bootstrap account's policy gained grants during the revoke window, between its first "
-                        f"read and its final read: {named}; left in place")
-
-
 def rel(path: Path) -> str:
     """Repository-relative and POSIX. The plan names files this way, never by absolute path."""
     return path.resolve().relative_to(ROOT).as_posix()
@@ -937,14 +675,13 @@ def rel(path: Path) -> str:
 def referenced_files() -> list[Path]:
     """Every file whose contents the plan depends on: this code, the roles and the condition."""
     roles = [HERE / "roles" / name for name in sorted(CUSTOM_ROLES.values())]
-    workflow = ROOT / ".github" / "workflows" / "han-bootstrap.yml"
-    return [Path(__file__).resolve(), HERE / "execution.py", SQL_CONDITION, *roles, workflow]
+    return [Path(__file__).resolve(), SQL_CONDITION, *roles]
 
 
 def build_plan(rotate: bool = False) -> list[str]:
     r = Runner(execute=False, backend=None)
     steps(r, rotate)
-    revoke_plan(r)
+    caller_plan(r)
     # Contents, not only names: a changed permission, condition or line of code changes the hash.
     for path in referenced_files():
         r.plan.append(f"input {rel(path)} sha256 {hashlib.sha256(path.read_bytes()).hexdigest()}")
@@ -957,21 +694,10 @@ def plan_sha256(lines: list[str]) -> str:
 
 def run_execute(backend: Backend, plan_sha: str, commit: str, rotate: bool = False) -> None:
     r = Runner(execute=True, backend=backend)
-    baseline = None
-    try:
-        baseline = preflight(r, plan_sha, commit)
-        steps(r, rotate)
-        postcheck(r)
-        database_postcheck(r)
-    except BaseException:
-        # The sign-in must not outlive a failed run. A failure to revoke is reported
-        # alongside the original error, which is kept as the cause.
-        try:
-            revoke(r, commit, plan_sha, baseline)
-        except StepError as err:
-            print(f"::error::revoke also failed: {err}", file=sys.stderr)
-        raise
-    revoke(r, commit, plan_sha, baseline)
+    preflight(r)
+    steps(r, rotate)
+    postcheck(r)
+    database_postcheck(r)
 
 
 def real_backend(kind: str, argv: list[str], stdin: str | None = None) -> tuple[int, str, str]:
@@ -986,22 +712,30 @@ def real_backend(kind: str, argv: list[str], stdin: str | None = None) -> tuple[
 
 
 def commit_check(expected: str | None) -> str | None:
-    """Return an error text unless this run is the reviewed commit, or None when it is."""
+    """Return an error text unless HEAD in this checkout is the reviewed commit, or None when it is."""
     if expected is None:
         return None
-    actual = os.environ.get("GITHUB_SHA", "")
+    try:
+        actual = subprocess.check_output(
+            ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+    except Exception as exc:
+        return f"cannot determine git HEAD in {ROOT}: {exc}; nothing ran"
     if actual != expected:
-        return f"run commit {actual!r} is not the reviewed commit {expected!r}; nothing ran"
+        return f"HEAD commit {actual!r} is not the reviewed commit {expected!r}; nothing ran"
     return None
 
 
 def ci_guard() -> str | None:
-    """Return an error text unless this is the reviewed workflow on main, or None when it is."""
+    """Return an error text unless this is the reviewed website workflow on main, or None when it is."""
     for key, want in CI_ENVIRONMENT.items():
         if os.environ.get(key) != want:
-            return f"{key} is {os.environ.get(key)!r}, not {want!r}; this command runs only from {WORKFLOW_REF}"
-    if re.fullmatch(r"[0-9a-f]{40}", os.environ.get("GITHUB_SHA", "")) is None:
-        return "GITHUB_SHA is not a commit; nothing ran"
+            return f"{key} is {os.environ.get(key)!r}, not {want!r}; this command runs only from {CALLER_WORKFLOW_REF}"
+    event = os.environ.get("GITHUB_EVENT_NAME", "")
+    if event not in CALLER_EVENTS:
+        return f"GITHUB_EVENT_NAME is {event!r}, not one of {CALLER_EVENTS!r}; this command runs only from {CALLER_WORKFLOW_REF}"
     return None
 
 
@@ -1009,14 +743,12 @@ def main(argv: list[str], backend: Backend | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else "")
     parser.add_argument("--execute", action="store_true", help="run the plan (CI only)")
     parser.add_argument("--expect-sha256", help="refuse unless the plan hashes to this value")
-    parser.add_argument("--expect-commit", help="refuse unless GITHUB_SHA is this commit")
+    parser.add_argument("--expect-commit", help="refuse unless git HEAD is this commit")
     parser.add_argument("--rotate-db-password", action="store_true",
                         help="generate a new database password and seed database-url with it")
-    parser.add_argument("--revoke-only", action="store_true", help="remove the sign-in member and nothing else")
-    parser.add_argument("--execution-manifest", help="canonical per-run identity registration")
     parser.add_argument("--plan-file", help="write the plan text here")
     args = parser.parse_args(argv)
-    if args.execute or args.revoke_only:
+    if args.execute:
         error = ci_guard()
         if error:
             print(f"::error::{error}", file=sys.stderr)
@@ -1024,54 +756,6 @@ def main(argv: list[str], backend: Backend | None = None) -> int:
         if args.expect_sha256 is None or args.expect_commit is None:
             print("::error::--expect-sha256 and --expect-commit are required; nothing ran", file=sys.stderr)
             return 2
-        if not args.execution_manifest:
-            print("::error::execution manifest is required; nothing ran", file=sys.stderr)
-            return 2
-        try:
-            manifest = execution.load_manifest(args.execution_manifest)
-            execution.check_ci(manifest, enforce_window=not args.revoke_only)
-            if (manifest["C"] != args.expect_commit or manifest["H"] != args.expect_sha256 or
-                    manifest["rotate_db_password"] != args.rotate_db_password):
-                raise execution.Refuse("manifest does not match the reviewed commit, plan and rotation")
-        except (OSError, ValueError, execution.Refuse) as exc:
-            print(f"::error::invalid execution manifest: {exc}; nothing ran", file=sys.stderr)
-            return 2
-        global ACTIVE_EXECUTION, BOOTSTRAP_PRINCIPAL, EXECUTION_POOL
-        ACTIVE_EXECUTION = manifest
-        BOOTSTRAP_PRINCIPAL = manifest["member"]
-        EXECUTION_POOL = f"projects/{PROJECT_NUMBER}/locations/global/workloadIdentityPools/{manifest['pool_id']}"
-
-    if args.revoke_only:
-        if args.execute:
-            print("::error::--revoke-only cannot be combined with --execute", file=sys.stderr)
-            return 2
-        if args.expect_sha256 is None or args.expect_commit is None:
-            print("::error::--revoke-only needs --expect-sha256 and --expect-commit, so only the approved grant "
-                  "is removed; nothing ran", file=sys.stderr)
-            return 2
-        error = pinned_identity_error(args.expect_commit, args.expect_sha256)
-        if error:
-            print(f"::error::{error}", file=sys.stderr)
-            return 2
-        error = commit_check(args.expect_commit)  # the run must be the approved commit itself
-        if error:
-            print(f"::error::{error}", file=sys.stderr)
-            return 2
-        # The grant names one plan. This checkout must compute that plan or nothing runs. A grant this run refuses
-        # is removed by the website's reviewed han-signin-retire job (contract C4), not by this run.
-        sha = plan_sha256(build_plan(args.rotate_db_password))
-        if sha != args.expect_sha256:
-            print(f"::error::this checkout computes plan hash {sha}, not the approved {args.expect_sha256}; "
-                  "nothing ran. Recovery: the website's reviewed han-signin-retire job removes the grant.",
-                  file=sys.stderr)
-            return 2
-        try:
-            revoke(Runner(execute=True, backend=backend or real_backend), args.expect_commit, args.expect_sha256)
-        except StepError as err:
-            print(f"::error::{err}", file=sys.stderr)
-            return 1
-        print("revoked: the approved bootstrap sign-in grant is absent")
-        return 0
 
     lines = build_plan(args.rotate_db_password)
     sha = plan_sha256(lines)
@@ -1090,10 +774,6 @@ def main(argv: list[str], backend: Backend | None = None) -> int:
         return 2
     if not args.execute:
         return 0
-    if args.expect_sha256 is None or args.expect_commit is None:
-        print("::error::--execute needs --expect-sha256 and --expect-commit, so the approval names the exact plan and commit",
-              file=sys.stderr)
-        return 2
     error = pinned_identity_error(args.expect_commit, args.expect_sha256)
     if error:
         print(f"::error::{error}", file=sys.stderr)
