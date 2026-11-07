@@ -340,6 +340,7 @@ jobs:
         run: |
           cat > lib/build-info.generated.ts << 'EOF'
           export const HAN_VERSION = "0.0.0-ci";
+          export const COORDINATOR_SHA256: string | null = null;
           export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
           export const version = "0.0.0-ci";
           export const gitCommit = "ci";
@@ -393,6 +394,7 @@ jobs:
         run: |
           cat > lib/build-info.generated.ts << 'EOF'
           export const HAN_VERSION = "0.0.0-ci";
+          export const COORDINATOR_SHA256: string | null = null;
           export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
           export const version = "0.0.0-ci";
           export const gitCommit = "ci";
@@ -400,7 +402,6 @@ jobs:
           export const platform = "linux";
           export const arch = "x64";
           EOF
-      - name: Prove transport classification rejects mutation
         working-directory: packages/han
         run: bun run scripts/prove-transport-classification-mutations.ts "${{ matrix.mutation }}"
 
@@ -478,6 +479,7 @@ jobs:
         run: |
           cat > lib/build-info.generated.ts << 'EOF'
           export const HAN_VERSION = "0.0.0-ci";
+          export const COORDINATOR_SHA256: string | null = null;
           export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
           export const version = "0.0.0-ci";
           export const gitCommit = "ci";
@@ -485,7 +487,6 @@ jobs:
           export const platform = "linux";
           export const arch = "x64";
           EOF
-      - name: Install browse dependencies
         working-directory: packages/browse-client
         run: bun install --frozen-lockfile
       - name: Install headless Chromium

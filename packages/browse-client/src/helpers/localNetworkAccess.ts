@@ -16,20 +16,15 @@ import { getGraphQLEndpoints } from '../config/urls.ts';
 
 /**
  * Hostnames that resolve to this machine.
- *
-const LOOPBACK_HOSTNAMES = new Set([
-	"localhost",
-	"127.0.0.1",
-	"::1",
-	"[::1]",
-]);
+ */
+const LOOPBACK_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
 
 function isLoopbackHostname(hostname: string): boolean {
-	if (LOOPBACK_HOSTNAMES.has(hostname)) {
-		return true;
-	}
-	// The whole 127.0.0.0/8 block is loopback, not just 127.0.0.1.
-	return /^127(?:\.\d{1,3}){3}$/.test(hostname);
+  if (LOOPBACK_HOSTNAMES.has(hostname)) {
+    return true;
+  }
+  // The whole 127.0.0.0/8 block is loopback, not just 127.0.0.1.
+  return /^127(?:\.\d{1,3}){3}$/.test(hostname);
 }
 
 /** Whether the page itself is served from this machine. */

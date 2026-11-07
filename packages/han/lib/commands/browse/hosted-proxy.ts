@@ -191,12 +191,21 @@ async function fetchDevAsset(
   method = 'GET',
   accept?: string
 ): Promise<Response> {
-  const target = validPath(path, origin);
-  return fetch(target, {
-    method,
-    headers: accept ? { accept } : {},
-    redirect: 'manual',
-  });
+  let target = validPath(path, origin);
+  for (let count = 0; ; count++) {
+    const response = await fetch(target, {
+      method,
+      headers: accept ? { accept } : {},
+      redirect: 'manual',
+    });
+    if (![301, 302, 303, 307, 308].includes(response.status)) return response;
+    const location = response.headers.get('location');
+    if (!location || count >= 5) throw new Error('Invalid dashboard redirect');
+    const next = new URL(location, target);
+    if (next.origin !== origin.origin)
+      throw new Error('Dashboard redirect changed origin');
+    target = next;
+  }
 }
 const mime: Record<string, string> = {
   html: 'text/html',
