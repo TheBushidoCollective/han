@@ -161,7 +161,12 @@ RELEASE_DIR="${BIN_DIR}/.han-releases/${RELEASE_NAME}"
 mkdir "$RELEASE_DIR"
 mv "${TEMP_DIR}/${CLI_ASSET}" "${RELEASE_DIR}/han${BINARY_SUFFIX}"
 mv "${TEMP_DIR}/${COORDINATOR_ASSET}" "${RELEASE_DIR}/han-coordinator${BINARY_SUFFIX}"
-ln -s ".han-releases/${RELEASE_NAME}/han${BINARY_SUFFIX}" "${TEMP_DIR}/han-link"
+if [ -n "$BINARY_SUFFIX" ]; then
+	cp -f "${RELEASE_DIR}/han-coordinator${BINARY_SUFFIX}" "${BIN_DIR}/han-coordinator${BINARY_SUFFIX}"
+	cp -f "${RELEASE_DIR}/han${BINARY_SUFFIX}" "${TEMP_DIR}/han-link"
+else
+	ln -s ".han-releases/${RELEASE_NAME}/han${BINARY_SUFFIX}" "${TEMP_DIR}/han-link"
+fi
 # Once the pair is complete, keep it even if publishing is interrupted.
 RELEASE_DIR=""
 mv -f "${TEMP_DIR}/han-link" "$HAN_BIN"

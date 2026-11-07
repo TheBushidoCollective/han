@@ -6,130 +6,140 @@
  * where the wrong chunk gets assigned as the entry script on Linux.
  * Generates index.html manually with the correct script reference.
  */
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
-import { pagesPlugin } from "./pages-plugin";
-import { relayPlugin } from "./relay-plugin";
-import { rnwCompatPlugin } from "./rnw-compat-plugin";
+import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
+import { pagesPlugin } from './pages-plugin';
+import { relayPlugin } from './relay-plugin';
+import { rnwCompatPlugin } from './rnw-compat-plugin';
 
 const projectRoot = dirname(import.meta.dir);
-const outDir = join(projectRoot, "out");
-const pagesDir = join(projectRoot, "src", "pages");
-const buildTarget = process.env.HAN_BUILD_TARGET ?? "local-dashboard";
-if (buildTarget !== "local-dashboard" && buildTarget !== "team-app") {
-	throw new Error(`Unknown dashboard build target: ${buildTarget}`);
+const outDir = join(projectRoot, 'out');
+const pagesDir = join(projectRoot, 'src', 'pages');
+const buildTarget = process.env.HAN_BUILD_TARGET ?? 'local-dashboard';
+if (buildTarget !== 'local-dashboard' && buildTarget !== 'team-app') {
+  throw new Error(`Unknown dashboard build target: ${buildTarget}`);
 }
-if (buildTarget === "team-app" && !process.env.GRAPHQL_URL) {
-	throw new Error("GRAPHQL_URL is required for the team dashboard build");
+if (buildTarget === 'team-app' && !process.env.GRAPHQL_URL) {
+  throw new Error('GRAPHQL_URL is required for the team dashboard build');
 }
-const revision = Bun.spawnSync(["git", "rev-parse", "HEAD"], {
-	cwd: projectRoot,
-});
-if (revision.exitCode !== 0)
-	throw new Error("Cannot determine dashboard source revision");
-const sourceRevision = revision.stdout.toString().trim();
+const envRevision =
+  process.env.SOURCE_REVISION || process.env.RAILWAY_GIT_COMMIT_SHA || '';
+let sourceRevision = '';
+if (/^[a-f0-9]{40}$/i.test(envRevision)) {
+  sourceRevision = envRevision.toLowerCase();
+} else {
+  const revision = Bun.spawnSync(['git', 'rev-parse', 'HEAD'], {
+    cwd: projectRoot,
+  });
+  if (revision.exitCode === 0) {
+    sourceRevision = revision.stdout.toString().trim();
+  }
+}
+if (!/^[a-f0-9]{40}$/i.test(sourceRevision)) {
+  throw new Error('Cannot determine dashboard source revision');
+}
 
 // Clean output directory
 try {
-	rmSync(outDir, { recursive: true });
+  rmSync(outDir, { recursive: true });
 } catch {
-	// Directory may not exist
+  // Directory may not exist
 }
 
-console.log("Building browse-client with Bun...");
+console.log('Building browse-client with Bun...');
 console.log(`  Output: ${outDir}`);
 
 // Use JS entrypoint instead of HTML to avoid Bun's HTML bundler bug
 // on Linux where it assigns the wrong chunk as the entry script.
 const result = await Bun.build({
-	entrypoints: [join(projectRoot, "src", "main.tsx")],
-	outdir: outDir,
-	minify: true,
-	splitting: true,
-	sourcemap: "external",
-	target: "browser",
-	publicPath: "/",
-	naming: "[dir]/[name]-[hash].[ext]",
-	plugins: [
-		rnwCompatPlugin(),
-		relayPlugin({ devMode: false }),
-		pagesPlugin({ pagesDir }),
-	],
-	define: {
-		"process.env.NODE_ENV": JSON.stringify("production"),
-		"import.meta.env.MODE": JSON.stringify("production"),
-		"import.meta.env.PROD": "true",
-		"import.meta.env.DEV": "false",
-		__HAN_BUILD_TARGET__: JSON.stringify(buildTarget),
-		global: "globalThis",
-		...(buildTarget === "team-app" && process.env.GRAPHQL_URL
-			? {
-					__GRAPHQL_URL__: JSON.stringify(process.env.GRAPHQL_URL),
-					__GRAPHQL_WS_URL__: JSON.stringify(
-						process.env.GRAPHQL_URL.replace(/^https:/, "wss:").replace(
-							/^http:/,
-							"ws:",
-						),
-					),
-				}
-			: {}),
-	},
-	loader: {
-		".css": "css",
-		".svg": "file",
-		".png": "file",
-		".jpg": "file",
-		".jpeg": "file",
-		".gif": "file",
-		".woff": "file",
-		".woff2": "file",
-	},
+  entrypoints: [join(projectRoot, 'src', 'main.tsx')],
+  outdir: outDir,
+  minify: true,
+  splitting: true,
+  sourcemap: 'external',
+  target: 'browser',
+  publicPath: '/',
+  naming: '[dir]/[name]-[hash].[ext]',
+  plugins: [
+    rnwCompatPlugin(),
+    relayPlugin({ devMode: false }),
+    pagesPlugin({ pagesDir }),
+  ],
+  define: {
+    'process.env.NODE_ENV': JSON.stringify('production'),
+    'import.meta.env.MODE': JSON.stringify('production'),
+    'import.meta.env.PROD': 'true',
+    'import.meta.env.DEV': 'false',
+    __HAN_BUILD_TARGET__: JSON.stringify(buildTarget),
+    global: 'globalThis',
+    ...(buildTarget === 'team-app' && process.env.GRAPHQL_URL
+      ? {
+          __GRAPHQL_URL__: JSON.stringify(process.env.GRAPHQL_URL),
+          __GRAPHQL_WS_URL__: JSON.stringify(
+            process.env.GRAPHQL_URL.replace(/^https:/, 'wss:').replace(
+              /^http:/,
+              'ws:'
+            )
+          ),
+        }
+      : {}),
+  },
+  loader: {
+    '.css': 'css',
+    '.svg': 'file',
+    '.png': 'file',
+    '.jpg': 'file',
+    '.jpeg': 'file',
+    '.gif': 'file',
+    '.woff': 'file',
+    '.woff2': 'file',
+  },
 });
 
 if (!result.success) {
-	console.error("Build failed:");
-	for (const log of result.logs) {
-		console.error(log);
-	}
-	process.exit(1);
+  console.error('Build failed:');
+  for (const log of result.logs) {
+    console.error(log);
+  }
+  process.exit(1);
 }
 
 // Find the entry point output (the main.tsx bundle)
 const entryOutput = result.outputs.find(
-	(o) => o.kind === "entry-point" && o.path.endsWith(".js"),
+  (o) => o.kind === 'entry-point' && o.path.endsWith('.js')
 );
 if (!entryOutput) {
-	console.error("Build failed: could not find entry-point JS output");
-	process.exit(1);
+  console.error('Build failed: could not find entry-point JS output');
+  process.exit(1);
 }
 const entryFilename = `/${basename(entryOutput.path)}`;
 
 // Generate index.html from template with the correct entry script
-const template = readFileSync(join(projectRoot, "index.html"), "utf-8");
+const template = readFileSync(join(projectRoot, 'index.html'), 'utf-8');
 const html = template.replace(
-	/<script type="module" src="\.\/src\/main\.tsx"><\/script>/,
-	`<script type="module" crossorigin src="${entryFilename}"></script>`,
+  /<script type="module" src="\.\/src\/main\.tsx"><\/script>/,
+  `<script type="module" crossorigin src="${entryFilename}"></script>`
 );
-writeFileSync(join(outDir, "index.html"), html);
-if (buildTarget === "local-dashboard") {
-	writeFileSync(
-		join(outDir, "han-dashboard-manifest.json"),
-		JSON.stringify({
-			kind: "local-dashboard",
-			transportVersion: 1,
-			sourceRevision,
-		}),
-	);
+writeFileSync(join(outDir, 'index.html'), html);
+if (buildTarget === 'local-dashboard') {
+  writeFileSync(
+    join(outDir, 'han-dashboard-manifest.json'),
+    JSON.stringify({
+      kind: 'local-dashboard',
+      transportVersion: 1,
+      sourceRevision,
+    })
+  );
 }
 
 // Report build artifacts
-console.log("\nBuild complete:");
+console.log('\nBuild complete:');
 for (const output of result.outputs) {
-	const size = output.size;
-	const sizeStr =
-		size > 1024 * 1024
-			? `${(size / 1024 / 1024).toFixed(2)} MB`
-			: `${(size / 1024).toFixed(1)} KB`;
-	console.log(`  ${output.path.replace(outDir, "out")} (${sizeStr})`);
+  const size = output.size;
+  const sizeStr =
+    size > 1024 * 1024
+      ? `${(size / 1024 / 1024).toFixed(2)} MB`
+      : `${(size / 1024).toFixed(1)} KB`;
+  console.log(`  ${output.path.replace(outDir, 'out')} (${sizeStr})`);
 }
 console.log(`  out/index.html (entry: ${entryFilename})`);

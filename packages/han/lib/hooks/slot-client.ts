@@ -27,7 +27,11 @@ function debugLog(message: string): void {
  * Check if coordinator is available
  */
 async function isCoordinatorAvailable(): Promise<boolean> {
-  return (await checkHealth())?.status === 'ok';
+  try {
+    return (await checkHealth())?.status === 'ok';
+  } catch {
+    return false;
+  }
 }
 
 /**

@@ -18,13 +18,17 @@ RUN test -f schema.graphql || (echo "ERROR: schema.graphql missing" && exit 1)
 # Build-time GraphQL URL injection (for team mode deployment)
 ARG GRAPHQL_URL
 ENV GRAPHQL_URL=${GRAPHQL_URL}
-ENV HAN_BUILD_TARGET=team-app
+ARG SOURCE_REVISION
+ARG RAILWAY_GIT_COMMIT_SHA
+ENV SOURCE_REVISION=${SOURCE_REVISION:-${RAILWAY_GIT_COMMIT_SHA}}
+ENV HAN_BUILD_TARGET=local-dashboard
 
 # Build the application
 RUN bun run build
 
 # Verify build output
 RUN test -f out/index.html || (echo "ERROR: Build failed - no index.html" && exit 1)
+RUN test -f out/han-dashboard-manifest.json || (echo "ERROR: Build failed - no han-dashboard-manifest.json" && exit 1)
 RUN ls -la out/
 
 # Production stage

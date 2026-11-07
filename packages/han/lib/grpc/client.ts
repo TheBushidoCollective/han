@@ -124,12 +124,16 @@ export async function isCoordinatorHealthy(
   port?: number,
   timeoutMs = 2000
 ): Promise<boolean> {
-  if (!(await checkHealth(port))) return false;
-  const response = await createCoordinatorClients(port).coordinator.health(
-    {},
-    { timeoutMs }
-  );
-  return response.healthy;
+  try {
+    if (!(await checkHealth(port))) return false;
+    const response = await createCoordinatorClients(port).coordinator.health(
+      {},
+      { timeoutMs }
+    );
+    return response.healthy;
+  } catch {
+    return false;
+  }
 }
 
 // Re-export generated types for convenience

@@ -55,3 +55,11 @@ jobs:
       - name: Build check
         run: bun run build
         working-directory: ./packages/browse-client
+
+      - name: Docker build check
+        run: |
+          docker build \
+            --build-arg SOURCE_REVISION=${{ github.sha }} \
+            -t browse-client:test \
+            ./packages/browse-client
+          docker run --rm browse-client:test test -f out/han-dashboard-manifest.json
