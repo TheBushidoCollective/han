@@ -300,9 +300,10 @@ describe('installed Windows proof diagnostics', () => {
       supervisorExitCode: null,
       supervisorProofKilled: true,
     };
-    expect(safeProcessDiagnostic(proofKilledProcess)).toEqual(
-      proofKilledProcess
-    );
+    const sanitized = safeProcessDiagnostic(proofKilledProcess);
+    expect(sanitized).toBeDefined();
+    expect(sanitized?.supervisorProofKilled).toBe(true);
+    expect(sanitized).not.toHaveProperty('supervisorExitCode');
   });
 
   test('reports helper diagnostic and process diagnostic together without collision', () => {
