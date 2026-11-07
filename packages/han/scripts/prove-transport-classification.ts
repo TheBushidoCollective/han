@@ -12,11 +12,11 @@ import { join, resolve } from 'node:path';
 import { ConnectError } from '@connectrpc/connect';
 import { checkHealth } from '../lib/commands/coordinator/health.ts';
 import {
-  type LocalCoordinatorDescriptor,
   CoordinatorConnectionRefusedError,
   CoordinatorSecurityError,
   coordinatorFetch,
   isExplicitConnectionRefusal,
+  type LocalCoordinatorDescriptor,
 } from '../lib/coordinator/connection.ts';
 import { createCoordinatorClients } from '../lib/grpc/client.ts';
 

@@ -111,26 +111,32 @@ describe('installed Windows proof diagnostics', () => {
     expect(assertReport.includes(secret)).toBe(false);
   });
 
-  test('classifies AssertionError containing certificatePem as assertion_failure not tls_error', () => {
-    const tlsAssertionError = Object.assign(
-      new Error(
-        `AssertionError: expected descriptor.certificatePem to be defined: ${secret}`
-      ),
-      {
-        name: 'AssertionError',
-      }
+  test('classifies typed errors and ignores arbitrary text in error message', () => {
+    const arbitraryError = new Error(
+      `arbitrary failure containing certificate and ${secret}`
     );
-    const report = safeProofFailure(
-      'initial-start-descriptor',
-      tlsAssertionError
-    );
+    const report = safeProofFailure('initial-start-descriptor', arbitraryError);
     expect(JSON.parse(report)).toEqual({
       phase: 'initial-start-descriptor',
       exitStatus: null,
       diagnostic: null,
-      reason: 'assertion_failure',
     });
     expect(report.includes(secret)).toBe(false);
+
+    const tlsError = Object.assign(
+      new Error(`TLS handshake failed: ${secret}`),
+      {
+        code: 'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
+      }
+    );
+    const tlsReport = safeProofFailure('initial-start-descriptor', tlsError);
+    expect(JSON.parse(tlsReport)).toEqual({
+      phase: 'initial-start-descriptor',
+      exitStatus: null,
+      diagnostic: null,
+      reason: 'tls_error',
+    });
+    expect(tlsReport.includes(secret)).toBe(false);
   });
 
   test('keeps cleanup reporting separate from the initiating failure', () => {

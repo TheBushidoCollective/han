@@ -188,32 +188,33 @@ export function safeProofFailure(phase: string, error: unknown): string {
   if (command?.startupTimeout === true) {
     reason = 'startup_timeout';
   } else if (error instanceof Error) {
+    const code = (error as { code?: unknown }).code;
     if (error.name === 'AssertionError') {
       reason = 'assertion_failure';
-    } else {
-      const msg = error.message.toLowerCase();
-      const code = (error as { code?: unknown }).code;
-      if (
-        code === 'ECONNREFUSED' ||
-        msg.includes('econnrefused') ||
-        msg.includes('connection refused')
-      ) {
-        reason = 'connection_refused';
-      } else if (
-        code === 'ECONNRESET' ||
-        msg.includes('econnreset') ||
-        msg.includes('connection reset')
-      ) {
-        reason = 'connection_reset';
-      } else if (/timed?\s*out/i.test(error.message)) {
-        reason = 'timeout';
-      } else if (/cert|tls|handshake|self_signed/i.test(msg)) {
-        reason = 'tls_error';
-      } else if (error.name === 'TypeError' || msg.includes('fetch failed')) {
-        reason = 'fetch_failure';
-      } else if (msg.includes('process')) {
-        reason = 'process_state_error';
-      }
+    } else if (code === 'ECONNREFUSED') {
+      reason = 'connection_refused';
+    } else if (code === 'ECONNRESET') {
+      reason = 'connection_reset';
+    } else if (
+      code === 'ETIMEDOUT' ||
+      error.name === 'TimeoutError' ||
+      error.message.startsWith('Timed out waiting for ')
+    ) {
+      reason = 'timeout';
+    } else if (
+      typeof code === 'string' &&
+      (code.startsWith('ERR_TLS_') ||
+        code.startsWith('ERR_SSL_') ||
+        code === 'CERT_HAS_EXPIRED' ||
+        code === 'DEPTH_ZERO_SELF_SIGNED_CERT' ||
+        code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE')
+    ) {
+      reason = 'tls_error';
+    } else if (
+      error.name === 'TypeError' &&
+      error.message.toLowerCase() === 'fetch failed'
+    ) {
+      reason = 'fetch_failure';
     }
   }
   return JSON.stringify({
