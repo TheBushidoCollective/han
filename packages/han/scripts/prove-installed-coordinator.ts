@@ -282,9 +282,12 @@ async function lifecycle(
 }
 
 async function main(): Promise<void> {
-  if (process.platform !== 'linux' || process.env.CI !== 'true')
+  if (
+    (process.platform !== 'linux' && process.platform !== 'darwin') ||
+    process.env.CI !== 'true'
+  )
     throw new Error(
-      'Installed acceptance requires a disposable Linux CI runner'
+      'Installed acceptance requires a disposable Linux or macOS CI runner'
     );
   const options = parseOptions(process.argv.slice(2));
   const cliArtifact = realpathSync(options.cli);
