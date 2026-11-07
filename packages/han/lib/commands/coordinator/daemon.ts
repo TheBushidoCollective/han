@@ -262,6 +262,16 @@ export async function startDaemon(
   const port = options.port ?? getCoordinatorPort();
   console.log(`[coordinator] Using port: ${port}`);
 
+  const selected = readOptionalDescriptor();
+  const predecessor = selected && descriptorIsDead(selected) ? selected : null;
+  if (!predecessor) {
+    const status = await getStatus(port);
+    if (status.running) {
+      console.log(`[coordinator] Already running (PID: ${status.pid})`);
+      return status;
+    }
+  }
+
   // K3: Self-repair if binary is missing
   if (!findCoordinatorBinary()) {
     try {
@@ -276,15 +286,6 @@ export async function startDaemon(
     await stopLegacyCoordinator(port);
   } catch (e) {
     if (e instanceof CoordinatorSecurityError) throw e;
-  }
-  const selected = readOptionalDescriptor();
-  const predecessor = selected && descriptorIsDead(selected) ? selected : null;
-  if (!predecessor) {
-    const status = await getStatus(port);
-    if (status.running) {
-      console.log(`[coordinator] Already running (PID: ${status.pid})`);
-      return status;
-    }
   }
 
   // Run in foreground mode

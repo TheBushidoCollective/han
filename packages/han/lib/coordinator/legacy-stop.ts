@@ -57,17 +57,14 @@ function isAlive(pid: number): boolean {
 export async function inspectLegacyCoordinator(
   port: number
 ): Promise<LegacyInspection> {
+  const occupied = await portOccupied(port);
+  if (!occupied) {
+    return { status: 'absent' };
+  }
+
   const dataDir = getCoordinatorDataDir();
   const descriptorPath = join(dataDir, 'runtime', 'coordinator.json');
   if (existsSync(descriptorPath)) {
-    return {
-      status: 'foreign',
-      reason: 'Modern descriptor present; not a legacy coordinator.',
-    };
-  }
-
-  const occupied = await portOccupied(port);
-  if (!occupied) {
     return { status: 'absent' };
   }
 
