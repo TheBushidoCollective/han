@@ -89,7 +89,7 @@ if (dashboardDir && existsSync(dashboardDir)) {
   const assetEntries = [];
   function walk(dir, relPrefix = '') {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, entry.name);
+      const full = resolve(dir, entry.name);
       const rel = `${relPrefix}/${entry.name}`;
       if (entry.isDirectory()) {
         walk(full, rel);
