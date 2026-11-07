@@ -8,6 +8,7 @@ native/
 
 # Generated files
 lib/build-info.generated.ts
+lib/commands/browse/embedded-dashboard.generated.ts
 
 # Coverage reports
 coverage/

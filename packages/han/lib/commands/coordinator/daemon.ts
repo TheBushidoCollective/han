@@ -21,6 +21,9 @@ import { Code, ConnectError } from '@connectrpc/connect';
 import { getHanDataDir } from '../../config/claude-settings.ts';
 import { getHanBinary } from '../../config/han-settings.ts';
 import {
+  CoordinatorBinaryMissingError,
+  CoordinatorConnectionRefusedError,
+  CoordinatorPortOccupiedError,
   CoordinatorSecurityError,
   getCoordinatorDataDir,
   isExplicitConnectionRefusal,
@@ -37,12 +40,14 @@ import {
   recoveryInspect,
   recoveryReclaim,
 } from '../../coordinator/recovery-runtime.ts';
+import { findCoordinatorBinary } from '../../coordinator/binary.ts';
+import { stopLegacyCoordinator } from '../../coordinator/legacy-stop.ts';
+import { repairCoordinator } from '../../coordinator/pair-repair.ts';
 import {
   windowsPrepareRuntime,
   windowsProcessState,
   windowsReadSupervisor,
 } from '../../coordinator/windows-runtime.ts';
-import { createCoordinatorClients } from '../../grpc/client.ts';
 import {
   checkHealth,
   descriptorIsDead,
@@ -185,7 +190,20 @@ function isProcessRunning(pid: number): boolean {
 /** Get coordinator status without changing supervisor ownership. */
 export async function getStatus(port?: number): Promise<CoordinatorStatus> {
   const effectivePort = port ?? getCoordinatorPort();
-  const health = await checkHealth(effectivePort);
+  let health: HealthCheckResponse | null = null;
+  try {
+    health = await checkHealth(effectivePort);
+  } catch (error) {
+    if (
+      error instanceof CoordinatorPortOccupiedError ||
+      error instanceof CoordinatorBinaryMissingError ||
+      error instanceof CoordinatorConnectionRefusedError
+    ) {
+      health = null;
+    } else {
+      throw error;
+    }
+  }
 
   if (health?.status === 'ok') {
     return {
@@ -242,6 +260,21 @@ export async function startDaemon(
   const port = options.port ?? getCoordinatorPort();
   console.log(`[coordinator] Using port: ${port}`);
 
+  // K3: Self-repair if binary is missing
+  if (!findCoordinatorBinary()) {
+    try {
+      await repairCoordinator();
+    } catch (e) {
+      console.error('[coordinator] Self-repair failed:', e);
+    }
+  }
+
+  // K4: Stop legacy coordinator if present on port
+  try {
+    await stopLegacyCoordinator(port);
+  } catch (e) {
+    if (e instanceof CoordinatorSecurityError) throw e;
+  }
   const selected = readOptionalDescriptor();
   const predecessor = selected && descriptorIsDead(selected) ? selected : null;
   if (!predecessor) {

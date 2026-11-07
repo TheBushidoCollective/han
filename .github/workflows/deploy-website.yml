@@ -25,12 +25,27 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      met: ${{ steps.contract-gate.outputs.met }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: Check installer contract for latest release
+        id: contract-gate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x ./.github/scripts/check-installer-contract.sh
+          if ./.github/scripts/check-installer-contract.sh; then
+            echo "met=true" >> $GITHUB_OUTPUT
+            echo "Notice: Installer contract met. Proceeding with deployment."
+          else
+            echo "met=false" >> $GITHUB_OUTPUT
+            echo "Notice: Installer contract unmet on latest release. Skipping website deployment."
+          fi
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -45,28 +60,32 @@ jobs:
         uses: actions/configure-pages@v4
 
       - name: Install dependencies
+        if: steps.contract-gate.outputs.met == 'true'
         run: bun install --frozen-lockfile
         working-directory: ./website
 
       - name: Build with Next.js
+        if: steps.contract-gate.outputs.met == 'true'
         run: bun run build
         working-directory: ./website
 
       - name: Add .nojekyll file
+        if: steps.contract-gate.outputs.met == 'true'
         run: touch out/.nojekyll
         working-directory: ./website
 
       - name: Upload artifact
+        if: steps.contract-gate.outputs.met == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./website/out
-
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
+    if: needs.build.outputs.met == 'true'
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

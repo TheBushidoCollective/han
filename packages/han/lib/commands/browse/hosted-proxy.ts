@@ -32,7 +32,6 @@ import {
   windowsRemoveLauncher,
 } from '../../coordinator/windows-runtime.ts';
 
-export const HOSTED_DASHBOARD_ORIGIN = 'https://dashboard.local.han.guru';
 const TOKEN_LIFETIME = 120_000;
 const INIT_TIMEOUT = 5_000;
 const stripped = new Set([
@@ -157,27 +156,47 @@ function validPath(path: string, origin: URL): URL {
     throw new Error('Invalid dashboard path');
   return target;
 }
-async function fetchAsset(
+async function embeddedAsset(path: string): Promise<Response> {
+  const url = validPath(path, new URL('http://127.0.0.1'));
+  let pathname = decodeURIComponent(url.pathname);
+  if (!pathname.includes('.') || pathname.endsWith('/'))
+    pathname = '/index.html';
+  let embeddedModule: { EMBEDDED_DASHBOARD_ASSETS?: Record<string, string> } =
+    {};
+  try {
+    embeddedModule = await import('./embedded-dashboard.generated.ts');
+  } catch {}
+  const assets = embeddedModule.EMBEDDED_DASHBOARD_ASSETS ?? {};
+  const target = assets[pathname] ?? assets['/index.html'];
+  if (!target) {
+    return new Response('Not Found', { status: 404 });
+  }
+  try {
+    const file = Bun.file(target);
+    if (await file.exists()) {
+      const ext = pathname.split('.').pop() ?? '';
+      return new Response(file, {
+        headers: {
+          'content-type': mime[ext] ?? 'application/octet-stream',
+        },
+      });
+    }
+  } catch {}
+  return new Response('Not Found', { status: 404 });
+}
+
+async function fetchDevAsset(
   origin: URL,
   path: string,
   method = 'GET',
   accept?: string
 ): Promise<Response> {
-  let target = validPath(path, origin);
-  for (let count = 0; ; count++) {
-    const response = await fetch(target, {
-      method,
-      headers: accept ? { accept } : {},
-      redirect: 'manual',
-    });
-    if (![301, 302, 303, 307, 308].includes(response.status)) return response;
-    const location = response.headers.get('location');
-    if (!location || count >= 5) throw new Error('Invalid dashboard redirect');
-    const next = new URL(location, target);
-    if (next.origin !== origin.origin)
-      throw new Error('Dashboard redirect changed origin');
-    target = next;
-  }
+  const target = validPath(path, origin);
+  return fetch(target, {
+    method,
+    headers: accept ? { accept } : {},
+    redirect: 'manual',
+  });
 }
 const mime: Record<string, string> = {
   html: 'text/html',
@@ -267,47 +286,28 @@ function jsonOnly(req: IncomingMessage): boolean {
 export async function startHostedDashboardProxy(
   options: HostedProxyOptions
 ): Promise<HostedProxy> {
-  const origin = new URL(options.origin ?? HOSTED_DASHBOARD_ORIGIN);
-  if (
-    origin.username ||
-    origin.password ||
-    !['http:', 'https:'].includes(origin.protocol) ||
-    origin.pathname !== '/' ||
-    origin.search ||
-    origin.hash
-  )
-    throw new Error('Invalid dashboard origin');
-  if (
-    options.dev &&
-    (origin.protocol !== 'http:' || origin.hostname !== '127.0.0.1')
-  ) {
-    throw new Error('Development assets must use a literal loopback origin');
+  const origin = options.origin ? new URL(options.origin) : undefined;
+  if (origin) {
+    if (
+      origin.username ||
+      origin.password ||
+      origin.protocol !== 'http:' ||
+      origin.hostname !== '127.0.0.1' ||
+      origin.pathname !== '/' ||
+      origin.search ||
+      origin.hash
+    )
+      throw new Error('Development assets must use a literal loopback origin');
   }
-  const asset = (path: string, method = 'GET', accept?: string) =>
-    options.assetDir
-      ? Promise.resolve(localAsset(options.assetDir, path))
-      : fetchAsset(origin, path, method, accept);
-  const manifest = await asset('/han-dashboard-manifest.json');
-  if (!manifest.ok)
-    throw new Error('UPGRADE_REQUIRED: dashboard manifest missing');
-  let info: unknown;
-  try {
-    info = await manifest.json();
-  } catch {
-    throw new Error('UPGRADE_REQUIRED: malformed dashboard manifest');
-  }
-  if (
-    !info ||
-    typeof info !== 'object' ||
-    !('kind' in info) ||
-    info.kind !== 'local-dashboard' ||
-    !('transportVersion' in info) ||
-    info.transportVersion !== 1 ||
-    !('sourceRevision' in info) ||
-    typeof info.sourceRevision !== 'string' ||
-    !/^[a-f0-9]{40}$/i.test(info.sourceRevision)
-  )
-    throw new Error('UPGRADE_REQUIRED: incompatible dashboard manifest');
+  const asset = (path: string, method = 'GET', accept?: string) => {
+    if (options.assetDir) {
+      return Promise.resolve(localAsset(options.assetDir, path));
+    }
+    if (origin) {
+      return fetchDevAsset(origin, path, method, accept);
+    }
+    return embeddedAsset(path);
+  };
   let authority = '';
   let launchToken: string | null = token();
   let launchPath = '';
@@ -340,7 +340,7 @@ export async function startHostedDashboardProxy(
       return;
     }
     try {
-      validPath(path, origin);
+      validPath(path, origin ?? new URL('http://127.0.0.1'));
     } catch {
       res.writeHead(400).end();
       return;

@@ -56,12 +56,6 @@ async function setup() {
         authorization: req.headers.get('authorization'),
         cookie: req.headers.get('cookie'),
       });
-      if (path === '/han-dashboard-manifest.json')
-        return Response.json({
-          kind: 'local-dashboard',
-          transportVersion: 1,
-          sourceRevision: 'a'.repeat(40),
-        });
       if (path === '/escape')
         return new Response(null, {
           status: 302,
@@ -488,24 +482,13 @@ describe('local dashboard gateway', () => {
     expect(seen.at(-1)?.cookie).toBeNull();
     expect((await fetch(`${proxy.url}/escape`)).status).toBe(502);
   });
-  test('rejects an incompatible dashboard before listening', async () => {
-    const upstream = Bun.serve({
-      hostname: '127.0.0.1',
-      port: 0,
-      fetch: () =>
-        Response.json({
-          kind: 'team-app',
-          transportVersion: 1,
-          sourceRevision: 'a'.repeat(40),
-        }),
-    });
-    cleanups.push(() => upstream.stop(true));
+  test('rejects non-loopback origin before listening', async () => {
     await expect(
       startHostedDashboardProxy({
         port: 0,
-        origin: `http://127.0.0.1:${upstream.port}`,
+        origin: 'https://example.com',
       })
-    ).rejects.toThrow('UPGRADE_REQUIRED');
+    ).rejects.toThrow('Development assets must use a literal loopback origin');
   });
   test('an occupied gateway port fails instead of attaching to the incumbent', async () => {
     const { proxy } = await setup();

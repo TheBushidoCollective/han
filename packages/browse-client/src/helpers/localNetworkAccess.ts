@@ -12,20 +12,16 @@
  * wrong, and it is what the connection overlay used to do forever.
  */
 
-import { getGraphQLEndpoints } from "../config/urls.ts";
+import { getGraphQLEndpoints } from '../config/urls.ts';
 
 /**
  * Hostnames that resolve to this machine.
  *
- * `coordinator.local.han.guru` is a public DNS name pointing at 127.0.0.1, so it
- * belongs here: it is a loopback target even though it does not look like one.
- */
 const LOOPBACK_HOSTNAMES = new Set([
 	"localhost",
 	"127.0.0.1",
 	"::1",
 	"[::1]",
-	"coordinator.local.han.guru",
 ]);
 
 function isLoopbackHostname(hostname: string): boolean {
@@ -38,19 +34,19 @@ function isLoopbackHostname(hostname: string): boolean {
 
 /** Whether the page itself is served from this machine. */
 export function isLoopbackOrigin(hostname?: string): boolean {
-	const host =
-		hostname ?? (typeof window === "undefined" ? "" : window.location.hostname);
-	return host !== "" && isLoopbackHostname(host);
+  const host =
+    hostname ?? (typeof window === 'undefined' ? '' : window.location.hostname);
+  return host !== '' && isLoopbackHostname(host);
 }
 
 /** Whether the configured coordinator is a loopback target. */
 export function coordinatorIsLoopback(endpoint?: string): boolean {
-	const url = endpoint ?? getGraphQLEndpoints().http;
-	try {
-		return isLoopbackHostname(new URL(url).hostname);
-	} catch {
-		return false;
-	}
+  const url = endpoint ?? getGraphQLEndpoints().http;
+  try {
+    return isLoopbackHostname(new URL(url).hostname);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -63,11 +59,11 @@ export function coordinatorIsLoopback(endpoint?: string): boolean {
  * coordinator is unreachable and the normal advice applies.
  */
 export function isBlockedByLocalNetworkAccess(options?: {
-	pageHostname?: string;
-	coordinatorEndpoint?: string;
+  pageHostname?: string;
+  coordinatorEndpoint?: string;
 }): boolean {
-	return (
-		!isLoopbackOrigin(options?.pageHostname) &&
-		coordinatorIsLoopback(options?.coordinatorEndpoint)
-	);
+  return (
+    !isLoopbackOrigin(options?.pageHostname) &&
+    coordinatorIsLoopback(options?.coordinatorEndpoint)
+  );
 }

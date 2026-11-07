@@ -1,5 +1,6 @@
 import { connect } from 'node:net';
 import {
+  CoordinatorPortOccupiedError,
   CoordinatorSecurityError,
   coordinatorFetch,
   getCoordinatorDataDir,
@@ -181,7 +182,7 @@ export async function checkHealth(
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       if (!starting && (await portOccupied(port ?? getCoordinatorPort())))
-        throw new CoordinatorSecurityError(
+        throw new CoordinatorPortOccupiedError(
           'UPGRADE_REQUIRED: occupied coordinator port has no compatible descriptor; identify and stop its owner'
         );
       return null;

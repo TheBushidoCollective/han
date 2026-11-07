@@ -11,6 +11,9 @@
 import { type Client, createClient } from 'graphql-ws';
 import WebSocket from 'ws';
 import {
+  CoordinatorBinaryMissingError,
+  CoordinatorConnectionRefusedError,
+  CoordinatorPortOccupiedError,
   coordinatorRequest,
   readCoordinatorDescriptor,
 } from '../../coordinator/connection.ts';
@@ -57,17 +60,30 @@ export interface GraphQLResponse<T = unknown> {
  */
 export class CoordinatorClient {
   private wsClient: Client | null = null;
+  private port?: number;
 
-  constructor(_port?: number) {}
+  constructor(port?: number) {
+    this.port = port;
+  }
 
   /**
    * Check if the coordinator is available
    */
   async isAvailable(): Promise<boolean> {
-    const health = await checkHealth();
-    return health?.status === 'ok';
+    try {
+      const health = await checkHealth(this.port);
+      return health?.status === 'ok';
+    } catch (error) {
+      if (
+        error instanceof CoordinatorPortOccupiedError ||
+        error instanceof CoordinatorBinaryMissingError ||
+        error instanceof CoordinatorConnectionRefusedError
+      ) {
+        return false;
+      }
+      throw error;
+    }
   }
-
   /**
    * Execute a GraphQL query or mutation.
    * Automatically ensures the coordinator is running before making requests.

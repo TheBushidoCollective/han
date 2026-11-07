@@ -79,7 +79,7 @@ async function waitForVite(origin: string, vite: ChildProcess): Promise<void> {
     if (vite.exitCode !== null || vite.signalCode !== null)
       throw new Error('Vite exited before becoming ready');
     try {
-      const response = await fetch(`${origin}/han-dashboard-manifest.json`);
+      const response = await fetch(`${origin}/`);
       if (response.ok) return;
     } catch {
       /* Starting. */

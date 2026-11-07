@@ -10,6 +10,9 @@
 
 import { checkHealth } from '../commands/coordinator/health.ts';
 import {
+  CoordinatorBinaryMissingError,
+  CoordinatorConnectionRefusedError,
+  CoordinatorPortOccupiedError,
   CoordinatorSecurityError,
   coordinatorRequest,
 } from '../coordinator/connection.ts';
@@ -29,8 +32,15 @@ function debugLog(message: string): void {
 async function isCoordinatorAvailable(): Promise<boolean> {
   try {
     return (await checkHealth())?.status === 'ok';
-  } catch {
-    return false;
+  } catch (error) {
+    if (
+      error instanceof CoordinatorPortOccupiedError ||
+      error instanceof CoordinatorBinaryMissingError ||
+      error instanceof CoordinatorConnectionRefusedError
+    ) {
+      return false;
+    }
+    throw error;
   }
 }
 

@@ -22,22 +22,6 @@ if (buildTarget !== 'local-dashboard' && buildTarget !== 'team-app') {
 if (buildTarget === 'team-app' && !process.env.GRAPHQL_URL) {
   throw new Error('GRAPHQL_URL is required for the team dashboard build');
 }
-const envRevision =
-  process.env.SOURCE_REVISION || process.env.RAILWAY_GIT_COMMIT_SHA || '';
-let sourceRevision = '';
-if (/^[a-f0-9]{40}$/i.test(envRevision)) {
-  sourceRevision = envRevision.toLowerCase();
-} else {
-  const revision = Bun.spawnSync(['git', 'rev-parse', 'HEAD'], {
-    cwd: projectRoot,
-  });
-  if (revision.exitCode === 0) {
-    sourceRevision = revision.stdout.toString().trim();
-  }
-}
-if (!/^[a-f0-9]{40}$/i.test(sourceRevision)) {
-  throw new Error('Cannot determine dashboard source revision');
-}
 
 // Clean output directory
 try {
@@ -121,16 +105,6 @@ const html = template.replace(
   `<script type="module" crossorigin src="${entryFilename}"></script>`
 );
 writeFileSync(join(outDir, 'index.html'), html);
-if (buildTarget === 'local-dashboard') {
-  writeFileSync(
-    join(outDir, 'han-dashboard-manifest.json'),
-    JSON.stringify({
-      kind: 'local-dashboard',
-      transportVersion: 1,
-      sourceRevision,
-    })
-  );
-}
 
 // Report build artifacts
 console.log('\nBuild complete:');

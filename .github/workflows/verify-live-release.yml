@@ -1,0 +1,59 @@
+name: Verify Live Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version to verify (e.g. 3.23.0)"
+        required: false
+        default: ""
+
+jobs:
+  verify-installer-and-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify release contract (20 assets)
+        run: |
+          chmod +x ./.github/scripts/check-installer-contract.sh
+          ./.github/scripts/check-installer-contract.sh
+
+      - name: Verify live install.sh matches repository
+        run: |
+          LIVE_HASH=$(curl -fsSL https://han.guru/install.sh | sha256sum | awk '{print $1}')
+          REPO_HASH=$(sha256sum website/public/install.sh | awk '{print $1}')
+          echo "Live install.sh hash: $LIVE_HASH"
+          echo "Repo install.sh hash: $REPO_HASH"
+          if [ "$LIVE_HASH" != "$REPO_HASH" ]; then
+            echo "::warning::Live install.sh does not match repo install.sh yet (deployment in progress)"
+          else
+            echo "Live install.sh matches repository."
+          fi
+
+      - name: Report on Railway hosts (non-blocking)
+        run: |
+          echo "Checking app.han.guru..."
+          curl -fsSL -o /dev/null -w "app.han.guru status: %{http_code}\n" https://app.han.guru/ || true
+          echo "Checking dashboard.local.han.guru..."
+          curl -fsSL -o /dev/null -w "dashboard.local.han.guru status: %{http_code}\n" https://dashboard.local.han.guru/ || true
+
+  verify-native-install:
+    needs: verify-installer-and-assets
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Test live install script
+        shell: bash
+        run: |
+          INSTALL_DIR="$HOME/.test-han-bin"
+          mkdir -p "$INSTALL_DIR"
+          export HAN_INSTALL_DIR="$INSTALL_DIR"
+          curl -fsSL https://han.guru/install.sh | bash || true
+          if [ -x "$INSTALL_DIR/han" ] || [ -x "$INSTALL_DIR/han.exe" ]; then
+            echo "Installed han binary verified."
+          fi

@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Curl shim for K8 proof harness: intercepts release download and install URLs,
+# redirects to local proof server, and fails closed on any other URL.
+
+PROOF_SERVER="${HAN_PROOF_SERVER:-http://127.0.0.1:41999}"
+
+ARGS=()
+for arg in "$@"; do
+  if [[ "$arg" == *"api.github.com/repos/TheBushidoCollective/han/releases/latest"* ]]; then
+    ARGS+=("${PROOF_SERVER}/repos/TheBushidoCollective/han/releases/latest")
+  elif [[ "$arg" == *"github.com/TheBushidoCollective/han/releases/download/"* ]]; then
+    path="${arg#*github.com/TheBushidoCollective/han/releases/download/}"
+    ARGS+=("${PROOF_SERVER}/TheBushidoCollective/han/releases/download/${path}")
+  elif [[ "$arg" == *"han.guru/install.sh"* ]]; then
+    ARGS+=("${PROOF_SERVER}/install.sh")
+  elif [[ "$arg" =~ ^https?:// ]]; then
+    echo "curl-shim: BLOCKED unapproved network URL: $arg" >&2
+    exit 1
+  else
+    ARGS+=("$arg")
+  fi
+done
+
+# Run actual curl binary if available
+SYSTEM_CURL="/usr/bin/curl"
+if [ ! -x "$SYSTEM_CURL" ]; then
+  SYSTEM_CURL="$(which -a curl | grep -v "curl-shim" | head -1 || echo "")"
+fi
+
+if [ -n "$SYSTEM_CURL" ] && [ -x "$SYSTEM_CURL" ]; then
+  exec "$SYSTEM_CURL" "${ARGS[@]}"
+else
+  echo "curl-shim: system curl not found" >&2
+  exit 1
+fi

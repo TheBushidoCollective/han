@@ -66,8 +66,11 @@ update_binary() {
     rm -f "$installer"
     return 1
   fi
+  local target_name
+  target_name="$(basename "$han_path")"
+  target_name="${target_name%.exe}"
   if HAN_INSTALL_DIR="$(dirname "$han_path")" \
-    HAN_INSTALL_TARGET="$(basename "$han_path")" \
+    HAN_INSTALL_TARGET="$target_name" \
     HAN_VERSION="$latest_version" bash "$installer"; then
     rm -f "$installer"
     return 0

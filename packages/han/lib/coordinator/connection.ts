@@ -21,7 +21,9 @@ import {
 } from './windows-runtime.ts';
 
 export {
+  CoordinatorBinaryMissingError,
   CoordinatorConnectionRefusedError,
+  CoordinatorPortOccupiedError,
   CoordinatorSecurityError,
 } from './errors.ts';
 export const LOCAL_TRANSPORT_VERSION = 1;

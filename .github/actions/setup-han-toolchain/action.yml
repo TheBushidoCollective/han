@@ -1,0 +1,30 @@
+name: "Setup Han Toolchain"
+description: "Sets up Bun 1.4.4, Rust stable, and protoc for Han builds and test gates"
+
+inputs:
+  bun-version:
+    description: "Bun version"
+    required: false
+    default: "1.4.4"
+  rust-targets:
+    description: "Optional Rust target architecture"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: ${{ inputs.bun-version }}
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ inputs.rust-targets }}
+
+    - name: Install Protoc
+      uses: taiki-e/install-action@v2
+      with:
+        tool: protoc

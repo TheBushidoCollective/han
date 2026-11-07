@@ -153,24 +153,57 @@ COORDINATOR_ASSET="han-coordinator-${PLATFORM}${BINARY_SUFFIX}"
 download_verified "$CLI_ASSET"
 download_verified "$COORDINATOR_ASSET"
 
-# Publish a complete pair behind a single atomic CLI symlink replacement.
-# Keep older pairs: a running CLI may still need its matching coordinator.
-mkdir -p "${BIN_DIR}/.han-releases"
-RELEASE_NAME="$(basename "$TEMP_DIR")"
-RELEASE_DIR="${BIN_DIR}/.han-releases/${RELEASE_NAME}"
-mkdir "$RELEASE_DIR"
-mv "${TEMP_DIR}/${CLI_ASSET}" "${RELEASE_DIR}/han${BINARY_SUFFIX}"
-mv "${TEMP_DIR}/${COORDINATOR_ASSET}" "${RELEASE_DIR}/han-coordinator${BINARY_SUFFIX}"
+# Publish a complete pair per K6 install layout
 if [ -n "$BINARY_SUFFIX" ]; then
-	cp -f "${RELEASE_DIR}/han-coordinator${BINARY_SUFFIX}" "${BIN_DIR}/han-coordinator${BINARY_SUFFIX}"
-	cp -f "${RELEASE_DIR}/han${BINARY_SUFFIX}" "${TEMP_DIR}/han-link"
-else
-	ln -s ".han-releases/${RELEASE_NAME}/han${BINARY_SUFFIX}" "${TEMP_DIR}/han-link"
-fi
-# Once the pair is complete, keep it even if publishing is interrupted.
-RELEASE_DIR=""
-mv -f "${TEMP_DIR}/han-link" "$HAN_BIN"
+	# Delete leftover *.old-* from previous installs
+	rm -f "${BIN_DIR}"/*.old-* 2>/dev/null || true
 
+	# Coordinator first: rename existing to .old-<rand> and move verified new file in
+	COORD_BIN="${BIN_DIR}/han-coordinator.exe"
+	if [ -f "$COORD_BIN" ]; then
+		RAND_SUFFIX="${RANDOM}${RANDOM}"
+		mv "$COORD_BIN" "${BIN_DIR}/han-coordinator.old-${RAND_SUFFIX}" || true
+	fi
+	mv "${TEMP_DIR}/${COORDINATOR_ASSET}" "$COORD_BIN"
+
+	# CLI binary next: rename existing to .old-<rand> and move verified new file in
+	if [ -f "$HAN_BIN" ]; then
+		RAND_SUFFIX="${RANDOM}${RANDOM}"
+		mv "$HAN_BIN" "${BIN_DIR}/han.old-${RAND_SUFFIX}" || true
+	fi
+	mv "${TEMP_DIR}/${CLI_ASSET}" "$HAN_BIN"
+	RELEASE_DIR=""
+else
+	# POSIX: store in .han-releases/<name>/{han,han-coordinator} with symlink
+	mkdir -p "${BIN_DIR}/.han-releases"
+	RELEASE_NAME="$(basename "$TEMP_DIR")"
+	RELEASE_DIR="${BIN_DIR}/.han-releases/${RELEASE_NAME}"
+	mkdir -p "$RELEASE_DIR"
+	mv "${TEMP_DIR}/${CLI_ASSET}" "${RELEASE_DIR}/han"
+	mv "${TEMP_DIR}/${COORDINATOR_ASSET}" "${RELEASE_DIR}/han-coordinator"
+
+	# Delete stale regular file at $BIN/han-coordinator when publishing symlink
+	if [ -f "${BIN_DIR}/han-coordinator" ] && [ ! -L "${BIN_DIR}/han-coordinator" ]; then
+		rm -f "${BIN_DIR}/han-coordinator"
+	fi
+
+	ln -s ".han-releases/${RELEASE_NAME}/han" "${TEMP_DIR}/han-link"
+	# Once the pair is complete, keep it even if publishing is interrupted.
+	RELEASE_DIR=""
+	mv -f "${TEMP_DIR}/han-link" "$HAN_BIN"
+
+	# Prune to the current pair and one previous pair
+	if [ -d "${BIN_DIR}/.han-releases" ]; then
+		(
+			cd "${BIN_DIR}/.han-releases" 2>/dev/null || exit 0
+			ls -1dt .han-install.* 2>/dev/null | tail -n +3 | while read -r old_rel; do
+				if [ -n "$old_rel" ]; then
+					rm -rf "$old_rel"
+				fi
+			done
+		)
+	fi
+fi
 echo -e "${GREEN}✓ Han v$LATEST_VERSION installed successfully!${NC}"
 echo ""
 echo -e "Han binary installed to: ${YELLOW}$HAN_BIN${NC}"

@@ -9,6 +9,9 @@ import { type Client, createClient } from '@connectrpc/connect';
 import { createGrpcWebTransport } from '@connectrpc/connect-web';
 import { checkHealth } from '../commands/coordinator/health.ts';
 import {
+  CoordinatorBinaryMissingError,
+  CoordinatorConnectionRefusedError,
+  CoordinatorPortOccupiedError,
   CoordinatorSecurityError,
   coordinatorFetch,
   type LocalCoordinatorDescriptor,
@@ -131,7 +134,17 @@ export async function isCoordinatorHealthy(
       { timeoutMs }
     );
     return response.healthy;
-  } catch {
+  } catch (error) {
+    if (
+      error instanceof CoordinatorPortOccupiedError ||
+      error instanceof CoordinatorBinaryMissingError ||
+      error instanceof CoordinatorConnectionRefusedError
+    ) {
+      return false;
+    }
+    if (error instanceof CoordinatorSecurityError) {
+      throw error;
+    }
     return false;
   }
 }
