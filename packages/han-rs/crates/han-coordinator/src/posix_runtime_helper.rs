@@ -38,7 +38,7 @@ struct Owner { version: u32, pid: u32, nonce: String }
 #[serde(rename_all="camelCase", deny_unknown_fields)]
 struct Request { version: u32, data_dir: PathBuf, op: String, target: Option<Target>, snapshot: Option<Snapshot>, claim: Option<Claim>, binding: Option<SupervisorBinding>, descriptor: Option<Descriptor>, pid: Option<u32>, nonce: Option<String> }
 fn open_at(dir: &fs::File, name: &OsStr, flags: i32, mode: u32) -> io::Result<fs::File> {
-    let n = c(name)?; let fd = unsafe { libc::openat(dir.as_raw_fd(), n.as_ptr(), flags | libc::O_CLOEXEC | libc::O_NOFOLLOW, mode as libc::mode_t) };
+    let n = c(name)?; let fd = unsafe { libc::openat(dir.as_raw_fd(), n.as_ptr(), flags | libc::O_CLOEXEC | libc::O_NOFOLLOW, mode as libc::c_uint) };
     if fd < 0 { return Err(io::Error::last_os_error()); }
     Ok(unsafe { fs::File::from_raw_fd(fd) })
 }
@@ -273,7 +273,13 @@ fn claim_operation(roots: &Roots, claim: &Claim, release: bool) -> io::Result<Va
 }
 fn dispatch(r: Request) -> io::Result<Value> {
     if r.version != 1 || !r.data_dir.is_absolute() { return Err(invalid()); }
-    if r.op == "runtime.prepare" { crate::runtime::prepare(&r.data_dir)?; let _ = Roots::open(&r.data_dir)?; return Ok(json!({"status":"prepared"})); }
+    if r.op == "runtime.prepare" || r.op == "supervisor.acquire" {
+        crate::runtime::prepare(&r.data_dir)?;
+        if r.op == "runtime.prepare" {
+            let _ = Roots::open(&r.data_dir)?;
+            return Ok(json!({"status":"prepared"}));
+        }
+    }
     let roots = match Roots::open(&r.data_dir) { Ok(r) => r, Err(e) if e.kind() == io::ErrorKind::NotFound && r.op == "supervisor.read" => return Ok(json!({"status":"absent"})), Err(e) => return Err(e) };
     match r.op.as_str() {
         "supervisor.acquire" => acquire(&roots, r.pid.ok_or_else(invalid)?, r.nonce.as_deref().ok_or_else(invalid)?),

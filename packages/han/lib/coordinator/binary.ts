@@ -50,6 +50,7 @@ export function findCoordinatorBinary(): string | null {
     const result = Bun.spawnSync(['which', binaryName], {
       stdout: 'pipe',
       stderr: 'ignore',
+      env: process.env,
     });
     if (result.exitCode === 0) {
       const path = result.stdout.toString().trim();

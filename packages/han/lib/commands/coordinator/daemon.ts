@@ -533,11 +533,22 @@ async function runForeground(port: number): Promise<void> {
       };
       child = null;
       owned = undefined;
+      let childExited = false;
+      const hasChildExited = () =>
+        childExited || (child !== null && child.exitCode !== null);
+      const awaitChildExit = async (timeoutMs = 2000): Promise<boolean> => {
+        if (!child || hasChildExited()) return true;
+        const res = await Promise.race([child.exited, Bun.sleep(timeoutMs)]);
+        return typeof res === 'number' || hasChildExited();
+      };
       try {
         const result = await startServer({ port }, binding);
         if (result.kind === 'attached') return;
         child = result.child;
         owned = result.descriptor;
+        child.exited.then(() => {
+          childExited = true;
+        });
         if (result.kind === 'shutdown-requested') {
           stopping = result.descriptor;
           break;
@@ -547,7 +558,7 @@ async function runForeground(port: number): Promise<void> {
         currentDelay = RESTART_DELAY_MS;
         console.log('[coordinator] Running. Press Ctrl+C to stop.');
         while (!signal) {
-          if (child.exitCode !== null)
+          if (hasChildExited())
             throw new CoordinatorChildExitError('Coordinator child exited');
           if (observeIntent()) break;
           let healthy: boolean;
@@ -556,23 +567,24 @@ async function runForeground(port: number): Promise<void> {
           } catch (error) {
             if (isExplicitConnectionRefusal(error)) {
               if (observeIntent()) break;
-              await Promise.race([child.exited, Bun.sleep(2000)]);
-              if (observeIntent()) break;
-              if (child.exitCode !== null)
+              if (await awaitChildExit(2000)) {
+                if (observeIntent()) break;
                 throw new CoordinatorChildExitError(
                   'Coordinator child exited',
                   { cause: error }
                 );
+              }
             }
             throw error;
           }
           if (observeIntent()) break;
-          if (child.exitCode !== null)
+          if (hasChildExited())
             throw new CoordinatorChildExitError('Coordinator child exited');
           if (!healthy) {
-            await Promise.race([child.exited, Bun.sleep(2000)]);
-            if (child.exitCode !== null)
+            if (await awaitChildExit(2000)) {
+              if (observeIntent()) break;
               throw new CoordinatorChildExitError('Coordinator child exited');
+            }
             throw new Error('Coordinator stopped responding');
           }
           await Bun.sleep(1000);
@@ -588,7 +600,7 @@ async function runForeground(port: number): Promise<void> {
         )
           throw error;
         if (observeIntent()) break;
-        if (child && child.exitCode === null) {
+        if (child && !hasChildExited()) {
           if (observeIntent()) break;
           // Only the authenticated descriptor may authorize shutdown.
           if (!owned)
@@ -601,9 +613,9 @@ async function runForeground(port: number): Promise<void> {
             if (!isExplicitConnectionRefusal(e)) throw e;
           }
           if (observeIntent()) break;
-          await Promise.race([child.exited, Bun.sleep(10000)]);
+          await awaitChildExit(10000);
           if (observeIntent()) break;
-          if (child.exitCode === null)
+          if (!hasChildExited())
             throw new CoordinatorSecurityError(
               'Coordinator did not exit after authenticated shutdown'
             );
