@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -255,6 +256,23 @@ async function main(): Promise<void> {
         exited: Promise<number>;
       }
     | undefined;
+  let feSupervisor:
+    | {
+        pid: number;
+        exitCode: number | null;
+        kill: () => void;
+        exited: Promise<number>;
+      }
+    | undefined;
+  let stopRequester:
+    | {
+        pid: number;
+        exitCode: number | null;
+        kill: () => void;
+        exited: Promise<number>;
+        stderr: unknown;
+      }
+    | undefined;
   let phase = 'initial-status';
   let failed = false;
   let cleanupFailed = false;
@@ -323,6 +341,23 @@ async function main(): Promise<void> {
   const collectDiagnostic = async (): Promise<
     SafeProcessDiagnostic | undefined
   > => {
+    if (phase.startsWith('fast-exit-')) {
+      let marker: SafeProcessDiagnostic['markerFile'] = 'none';
+      const fastExitData = join(root, 'fast-exit-data');
+      if (existsSync(join(fastExitData, 'startup-completed'))) {
+        marker = 'startup-completed';
+      } else if (existsSync(join(fastExitData, 'receipt-release'))) {
+        marker = 'receipt-released';
+      } else if (existsSync(join(fastExitData, 'receipt-held'))) {
+        marker = 'receipt-held';
+      } else if (existsSync(join(fastExitData, 'mock-installed'))) {
+        marker = 'mock-installed';
+      }
+      return {
+        supervisorExitCode: feSupervisor?.exitCode ?? null,
+        markerFile: marker,
+      };
+    }
     if (!phase.startsWith('orphan-')) return undefined;
     const targetChild = orphanChildIdentity;
     if (!targetChild) return undefined;
@@ -667,10 +702,12 @@ async function main(): Promise<void> {
     // This exercises accepting shutdown-requested when child is already gone.
     const fastExitData = join(root, 'fast-exit-data');
     mkdirSync(fastExitData);
-    const fastExitEnv = {
+    const fastExitEnv: Record<string, string> = {
       ...env,
       HAN_DATA_DIR: fastExitData,
+      HAN_COORDINATOR_PORT: '0',
     };
+    delete fastExitEnv.HAN_PROOF_STARTUP_BARRIER;
     const receiptHoldBarrier = join(fastExitData, 'receipt-held');
     const receiptReleaseSignal = join(fastExitData, 'receipt-release');
     const runtimeModPath = resolve(
@@ -688,19 +725,32 @@ async function main(): Promise<void> {
     const fastExitSupervisorScript = `
       const fs = await import('node:fs');
       const { mock } = await import('bun:test');
+      const binaryModPath = ${JSON.stringify(resolve(import.meta.dir, '../lib/coordinator/binary.ts'))};
+      const realBinary = await import(binaryModPath);
+      mock.module(binaryModPath, () => ({
+        ...realBinary,
+        findCoordinatorBinary: () => ${JSON.stringify(coordinator)},
+      }));
       const realHelper = await import(${JSON.stringify(helperModPath)});
       mock.module(${JSON.stringify(helperModPath)}, () => ({
         ...realHelper,
         findCoordinatorBinary: () => ${JSON.stringify(coordinator)},
       }));
+      fs.writeFileSync(${JSON.stringify(join(fastExitData, 'mock-installed'))}, 'ok');
       const realRuntime = await import(${JSON.stringify(runtimeModPath)});
       const origRead = realRuntime.readWindowsChildDescriptor;
       mock.module(${JSON.stringify(runtimeModPath)}, () => ({
         ...realRuntime,
         async readWindowsChildDescriptor(...args) {
           const result = await origRead(...args);
-          if (result) {
-            fs.writeFileSync(${JSON.stringify(receiptHoldBarrier)}, JSON.stringify(result));
+          if (result && result.process && result.process.pid > 0) {
+            // Write only safe non-sensitive process identity metadata, never tokens or certificates
+            const safeIdentity = {
+              pid: result.process.pid,
+              creationTime: result.process.creationTime,
+              userSid: result.process.userSid,
+            };
+            fs.writeFileSync(${JSON.stringify(receiptHoldBarrier)}, JSON.stringify(safeIdentity));
             while (!fs.existsSync(${JSON.stringify(receiptReleaseSignal)})) {
               await Bun.sleep(20);
             }
@@ -711,6 +761,7 @@ async function main(): Promise<void> {
       const { startDaemon } = await import(${JSON.stringify(daemonModPath)});
       try {
         await startDaemon({ port: 0, foreground: true });
+        fs.writeFileSync(${JSON.stringify(join(fastExitData, 'startup-completed'))}, 'ok');
       } catch (e) {
         console.error(e);
         process.exit(1);
@@ -721,44 +772,58 @@ async function main(): Promise<void> {
       'fast-exit-supervisor.ts'
     );
     writeFileSync(fastExitSupervisorFile, fastExitSupervisorScript);
-    const feSupervisor = Bun.spawn([process.execPath, fastExitSupervisorFile], {
+    feSupervisor = Bun.spawn([process.execPath, fastExitSupervisorFile], {
       env: fastExitEnv,
       stdout: 'pipe',
       stderr: 'pipe',
     });
     try {
-      // Wait for child to publish and receipt to be captured & held
-      const capturedReceiptJson = await waitFor('receipt captured', () => {
+      phase = 'fast-exit-receipt-capture';
+      // Wait for child to publish and receipt to be captured & held; fail fast on early supervisor death
+      const capturedIdentity = await waitFor('receipt captured', () => {
+        if (feSupervisor && feSupervisor.exitCode !== null) {
+          throw new Error(
+            `supervisor exited early with code ${feSupervisor.exitCode}`
+          );
+        }
         if (!existsSync(receiptHoldBarrier)) return undefined;
         try {
           return JSON.parse(
             readFileSync(receiptHoldBarrier, 'utf8')
-          ) as Descriptor;
+          ) as Identity;
         } catch {
           return undefined;
         }
       });
-      const feChildIdentity = capturedReceiptJson.process;
+      const feChildIdentity = capturedIdentity;
       assert.ok(feChildIdentity && feChildIdentity.pid > 0);
       owned.push({ identity: feChildIdentity, image: coordinator });
       assert.ok(await ownedProcess(feChildIdentity, coordinator, false));
 
+      phase = 'fast-exit-child-stop';
       // Initiate authenticated shutdown to the child in fastExitEnv without awaiting completion,
       // because stopDaemon waits for the supervisor claim to clear while the supervisor is held
-      const stopRequester = Bun.spawn([cli, 'coordinator', 'stop'], {
+      stopRequester = Bun.spawn([cli, 'coordinator', 'stop'], {
         cwd: root,
         env: fastExitEnv,
         stdout: 'pipe',
         stderr: 'pipe',
       });
 
-      // Wait for child to receive shutdown and fully exit before releasing receipt
-      await waitFor('child exit before receipt release', async () =>
-        !(await ownedProcess(feChildIdentity, coordinator, false))
+      phase = 'fast-exit-child-exit';
+      // Wait for child to receive shutdown and fully exit before releasing receipt; fail fast if supervisor dies
+      await waitFor('child exit before receipt release', async () => {
+        if (feSupervisor && feSupervisor.exitCode !== null) {
+          throw new Error(
+            `supervisor exited early with code ${feSupervisor.exitCode}`
+          );
+        }
+        return !(await ownedProcess(feChildIdentity, coordinator, false))
           ? true
-          : undefined
-      );
+          : undefined;
+      });
 
+      phase = 'fast-exit-receipt-release';
       // Now release the held receipt to startDaemon; it must safely accept shutdown-requested
       // from the committed intent and matching receipt without failing or restarting a successor
       writeFileSync(receiptReleaseSignal, 'release');
@@ -771,16 +836,38 @@ async function main(): Promise<void> {
         ).text();
         throw new Error(`fast-exit stop failed with code ${stopCode}: ${err}`);
       }
+      phase = 'fast-exit-supervisor-exit';
       await waitFor('supervisor exit after fast-exit', () =>
-        feSupervisor.exitCode !== null ? feSupervisor.exitCode : undefined
+        feSupervisor?.exitCode !== null ? feSupervisor?.exitCode : undefined
       );
-      assert.equal(feSupervisor.exitCode, 0);
+      assert.equal(feSupervisor?.exitCode, 0);
+      phase = 'fast-exit-cleanup';
       assert.equal(readDescriptor(fastExitData), undefined);
       assert.ok(
         !existsSync(join(fastExitData, 'runtime/supervisor.reservation.json'))
       );
+      assert.ok(
+        !existsSync(join(fastExitData, 'runtime/supervisor.owner.json'))
+      );
+      assert.ok(!existsSync(join(fastExitData, 'runtime/supervisor.pid')));
+      // descriptor-publication.lock is a permanent file created to serialize
+      // descriptor publication and must remain present
+      assert.ok(
+        existsSync(join(fastExitData, 'runtime/descriptor-publication.lock'))
+      );
+      const fastExitRuntime = join(fastExitData, 'runtime');
+      if (existsSync(fastExitRuntime)) {
+        const leftoverStopping = readdirSync(fastExitRuntime).filter((name) =>
+          name.startsWith('coordinator.stopping.')
+        );
+        assert.equal(leftoverStopping.length, 0);
+      }
     } finally {
-      if (feSupervisor.exitCode === null) {
+      if (stopRequester && stopRequester.exitCode === null) {
+        stopRequester.kill();
+        await stopRequester.exited;
+      }
+      if (feSupervisor && feSupervisor.exitCode === null) {
         feSupervisor.kill();
         await feSupervisor.exited;
       }
@@ -810,6 +897,22 @@ async function main(): Promise<void> {
     if (existsSync(join(runtime, 'coordinator.json'))) {
       try {
         await command('coordinator', 'stop');
+      } catch {
+        cleanupFailed = true;
+      }
+    }
+    const fastExitRuntimePath = join(
+      root,
+      'fast-exit-data',
+      'runtime',
+      'coordinator.json'
+    );
+    if (existsSync(fastExitRuntimePath)) {
+      try {
+        await run([cli, 'coordinator', 'stop'], root, {
+          ...env,
+          HAN_DATA_DIR: join(root, 'fast-exit-data'),
+        });
       } catch {
         cleanupFailed = true;
       }
@@ -846,7 +949,7 @@ async function main(): Promise<void> {
     process.exitCode = 1;
   } else {
     console.log(
-      'Installed Windows CLI: authenticated transport, crash recovery, restart, stop, missing lock, partial claim, and modeled PID reuse passed'
+      'Installed Windows CLI: authenticated transport, crash recovery, restart, stop, missing lock, partial claim, modeled PID reuse, and fast-exit receipt passed'
     );
   }
 }

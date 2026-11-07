@@ -674,12 +674,17 @@ async fn daemonize(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
         args.push(pid_path.clone());
     }
 
-    let mut child = Command::new(exe)
-        .args(&args)
+    let mut cmd = Command::new(exe);
+    cmd.args(&args)
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
-        .stdin(std::process::Stdio::null())
-        .spawn()?;
+        .stdin(std::process::Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    }
+    let mut child = cmd.spawn()?;
 
     tracing::info!("Daemon started with PID {}", child.id());
 

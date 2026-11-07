@@ -106,6 +106,12 @@ const phases = [
   'partial-claim-start',
   'modeled-pid-reuse',
   'fast-exit-receipt',
+  'fast-exit-receipt-capture',
+  'fast-exit-child-stop',
+  'fast-exit-child-exit',
+  'fast-exit-receipt-release',
+  'fast-exit-supervisor-exit',
+  'fast-exit-cleanup',
   'cleanup',
 ];
 
@@ -207,10 +213,19 @@ const processDiagnosticKeys = [
   'supervisorCreationTime',
   'supervisorStatusBefore',
   'supervisorStatusAfter',
+  'supervisorExitCode',
+  'markerFile',
 ];
 const processLivenessValues = ['alive', 'dead', 'mismatched', 'unknown'];
 const descriptorStates = ['present', 'absent', 'mismatched', 'unknown'];
 const supervisorStatusValues = ['alive', 'dead', 'mismatched', 'unknown'];
+const markerFileValues = [
+  'none',
+  'mock-installed',
+  'receipt-held',
+  'receipt-released',
+  'startup-completed',
+];
 
 export type SafeProcessDiagnostic = {
   childPid?: number | null;
@@ -222,6 +237,14 @@ export type SafeProcessDiagnostic = {
   supervisorCreationTime?: string | null;
   supervisorStatusBefore?: 'alive' | 'dead' | 'mismatched' | 'unknown' | null;
   supervisorStatusAfter?: 'alive' | 'dead' | 'mismatched' | 'unknown' | null;
+  supervisorExitCode?: number | null;
+  markerFile?:
+    | 'none'
+    | 'mock-installed'
+    | 'receipt-held'
+    | 'receipt-released'
+    | 'startup-completed'
+    | null;
 };
 
 export function safeProcessDiagnostic(
@@ -293,7 +316,19 @@ export function safeProcessDiagnostic(
       !supervisorStatusValues.includes(item.supervisorStatusAfter))
   )
     return undefined;
-
+  if (
+    item.supervisorExitCode !== undefined &&
+    item.supervisorExitCode !== null &&
+    !Number.isSafeInteger(item.supervisorExitCode)
+  )
+    return undefined;
+  if (
+    item.markerFile !== undefined &&
+    item.markerFile !== null &&
+    (typeof item.markerFile !== 'string' ||
+      !markerFileValues.includes(item.markerFile))
+  )
+    return undefined;
   const result: SafeProcessDiagnostic = {};
   if (item.childPid !== undefined && item.childPid !== null) {
     result.childPid = item.childPid as number;
@@ -334,6 +369,15 @@ export function safeProcessDiagnostic(
   ) {
     result.supervisorStatusAfter =
       item.supervisorStatusAfter as SafeProcessDiagnostic['supervisorStatusAfter'];
+  }
+  if (
+    item.supervisorExitCode !== undefined &&
+    item.supervisorExitCode !== null
+  ) {
+    result.supervisorExitCode = item.supervisorExitCode as number;
+  }
+  if (item.markerFile !== undefined && item.markerFile !== null) {
+    result.markerFile = item.markerFile as SafeProcessDiagnostic['markerFile'];
   }
   return result;
 }

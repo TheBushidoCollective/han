@@ -191,6 +191,8 @@ describe('installed Windows proof diagnostics', () => {
       supervisorCreationTime: '133748291020000000',
       supervisorStatusBefore: 'alive' as const,
       supervisorStatusAfter: 'dead' as const,
+      supervisorExitCode: 0,
+      markerFile: 'receipt-held' as const,
     };
     expect(safeProcessDiagnostic(validProcess)).toEqual(validProcess);
 
