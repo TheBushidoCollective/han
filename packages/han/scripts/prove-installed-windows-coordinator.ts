@@ -8,15 +8,36 @@ import {
   readFileSync,
   rmSync,
   writeFileSync,
+  writeSync,
 } from 'node:fs';
 import { createConnection, createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
   ProofCommandError,
+  phases,
+  safeProofProgress,
+  safeProofCleanup,
+  type ProofPhase,
+  type SafePreviousProgress,
   type SafeProcessDiagnostic,
+  type SafeHelperDiagnostic,
   safeProofFailure,
+  validateHelperDiagnostic,
 } from './windows-proof-diagnostics.ts';
+import {
+  ProofDeadlineError,
+  ProofSubprocessTimeout,
+  ProofOutputRetained,
+  createProofClock,
+  readProofBudget,
+  spawnBounded,
+  startBounded,
+  waitFor as boundsWaitFor,
+  abortableSleep,
+  sweepRoot,
+  type BoundedChild,
+} from './windows-proof-bounds.ts';
 
 // Run only on a disposable Windows CI runner against the freshly built artifacts:
 // bun packages/han/scripts/prove-installed-windows-coordinator.ts <han.exe> <han-coordinator.exe>
@@ -31,19 +52,6 @@ interface Descriptor {
   process: { pid: number; creationTime: string; userSid: string };
 }
 
-async function waitFor<T>(
-  label: string,
-  probe: () => T | undefined | Promise<T | undefined>
-): Promise<T> {
-  const deadline = Date.now() + 60000;
-  do {
-    const result = await probe();
-    if (result !== undefined) return result;
-    await Bun.sleep(200);
-  } while (Date.now() < deadline);
-  throw new Error(`Timed out waiting for ${label}`);
-}
-
 function readDescriptor(data: string): Descriptor | undefined {
   try {
     return JSON.parse(
@@ -55,26 +63,10 @@ function readDescriptor(data: string): Descriptor | undefined {
   }
 }
 
-async function run(
-  argv: string[],
-  cwd: string,
-  env: Record<string, string>,
-  expectedFailure = false
-): Promise<string> {
-  const child = Bun.spawn(argv, { cwd, env, stdout: 'pipe', stderr: 'pipe' });
-  const stdout = new Response(child.stdout).text();
-  const stderr = new Response(child.stderr).text();
-  const timer = setTimeout(() => child.kill(), 90000);
-  try {
-    const code = await child.exited;
-    const output = `${await stdout}\n${await stderr}`;
-    if ((code !== 0) !== expectedFailure) {
-      throw new ProofCommandError(code, output);
-    }
-    return output;
-  } finally {
-    clearTimeout(timer);
-  }
+function combineSignals(timeoutMs: number, signal?: AbortSignal): AbortSignal {
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  if (!signal) return timeoutSignal;
+  return AbortSignal.any([timeoutSignal, signal]);
 }
 
 async function request(
@@ -82,44 +74,86 @@ async function request(
   port: number,
   path: string,
   token?: string,
-  body?: Uint8Array
+  body?: Uint8Array,
+  signal?: AbortSignal
 ): Promise<Response> {
-  return fetch(`https://127.0.0.1:${port}${path}`, {
-    method: body ? 'POST' : 'GET',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(body ? { 'Content-Type': 'application/grpc-web+proto' } : {}),
-    },
-    body,
-    tls: { ca: d.certificatePem, rejectUnauthorized: true },
-    signal: AbortSignal.timeout(5000),
-  } as RequestInit);
+  if (signal?.aborted) throw new ProofDeadlineError();
+  try {
+    return await fetch(`https://127.0.0.1:${port}${path}`, {
+      method: body ? 'POST' : 'GET',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(body ? { 'Content-Type': 'application/grpc-web+proto' } : {}),
+      },
+      body,
+      tls: { ca: d.certificatePem, rejectUnauthorized: true },
+      signal: combineSignals(5000, signal),
+    } as RequestInit);
+  } catch (err) {
+    if (signal?.aborted) throw new ProofDeadlineError();
+    throw err;
+  }
 }
 
 async function live(
   d: Descriptor,
-  setPhase?: (p: string) => void
+  setPhase?: (p: string) => void,
+  signal?: AbortSignal
 ): Promise<void> {
   assert.ok(d.supervisor, 'coordinator has no supervisor binding');
   assert.ok(d.httpsPort > 0 && d.grpcPort > 0);
   if (setPhase) setPhase('orphan-live-https');
-  const health = await request(d, d.httpsPort, '/health', d.bearerToken);
-  assert.equal(health.status, 200);
-  const healthBody: unknown = await health.json();
+  const health = await request(
+    d,
+    d.httpsPort,
+    '/health',
+    d.bearerToken,
+    undefined,
+    signal
+  );
+  let healthBody: unknown;
+  try {
+    healthBody = await health.json();
+  } catch (err) {
+    if (signal?.aborted) throw new ProofDeadlineError();
+    throw err;
+  }
+  if (signal?.aborted) throw new ProofDeadlineError();
   assert.ok(
     healthBody && typeof healthBody === 'object' && 'pid' in healthBody
   );
   assert.equal(healthBody.pid, d.pid);
   if (setPhase) setPhase('orphan-live-unauth');
-  assert.equal((await request(d, d.httpsPort, '/health')).status, 401);
+  assert.equal(
+    (await request(d, d.httpsPort, '/health', undefined, undefined, signal))
+      .status,
+    401
+  );
   if (setPhase) setPhase('orphan-live-badtoken');
-  assert.equal((await request(d, d.httpsPort, '/health', 'wrong')).status, 401);
+  assert.equal(
+    (await request(d, d.httpsPort, '/health', 'wrong', undefined, signal))
+      .status,
+    401
+  );
   if (setPhase) setPhase('orphan-live-grpc');
   const grpcPath = '/han.coordinator.CoordinatorService/Health';
   const frame = new Uint8Array(5);
-  const grpc = await request(d, d.grpcPort, grpcPath, d.bearerToken, frame);
-  assert.equal(grpc.status, 200);
-  const bytes = new Uint8Array(await grpc.arrayBuffer());
+  const grpc = await request(
+    d,
+    d.grpcPort,
+    grpcPath,
+    d.bearerToken,
+    frame,
+    signal
+  );
+  let bytes: Uint8Array;
+  try {
+    bytes = new Uint8Array(await grpc.arrayBuffer());
+  } catch (err) {
+    if (signal?.aborted) throw new ProofDeadlineError();
+    throw err;
+  }
+  if (signal?.aborted) throw new ProofDeadlineError();
   assert.ok(
     bytes.length >= 7 && bytes[0] === 0,
     'missing gRPC response message'
@@ -133,35 +167,77 @@ async function live(
   assert.equal(bytes[5], 8, 'gRPC health response lacks healthy field');
   assert.equal(bytes[6], 1, 'gRPC coordinator reports unhealthy');
   if (setPhase) setPhase('orphan-live-grpc-denied');
-  const denied = await request(d, d.grpcPort, grpcPath, 'wrong', frame);
+  const denied = await request(d, d.grpcPort, grpcPath, 'wrong', frame, signal);
   assert.equal(denied.headers.get('grpc-status'), '16');
   if (setPhase) setPhase('orphan-live-untrusted-ca');
   await assert.rejects(
     fetch(`https://127.0.0.1:${d.httpsPort}/health`, {
       headers: { Authorization: `Bearer ${d.bearerToken}` },
-      signal: AbortSignal.timeout(5000),
+      signal: combineSignals(5000, signal),
     })
   );
+  if (signal?.aborted) throw new ProofDeadlineError();
 }
 
-async function assertListenerUnbound(port: number): Promise<void> {
+async function assertListenerUnbound(
+  port: number,
+  signal?: AbortSignal
+): Promise<void> {
+  if (signal?.aborted) throw new ProofDeadlineError();
   const { promise, resolve, reject } = Promise.withResolvers<void>();
   const socket = createConnection({ host: '127.0.0.1', port });
   socket.setTimeout(5000);
+  const onAbort = () => {
+    socket.destroy();
+    reject(new ProofDeadlineError());
+  };
+  if (signal) {
+    signal.addEventListener('abort', onAbort, { once: true });
+  }
   socket.once('connect', () => {
+    if (signal) signal.removeEventListener('abort', onAbort);
     socket.destroy();
     reject(new Error('Listener remains bound'));
   });
   socket.once('timeout', () => {
+    if (signal) signal.removeEventListener('abort', onAbort);
     socket.destroy();
     reject(new Error('Listener probe timed out'));
   });
   socket.once('error', (error: NodeJS.ErrnoException) => {
+    if (signal) signal.removeEventListener('abort', onAbort);
     socket.destroy();
     if (error.code === 'ECONNREFUSED') resolve();
     else reject(new Error('Listener probe failed'));
   });
   await promise;
+}
+
+async function waitProcessExit(
+  exitedPromise: Promise<number | null>,
+  timeoutMs: number,
+  signal?: AbortSignal
+): Promise<boolean> {
+  const { promise, resolve } = Promise.withResolvers<'timeout' | 'abort'>();
+  const timer = setTimeout(() => resolve('timeout'), timeoutMs);
+  let onAbort: (() => void) | null = null;
+  if (signal) {
+    onAbort = () => resolve('abort');
+    signal.addEventListener('abort', onAbort, { once: true });
+  }
+
+  try {
+    const winner = await Promise.race([
+      exitedPromise.then(() => 'exited' as const),
+      promise,
+    ]);
+    return winner === 'exited';
+  } finally {
+    clearTimeout(timer);
+    if (signal && onAbort) {
+      signal.removeEventListener('abort', onAbort);
+    }
+  }
 }
 
 async function main(): Promise<void> {
@@ -178,6 +254,13 @@ async function main(): Promise<void> {
     'v1.0',
     'powershell.exe'
   );
+  const { deadlineMs, cleanupMs } = readProofBudget(process.env);
+  const clock = createProofClock({
+    deadlineMs,
+    cleanupMs,
+    watchdogMarginMs: 60000,
+  });
+
   const root = mkdtempSync(join(tmpdir(), 'han-windows-installed-'));
   const bin = join(root, 'bin');
   const data = join(root, 'data');
@@ -224,14 +307,14 @@ async function main(): Promise<void> {
     );
     await closed.promise;
   }
-  const command = (...args: string[]) => run([cli, ...args], root, env);
+
   const runtime = join(data, 'runtime');
   const reservation = join(runtime, 'supervisor.reservation.json');
   const owner = join(runtime, 'supervisor.owner.json');
   const pidFile = join(runtime, 'supervisor.pid');
   const lock = join(runtime, 'descriptor-publication.lock');
   type Identity = Descriptor['process'];
-  const owned: { identity: Identity; image: string }[] = [];
+
   let orphanChildIdentity: Identity | undefined;
   let orphanSupervisorIdentity: Identity | undefined;
   let orphanSupervisorStatusBefore:
@@ -248,36 +331,107 @@ async function main(): Promise<void> {
     | undefined;
   let expectedDescriptorInstance: string | undefined;
   let current: Descriptor | undefined;
-  let fixture:
-    | {
-        pid: number;
-        exitCode: number | null;
-        kill: () => void;
-        exited: Promise<number>;
-      }
-    | undefined;
-  let feSupervisor:
-    | {
-        pid: number;
-        exitCode: number | null;
-        kill: () => void;
-        exited: Promise<number>;
-      }
-    | undefined;
+  let fixture: BoundedChild | undefined;
+  let feSupervisor: BoundedChild | undefined;
   let feSupervisorExitCodeBeforeCleanup: number | null = null;
   let feSupervisorProofKilled = false;
-  let stopRequester:
-    | {
-        pid: number;
-        exitCode: number | null;
-        kill: () => void;
-        exited: Promise<number>;
-        stderr: unknown;
-      }
-    | undefined;
-  let phase = 'initial-status';
-  let failed = false;
-  let cleanupFailed = false;
+  let stopRequester: BoundedChild | undefined;
+
+  let phase: ProofPhase = 'setup';
+  let phaseStartTime = Date.now();
+  let currentCliCount = 0;
+  let currentCliMs = 0;
+  let currentCliMaxMs = 0;
+  let currentProbeCount = 0;
+  let currentProbeMs = 0;
+
+  clock.armWatchdog(root, () => phase);
+
+  const setPhase = (p: string) => {
+    if (!phases.includes(p as ProofPhase)) {
+      throw new Error(`Unknown proof phase: ${p}`);
+    }
+    const nextPhase = p as ProofPhase;
+    const now = Date.now();
+    const phaseMs = now - phaseStartTime;
+    const prev: SafePreviousProgress = {
+      phase,
+      ms: Math.max(0, phaseMs),
+      cliCount: currentCliCount,
+      cliMs: currentCliMs,
+      cliMaxMs: currentCliMaxMs,
+      probeCount: currentProbeCount,
+      probeMs: currentProbeMs,
+    };
+
+    phase = nextPhase;
+    phaseStartTime = now;
+    currentCliCount = 0;
+    currentCliMs = 0;
+    currentCliMaxMs = 0;
+    currentProbeCount = 0;
+    currentProbeMs = 0;
+
+    const progressLine = safeProofProgress({
+      phase: nextPhase,
+      elapsedMs: clock.elapsedMs(),
+      previous: prev,
+    });
+    if (progressLine) {
+      writeSync(2, `Installed Windows proof progress: ${progressLine}\n`);
+    }
+  };
+
+  const waitFor = <T>(
+    label: string,
+    probe: () =>
+      | Promise<T | null | undefined | false>
+      | T
+      | null
+      | undefined
+      | false,
+    boundMs = 60000
+  ): Promise<T> => boundsWaitFor(label, probe, clock.phaseSignal, boundMs);
+
+  const run = async (
+    argv: string[],
+    cwd: string,
+    runEnv: Record<string, string>,
+    expectedFailure = false,
+    timeoutMs = 90000
+  ): Promise<string> => {
+    const isCli = argv[0] === cli;
+    const isProbe = argv[0] === powershell;
+    const t0 = Date.now();
+    const res = await spawnBounded(argv, {
+      cwd,
+      env: runEnv,
+      timeoutMs,
+      signal: clock.phaseSignal,
+      capture: true,
+      maxBytes: 65536,
+      eofGraceMs: 5000,
+    });
+    const elapsed = Date.now() - t0;
+    if (isCli) {
+      currentCliCount++;
+      currentCliMs += elapsed;
+      if (elapsed > currentCliMaxMs) currentCliMaxMs = elapsed;
+    } else if (isProbe) {
+      currentProbeCount++;
+      currentProbeMs += elapsed;
+    }
+
+    if (res.aborted) throw new ProofDeadlineError();
+    if (res.timedOut) throw new ProofSubprocessTimeout();
+    if (res.pipeRetained) throw new ProofOutputRetained();
+    if ((res.exitCode !== 0) !== expectedFailure) {
+      throw new ProofCommandError(res.exitCode, res.output);
+    }
+    return res.output;
+  };
+
+  const command = (...args: string[]) => run([cli, ...args], root, env);
 
   // Verify both the exact staged executable and creation time before signalling.
   const ownedProcess = async (
@@ -288,7 +442,8 @@ async function main(): Promise<void> {
     assert.ok(Number.isSafeInteger(identity.pid) && identity.pid > 0);
     assert.ok(/^[1-9][0-9]{0,19}$/.test(identity.creationTime));
     const script = `$p=Get-Process -Id ${identity.pid} -ErrorAction SilentlyContinue; if (!$p) { exit 3 }; $actual=[System.IO.Path]::GetFullPath($p.Path); $expected=[System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $env:HAN_PROOF_IMAGE).Path); if ($actual -ne $expected) { exit 4 }; if ($p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString() -ne $env:HAN_PROOF_TIME) { exit 5 }; ${kill ? 'Stop-Process -InputObject $p -Force -ErrorAction Stop' : ''}`;
-    const child = Bun.spawn(
+    const t0 = Date.now();
+    const res = await spawnBounded(
       [powershell, '-NoProfile', '-NonInteractive', '-Command', script],
       {
         cwd: root,
@@ -297,18 +452,28 @@ async function main(): Promise<void> {
           HAN_PROOF_IMAGE: image,
           HAN_PROOF_TIME: identity.creationTime,
         },
-        stdout: 'ignore',
-        stderr: 'ignore',
+        timeoutMs: 20000,
+        signal: clock.phaseSignal,
+        capture: false,
       }
     );
-    const code = await child.exited;
+    const elapsed = Date.now() - t0;
+    currentProbeCount++;
+    currentProbeMs += elapsed;
+
+    if (res.aborted) throw new ProofDeadlineError();
+    if (res.timedOut) throw new ProofSubprocessTimeout();
+    if (res.pipeRetained) throw new ProofOutputRetained();
+    const code = res.exitCode;
     if (code === 3 || code === 4 || code === 5) return false;
     if (code !== 0) throw new ProofCommandError(code, '');
     return true;
   };
+
   const inspectProcess = async (
     identity: Identity,
-    image: string
+    image: string,
+    signal: AbortSignal = clock.phaseSignal
   ): Promise<'alive' | 'dead' | 'mismatched' | 'unknown'> => {
     if (
       !Number.isSafeInteger(identity.pid) ||
@@ -317,8 +482,9 @@ async function main(): Promise<void> {
     )
       return 'unknown';
     const script = `$p=Get-Process -Id ${identity.pid} -ErrorAction SilentlyContinue; if (!$p) { exit 3 }; $actual=[System.IO.Path]::GetFullPath($p.Path); $expected=[System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $env:HAN_PROOF_IMAGE).Path); if ($actual -ne $expected) { exit 4 }; if ($p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString() -ne $env:HAN_PROOF_TIME) { exit 5 }; exit 0`;
+    const t0 = Date.now();
     try {
-      const child = Bun.spawn(
+      const res = await spawnBounded(
         [powershell, '-NoProfile', '-NonInteractive', '-Command', script],
         {
           cwd: root,
@@ -327,19 +493,45 @@ async function main(): Promise<void> {
             HAN_PROOF_IMAGE: image,
             HAN_PROOF_TIME: identity.creationTime,
           },
-          stdout: 'ignore',
-          stderr: 'ignore',
+          timeoutMs: 20000,
+          signal,
+          capture: false,
         }
       );
-      const code = await child.exited;
+      const elapsed = Date.now() - t0;
+      currentProbeCount++;
+      currentProbeMs += elapsed;
+
+      if (res.aborted) {
+        if (signal === clock.cleanupSignal) return 'unknown';
+        throw new ProofDeadlineError();
+      }
+      if (res.timedOut) {
+        if (signal === clock.cleanupSignal) return 'unknown';
+        throw new ProofSubprocessTimeout();
+      }
+      if (res.pipeRetained) {
+        if (signal === clock.cleanupSignal) return 'unknown';
+        throw new ProofOutputRetained();
+      }
+      const code = res.exitCode;
       if (code === 0) return 'alive';
       if (code === 3) return 'dead';
       if (code === 4 || code === 5) return 'mismatched';
       return 'unknown';
-    } catch {
+    } catch (e) {
+      if (
+        e instanceof ProofDeadlineError ||
+        e instanceof ProofSubprocessTimeout ||
+        e instanceof ProofOutputRetained
+      ) {
+        if (signal === clock.cleanupSignal) return 'unknown';
+        throw e;
+      }
       return 'unknown';
     }
   };
+
   const collectDiagnostic = async (): Promise<
     SafeProcessDiagnostic | undefined
   > => {
@@ -461,7 +653,11 @@ async function main(): Promise<void> {
     if (!phase.startsWith('orphan-')) return undefined;
     const targetChild = orphanChildIdentity;
     if (!targetChild) return undefined;
-    const childLiveness = await inspectProcess(targetChild, coordinator);
+    const childLiveness = await inspectProcess(
+      targetChild,
+      coordinator,
+      clock.cleanupSignal
+    );
     const diskDescriptor = readDescriptor(data);
     let descriptorMatches: boolean | null = null;
     let descriptorState: 'present' | 'absent' | 'mismatched' | 'unknown' =
@@ -489,17 +685,15 @@ async function main(): Promise<void> {
       supervisorStatusAfter: orphanSupervisorStatusAfter ?? null,
     };
   };
+
   const register = (d: Descriptor) => {
     const claim = JSON.parse(readFileSync(reservation, 'utf8')) as {
       process: Identity;
     };
     assert.ok(d.supervisor && claim.process.pid === d.supervisor.pid);
-    owned.push(
-      { identity: d.process, image: coordinator },
-      { identity: claim.process, image: cli }
-    );
     return claim.process;
   };
+
   const started = async (previous?: Descriptor) => {
     const d = await waitFor('new descriptor', () => {
       const next = readDescriptor(data);
@@ -507,20 +701,22 @@ async function main(): Promise<void> {
         ? next
         : undefined;
     });
-    if (phase === 'initial-start-descriptor') phase = 'initial-start-identity';
+    if (phase === 'initial-start-descriptor')
+      setPhase('initial-start-identity');
     if (phase === 'initial-start-identity')
-      phase = 'initial-start-registration';
+      setPhase('initial-start-registration');
     const supervisor = register(d);
     if (phase === 'initial-start-registration')
-      phase = 'initial-start-coordinator';
+      setPhase('initial-start-coordinator');
     assert.ok(await ownedProcess(d.process, coordinator, false));
     if (phase === 'initial-start-coordinator')
-      phase = 'initial-start-supervisor';
+      setPhase('initial-start-supervisor');
     assert.ok(await ownedProcess(supervisor, cli, false));
-    if (phase === 'initial-start-supervisor') phase = 'initial-start-health';
-    await live(d);
+    if (phase === 'initial-start-supervisor') setPhase('initial-start-health');
+    await live(d, undefined, clock.phaseSignal);
     return d;
   };
+
   const stop = async (d: Descriptor) => {
     const supervisor = register(d);
     await command('coordinator', 'stop');
@@ -534,6 +730,7 @@ async function main(): Promise<void> {
       !(await ownedProcess(d.process, coordinator, false)) ? true : undefined
     );
   };
+
   const ensureStopped = async (identity: Identity, image: string) => {
     if (!(await ownedProcess(identity, image, false))) return;
     assert.ok(await ownedProcess(identity, image, true));
@@ -541,28 +738,33 @@ async function main(): Promise<void> {
       !(await ownedProcess(identity, image, false)) ? true : undefined
     );
   };
+
   const killPair = async (d: Descriptor) => {
     const supervisor = register(d);
     await ensureStopped(supervisor, cli);
     await ensureStopped(d.process, coordinator);
   };
 
+  let failed = false;
+  let cleanupFailed = false;
+
   try {
+    setPhase('initial-status');
     assert.ok(
       /Coordinator: not running/.test(await command('coordinator', 'status'))
     );
     assert.equal(readDescriptor(data), undefined);
-    phase = 'initial-start-command';
+    setPhase('initial-start-command');
     await command('coordinator', 'start');
-    phase = 'initial-start-descriptor';
+    setPhase('initial-start-descriptor');
     current = await started();
-    phase = 'initial-start-status';
+    setPhase('initial-start-status');
     assert.ok(
       /Coordinator: running/.test(await command('coordinator', 'status'))
     );
 
     if (barrierProof) {
-      phase = 'fixed-port-bind-before-publication';
+      setPhase('fixed-port-bind-before-publication');
       const previous = current;
       writeFileSync(join(barrier, 'arm'), '');
       assert.ok(await ownedProcess(previous.process, coordinator, true));
@@ -586,18 +788,12 @@ async function main(): Promise<void> {
             `$p=Get-Process -Id ${marker.pid} -ErrorAction Stop; $w=Get-CimInstance Win32_Process -Filter 'ProcessId=${marker.pid}'; if ($w.ParentProcessId -ne ${previous.supervisor?.pid ?? 0}) { exit 4 }; if ([System.IO.Path]::GetFullPath($p.Path) -ne [System.IO.Path]::GetFullPath($env:HAN_PROOF_IMAGE)) { exit 5 }; $p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString()`,
           ],
           root,
-          { ...env, HAN_PROOF_IMAGE: coordinator }
+          { ...env, HAN_PROOF_IMAGE: coordinator },
+          false,
+          90000
         )
       ).trim();
       assert.match(creationTime, /^[1-9][0-9]{0,19}$/);
-      owned.push({
-        identity: {
-          pid: marker.pid,
-          creationTime,
-          userSid: previous.process.userSid,
-        },
-        image: coordinator,
-      });
       assert.equal(marker.httpsPort, Number(env.HAN_COORDINATOR_PORT));
       assert.equal(marker.supervisor?.pid, previous.supervisor?.pid);
       assert.notEqual(
@@ -606,7 +802,8 @@ async function main(): Promise<void> {
       );
       assert.equal(readDescriptor(data)?.instanceId, previous.instanceId);
       for (let i = 0; i < 5; i++) {
-        const check = Bun.spawn(
+        const t0 = Date.now();
+        const check = await spawnBounded(
           [
             powershell,
             '-NoProfile',
@@ -614,15 +811,23 @@ async function main(): Promise<void> {
             '-Command',
             `$c=Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort ${marker.httpsPort} -State Established -ErrorAction SilentlyContinue; if ($c) { exit 1 }`,
           ],
-          { cwd: root, env, stdout: 'ignore', stderr: 'ignore' }
+          {
+            cwd: root,
+            env,
+            timeoutMs: 30000,
+            signal: clock.phaseSignal,
+            capture: false,
+          }
         );
-        assert.equal(
-          await check.exited,
-          0,
-          'request reached unpublished listener'
-        );
+        const elapsed = Date.now() - t0;
+        currentProbeCount++;
+        currentProbeMs += elapsed;
+        if (check.aborted) throw new ProofDeadlineError();
+        if (check.timedOut) throw new ProofSubprocessTimeout();
+        if (check.pipeRetained) throw new ProofOutputRetained();
+        assert.equal(check.exitCode, 0, 'request reached unpublished listener');
         assert.equal(readDescriptor(data)?.instanceId, previous.instanceId);
-        await Bun.sleep(100);
+        await abortableSleep(100, clock.phaseSignal);
       }
       writeFileSync(join(barrier, 'release'), '');
       current = await started(previous);
@@ -632,453 +837,652 @@ async function main(): Promise<void> {
         marker.supervisor?.generationId
       );
       assert.notEqual(current.bearerToken, previous.bearerToken);
-    }
 
-    phase = 'crash-recovery';
-    const beforeCrash = current;
-    assert.ok(await ownedProcess(beforeCrash.process, coordinator, true));
-    current = await started(beforeCrash);
-    assert.equal(current.supervisor?.pid, beforeCrash.supervisor?.pid);
-    assert.ok(
-      current.supervisor?.generationId !== beforeCrash.supervisor?.generationId
-    );
-    assert.ok(current.bearerToken !== beforeCrash.bearerToken);
-    assert.equal(
-      (
-        await request(
-          current,
-          current.httpsPort,
-          '/health',
-          beforeCrash.bearerToken
-        )
-      ).status,
-      401
-    );
+      // Startup barrier Option (a): complete proof by stopping the coordinator
+      // and falling through to finally/cleanup without running the default suite.
+      setPhase('stop');
+      await stop(current);
+      assert.ok(
+        /Coordinator: not running/.test(await command('coordinator', 'status'))
+      );
+    } else {
+      setPhase('crash-recovery');
+      const beforeCrash = current;
+      assert.ok(await ownedProcess(beforeCrash.process, coordinator, true));
+      current = await started(beforeCrash);
+      assert.equal(current.supervisor?.pid, beforeCrash.supervisor?.pid);
+      assert.ok(
+        current.supervisor?.generationId !==
+          beforeCrash.supervisor?.generationId
+      );
+      assert.ok(current.bearerToken !== beforeCrash.bearerToken);
+      assert.equal(
+        (
+          await request(
+            current,
+            current.httpsPort,
+            '/health',
+            beforeCrash.bearerToken,
+            undefined,
+            clock.phaseSignal
+          )
+        ).status,
+        401
+      );
 
-    phase = 'restart';
-    const beforeRestart = current;
-    await command('coordinator', 'restart');
-    current = await started(beforeRestart);
-    assert.ok(current.bearerToken !== beforeRestart.bearerToken);
-    assert.ok(current.certificatePem !== beforeRestart.certificatePem);
-    phase = 'stop';
-    await stop(current);
-    assert.ok(
-      /Coordinator: not running/.test(await command('coordinator', 'status'))
-    );
-    phase = 'dead-pair-stop';
-    await command('coordinator', 'start');
-    current = await started(beforeRestart);
-    const beforeDeadStop = current;
-    await killPair(beforeDeadStop);
-    assert.equal(readDescriptor(data)?.instanceId, beforeDeadStop.instanceId);
-    assert.ok(existsSync(reservation));
-    await command('coordinator', 'stop');
-    assert.equal(readDescriptor(data), undefined);
-    assert.ok(!existsSync(reservation));
+      setPhase('restart');
+      const beforeRestart = current;
+      await command('coordinator', 'restart');
+      current = await started(beforeRestart);
+      assert.ok(current.bearerToken !== beforeRestart.bearerToken);
+      assert.ok(current.certificatePem !== beforeRestart.certificatePem);
+      setPhase('stop');
+      await stop(current);
+      assert.ok(
+        /Coordinator: not running/.test(await command('coordinator', 'status'))
+      );
+      setPhase('dead-pair-stop');
+      await command('coordinator', 'start');
+      current = await started(beforeRestart);
+      const beforeDeadStop = current;
+      await killPair(beforeDeadStop);
+      assert.equal(readDescriptor(data)?.instanceId, beforeDeadStop.instanceId);
+      assert.ok(existsSync(reservation));
+      await command('coordinator', 'stop');
+      assert.equal(readDescriptor(data), undefined);
+      assert.ok(!existsSync(reservation));
 
-    phase = 'dead-pair-restart';
-    await command('coordinator', 'start');
-    current = await started(beforeDeadStop);
-    const beforeDeadRestart = current;
-    await killPair(beforeDeadRestart);
-    assert.equal(
-      readDescriptor(data)?.instanceId,
-      beforeDeadRestart.instanceId
-    );
-    await command('coordinator', 'restart');
-    current = await started(beforeDeadRestart);
-    await stop(current);
+      setPhase('dead-pair-restart');
+      await command('coordinator', 'start');
+      current = await started(beforeDeadStop);
+      const beforeDeadRestart = current;
+      await killPair(beforeDeadRestart);
+      assert.equal(
+        readDescriptor(data)?.instanceId,
+        beforeDeadRestart.instanceId
+      );
+      await command('coordinator', 'restart');
+      current = await started(beforeDeadRestart);
+      await stop(current);
 
-    phase = 'orphan-start';
-    await command('coordinator', 'start');
-    phase = 'orphan-started';
-    current = await started(beforeDeadRestart);
-    const orphan = current;
-    const deadSupervisor = register(orphan);
-    orphanChildIdentity = orphan.process;
-    expectedDescriptorInstance = orphan.instanceId;
-    orphanSupervisorIdentity = deadSupervisor;
-    orphanSupervisorStatusBefore = await inspectProcess(deadSupervisor, cli);
-    phase = 'orphan-kill-supervisor';
-    await ensureStopped(deadSupervisor, cli);
-    orphanSupervisorStatusAfter = await inspectProcess(deadSupervisor, cli);
-    phase = 'orphan-live';
-    await live(orphan, (p) => {
-      phase = p;
-    });
-    phase = 'orphan-stop';
-    await command('coordinator', 'stop');
-    phase = 'orphan-wait-exit';
-    await waitFor('orphan coordinator exit', async () =>
-      !(await ownedProcess(orphan.process, coordinator, false))
-        ? true
-        : undefined
-    );
-    phase = 'orphan-assert-stopped';
-    assert.equal(readDescriptor(data), undefined);
-    assert.ok(!existsSync(reservation));
-    orphanChildIdentity = undefined;
-    orphanSupervisorIdentity = undefined;
-    orphanSupervisorStatusBefore = undefined;
-    orphanSupervisorStatusAfter = undefined;
-    expectedDescriptorInstance = undefined;
-    phase = 'orphan-restart';
-    await command('coordinator', 'restart');
-    phase = 'orphan-restart-started';
-    current = await started(orphan);
-    phase = 'orphan-restart-stop';
-    await stop(current);
-    phase = 'missing-lock-status';
-    rmSync(lock);
-    await run([cli, 'coordinator', 'status'], root, env, true);
-    assert.ok(!existsSync(lock));
-    phase = 'missing-lock-start';
-    await command('coordinator', 'start');
-    current = await started(beforeRestart);
-    assert.ok(existsSync(lock));
-
-    phase = 'partial-claim-kill';
-    const beforePartial = current;
-    await killPair(beforePartial);
-    phase = 'partial-claim-status';
-    rmSync(pidFile);
-    const reservationBytes = readFileSync(reservation);
-    const ownerBytes = readFileSync(owner);
-    assert.ok(
-      /Coordinator: not running/.test(await command('coordinator', 'status'))
-    );
-    assert.ok(reservationBytes.equals(readFileSync(reservation)));
-    assert.ok(ownerBytes.equals(readFileSync(owner)));
-    assert.ok(!existsSync(pidFile));
-    phase = 'partial-claim-start';
-    await command('coordinator', 'start');
-    current = await started(beforePartial);
-    assert.ok(
-      current.supervisor?.generationId !==
-        beforePartial.supervisor?.generationId
-    );
-    assert.ok(current.supervisor?.nonce !== beforePartial.supervisor?.nonce);
-
-    phase = 'modeled-pid-reuse';
-    const beforeReuse = current;
-    await killPair(beforeReuse);
-    await assertListenerUnbound(beforeReuse.httpsPort);
-    await assertListenerUnbound(beforeReuse.grpcPort);
-    fixture = Bun.spawn(
-      [
-        powershell,
-        '-NoProfile',
-        '-NonInteractive',
-        '-Command',
-        'Start-Sleep -Seconds 300',
-      ],
-      {
-        cwd: root,
-        env,
-        stdout: 'ignore',
-        stderr: 'ignore',
-      }
-    );
-    assert.ok(fixture.pid > 0);
-    const stale = {
-      ...beforeReuse,
-      pid: fixture.pid,
-      process: { ...beforeReuse.process, pid: fixture.pid },
-    };
-    assert.ok(!(await ownedProcess(stale.process, powershell, false)));
-    writeFileSync(join(runtime, 'coordinator.json'), JSON.stringify(stale));
-    await command('coordinator', 'start');
-    current = await started(beforeReuse);
-    assert.ok(
-      current.supervisor?.generationId !== beforeReuse.supervisor?.generationId
-    );
-    assert.equal(fixture.exitCode, null);
-    await stop(current);
-
-    phase = 'fast-exit-receipt';
-    // Deterministic supervisor path: Start the supervisor, hold receipt delivery
-    // until the child has received authenticated shutdown, committed intent, and exited.
-    // This exercises accepting shutdown-requested when child is already gone.
-    const fastExitData = join(root, 'fast-exit-data');
-    mkdirSync(fastExitData);
-    const fastExitEnv: Record<string, string> = {
-      ...env,
-      HAN_DATA_DIR: fastExitData,
-      HAN_COORDINATOR_PORT: '0',
-    };
-    delete fastExitEnv.HAN_PROOF_STARTUP_BARRIER;
-    const receiptHoldBarrier = join(fastExitData, 'receipt-held');
-    const receiptReleaseSignal = join(fastExitData, 'receipt-release');
-    const runtimeModPath = resolve(
-      import.meta.dir,
-      '../lib/coordinator/windows-runtime.ts'
-    );
-    const helperModPath = resolve(
-      import.meta.dir,
-      '../lib/coordinator/windows-helper.ts'
-    );
-    const daemonModPath = resolve(
-      import.meta.dir,
-      '../lib/commands/coordinator/daemon.ts'
-    );
-    const diagModPath = resolve(
-      import.meta.dir,
-      './windows-proof-diagnostics.ts'
-    );
-    const fastExitSupervisorScript = `
-      const fs = await import('node:fs');
-      const { safeHelperDiagnostic, classifySupervisorError, evaluateHelperMarkerStatus } = await import(${JSON.stringify(diagModPath)});
-      try {
-        const { mock } = await import('bun:test');
-        const binaryModPath = ${JSON.stringify(resolve(import.meta.dir, '../lib/coordinator/binary.ts'))};
-        const realBinary = await import(binaryModPath);
-        mock.module(binaryModPath, () => ({
-          ...realBinary,
-          findCoordinatorBinary: () => ${JSON.stringify(coordinator)},
-        }));
-        const realHelper = await import(${JSON.stringify(helperModPath)});
-        mock.module(${JSON.stringify(helperModPath)}, () => ({
-          ...realHelper,
-          findCoordinatorBinary: () => ${JSON.stringify(coordinator)},
-        }));
-        fs.writeFileSync(${JSON.stringify(join(fastExitData, 'mock-installed'))}, 'ok');
-
-        const realRuntime = await import(${JSON.stringify(runtimeModPath)});
-        fs.writeFileSync(${JSON.stringify(join(fastExitData, 'runtime-imported'))}, 'ok');
-        const origRead = realRuntime.readWindowsChildDescriptor;
-        mock.module(${JSON.stringify(runtimeModPath)}, () => ({
-          ...realRuntime,
-          async readWindowsChildDescriptor(...args) {
-            const result = await origRead(...args);
-            if (result && result.process && result.process.pid > 0) {
-              const safeIdentity = {
-                pid: result.process.pid,
-                creationTime: result.process.creationTime,
-                userSid: result.process.userSid,
-              };
-              fs.writeFileSync(${JSON.stringify(receiptHoldBarrier)}, JSON.stringify(safeIdentity));
-              while (!fs.existsSync(${JSON.stringify(receiptReleaseSignal)})) {
-                await Bun.sleep(20);
-              }
-            }
-            return result;
-          },
-        }));
-
-        const { startDaemon } = await import(${JSON.stringify(daemonModPath)});
-        fs.writeFileSync(${JSON.stringify(join(fastExitData, 'daemon-imported'))}, 'ok');
-
-        fs.writeFileSync(${JSON.stringify(join(fastExitData, 'start-daemon-called'))}, 'ok');
-        await startDaemon({ port: 0, foreground: true });
-        fs.writeFileSync(${JSON.stringify(join(fastExitData, 'startup-completed'))}, 'ok');
-      } catch (e) {
-        try {
-          fs.writeFileSync(${JSON.stringify(join(fastExitData, 'error-category'))}, classifySupervisorError(e));
-          const errMsg = e instanceof Error ? (e.name + ': ' + e.message) : String(e);
-          fs.writeFileSync(${JSON.stringify(join(fastExitData, 'runtime-marker-status'))}, evaluateHelperMarkerStatus(errMsg));
-          const helper = safeHelperDiagnostic(errMsg);
-          if (helper) {
-            fs.writeFileSync(${JSON.stringify(join(fastExitData, 'runtime-diagnostic.json'))}, JSON.stringify(helper));
-          }
-        } catch {}
-        process.exit(1);
-      }
-    `;
-    const fastExitSupervisorFile = join(
-      fastExitData,
-      'fast-exit-supervisor.ts'
-    );
-    writeFileSync(fastExitSupervisorFile, fastExitSupervisorScript);
-    feSupervisor = Bun.spawn([process.execPath, fastExitSupervisorFile], {
-      env: fastExitEnv,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    try {
-      phase = 'fast-exit-receipt-capture';
-      // Wait for child to publish and receipt to be captured & held; fail fast on early supervisor death
-      const capturedIdentity = await waitFor('receipt captured', () => {
-        if (feSupervisor && feSupervisor.exitCode !== null) {
-          throw new Error(
-            `supervisor exited early with code ${feSupervisor.exitCode}`
-          );
-        }
-        if (!existsSync(receiptHoldBarrier)) return undefined;
-        try {
-          return JSON.parse(
-            readFileSync(receiptHoldBarrier, 'utf8')
-          ) as Identity;
-        } catch {
-          return undefined;
-        }
-      });
-      const feChildIdentity = capturedIdentity;
-      assert.ok(feChildIdentity && feChildIdentity.pid > 0);
-      owned.push({ identity: feChildIdentity, image: coordinator });
-      assert.ok(await ownedProcess(feChildIdentity, coordinator, false));
-
-      phase = 'fast-exit-child-stop';
-      // Initiate authenticated shutdown to the child in fastExitEnv without awaiting completion,
-      // because stopDaemon waits for the supervisor claim to clear while the supervisor is held
-      stopRequester = Bun.spawn([cli, 'coordinator', 'stop'], {
-        cwd: root,
-        env: fastExitEnv,
-        stdout: 'pipe',
-        stderr: 'pipe',
-      });
-
-      phase = 'fast-exit-child-exit';
-      // Wait for child to receive shutdown and fully exit before releasing receipt; fail fast if supervisor dies
-      await waitFor('child exit before receipt release', async () => {
-        if (feSupervisor && feSupervisor.exitCode !== null) {
-          throw new Error(
-            `supervisor exited early with code ${feSupervisor.exitCode}`
-          );
-        }
-        return !(await ownedProcess(feChildIdentity, coordinator, false))
+      setPhase('orphan-start');
+      await command('coordinator', 'start');
+      setPhase('orphan-started');
+      current = await started(beforeDeadRestart);
+      const orphan = current;
+      const deadSupervisor = register(orphan);
+      orphanChildIdentity = orphan.process;
+      expectedDescriptorInstance = orphan.instanceId;
+      orphanSupervisorIdentity = deadSupervisor;
+      orphanSupervisorStatusBefore = await inspectProcess(deadSupervisor, cli);
+      setPhase('orphan-kill-supervisor');
+      await ensureStopped(deadSupervisor, cli);
+      orphanSupervisorStatusAfter = await inspectProcess(deadSupervisor, cli);
+      setPhase('orphan-live');
+      await live(
+        orphan,
+        (p) => {
+          setPhase(p);
+        },
+        clock.phaseSignal
+      );
+      setPhase('orphan-stop');
+      await command('coordinator', 'stop');
+      setPhase('orphan-wait-exit');
+      await waitFor('orphan coordinator exit', async () =>
+        !(await ownedProcess(orphan.process, coordinator, false))
           ? true
-          : undefined;
+          : undefined
+      );
+      setPhase('orphan-assert-stopped');
+      assert.equal(readDescriptor(data), undefined);
+      assert.ok(!existsSync(reservation));
+      orphanChildIdentity = undefined;
+      orphanSupervisorIdentity = undefined;
+      orphanSupervisorStatusBefore = undefined;
+      orphanSupervisorStatusAfter = undefined;
+      expectedDescriptorInstance = undefined;
+      setPhase('orphan-restart');
+      await command('coordinator', 'restart');
+      setPhase('orphan-restart-started');
+      current = await started(orphan);
+      setPhase('orphan-restart-stop');
+      await stop(current);
+      setPhase('missing-lock-status');
+      rmSync(lock);
+      await run([cli, 'coordinator', 'status'], root, env, true);
+      assert.ok(!existsSync(lock));
+      setPhase('missing-lock-start');
+      await command('coordinator', 'start');
+      current = await started(beforeRestart);
+      assert.ok(existsSync(lock));
+
+      setPhase('partial-claim-kill');
+      const beforePartial = current;
+      await killPair(beforePartial);
+      setPhase('partial-claim-status');
+      rmSync(pidFile);
+      const reservationBytes = readFileSync(reservation);
+      const ownerBytes = readFileSync(owner);
+      assert.ok(
+        /Coordinator: not running/.test(await command('coordinator', 'status'))
+      );
+      assert.ok(reservationBytes.equals(readFileSync(reservation)));
+      assert.ok(ownerBytes.equals(readFileSync(owner)));
+      assert.ok(!existsSync(pidFile));
+      setPhase('partial-claim-start');
+      await command('coordinator', 'start');
+      current = await started(beforePartial);
+      assert.ok(
+        current.supervisor?.generationId !==
+          beforePartial.supervisor?.generationId
+      );
+      assert.ok(current.supervisor?.nonce !== beforePartial.supervisor?.nonce);
+
+      setPhase('modeled-pid-reuse');
+      const beforeReuse = current;
+      await killPair(beforeReuse);
+      await assertListenerUnbound(beforeReuse.httpsPort, clock.phaseSignal);
+      await assertListenerUnbound(beforeReuse.grpcPort, clock.phaseSignal);
+      fixture = startBounded(
+        [
+          powershell,
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          'Start-Sleep -Seconds 300',
+        ],
+        {
+          cwd: root,
+          env,
+          timeoutMs: 330000,
+          signal: clock.phaseSignal,
+          capture: false,
+        }
+      );
+      assert.ok(fixture.pid > 0);
+      const stale = {
+        ...beforeReuse,
+        pid: fixture.pid,
+        process: { ...beforeReuse.process, pid: fixture.pid },
+      };
+      assert.ok(!(await ownedProcess(stale.process, powershell, false)));
+      writeFileSync(join(runtime, 'coordinator.json'), JSON.stringify(stale));
+      await command('coordinator', 'start');
+      current = await started(beforeReuse);
+      assert.ok(
+        current.supervisor?.generationId !==
+          beforeReuse.supervisor?.generationId
+      );
+      assert.equal(fixture.exitCode, null);
+      await stop(current);
+
+      setPhase('fast-exit-receipt');
+      // Deterministic supervisor path: Start the supervisor, hold receipt delivery
+      // until the child has received authenticated shutdown, committed intent, and exited.
+      // This exercises accepting shutdown-requested when child is already gone.
+      const fastExitData = join(root, 'fast-exit-data');
+      mkdirSync(fastExitData);
+      const fastExitEnv: Record<string, string> = {
+        ...env,
+        HAN_DATA_DIR: fastExitData,
+        HAN_COORDINATOR_PORT: '0',
+      };
+      delete fastExitEnv.HAN_PROOF_STARTUP_BARRIER;
+      const receiptHoldBarrier = join(fastExitData, 'receipt-held');
+      const receiptReleaseSignal = join(fastExitData, 'receipt-release');
+      const runtimeModPath = resolve(
+        import.meta.dir,
+        '../lib/coordinator/windows-runtime.ts'
+      );
+      const helperModPath = resolve(
+        import.meta.dir,
+        '../lib/coordinator/windows-helper.ts'
+      );
+      const daemonModPath = resolve(
+        import.meta.dir,
+        '../lib/commands/coordinator/daemon.ts'
+      );
+      const diagModPath = resolve(
+        import.meta.dir,
+        './windows-proof-diagnostics.ts'
+      );
+      const fastExitSupervisorScript = `
+        const fs = await import('node:fs');
+        const { safeHelperDiagnostic, classifySupervisorError, evaluateHelperMarkerStatus } = await import(${JSON.stringify(diagModPath)});
+        try {
+          const { mock } = await import('bun:test');
+          const binaryModPath = ${JSON.stringify(resolve(import.meta.dir, '../lib/coordinator/binary.ts'))};
+          const realBinary = await import(binaryModPath);
+          mock.module(binaryModPath, () => ({
+            ...realBinary,
+            findCoordinatorBinary: () => ${JSON.stringify(coordinator)},
+          }));
+          const realHelper = await import(${JSON.stringify(helperModPath)});
+          mock.module(${JSON.stringify(helperModPath)}, () => ({
+            ...realHelper,
+            findCoordinatorBinary: () => ${JSON.stringify(coordinator)},
+          }));
+          fs.writeFileSync(${JSON.stringify(join(fastExitData, 'mock-installed'))}, 'ok');
+
+          const realRuntime = await import(${JSON.stringify(runtimeModPath)});
+          fs.writeFileSync(${JSON.stringify(join(fastExitData, 'runtime-imported'))}, 'ok');
+          const origRead = realRuntime.readWindowsChildDescriptor;
+          mock.module(${JSON.stringify(runtimeModPath)}, () => ({
+            ...realRuntime,
+            async readWindowsChildDescriptor(...args) {
+              const result = await origRead(...args);
+              if (result && result.process && result.process.pid > 0) {
+                const safeIdentity = {
+                  pid: result.process.pid,
+                  creationTime: result.process.creationTime,
+                  userSid: result.process.userSid,
+                };
+                fs.writeFileSync(${JSON.stringify(receiptHoldBarrier)}, JSON.stringify(safeIdentity));
+                while (!fs.existsSync(${JSON.stringify(receiptReleaseSignal)})) {
+                  await Bun.sleep(20);
+                }
+              }
+              return result;
+            },
+          }));
+
+          const { startDaemon } = await import(${JSON.stringify(daemonModPath)});
+          fs.writeFileSync(${JSON.stringify(join(fastExitData, 'daemon-imported'))}, 'ok');
+
+          fs.writeFileSync(${JSON.stringify(join(fastExitData, 'start-daemon-called'))}, 'ok');
+          await startDaemon({ port: 0, foreground: true });
+          fs.writeFileSync(${JSON.stringify(join(fastExitData, 'startup-completed'))}, 'ok');
+        } catch (e) {
+          try {
+            fs.writeFileSync(${JSON.stringify(join(fastExitData, 'error-category'))}, classifySupervisorError(e));
+            const errMsg = e instanceof Error ? (e.name + ': ' + e.message) : String(e);
+            fs.writeFileSync(${JSON.stringify(join(fastExitData, 'runtime-marker-status'))}, evaluateHelperMarkerStatus(errMsg));
+            const helper = safeHelperDiagnostic(errMsg);
+            if (helper) {
+              fs.writeFileSync(${JSON.stringify(join(fastExitData, 'runtime-diagnostic.json'))}, JSON.stringify(helper));
+            }
+          } catch {}
+          process.exit(1);
+        }
+      `;
+      const fastExitSupervisorFile = join(
+        fastExitData,
+        'fast-exit-supervisor.ts'
+      );
+      writeFileSync(fastExitSupervisorFile, fastExitSupervisorScript);
+      feSupervisor = startBounded([process.execPath, fastExitSupervisorFile], {
+        env: fastExitEnv,
+        timeoutMs: 180000,
+        signal: clock.phaseSignal,
+        capture: false,
       });
+      try {
+        setPhase('fast-exit-receipt-capture');
+        // Wait for child to publish and receipt to be captured & held; fail fast on early supervisor death
+        const capturedIdentity = await waitFor('receipt captured', () => {
+          if (feSupervisor?.timedOut) {
+            throw new ProofSubprocessTimeout();
+          }
+          if (feSupervisor && feSupervisor.exitCode !== null) {
+            throw new Error(
+              `supervisor exited early with code ${feSupervisor.exitCode}`
+            );
+          }
+          if (!existsSync(receiptHoldBarrier)) return undefined;
+          try {
+            return JSON.parse(
+              readFileSync(receiptHoldBarrier, 'utf8')
+            ) as Identity;
+          } catch {
+            return undefined;
+          }
+        });
+        const feChildIdentity = capturedIdentity;
+        assert.ok(feChildIdentity && feChildIdentity.pid > 0);
+        assert.ok(await ownedProcess(feChildIdentity, coordinator, false));
 
-      phase = 'fast-exit-receipt-release';
-      // Now release the held receipt to startDaemon; it must safely accept shutdown-requested
-      // from the committed intent and matching receipt without failing or restarting a successor
-      writeFileSync(receiptReleaseSignal, 'release');
+        setPhase('fast-exit-child-stop');
+        // Initiate authenticated shutdown to the child in fastExitEnv without awaiting completion,
+        // because stopDaemon waits for the supervisor claim to clear while the supervisor is held
+        stopRequester = startBounded([cli, 'coordinator', 'stop'], {
+          cwd: root,
+          env: fastExitEnv,
+          timeoutMs: 90000,
+          signal: clock.phaseSignal,
+          capture: true,
+          maxBytes: 65536,
+          eofGraceMs: 5000,
+        });
 
-      // Await successful completion of the stop requester
-      const stopCode = await stopRequester.exited;
-      if (stopCode !== 0) {
-        const err = await new Response(
-          stopRequester.stderr as ReadableStream
-        ).text();
-        throw new Error(`fast-exit stop failed with code ${stopCode}: ${err}`);
-      }
-      phase = 'fast-exit-supervisor-exit';
-      await waitFor('supervisor exit after fast-exit', () =>
-        feSupervisor?.exitCode !== null ? feSupervisor?.exitCode : undefined
-      );
-      assert.equal(feSupervisor?.exitCode, 0);
-      phase = 'fast-exit-cleanup';
-      assert.equal(readDescriptor(fastExitData), undefined);
-      assert.ok(
-        !existsSync(join(fastExitData, 'runtime/supervisor.reservation.json'))
-      );
-      assert.ok(
-        !existsSync(join(fastExitData, 'runtime/supervisor.owner.json'))
-      );
-      assert.ok(!existsSync(join(fastExitData, 'runtime/supervisor.pid')));
-      // descriptor-publication.lock is a permanent file created to serialize
-      // descriptor publication and must remain present
-      assert.ok(
-        existsSync(join(fastExitData, 'runtime/descriptor-publication.lock'))
-      );
-      const fastExitRuntime = join(fastExitData, 'runtime');
-      if (existsSync(fastExitRuntime)) {
-        const leftoverStopping = readdirSync(fastExitRuntime).filter((name) =>
-          name.startsWith('coordinator.stopping.')
+        setPhase('fast-exit-child-exit');
+        // Wait for child to receive shutdown and fully exit before releasing receipt; fail fast if supervisor dies
+        await waitFor('child exit before receipt release', async () => {
+          if (feSupervisor?.timedOut) {
+            throw new ProofSubprocessTimeout();
+          }
+          if (feSupervisor && feSupervisor.exitCode !== null) {
+            throw new Error(
+              `supervisor exited early with code ${feSupervisor.exitCode}`
+            );
+          }
+          return !(await ownedProcess(feChildIdentity, coordinator, false))
+            ? true
+            : undefined;
+        });
+
+        setPhase('fast-exit-receipt-release');
+        // Now release the held receipt to startDaemon; it must safely accept shutdown-requested
+        // from the committed intent and matching receipt without failing or restarting a successor
+        writeFileSync(receiptReleaseSignal, 'release');
+
+        // Await successful completion of the stop requester
+        const stopResult = await stopRequester.waitBounded();
+        if (stopResult.aborted) throw new ProofDeadlineError();
+        if (stopResult.timedOut) throw new ProofSubprocessTimeout();
+        if (stopResult.pipeRetained) throw new ProofOutputRetained();
+        if (stopResult.exitCode !== 0) {
+          throw new ProofCommandError(stopResult.exitCode, stopResult.output);
+        }
+        setPhase('fast-exit-supervisor-exit');
+        await waitFor('supervisor exit after fast-exit', () => {
+          if (feSupervisor?.timedOut) {
+            throw new ProofSubprocessTimeout();
+          }
+          return feSupervisor?.exitCode !== null
+            ? feSupervisor?.exitCode
+            : undefined;
+        });
+        assert.equal(feSupervisor?.exitCode, 0);
+        setPhase('fast-exit-cleanup');
+        assert.equal(readDescriptor(fastExitData), undefined);
+        assert.ok(
+          !existsSync(join(fastExitData, 'runtime/supervisor.reservation.json'))
         );
-        assert.equal(leftoverStopping.length, 0);
-      }
-    } catch (fastExitErr) {
-      feSupervisorExitCodeBeforeCleanup = feSupervisor?.exitCode ?? null;
-      throw fastExitErr;
-    } finally {
-      if (stopRequester && stopRequester.exitCode === null) {
-        stopRequester.kill();
-        await stopRequester.exited;
-      }
-      if (feSupervisor && feSupervisor.exitCode === null) {
-        feSupervisorProofKilled = true;
-        feSupervisor.kill();
-        await feSupervisor.exited;
+        assert.ok(
+          !existsSync(join(fastExitData, 'runtime/supervisor.owner.json'))
+        );
+        assert.ok(!existsSync(join(fastExitData, 'runtime/supervisor.pid')));
+        // descriptor-publication.lock is a permanent file created to serialize
+        // descriptor publication and must remain present
+        assert.ok(
+          existsSync(join(fastExitData, 'runtime/descriptor-publication.lock'))
+        );
+        const fastExitRuntime = join(fastExitData, 'runtime');
+        if (existsSync(fastExitRuntime)) {
+          const leftoverStopping = readdirSync(fastExitRuntime).filter((name) =>
+            name.startsWith('coordinator.stopping.')
+          );
+          assert.equal(leftoverStopping.length, 0);
+        }
+      } catch (fastExitErr) {
+        feSupervisorExitCodeBeforeCleanup = feSupervisor?.exitCode ?? null;
+        throw fastExitErr;
+      } finally {
+        if (stopRequester && stopRequester.exitCode === null) {
+          try {
+            stopRequester.kill();
+            await waitProcessExit(
+              stopRequester.exited,
+              5000,
+              clock.cleanupSignal
+            );
+          } catch {}
+        }
+        if (feSupervisor && feSupervisor.exitCode === null) {
+          feSupervisorProofKilled = true;
+          try {
+            feSupervisor.kill();
+            await waitProcessExit(
+              feSupervisor.exited,
+              5000,
+              clock.cleanupSignal
+            );
+          } catch {}
+        }
       }
     }
   } catch (error) {
     failed = true;
+    if (clock.phaseSignal.aborted) {
+      try {
+        await abortableSleep(1000, clock.cleanupSignal);
+      } catch {}
+    }
     let diagnostic: SafeProcessDiagnostic | undefined;
     try {
       diagnostic = await collectDiagnostic();
     } catch {}
-    console.error(
-      `Installed Windows proof failure: ${safeProofFailure(
-        phase,
-        error,
-        diagnostic
-      )}`
-    );
+    const failureLine = safeProofFailure(phase, error, diagnostic);
+    writeSync(2, `Installed Windows proof failure: ${failureLine}\n`);
   } finally {
-    if (fixture && fixture.exitCode === null) {
-      try {
-        fixture.kill();
-        await fixture.exited;
-      } catch {
-        cleanupFailed = true;
-      }
-    }
-    if (existsSync(join(runtime, 'coordinator.json'))) {
-      try {
-        await command('coordinator', 'stop');
-      } catch {
-        cleanupFailed = true;
-      }
-    }
-    const fastExitRuntimePath = join(
-      root,
-      'fast-exit-data',
-      'runtime',
-      'coordinator.json'
-    );
-    if (existsSync(fastExitRuntimePath)) {
-      try {
-        await run([cli, 'coordinator', 'stop'], root, {
-          ...env,
-          HAN_DATA_DIR: join(root, 'fast-exit-data'),
-        });
-      } catch {
-        cleanupFailed = true;
-      }
-    }
-    for (const { identity, image } of owned) {
-      try {
-        if (await ownedProcess(identity, image, false)) {
-          await ownedProcess(identity, image, true);
-          await waitFor('owned process exit', async () =>
-            !(await ownedProcess(identity, image, false)) ? true : undefined
+    const cleanupStartTime = Date.now();
+
+    // Step 1: fixture
+    {
+      const t0 = Date.now();
+      let ok = true;
+      if (fixture && fixture.exitCode === null) {
+        try {
+          fixture.kill();
+          const exited = await waitProcessExit(
+            fixture.exited,
+            5000,
+            clock.cleanupSignal
           );
+          if (!exited) {
+            ok = false;
+            cleanupFailed = true;
+          }
+        } catch {
+          ok = false;
+          cleanupFailed = true;
+        }
+      }
+      if (feSupervisor && feSupervisor.exitCode === null) {
+        try {
+          feSupervisorProofKilled = true;
+          feSupervisor.kill();
+          const exited = await waitProcessExit(
+            feSupervisor.exited,
+            5000,
+            clock.cleanupSignal
+          );
+          if (!exited) {
+            ok = false;
+            cleanupFailed = true;
+          }
+        } catch {
+          ok = false;
+          cleanupFailed = true;
+        }
+      }
+      if (stopRequester && stopRequester.exitCode === null) {
+        try {
+          stopRequester.kill();
+          const exited = await waitProcessExit(
+            stopRequester.exited,
+            5000,
+            clock.cleanupSignal
+          );
+          if (!exited) {
+            ok = false;
+            cleanupFailed = true;
+          }
+        } catch {
+          ok = false;
+          cleanupFailed = true;
+        }
+      }
+      const ms = Date.now() - t0;
+      const line = safeProofCleanup({ step: 'fixture', ms, ok });
+      if (line) writeSync(2, `Installed Windows proof cleanup: ${line}\n`);
+    }
+
+    // Step 2: stop
+    {
+      const t0 = Date.now();
+      let ok = true;
+      if (existsSync(join(runtime, 'coordinator.json'))) {
+        const remainingCleanup = cleanupMs - (Date.now() - cleanupStartTime);
+        if (remainingCleanup >= 60000) {
+          try {
+            const stopRes = await spawnBounded([cli, 'coordinator', 'stop'], {
+              cwd: root,
+              env,
+              timeoutMs: 30000,
+              signal: clock.cleanupSignal,
+              capture: false,
+            });
+            if (
+              stopRes.exitCode !== 0 ||
+              stopRes.timedOut ||
+              stopRes.pipeRetained ||
+              stopRes.aborted
+            ) {
+              ok = false;
+              cleanupFailed = true;
+            }
+          } catch {
+            ok = false;
+            cleanupFailed = true;
+          }
+        }
+      }
+      const ms = Date.now() - t0;
+      const line = safeProofCleanup({ step: 'stop', ms, ok });
+      if (line) writeSync(2, `Installed Windows proof cleanup: ${line}\n`);
+    }
+
+    // Step 3: fast-exit-stop
+    {
+      const t0 = Date.now();
+      let ok = true;
+      const fastExitRuntimePath = join(
+        root,
+        'fast-exit-data',
+        'runtime',
+        'coordinator.json'
+      );
+      if (existsSync(fastExitRuntimePath)) {
+        const remainingCleanup = cleanupMs - (Date.now() - cleanupStartTime);
+        if (remainingCleanup >= 60000) {
+          try {
+            const stopRes = await spawnBounded([cli, 'coordinator', 'stop'], {
+              cwd: root,
+              env: {
+                ...env,
+                HAN_DATA_DIR: join(root, 'fast-exit-data'),
+              },
+              timeoutMs: 30000,
+              signal: clock.cleanupSignal,
+              capture: false,
+            });
+            if (
+              stopRes.exitCode !== 0 ||
+              stopRes.timedOut ||
+              stopRes.pipeRetained ||
+              stopRes.aborted
+            ) {
+              ok = false;
+              cleanupFailed = true;
+            }
+          } catch {
+            ok = false;
+            cleanupFailed = true;
+          }
+        }
+      }
+      const ms = Date.now() - t0;
+      const line = safeProofCleanup({ step: 'fast-exit-stop', ms, ok });
+      if (line) writeSync(2, `Installed Windows proof cleanup: ${line}\n`);
+    }
+
+    // Step 4: sweep
+    {
+      const t0 = Date.now();
+      let ok = true;
+      let terminated: number | undefined;
+      let remaining: number | undefined;
+      try {
+        const sweepRes = await sweepRoot(root, 30000);
+        terminated = sweepRes.terminated;
+        remaining = sweepRes.remaining;
+        if (remaining !== 0 || (terminated !== undefined && terminated < 0)) {
+          ok = false;
+          cleanupFailed = true;
         }
       } catch {
+        ok = false;
         cleanupFailed = true;
       }
-    }
-    try {
-      rmSync(root, {
-        recursive: true,
-        force: true,
-        maxRetries: 10,
-        retryDelay: 300,
+      const ms = Date.now() - t0;
+      const line = safeProofCleanup({
+        step: 'sweep',
+        ms,
+        ok,
+        terminated:
+          terminated !== undefined && terminated >= 0 ? terminated : 0,
+        remaining: remaining !== undefined && remaining >= 0 ? remaining : 0,
       });
-    } catch {
-      cleanupFailed = true;
+      if (line) writeSync(2, `Installed Windows proof cleanup: ${line}\n`);
     }
-    if (cleanupFailed)
-      console.error(
-        `Installed Windows proof failure: ${safeProofFailure('cleanup', undefined)}`
-      );
+
+    // Step 5: remove
+    {
+      const t0 = Date.now();
+      let ok = true;
+      try {
+        rmSync(root, {
+          recursive: true,
+          force: true,
+          maxRetries: 5,
+          retryDelay: 200,
+        });
+      } catch {
+        ok = false;
+        cleanupFailed = true;
+      }
+      const ms = Date.now() - t0;
+      const line = safeProofCleanup({ step: 'remove', ms, ok });
+      if (line) writeSync(2, `Installed Windows proof cleanup: ${line}\n`);
+    }
+
+    // Step 6: complete
+    {
+      const ms = Date.now() - cleanupStartTime;
+      const ok = !cleanupFailed;
+      const line = safeProofCleanup({ step: 'complete', ms, ok });
+      if (line) writeSync(2, `Installed Windows proof cleanup: ${line}\n`);
+    }
+
+    clock.disarm();
   }
+
   if (failed || cleanupFailed) {
-    // The primary phase has already been reported; never print the thrown object.
-    process.exitCode = 1;
+    if (!failed && cleanupFailed) {
+      const failureLine = safeProofFailure('cleanup', undefined);
+      writeSync(2, `Installed Windows proof failure: ${failureLine}\n`);
+    }
+    process.exit(1);
   } else {
     console.log(
-      'Installed Windows CLI: authenticated transport, crash recovery, restart, stop, missing lock, partial claim, modeled PID reuse, and fast-exit receipt passed'
+      barrierProof
+        ? 'Installed Windows CLI: fixed-port startup barrier passed'
+        : 'Installed Windows CLI: authenticated transport, crash recovery, restart, stop, missing lock, partial claim, modeled PID reuse, and fast-exit receipt passed'
     );
+    process.exit(0);
   }
 }
 
+process.exitCode = 1;
+
 await main().catch((error: unknown) => {
-  console.error(
-    `Installed Windows proof failure: ${safeProofFailure('setup', error)}`
-  );
-  process.exitCode = 1;
+  const failure = safeProofFailure('setup', error);
+  try {
+    writeSync(2, `Installed Windows proof failure: ${failure}\n`);
+  } catch {
+    console.error(`Installed Windows proof failure: ${failure}`);
+  }
+  process.exit(1);
 });

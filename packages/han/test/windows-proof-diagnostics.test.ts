@@ -1,14 +1,17 @@
 import { describe, expect, test } from 'bun:test';
 import {
   classifySupervisorError,
+  cleanupSteps,
   evaluateHelperMarkerStatus,
+  phases,
   ProofCommandError,
   safeHelperDiagnostic,
   safeProcessDiagnostic,
+  safeProofCleanup,
   safeProofFailure,
+  safeProofProgress,
   validateHelperDiagnostic,
 } from '../scripts/windows-proof-diagnostics.ts';
-
 const secret = 'SENTINEL_SECRET_token_certificate_path_nonce_sid';
 const prefix = 'HAN_WINDOWS_RUNTIME_DIAGNOSTIC=';
 const valid = {
@@ -726,5 +729,309 @@ describe('installed Windows proof diagnostics', () => {
         `CoordinatorSecurityError: Windows local-runtime helper failed without any marker\n${secret}`
       )
     ).toBe('no_marker_in_error');
+  });
+
+  test('exports phases array as const with all expected phases', () => {
+    expect(phases).toContain('setup');
+    expect(phases).toContain('initial-status');
+    expect(phases).toContain('initial-start');
+    expect(phases).toContain('fast-exit-receipt');
+    expect(phases).toContain('fast-exit-cleanup');
+    expect(phases).toContain('cleanup');
+    expect(phases.length).toBe(48);
+    expect(Object.isFrozen(phases) || Array.isArray(phases)).toBe(true);
+  });
+
+  test('safeProofProgress validates and formats progress JSON correctly', () => {
+    const validProgress = {
+      phase: 'initial-start',
+      elapsedMs: 1250,
+      previous: {
+        phase: 'initial-status',
+        ms: 320,
+        cliCount: 2,
+        cliMs: 250,
+        cliMaxMs: 150,
+        probeCount: 4,
+        probeMs: 70,
+      },
+    };
+
+    const output = safeProofProgress(validProgress);
+    expect(output).toBeDefined();
+    if (output) {
+      expect(JSON.parse(output)).toEqual(validProgress);
+    }
+
+    // Null previous is allowed for the initial phase
+    const initialProgress = {
+      phase: 'setup',
+      elapsedMs: 0,
+      previous: null,
+    };
+    const outputInitial = safeProofProgress(initialProgress);
+    expect(outputInitial).toBeDefined();
+    if (outputInitial) {
+      expect(JSON.parse(outputInitial)).toEqual(initialProgress);
+    }
+  });
+
+  test('safeProofProgress rejects unlisted phases, negative or non-integer numbers, extra keys, and secrets', () => {
+    const base = {
+      phase: 'initial-start',
+      elapsedMs: 100,
+      previous: {
+        phase: 'initial-status',
+        ms: 50,
+        cliCount: 1,
+        cliMs: 30,
+        cliMaxMs: 30,
+        probeCount: 2,
+        probeMs: 20,
+      },
+    };
+
+    // Unlisted phase
+    expect(
+      safeProofProgress({ ...base, phase: 'unlisted-phase' })
+    ).toBeUndefined();
+    expect(safeProofProgress({ ...base, phase: secret })).toBeUndefined();
+    expect(
+      safeProofProgress({
+        ...base,
+        previous: { ...base.previous, phase: 'unknown-phase' },
+      })
+    ).toBeUndefined();
+    expect(
+      safeProofProgress({
+        ...base,
+        previous: { ...base.previous, phase: secret },
+      })
+    ).toBeUndefined();
+
+    // Non-integer or negative numbers
+    expect(safeProofProgress({ ...base, elapsedMs: -1 })).toBeUndefined();
+    expect(safeProofProgress({ ...base, elapsedMs: 1.5 })).toBeUndefined();
+    expect(safeProofProgress({ ...base, elapsedMs: '100' })).toBeUndefined();
+    expect(
+      safeProofProgress({
+        ...base,
+        previous: { ...base.previous, ms: -5 },
+      })
+    ).toBeUndefined();
+    expect(
+      safeProofProgress({
+        ...base,
+        previous: { ...base.previous, cliCount: 1.2 },
+      })
+    ).toBeUndefined();
+    expect(
+      safeProofProgress({
+        ...base,
+        previous: { ...base.previous, cliMs: -1 },
+      })
+    ).toBeUndefined();
+    expect(
+      safeProofProgress({
+        ...base,
+        previous: { ...base.previous, cliMaxMs: -1 },
+      })
+    ).toBeUndefined();
+    expect(
+      safeProofProgress({
+        ...base,
+        previous: { ...base.previous, probeCount: -1 },
+      })
+    ).toBeUndefined();
+    expect(
+      safeProofProgress({
+        ...base,
+        previous: { ...base.previous, probeMs: -1 },
+      })
+    ).toBeUndefined();
+
+    // Extra keys
+    expect(safeProofProgress({ ...base, extraKey: 'leaked' })).toBeUndefined();
+    expect(safeProofProgress({ ...base, secret })).toBeUndefined();
+    expect(
+      safeProofProgress({
+        ...base,
+        previous: { ...base.previous, token: secret },
+      })
+    ).toBeUndefined();
+
+    // Missing keys
+    expect(safeProofProgress({ phase: 'setup', elapsedMs: 0 })).toBeUndefined();
+    expect(
+      safeProofProgress({
+        phase: 'setup',
+        elapsedMs: 0,
+        previous: { phase: 'setup', ms: 0 },
+      })
+    ).toBeUndefined();
+
+    // Invalid value types
+    expect(safeProofProgress(null)).toBeUndefined();
+    expect(safeProofProgress(undefined)).toBeUndefined();
+    expect(safeProofProgress('string')).toBeUndefined();
+    expect(safeProofProgress([])).toBeUndefined();
+  });
+
+  test('safeProofCleanup validates and formats cleanup JSON correctly', () => {
+    for (const step of cleanupSteps) {
+      const basic = { step, ms: 45, ok: true };
+      const outputBasic = safeProofCleanup(basic);
+      expect(outputBasic).toBeDefined();
+      if (outputBasic) {
+        expect(JSON.parse(outputBasic)).toEqual(basic);
+      }
+    }
+
+    const sweepResult = {
+      step: 'sweep',
+      ms: 120,
+      ok: true,
+      terminated: 2,
+      remaining: 0,
+    };
+    const outputSweep = safeProofCleanup(sweepResult);
+    expect(outputSweep).toBeDefined();
+    if (outputSweep) {
+      expect(JSON.parse(outputSweep)).toEqual(sweepResult);
+    }
+  });
+
+  test('safeProofCleanup rejects invalid steps, non-integer numbers, extra keys, and secrets', () => {
+    // Invalid steps
+    expect(
+      safeProofCleanup({ step: 'invalid-step', ms: 10, ok: true })
+    ).toBeUndefined();
+    expect(
+      safeProofCleanup({ step: secret, ms: 10, ok: true })
+    ).toBeUndefined();
+
+    // Invalid numbers
+    expect(
+      safeProofCleanup({ step: 'stop', ms: -1, ok: true })
+    ).toBeUndefined();
+    expect(
+      safeProofCleanup({ step: 'stop', ms: 12.34, ok: true })
+    ).toBeUndefined();
+    expect(
+      safeProofCleanup({ step: 'sweep', ms: 10, ok: true, terminated: -1 })
+    ).toBeUndefined();
+    expect(
+      safeProofCleanup({ step: 'sweep', ms: 10, ok: true, remaining: 1.5 })
+    ).toBeUndefined();
+
+    // Non-boolean ok
+    expect(
+      safeProofCleanup({
+        step: 'stop',
+        ms: 10,
+        ok: 'true' as unknown as boolean,
+      })
+    ).toBeUndefined();
+    expect(
+      safeProofCleanup({ step: 'stop', ms: 10, ok: 1 as unknown as boolean })
+    ).toBeUndefined();
+
+    // Extra keys
+    expect(
+      safeProofCleanup({ step: 'stop', ms: 10, ok: true, extra: 'bad' })
+    ).toBeUndefined();
+    expect(
+      safeProofCleanup({ step: 'stop', ms: 10, ok: true, token: secret })
+    ).toBeUndefined();
+
+    // Missing required keys
+    expect(safeProofCleanup({ step: 'stop', ms: 10 })).toBeUndefined();
+    expect(safeProofCleanup({ step: 'stop', ok: true })).toBeUndefined();
+    expect(safeProofCleanup({ ms: 10, ok: true })).toBeUndefined();
+
+    // Invalid value types
+    expect(safeProofCleanup(null)).toBeUndefined();
+    expect(safeProofCleanup(undefined)).toBeUndefined();
+    expect(safeProofCleanup('invalid')).toBeUndefined();
+    expect(safeProofCleanup([])).toBeUndefined();
+  });
+
+  test('safeProofFailure maps new error names strictly without inspecting message text', () => {
+    // ProofDeadlineError -> deadline
+    class ProofDeadlineError extends Error {
+      constructor(msg: string) {
+        super(msg);
+        this.name = 'ProofDeadlineError';
+      }
+    }
+    const deadlineErr = new ProofDeadlineError(`Proof exceeded ${secret}`);
+    const deadlineJson = JSON.parse(
+      safeProofFailure('orphan-live', deadlineErr)
+    );
+    expect(deadlineJson.reason).toBe('deadline');
+    expect(JSON.stringify(deadlineJson).includes(secret)).toBe(false);
+
+    // ProofSubprocessTimeout -> subprocess_timeout
+    class ProofSubprocessTimeout extends Error {
+      constructor(msg: string) {
+        super(msg);
+        this.name = 'ProofSubprocessTimeout';
+      }
+    }
+    const subprocErr = new ProofSubprocessTimeout(
+      `Subprocess timed out ${secret}`
+    );
+    const subprocJson = JSON.parse(safeProofFailure('orphan-live', subprocErr));
+    expect(subprocJson.reason).toBe('subprocess_timeout');
+    expect(JSON.stringify(subprocJson).includes(secret)).toBe(false);
+
+    // ProofOutputRetained -> output_handle_retained
+    class ProofOutputRetained extends Error {
+      constructor(msg: string) {
+        super(msg);
+        this.name = 'ProofOutputRetained';
+      }
+    }
+    const retainedErr = new ProofOutputRetained(
+      `Output handle retained ${secret}`
+    );
+    const retainedJson = JSON.parse(
+      safeProofFailure('orphan-live', retainedErr)
+    );
+    expect(retainedJson.reason).toBe('output_handle_retained');
+    expect(JSON.stringify(retainedJson).includes(secret)).toBe(false);
+
+    // ProofWatchdogError -> watchdog
+    class ProofWatchdogError extends Error {
+      constructor(msg: string) {
+        super(msg);
+        this.name = 'ProofWatchdogError';
+      }
+    }
+    const watchdogErr = new ProofWatchdogError(`Watchdog fired ${secret}`);
+    const watchdogJson = JSON.parse(
+      safeProofFailure('orphan-live', watchdogErr)
+    );
+    expect(watchdogJson.reason).toBe('watchdog');
+    expect(JSON.stringify(watchdogJson).includes(secret)).toBe(false);
+
+    // Error with code: 'WATCHDOG'
+    const codedWatchdogErr = new Error('watchdog fired');
+    (codedWatchdogErr as unknown as { code: string }).code = 'WATCHDOG';
+    const codedWatchdogJson = JSON.parse(
+      safeProofFailure('orphan-live', codedWatchdogErr)
+    );
+    expect(codedWatchdogJson.reason).toBe('watchdog');
+
+    // CRITICAL: A generic error whose message contains "deadline" or other keywords
+    // but without the matching error.name MUST NOT be given the reason!
+    const spoofMsgErr = new Error(
+      `Custom error with deadline reached and subprocess_timeout ${secret}`
+    );
+    const spoofMsgJson = JSON.parse(
+      safeProofFailure('orphan-live', spoofMsgErr)
+    );
+    expect(spoofMsgJson.reason).toBeUndefined();
+    expect(JSON.stringify(spoofMsgJson).includes(secret)).toBe(false);
   });
 });

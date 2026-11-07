@@ -64,7 +64,7 @@ const keys = [
   'kind',
   'win32Code',
 ];
-const phases = [
+export const phases = [
   'setup',
   'initial-status',
   'initial-start',
@@ -113,8 +113,175 @@ const phases = [
   'fast-exit-supervisor-exit',
   'fast-exit-cleanup',
   'cleanup',
-];
+] as const;
 
+export type ProofPhase = (typeof phases)[number];
+
+export const cleanupSteps = [
+  'fixture',
+  'stop',
+  'fast-exit-stop',
+  'sweep',
+  'remove',
+  'complete',
+] as const;
+
+export type CleanupStep = (typeof cleanupSteps)[number];
+
+export type SafePreviousProgress = {
+  phase: ProofPhase;
+  ms: number;
+  cliCount: number;
+  cliMs: number;
+  cliMaxMs: number;
+  probeCount: number;
+  probeMs: number;
+};
+
+export type SafeProofProgress = {
+  phase: ProofPhase;
+  elapsedMs: number;
+  previous: SafePreviousProgress | null;
+};
+
+function isNonNegativeSafeInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+}
+
+export function safeProofProgress(value: unknown): string | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+  const raw = value as Record<string, unknown>;
+  const rawKeys = Object.keys(raw);
+  if (
+    rawKeys.length !== 3 ||
+    !rawKeys.includes('phase') ||
+    !rawKeys.includes('elapsedMs') ||
+    !rawKeys.includes('previous')
+  ) {
+    return undefined;
+  }
+  if (
+    typeof raw.phase !== 'string' ||
+    !phases.includes(raw.phase as ProofPhase)
+  ) {
+    return undefined;
+  }
+  if (!isNonNegativeSafeInteger(raw.elapsedMs)) {
+    return undefined;
+  }
+  const prev = raw.previous;
+  let validatedPrev: SafePreviousProgress | null = null;
+  if (prev !== null) {
+    if (!prev || typeof prev !== 'object' || Array.isArray(prev)) {
+      return undefined;
+    }
+    const prevRaw = prev as Record<string, unknown>;
+    const prevKeys = Object.keys(prevRaw);
+    const expectedPrevKeys = [
+      'phase',
+      'ms',
+      'cliCount',
+      'cliMs',
+      'cliMaxMs',
+      'probeCount',
+      'probeMs',
+    ];
+    if (
+      prevKeys.length !== expectedPrevKeys.length ||
+      !expectedPrevKeys.every((k) => prevKeys.includes(k))
+    ) {
+      return undefined;
+    }
+    if (
+      typeof prevRaw.phase !== 'string' ||
+      !phases.includes(prevRaw.phase as ProofPhase)
+    ) {
+      return undefined;
+    }
+    if (
+      !isNonNegativeSafeInteger(prevRaw.ms) ||
+      !isNonNegativeSafeInteger(prevRaw.cliCount) ||
+      !isNonNegativeSafeInteger(prevRaw.cliMs) ||
+      !isNonNegativeSafeInteger(prevRaw.cliMaxMs) ||
+      !isNonNegativeSafeInteger(prevRaw.probeCount) ||
+      !isNonNegativeSafeInteger(prevRaw.probeMs)
+    ) {
+      return undefined;
+    }
+    validatedPrev = {
+      phase: prevRaw.phase as ProofPhase,
+      ms: prevRaw.ms,
+      cliCount: prevRaw.cliCount,
+      cliMs: prevRaw.cliMs,
+      cliMaxMs: prevRaw.cliMaxMs,
+      probeCount: prevRaw.probeCount,
+      probeMs: prevRaw.probeMs,
+    };
+  }
+
+  return JSON.stringify({
+    phase: raw.phase,
+    elapsedMs: raw.elapsedMs,
+    previous: validatedPrev,
+  });
+}
+
+export type SafeProofCleanup = {
+  step: CleanupStep;
+  ms: number;
+  ok: boolean;
+  terminated?: number;
+  remaining?: number;
+};
+
+export function safeProofCleanup(value: unknown): string | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+  const raw = value as Record<string, unknown>;
+  const rawKeys = Object.keys(raw);
+  const requiredKeys = ['step', 'ms', 'ok'];
+  const allowedKeys = ['step', 'ms', 'ok', 'terminated', 'remaining'];
+  if (!requiredKeys.every((k) => rawKeys.includes(k))) {
+    return undefined;
+  }
+  if (!rawKeys.every((k) => allowedKeys.includes(k))) {
+    return undefined;
+  }
+  if (
+    typeof raw.step !== 'string' ||
+    !cleanupSteps.includes(raw.step as CleanupStep)
+  ) {
+    return undefined;
+  }
+  if (!isNonNegativeSafeInteger(raw.ms)) {
+    return undefined;
+  }
+  if (typeof raw.ok !== 'boolean') {
+    return undefined;
+  }
+  const out: Record<string, unknown> = {
+    step: raw.step,
+    ms: raw.ms,
+    ok: raw.ok,
+  };
+  if ('terminated' in raw) {
+    if (!isNonNegativeSafeInteger(raw.terminated)) {
+      return undefined;
+    }
+    out.terminated = raw.terminated;
+  }
+  if ('remaining' in raw) {
+    if (!isNonNegativeSafeInteger(raw.remaining)) {
+      return undefined;
+    }
+    out.remaining = raw.remaining;
+  }
+
+  return JSON.stringify(out);
+}
 export type SafeHelperDiagnostic = Record<string, string | number | null>;
 
 export function validateHelperDiagnostic(
@@ -710,37 +877,52 @@ export function safeProofFailure(
 ): string {
   const command = error instanceof ProofCommandError ? error : undefined;
   let reason: string | undefined;
-  if (command?.startupTimeout === true) {
-    reason = 'startup_timeout';
-  } else if (error instanceof Error) {
-    const code = (error as { code?: unknown }).code;
-    if (error.name === 'AssertionError') {
-      reason = 'assertion_failure';
-    } else if (code === 'ECONNREFUSED') {
-      reason = 'connection_refused';
-    } else if (code === 'ECONNRESET') {
-      reason = 'connection_reset';
+  if (error instanceof Error) {
+    if (error.name === 'ProofDeadlineError') {
+      reason = 'deadline';
+    } else if (error.name === 'ProofSubprocessTimeout') {
+      reason = 'subprocess_timeout';
+    } else if (error.name === 'ProofOutputRetained') {
+      reason = 'output_handle_retained';
     } else if (
-      code === 'ETIMEDOUT' ||
-      error.name === 'TimeoutError' ||
-      error.message.startsWith('Timed out waiting for ')
+      error.name === 'ProofWatchdogError' ||
+      ('code' in error && error.code === 'WATCHDOG')
     ) {
-      reason = 'timeout';
-    } else if (
-      typeof code === 'string' &&
-      (code.startsWith('ERR_TLS_') ||
-        code.startsWith('ERR_SSL_') ||
-        code === 'CERT_HAS_EXPIRED' ||
-        code === 'DEPTH_ZERO_SELF_SIGNED_CERT' ||
-        code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE')
-    ) {
-      reason = 'tls_error';
-    } else if (
-      error.name === 'TypeError' &&
-      error.message.toLowerCase() === 'fetch failed'
-    ) {
-      reason = 'fetch_failure';
+      reason = 'watchdog';
+    } else if (command?.startupTimeout === true) {
+      reason = 'startup_timeout';
+    } else {
+      const code = 'code' in error ? error.code : undefined;
+      if (error.name === 'AssertionError') {
+        reason = 'assertion_failure';
+      } else if (code === 'ECONNREFUSED') {
+        reason = 'connection_refused';
+      } else if (code === 'ECONNRESET') {
+        reason = 'connection_reset';
+      } else if (
+        code === 'ETIMEDOUT' ||
+        error.name === 'TimeoutError' ||
+        error.message.startsWith('Timed out waiting for ')
+      ) {
+        reason = 'timeout';
+      } else if (
+        typeof code === 'string' &&
+        (code.startsWith('ERR_TLS_') ||
+          code.startsWith('ERR_SSL_') ||
+          code === 'CERT_HAS_EXPIRED' ||
+          code === 'DEPTH_ZERO_SELF_SIGNED_CERT' ||
+          code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE')
+      ) {
+        reason = 'tls_error';
+      } else if (
+        error.name === 'TypeError' &&
+        error.message.toLowerCase() === 'fetch failed'
+      ) {
+        reason = 'fetch_failure';
+      }
     }
+  } else if (command?.startupTimeout === true) {
+    reason = 'startup_timeout';
   }
   let helperDiagnostic: SafeHelperDiagnostic | null =
     command?.diagnostic ?? null;
