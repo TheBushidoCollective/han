@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
+
 let COORDINATOR_SHA256: string | null = null;
 try {
   const buildInfo = await import('../build-info.generated.ts');
