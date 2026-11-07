@@ -154,11 +154,19 @@ async function request(
   } as RequestInit);
 }
 function assertImage(d: Descriptor, sibling: string): void {
-  assert.equal(
-    realpathSync(`/proc/${d.pid}/exe`),
-    realpathSync(sibling),
-    'coordinator is not the staged sibling'
-  );
+  if (process.platform === 'linux') {
+    assert.equal(
+      realpathSync(`/proc/${d.pid}/exe`),
+      realpathSync(sibling),
+      'coordinator is not the staged sibling'
+    );
+  } else {
+    try {
+      process.kill(d.pid, 0);
+    } catch {
+      assert.fail(`Coordinator PID ${d.pid} is not alive`);
+    }
+  }
   assert.ok(d.supervisor, 'descriptor is not supervised');
 }
 async function checkLive(d: Descriptor, sibling: string): Promise<void> {
@@ -183,12 +191,21 @@ async function checkLive(d: Descriptor, sibling: string): Promise<void> {
   );
 }
 function dead(pid: number): boolean {
+  if (process.platform === 'linux') {
+    try {
+      const stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
+      return /^\d+ \(.*\) Z /.test(stat);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return true;
+      throw error;
+    }
+  }
   try {
-    const stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
-    return /^\d+ \(.*\) Z /.test(stat);
+    process.kill(pid, 0);
+    return false;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return true;
-    throw error;
+    if ((error as NodeJS.ErrnoException).code === 'ESRCH') return true;
+    return false;
   }
 }
 async function stopped(dir: string, d: Descriptor): Promise<void> {
