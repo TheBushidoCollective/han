@@ -62,4 +62,4 @@ jobs:
             --build-arg SOURCE_REVISION=${{ github.sha }} \
             -t browse-client:test \
             ./packages/browse-client
-          docker run --rm browse-client:test test -f out/han-dashboard-manifest.json
+          docker run --rm browse-client:test test -f out/index.html
