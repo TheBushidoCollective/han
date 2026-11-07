@@ -944,8 +944,9 @@ export function safeProofFailure(
     ? safeProcessDiagnostic(rawProcess)
     : undefined;
 
+  const isKnownPhase = (phases as readonly string[]).includes(phase);
   return JSON.stringify({
-    phase: phases.includes(phase) ? phase : 'setup',
+    phase: isKnownPhase ? phase : 'setup',
     exitStatus: command?.exitStatus ?? null,
     diagnostic: helperDiagnostic,
     ...(validatedProcess ? { process: validatedProcess } : {}),

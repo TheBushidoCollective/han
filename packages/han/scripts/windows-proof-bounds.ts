@@ -210,14 +210,20 @@ export function createProofClock(options: ProofClockOptions): ProofClock {
   };
 }
 
+interface MinimalStreamReader {
+  read(): Promise<{ value?: Uint8Array | undefined; done: boolean }>;
+  cancel(reason?: unknown): Promise<unknown> | unknown;
+  releaseLock(): void;
+}
+
 class BoundedStreamReader {
-  private reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+  private reader: MinimalStreamReader | null = null;
   private finished = false;
   private cancelled = false;
   private readPromise: Promise<void> | null = null;
 
   constructor(
-    stream: ReadableStream<Uint8Array> | null | undefined,
+    stream: { getReader(): MinimalStreamReader } | null | undefined,
     onChunk: (chunk: Uint8Array) => void
   ) {
     if (!stream) {
@@ -354,18 +360,20 @@ export async function spawnBounded(
     throw err;
   }
 
-  const stdoutReader = capture
-    ? new BoundedStreamReader(
-        child.stdout as ReadableStream<Uint8Array> | null,
-        onChunk
-      )
-    : null;
-  const stderrReader = capture
-    ? new BoundedStreamReader(
-        child.stderr as ReadableStream<Uint8Array> | null,
-        onChunk
-      )
-    : null;
+  const stdoutReader =
+    capture && child.stdout
+      ? new BoundedStreamReader(
+          child.stdout as unknown as { getReader(): MinimalStreamReader },
+          onChunk
+        )
+      : null;
+  const stderrReader =
+    capture && child.stderr
+      ? new BoundedStreamReader(
+          child.stderr as unknown as { getReader(): MinimalStreamReader },
+          onChunk
+        )
+      : null;
 
   let timedOut = false;
   let timeoutTimer: NodeJS.Timeout | undefined;
@@ -490,18 +498,20 @@ export function startBounded(
 
   const child = Bun.spawn(argv, spawnConfig) as unknown as ProofSubprocess;
 
-  const stdoutReader = capture
-    ? new BoundedStreamReader(
-        child.stdout as ReadableStream<Uint8Array> | null,
-        onChunk
-      )
-    : null;
-  const stderrReader = capture
-    ? new BoundedStreamReader(
-        child.stderr as ReadableStream<Uint8Array> | null,
-        onChunk
-      )
-    : null;
+  const stdoutReader =
+    capture && child.stdout
+      ? new BoundedStreamReader(
+          child.stdout as unknown as { getReader(): MinimalStreamReader },
+          onChunk
+        )
+      : null;
+  const stderrReader =
+    capture && child.stderr
+      ? new BoundedStreamReader(
+          child.stderr as unknown as { getReader(): MinimalStreamReader },
+          onChunk
+        )
+      : null;
 
   let timedOut = false;
   let timeoutTimer: NodeJS.Timeout | undefined;

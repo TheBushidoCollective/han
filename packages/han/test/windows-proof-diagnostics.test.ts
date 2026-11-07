@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  ProofCommandError,
   classifySupervisorError,
   cleanupSteps,
   evaluateHelperMarkerStatus,
   phases,
-  ProofCommandError,
   safeHelperDiagnostic,
   safeProcessDiagnostic,
   safeProofCleanup,
@@ -12,6 +12,7 @@ import {
   safeProofProgress,
   validateHelperDiagnostic,
 } from '../scripts/windows-proof-diagnostics.ts';
+
 const secret = 'SENTINEL_SECRET_token_certificate_path_nonce_sid';
 const prefix = 'HAN_WINDOWS_RUNTIME_DIAGNOSTIC=';
 const valid = {

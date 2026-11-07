@@ -14,30 +14,30 @@ import { createConnection, createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
-  ProofCommandError,
-  phases,
-  safeProofProgress,
-  safeProofCleanup,
-  type ProofPhase,
-  type SafePreviousProgress,
-  type SafeProcessDiagnostic,
-  type SafeHelperDiagnostic,
-  safeProofFailure,
-  validateHelperDiagnostic,
-} from './windows-proof-diagnostics.ts';
-import {
-  ProofDeadlineError,
-  ProofSubprocessTimeout,
-  ProofOutputRetained,
+  abortableSleep,
+  type BoundedChild,
+  waitFor as boundsWaitFor,
   createProofClock,
+  ProofDeadlineError,
+  ProofOutputRetained,
+  ProofSubprocessTimeout,
   readProofBudget,
   spawnBounded,
   startBounded,
-  waitFor as boundsWaitFor,
-  abortableSleep,
   sweepRoot,
-  type BoundedChild,
 } from './windows-proof-bounds.ts';
+import {
+  ProofCommandError,
+  type ProofPhase,
+  phases,
+  type SafeHelperDiagnostic,
+  type SafePreviousProgress,
+  type SafeProcessDiagnostic,
+  safeProofCleanup,
+  safeProofFailure,
+  safeProofProgress,
+  validateHelperDiagnostic,
+} from './windows-proof-diagnostics.ts';
 
 // Run only on a disposable Windows CI runner against the freshly built artifacts:
 // bun packages/han/scripts/prove-installed-windows-coordinator.ts <han.exe> <han-coordinator.exe>
