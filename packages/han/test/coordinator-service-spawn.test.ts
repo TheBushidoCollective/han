@@ -50,15 +50,29 @@ mock.module('../lib/grpc/client.ts', () => ({
 // below already sets. Left real, these tests would hit the network and, on
 // a machine running han, get a truthful "yes, one is already serving".
 const realHealthModule = require('../lib/commands/coordinator/health.ts');
+const mockOptionalDescriptor = mock(() =>
+  mockBunSpawn.mock.calls.length ? mockDescriptor() : null
+);
 mock.module('../lib/commands/coordinator/health.ts', () => ({
   ...realHealthModule,
   checkHealth: async (port?: number) =>
     (await mockHealth(port))
       ? { status: 'ok', pid: 4242, uptime: 1, version: 'test' }
       : null,
-  readOptionalDescriptor: () =>
-    mockBunSpawn.mock.calls.length ? mockDescriptor() : null,
-  checkDescriptorHealth: async (descriptor: { pid: number }) => {
+  readOptionalDescriptor: () => mockOptionalDescriptor(),
+  checkDescriptorHealth: async (
+    descriptor: { pid: number; httpsPort: number },
+    requestedPort?: number
+  ) => {
+    if (
+      requestedPort !== undefined &&
+      requestedPort !== 0 &&
+      requestedPort !== descriptor.httpsPort
+    ) {
+      throw new realConnection.CoordinatorSecurityError(
+        'Coordinator descriptor port does not match requested port'
+      );
+    }
     if (!(await mockHealth()))
       throw new realConnection.CoordinatorSecurityError('not healthy');
     return { status: 'ok', pid: descriptor.pid };
@@ -87,11 +101,6 @@ const realRecovery = require('../lib/coordinator/recovery-runtime.ts');
 mock.module('../lib/coordinator/recovery-runtime.ts', () => ({
   ...realRecovery,
   posixPrepare: () => {},
-}));
-const realWindowsRuntime = require('../lib/coordinator/windows-runtime.ts');
-mock.module('../lib/coordinator/windows-runtime.ts', () => ({
-  ...realWindowsRuntime,
-  readWindowsChildDescriptor: async () => mockDescriptor(),
 }));
 
 // existsSync returns true so findCoordinatorBinary "finds" a binary path.
@@ -129,6 +138,10 @@ beforeEach(() => {
   mockBunSpawn.mockClear();
   mockShutdown.mockReset();
   mockDescriptor.mockReset();
+  mockOptionalDescriptor.mockReset();
+  mockOptionalDescriptor.mockImplementation(() =>
+    mockBunSpawn.mock.calls.length ? mockDescriptor() : null
+  );
   mockDescriptor.mockReturnValue({
     transportVersion: 1,
     instanceId: 'owned',
@@ -166,10 +179,6 @@ afterAll(() => {
   mock.module('../lib/grpc/client.ts', () => realGrpcClient);
   mock.module('../lib/commands/coordinator/health.ts', () => realHealthModule);
   mock.module('../lib/coordinator/recovery-runtime.ts', () => realRecovery);
-  mock.module(
-    '../lib/coordinator/windows-runtime.ts',
-    () => realWindowsRuntime
-  );
   mock.module('../lib/coordinator/connection.ts', () => ({
     ...realConnection,
     readCoordinatorDescriptor: readActualDescriptor,
@@ -223,6 +232,78 @@ describe('startCoordinatorService with binary found', () => {
     expect(args[args.indexOf('--supervisor-generation') + 1]).toBe(
       supervisor.generationId
     );
+  });
+
+  test('passes --grpc-port 0 when requested port is 0, and omits it when port is non-zero', async () => {
+    const prevPort = process.env.HAN_COORDINATOR_PORT;
+    try {
+      process.env.HAN_COORDINATOR_PORT = '0';
+      mockHealth.mockResolvedValue(false);
+      mockBunSpawn.mockClear();
+      await expect(cs.startCoordinatorService()).rejects.toThrow('test double');
+      expect(mockBunSpawn).toHaveBeenCalled();
+      let args = mockBunSpawn.mock.calls[0][0] as string[];
+      expect(args).toContain('--port');
+      expect(args[args.indexOf('--port') + 1]).toBe('0');
+      expect(args).toContain('--grpc-port');
+      expect(args[args.indexOf('--grpc-port') + 1]).toBe('0');
+
+      process.env.HAN_COORDINATOR_PORT = '41957';
+      mockBunSpawn.mockClear();
+      await expect(cs.startCoordinatorService()).rejects.toThrow('test double');
+      expect(mockBunSpawn).toHaveBeenCalled();
+      args = mockBunSpawn.mock.calls[0][0] as string[];
+      expect(args).toContain('--port');
+      expect(args[args.indexOf('--port') + 1]).toBe('41957');
+      expect(args).not.toContain('--grpc-port');
+    } finally {
+      if (prevPort !== undefined) process.env.HAN_COORDINATOR_PORT = prevPort;
+      else delete process.env.HAN_COORDINATOR_PORT;
+    }
+  });
+
+  test('fails closed with CoordinatorSecurityError when cached descriptor port mismatches fixed requested port', async () => {
+    const prevPort = process.env.HAN_COORDINATOR_PORT;
+    try {
+      mockOptionalDescriptor.mockImplementation(() => mockDescriptor());
+      mockHealth.mockResolvedValue(true);
+      mockBunSpawn.mockClear();
+      await cs.startCoordinatorService();
+
+      process.env.HAN_COORDINATOR_PORT = '41959';
+      await expect(cs.startCoordinatorService()).rejects.toThrow(
+        /port does not match/
+      );
+      expect(mockBunSpawn).not.toHaveBeenCalled();
+    } finally {
+      if (prevPort !== undefined) process.env.HAN_COORDINATOR_PORT = prevPort;
+      else delete process.env.HAN_COORDINATOR_PORT;
+      await cs.stopCoordinatorService();
+    }
+  });
+
+  test('fails closed with CoordinatorSecurityError when descriptor changes during cached health check', async () => {
+    mockOptionalDescriptor.mockImplementation(() => mockDescriptor());
+    mockHealth.mockResolvedValue(true);
+    await cs.startCoordinatorService();
+
+    let callCount = 0;
+    const baseDesc = mockDescriptor();
+    mockOptionalDescriptor.mockImplementation(() => {
+      callCount++;
+      return {
+        ...baseDesc,
+        instanceId: callCount > 1 ? 'rotated-instance' : 'owned',
+      } as never;
+    });
+
+    try {
+      await expect(cs.startCoordinatorService()).rejects.toThrow(
+        'Coordinator descriptor changed during health check'
+      );
+    } finally {
+      await cs.stopCoordinatorService();
+    }
   });
 
   test('handles spawn failure gracefully', async () => {
@@ -419,6 +500,52 @@ describe('stopCoordinatorService ownership', () => {
     await cs.stopCoordinatorService();
     expect(mockShutdown).not.toHaveBeenCalled();
     expect(child.kill).not.toHaveBeenCalled();
+  });
+
+  test('returns owned on second start when child remains live and matches descriptor', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const supervisor = {
+      pid: process.pid,
+      nonce: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      generationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    };
+    const child = {
+      pid: 4242,
+      exitCode: null as number | null,
+      unref: mock(),
+      kill: mock(),
+    };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    mockDescriptor.mockImplementation(
+      () =>
+        ({
+          transportVersion: 1,
+          instanceId: 'owned',
+          pid: child.pid,
+          httpsPort: 41957,
+          grpcPort: 41958,
+          certificatePem: 'certificate',
+          bearerToken: 'token',
+          supervisor,
+        }) as never
+    );
+
+    const first = await cs.startCoordinatorService({ supervisor });
+    expect(first.kind).toBe('owned');
+    if (first.kind === 'owned') {
+      expect(first.child).toBe(child as never);
+    }
+
+    const second = await cs.startCoordinatorService({ supervisor });
+    expect(second.kind).toBe('owned');
+    if (second.kind === 'owned') {
+      expect(second.child).toBe(child as never);
+    }
+    expect(child.unref).not.toHaveBeenCalled();
+    expect(mockBunSpawn).toHaveBeenCalledTimes(1);
+
+    await cs.stopCoordinatorService();
   });
 
   test('a coordinator this process actually spawned still gets a graceful shutdown', async () => {

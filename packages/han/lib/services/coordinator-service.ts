@@ -21,6 +21,7 @@ import {
   readOptionalDescriptor,
 } from '../commands/coordinator/health.ts';
 import { readShutdownIntent } from '../commands/coordinator/shutdown-intent.ts';
+import { getCoordinatorPort } from '../commands/coordinator/types.ts';
 import { getHanDataDir } from '../config/claude-settings.ts';
 import { findCoordinatorBinary } from '../coordinator/binary.ts';
 import {
@@ -114,8 +115,7 @@ export type CoordinatorStartResult =
  * Reads HAN_COORDINATOR_PORT at call time (set by server.ts before startup).
  */
 function getEffectivePort(): number {
-  const port = Number.parseInt(process.env.HAN_COORDINATOR_PORT ?? '', 10);
-  return Number.isNaN(port) ? state.port : port;
+  return getCoordinatorPort();
 }
 
 // ============================================================================
@@ -344,42 +344,67 @@ export async function startCoordinatorService(
   if (process.platform === 'win32')
     windowsPrepareRuntime(getCoordinatorDataDir());
   else posixPrepare(getCoordinatorDataDir());
+  const port = getEffectivePort();
   const cachedDescriptor = state.isRunning ? readOptionalDescriptor() : null;
   if (
     state.isRunning &&
     cachedDescriptor &&
-    !descriptorIsDead(cachedDescriptor) &&
-    (await checkDescriptorHealth(cachedDescriptor, state.port))
+    !descriptorIsDead(cachedDescriptor)
   ) {
-    if (state.ownsProcess && state.process && state.ownedDescriptor) {
-      const current = readCoordinatorDescriptor();
-      if (
-        state.process.exitCode === null &&
-        sameCoordinator(current, state.ownedDescriptor) &&
-        sameSupervisor(current.supervisor, options.supervisor ?? null)
-      ) {
-        return {
-          kind: 'owned',
-          child: state.process,
-          descriptor: state.ownedDescriptor,
-        };
+    let cachedHealthy = false;
+    try {
+      await checkDescriptorHealth(cachedDescriptor, port);
+      const current = readOptionalDescriptor();
+      if (!current || !sameCoordinator(current, cachedDescriptor)) {
+        throw new CoordinatorSecurityError(
+          'Coordinator descriptor changed during health check'
+        );
       }
-      // The healthy instance is not this generation's child. Relinquish the
-      // old handle without signalling either process.
-      if (state.process.exitCode === null) state.process.unref();
-      state.process = null;
-      state.ownsProcess = false;
-      state.ownedDescriptor = null;
+      cachedHealthy = true;
+    } catch (error) {
+      if (!isExplicitConnectionRefusal(error)) {
+        throw error;
+      }
     }
-    return { kind: 'attached' };
+    if (cachedHealthy) {
+      if (state.ownsProcess && state.process && state.ownedDescriptor) {
+        if (
+          state.process.exitCode === null &&
+          sameCoordinator(cachedDescriptor, state.ownedDescriptor) &&
+          sameSupervisor(
+            cachedDescriptor.supervisor,
+            options.supervisor ?? null
+          )
+        ) {
+          return {
+            kind: 'owned',
+            child: state.process,
+            descriptor: state.ownedDescriptor,
+          };
+        }
+        // The healthy instance is not this generation's child. Relinquish the
+        // old handle without signalling either process.
+        if (state.process.exitCode === null) state.process.unref();
+        state.process = null;
+        state.ownsProcess = false;
+        state.ownedDescriptor = null;
+        state.port = cachedDescriptor.httpsPort;
+      }
+      return { kind: 'attached' };
+    }
   }
   state.isRunning = false;
-  const port = getEffectivePort();
   const selected = readOptionalDescriptor();
   const predecessor = selected && descriptorIsDead(selected) ? selected : null;
   if (!predecessor && (await isCoordinatorServing(port))) {
+    const current = readOptionalDescriptor();
+    if (selected && (!current || !sameCoordinator(current, selected))) {
+      throw new CoordinatorSecurityError(
+        'Coordinator descriptor changed during health check'
+      );
+    }
     state.isRunning = true;
-    state.port = selected ? selected.httpsPort : port;
+    state.port = selected ? selected.httpsPort : (current?.httpsPort ?? port);
     state.ownsProcess = false;
     state.ownedDescriptor = null;
     console.log(
@@ -438,6 +463,7 @@ export async function startCoordinatorService(
           ...(process.platform === 'win32' ? ['--startup-receipt'] : []),
           '--port',
           String(port),
+          ...(port === 0 ? ['--grpc-port', '0'] : []),
           '--data-dir',
           getCoordinatorDataDir(),
           '--scan-on-start',
@@ -707,6 +733,7 @@ export async function stopCoordinatorService(): Promise<void> {
   state.ownsProcess = false;
   state.ownedDescriptor = null;
   state.process = null;
+  state.port = DEFAULT_PORT;
   console.log('[coordinator] Service stopped');
 }
 
@@ -809,7 +836,8 @@ export async function indexFile(filePath: string): Promise<void> {
 export async function ensureCoordinator(): Promise<boolean> {
   if (process.platform === 'win32')
     windowsPrepareRuntime(getCoordinatorDataDir());
-  if (state.isRunning && (await isCoordinatorServing(state.port))) {
+  const configuredPort = getEffectivePort();
+  if (state.isRunning && (await isCoordinatorServing(configuredPort))) {
     return true;
   }
 
