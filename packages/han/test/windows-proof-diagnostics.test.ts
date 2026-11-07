@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  classifySupervisorError,
   ProofCommandError,
   safeHelperDiagnostic,
   safeProcessDiagnostic,
@@ -304,6 +305,27 @@ describe('installed Windows proof diagnostics', () => {
     expect(sanitized).toBeDefined();
     expect(sanitized?.supervisorProofKilled).toBe(true);
     expect(sanitized).not.toHaveProperty('supervisorExitCode');
+    for (const category of [
+      'none',
+      'reference_error',
+      'type_error',
+      'syntax_error',
+      'module_not_found',
+      'binary_missing',
+      'assertion_error',
+      'connection_refused',
+      'timeout',
+      'security_error',
+      'child_exit_error',
+      'pid_claim_failed',
+      'health_check_failed',
+      'generic_error',
+    ] as const) {
+      expect(
+        safeProcessDiagnostic({ ...validProcess, errorCategory: category })
+          ?.errorCategory
+      ).toBe(category);
+    }
   });
 
   test('reports helper diagnostic and process diagnostic together without collision', () => {
@@ -333,5 +355,124 @@ describe('installed Windows proof diagnostics', () => {
       diagnostic: valid,
       process: validProcess,
     });
+  });
+  test('classifySupervisorError discriminates real errors correctly and never leaks secret messages', () => {
+    // 1. Connection refused errors
+    expect(
+      classifySupervisorError(
+        Object.assign(new Error(`Failed to connect: ${secret}`), {
+          name: 'CoordinatorConnectionRefusedError',
+        })
+      )
+    ).toBe('connection_refused');
+    expect(
+      classifySupervisorError(
+        Object.assign(new Error(`fetch failed: ${secret}`), {
+          cause: { code: 'ECONNREFUSED' },
+        })
+      )
+    ).toBe('connection_refused');
+
+    // 2. Startup timeouts
+    expect(
+      classifySupervisorError(
+        Object.assign(new Error(`Startup receipt timed out: ${secret}`), {
+          name: 'CoordinatorSecurityError',
+        })
+      )
+    ).toBe('timeout');
+    expect(
+      classifySupervisorError(
+        Object.assign(
+          new Error(`Coordinator listener probe timed out: ${secret}`),
+          {
+            name: 'CoordinatorSecurityError',
+          }
+        )
+      )
+    ).toBe('timeout');
+
+    // 3. Child exit errors
+    expect(
+      classifySupervisorError(
+        Object.assign(new Error(`Coordinator child exited: ${secret}`), {
+          name: 'CoordinatorChildExitError',
+        })
+      )
+    ).toBe('child_exit_error');
+
+    // 4. Binary and module missing
+    expect(
+      classifySupervisorError(
+        new Error(`[coordinator] han-coordinator binary not found ${secret}`)
+      )
+    ).toBe('binary_missing');
+    expect(
+      classifySupervisorError(
+        Object.assign(new Error(`Cannot find module: ${secret}`), {
+          code: 'ERR_MODULE_NOT_FOUND',
+        })
+      )
+    ).toBe('module_not_found');
+
+    // 5. PID claim errors
+    expect(
+      classifySupervisorError(
+        new Error(
+          `Supervisor claim no longer belongs to this process ${secret}`
+        )
+      )
+    ).toBe('pid_claim_failed');
+    expect(
+      classifySupervisorError(new Error(`Malformed supervisor PID: ${secret}`))
+    ).toBe('pid_claim_failed');
+    expect(
+      classifySupervisorError(
+        Object.assign(new Error(`Insecure supervisor PID file: ${secret}`), {
+          name: 'CoordinatorSecurityError',
+        })
+      )
+    ).toBe('pid_claim_failed');
+
+    // 6. Health check failures
+    expect(
+      classifySupervisorError(
+        new Error(`Coordinator stopped responding: ${secret}`)
+      )
+    ).toBe('health_check_failed');
+    expect(
+      classifySupervisorError(
+        Object.assign(
+          new Error(
+            `Coordinator descriptor changed during health check: ${secret}`
+          ),
+          {
+            name: 'CoordinatorSecurityError',
+          }
+        )
+      )
+    ).toBe('health_check_failed');
+
+    // 7. General security error (catch-all for other security failures)
+    expect(
+      classifySupervisorError(
+        Object.assign(new Error(`Unknown security check failed: ${secret}`), {
+          name: 'CoordinatorSecurityError',
+        })
+      )
+    ).toBe('security_error');
+
+    // 8. Standard runtime errors
+    expect(classifySupervisorError(new ReferenceError(secret))).toBe(
+      'reference_error'
+    );
+    expect(classifySupervisorError(new TypeError(secret))).toBe('type_error');
+    expect(classifySupervisorError(new SyntaxError(secret))).toBe(
+      'syntax_error'
+    );
+    expect(classifySupervisorError(null)).toBe('none');
+    expect(
+      classifySupervisorError(new Error('something completely generic'))
+    ).toBe('generic_error');
   });
 });

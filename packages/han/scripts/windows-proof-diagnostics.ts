@@ -242,8 +242,114 @@ const errorCategoryValues = [
   'assertion_error',
   'connection_refused',
   'timeout',
+  'security_error',
+  'child_exit_error',
+  'pid_claim_failed',
+  'health_check_failed',
   'generic_error',
 ];
+export function classifySupervisorError(
+  err: unknown
+): (typeof errorCategoryValues)[number] {
+  if (!err) return 'none';
+  const errorObj =
+    typeof err === 'object' && err !== null
+      ? (err as Record<string, unknown>)
+      : {};
+  const name = typeof errorObj.name === 'string' ? errorObj.name : '';
+  const msg =
+    typeof errorObj.message === 'string' ? errorObj.message.toLowerCase() : '';
+  const code = typeof errorObj.code === 'string' ? errorObj.code : '';
+  const causeCode =
+    errorObj.cause &&
+    typeof errorObj.cause === 'object' &&
+    'code' in errorObj.cause
+      ? String((errorObj.cause as { code: unknown }).code)
+      : '';
+
+  if (name === 'ReferenceError' || msg.includes('is not defined'))
+    return 'reference_error';
+  if (name === 'TypeError') return 'type_error';
+  if (name === 'SyntaxError') return 'syntax_error';
+  if (name === 'AssertionError') return 'assertion_error';
+
+  // 1. Connection refused checks (including CoordinatorConnectionRefusedError and nested cause)
+  if (
+    name === 'CoordinatorConnectionRefusedError' ||
+    code === 'ECONNREFUSED' ||
+    causeCode === 'ECONNREFUSED' ||
+    msg.includes('econnrefused') ||
+    msg.includes('connection refused')
+  ) {
+    return 'connection_refused';
+  }
+
+  // 2. Timeout checks (including startup receipt, listener probe, and general timeouts)
+  if (
+    code === 'ETIMEDOUT' ||
+    causeCode === 'ETIMEDOUT' ||
+    msg.includes('timed out') ||
+    msg.includes('timeout')
+  ) {
+    return 'timeout';
+  }
+
+  // 3. Child exit errors
+  if (
+    name === 'CoordinatorChildExitError' ||
+    msg.includes('coordinator child exited')
+  ) {
+    return 'child_exit_error';
+  }
+
+  // 4. Missing binary or module
+  if (
+    msg.includes('binary not found') ||
+    msg.includes('binary_missing') ||
+    msg.includes('han-coordinator binary not found')
+  ) {
+    return 'binary_missing';
+  }
+  if (
+    msg.includes('cannot find module') ||
+    msg.includes('module_not_found') ||
+    code === 'ERR_MODULE_NOT_FOUND'
+  ) {
+    return 'module_not_found';
+  }
+
+  // 5. PID claim errors
+  if (
+    msg.includes('supervisor claim') ||
+    msg.includes('malformed supervisor pid') ||
+    msg.includes('insecure supervisor pid') ||
+    msg.includes('supervisor ownership') ||
+    msg.includes('another coordinator supervisor is already running')
+  ) {
+    return 'pid_claim_failed';
+  }
+
+  // 6. Health check specific failures
+  if (
+    msg.includes('coordinator health') ||
+    msg.includes('coordinator stopped responding') ||
+    msg.includes('coordinator descriptor changed during health check') ||
+    msg.includes('health check failed') ||
+    msg.includes('failed to reach healthy state')
+  ) {
+    return 'health_check_failed';
+  }
+
+  // 7. General security errors
+  if (
+    name === 'CoordinatorSecurityError' ||
+    msg.includes('coordinatorsecurityerror')
+  ) {
+    return 'security_error';
+  }
+
+  return 'generic_error';
+}
 
 export type SafeProcessDiagnostic = {
   childPid?: number | null;
@@ -277,6 +383,10 @@ export type SafeProcessDiagnostic = {
     | 'assertion_error'
     | 'connection_refused'
     | 'timeout'
+    | 'security_error'
+    | 'child_exit_error'
+    | 'pid_claim_failed'
+    | 'health_check_failed'
     | 'generic_error'
     | null;
   helperDiagnostic?: SafeHelperDiagnostic | null;

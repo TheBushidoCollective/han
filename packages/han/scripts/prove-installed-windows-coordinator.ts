@@ -376,6 +376,10 @@ async function main(): Promise<void> {
             'assertion_error',
             'connection_refused',
             'timeout',
+            'security_error',
+            'child_exit_error',
+            'pid_claim_failed',
+            'health_check_failed',
             'generic_error',
           ] as const;
           if (allowed.includes(raw as (typeof allowed)[number])) {
@@ -780,21 +784,7 @@ async function main(): Promise<void> {
     );
     const fastExitSupervisorScript = `
       const fs = await import('node:fs');
-      const { safeHelperDiagnostic } = await import(${JSON.stringify(diagModPath)});
-      const classifyError = (err) => {
-        if (!err) return 'none';
-        const name = err.name || '';
-        const msg = String(err.message || '').toLowerCase();
-        if (name === 'ReferenceError' || msg.includes('is not defined')) return 'reference_error';
-        if (name === 'TypeError') return 'type_error';
-        if (name === 'SyntaxError') return 'syntax_error';
-        if (msg.includes('cannot find module') || msg.includes('module_not_found') || err.code === 'ERR_MODULE_NOT_FOUND') return 'module_not_found';
-        if (msg.includes('binary not found') || msg.includes('binary_missing')) return 'binary_missing';
-        if (name === 'AssertionError') return 'assertion_error';
-        if (err.code === 'ECONNREFUSED' || msg.includes('econnrefused')) return 'connection_refused';
-        if (msg.includes('timed out') || msg.includes('timeout')) return 'timeout';
-        return 'generic_error';
-      };
+      const { safeHelperDiagnostic, classifySupervisorError } = await import(${JSON.stringify(diagModPath)});
       try {
         const { mock } = await import('bun:test');
         const binaryModPath = ${JSON.stringify(resolve(import.meta.dir, '../lib/coordinator/binary.ts'))};
@@ -840,7 +830,7 @@ async function main(): Promise<void> {
         fs.writeFileSync(${JSON.stringify(join(fastExitData, 'startup-completed'))}, 'ok');
       } catch (e) {
         try {
-          fs.writeFileSync(${JSON.stringify(join(fastExitData, 'error-category'))}, classifyError(e));
+          fs.writeFileSync(${JSON.stringify(join(fastExitData, 'error-category'))}, classifySupervisorError(e));
           if (e && e.message) {
             const helper = safeHelperDiagnostic(String(e.message));
             if (helper) {
