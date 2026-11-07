@@ -884,6 +884,8 @@ export function safeProofFailure(
       reason = 'subprocess_timeout';
     } else if (error.name === 'ProofOutputRetained') {
       reason = 'output_handle_retained';
+    } else if (error.name === 'ProofProbeDiagnosticComplete') {
+      reason = 'probe_diagnostic';
     } else if (
       error.name === 'ProofWatchdogError' ||
       ('code' in error && error.code === 'WATCHDOG')

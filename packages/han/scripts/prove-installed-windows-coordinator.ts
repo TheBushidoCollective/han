@@ -14,6 +14,11 @@ import { createConnection, createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
+  ownedProcessScript,
+  ProofProbeDiagnosticComplete,
+  runProbeDiagnostic,
+} from './windows-probe-diagnostic.ts';
+import {
   abortableSleep,
   type BoundedChild,
   waitFor as boundsWaitFor,
@@ -261,6 +266,14 @@ async function main(): Promise<void> {
     watchdogMarginMs: 60000,
   });
 
+  const barrierProof = process.env.HAN_PROOF_BARRIER_ONLY === '1';
+  const probeDiagnostic = process.env.HAN_PROOF_PROBE_DIAGNOSTIC === '1';
+  if (probeDiagnostic && barrierProof) {
+    throw new Error(
+      'Cannot combine HAN_PROOF_PROBE_DIAGNOSTIC and HAN_PROOF_BARRIER_ONLY'
+    );
+  }
+
   const root = mkdtempSync(join(tmpdir(), 'han-windows-installed-'));
   const bin = join(root, 'bin');
   const data = join(root, 'data');
@@ -289,7 +302,6 @@ async function main(): Promise<void> {
     CLAUDE_CODE_ENABLE_TELEMETRY: '0',
   };
   const barrier = join(root, 'startup-barrier');
-  const barrierProof = process.env.HAN_PROOF_BARRIER_ONLY === '1';
   if (barrierProof) {
     mkdirSync(barrier);
     env.HAN_PROOF_STARTUP_BARRIER = barrier;
@@ -441,7 +453,7 @@ async function main(): Promise<void> {
   ): Promise<boolean> => {
     assert.ok(Number.isSafeInteger(identity.pid) && identity.pid > 0);
     assert.ok(/^[1-9][0-9]{0,19}$/.test(identity.creationTime));
-    const script = `$ErrorActionPreference='Stop'; try { $p=Get-Process -Id ${identity.pid} -ErrorAction Stop } catch { if ($_.FullyQualifiedErrorId -like 'NoProcessFoundForGivenId*') { exit 3 }; exit 6 }; try { $actual=[System.IO.Path]::GetFullPath($p.Path); $expected=[System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $env:HAN_PROOF_IMAGE).Path); if ($actual -ne $expected) { exit 4 }; if ($p.StartTime.ToUniversalTime().ToFileTimeUtc().ToString() -ne $env:HAN_PROOF_TIME) { exit 5 }; ${kill ? 'Stop-Process -InputObject $p -Force -ErrorAction Stop;' : ''} exit 0 } catch { exit 6 }`;
+    const script = ownedProcessScript(identity.pid, kill);
     const t0 = Date.now();
     const res = await spawnBounded(
       [powershell, '-NoProfile', '-NonInteractive', '-Command', script],
@@ -708,6 +720,20 @@ async function main(): Promise<void> {
     const supervisor = register(d);
     if (phase === 'initial-start-registration')
       setPhase('initial-start-coordinator');
+    if (probeDiagnostic && phase === 'initial-start-coordinator') {
+      await runProbeDiagnostic({
+        powershell,
+        systemRoot,
+        root,
+        proofEnv: env,
+        runnerEnv: process.env,
+        identity: d.process,
+        image: coordinator,
+        signal: clock.phaseSignal,
+        emit: (l) => writeSync(2, `Installed Windows probe diagnostic: ${l}\n`),
+      });
+      throw new ProofProbeDiagnosticComplete();
+    }
     assert.ok(await ownedProcess(d.process, coordinator, false));
     if (phase === 'initial-start-coordinator')
       setPhase('initial-start-supervisor');
