@@ -1,5 +1,5 @@
-import { createServer } from 'node:http';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { basename, join, resolve } from 'node:path';
 
 // Parse arguments

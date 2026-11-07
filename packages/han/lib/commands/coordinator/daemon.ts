@@ -20,6 +20,7 @@ import { dirname, join, win32 } from 'node:path';
 import { Code, ConnectError } from '@connectrpc/connect';
 import { getHanDataDir } from '../../config/claude-settings.ts';
 import { getHanBinary } from '../../config/han-settings.ts';
+import { findCoordinatorBinary } from '../../coordinator/binary.ts';
 import {
   CoordinatorBinaryMissingError,
   CoordinatorConnectionRefusedError,
@@ -33,6 +34,8 @@ import {
   sameCoordinator,
   sameSupervisor,
 } from '../../coordinator/connection.ts';
+import { stopLegacyCoordinator } from '../../coordinator/legacy-stop.ts';
+import { repairCoordinator } from '../../coordinator/pair-repair.ts';
 import {
   assertRecoveryFence,
   posixPrepare,
@@ -40,9 +43,6 @@ import {
   recoveryInspect,
   recoveryReclaim,
 } from '../../coordinator/recovery-runtime.ts';
-import { findCoordinatorBinary } from '../../coordinator/binary.ts';
-import { stopLegacyCoordinator } from '../../coordinator/legacy-stop.ts';
-import { repairCoordinator } from '../../coordinator/pair-repair.ts';
 import {
   windowsPrepareRuntime,
   windowsProcessState,
