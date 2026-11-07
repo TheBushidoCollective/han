@@ -570,6 +570,9 @@ jobs:
           export const platform = "linux";
           export const arch = "x64";
           EOF
+          cat > lib/commands/browse/embedded-dashboard.generated.ts << 'EOF'
+          export const EMBEDDED_DASHBOARD_ASSETS: Record<string, string> = {};
+          EOF
 
       - name: TypeScript type check
         run: bun run tsc --noEmit

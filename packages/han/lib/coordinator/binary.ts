@@ -73,10 +73,7 @@ export function findCoordinatorBinary(): string | null {
       } catch {}
     }
   }
-  const hanBin =
-    process.platform !== 'win32' || isAbsolute(home)
-      ? join(home, '.han', 'bin', binaryName)
-      : '';
+  const hanBin = isAbsolute(home) ? join(home, '.han', 'bin', binaryName) : '';
   if (existsSync(hanBin) && verifyCandidateHash(hanBin)) return hanBin;
   // Windows local-runtime requests carry privileged data. `where` searches the
   // working directory, and package resolution can also depend on the caller's

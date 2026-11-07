@@ -48,9 +48,11 @@ import {
   windowsProcessState,
   windowsReadSupervisor,
 } from '../../coordinator/windows-runtime.ts';
+import { createCoordinatorClients } from '../../grpc/client.ts';
 import {
   checkHealth,
   descriptorIsDead,
+  type HealthCheckResponse,
   readOptionalDescriptor,
   waitForHealth,
 } from './health.ts';

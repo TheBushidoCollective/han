@@ -501,6 +501,7 @@ export async function startHostedDashboardProxy(
     if (
       !failure &&
       options.dev &&
+      origin &&
       origin.protocol === 'http:' &&
       origin.hostname === '127.0.0.1' &&
       (req.url === '/_han/vite-hmr' ||
@@ -515,7 +516,7 @@ export async function startHostedDashboardProxy(
       hmr.handleUpgrade(req, socket, head, (client) => {
         sockets.add(client);
         const upstream = new WebSocket(target, 'vite-hmr', {
-          origin: origin.origin,
+          origin: origin?.origin,
         });
         client.on('message', (data, binary) => {
           if (upstream.readyState === WebSocket.OPEN)
