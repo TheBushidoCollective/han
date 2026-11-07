@@ -161,16 +161,41 @@ async function getClosedPort(): Promise<number> {
   return port;
 }
 
+function extractInnermost(err: unknown): unknown {
+  let curr: unknown = err;
+  while (curr && typeof curr === 'object' && 'cause' in curr && curr.cause) {
+    curr = curr.cause;
+  }
+  return curr;
+}
+
 function logPass(label: string, err: unknown) {
-  const name = err instanceof Error ? err.name : 'Unknown';
+  const inner = extractInnermost(err);
+  const name = inner instanceof Error ? inner.constructor.name : 'Unknown';
   const code =
-    err && typeof err === 'object' && 'code' in err ? String(err.code) : '';
+    inner && typeof inner === 'object' && 'code' in inner
+      ? String(inner.code)
+      : '';
   const errno =
-    err && typeof err === 'object' && 'errno' in err ? String(err.errno) : '';
-  const message = err instanceof Error ? err.message : String(err);
+    inner && typeof inner === 'object' && 'errno' in inner
+      ? String(inner.errno)
+      : '';
+  const message =
+    inner instanceof Error
+      ? inner.message
+      : err instanceof Error
+        ? err.message
+        : String(err);
   console.log(
     `PASS ${label} name=${name} code=${code} errno=${errno} message=${message}`
   );
+}
+
+function writeProtectedDescriptor(dir: string, d: LocalCoordinatorDescriptor) {
+  mkdirSync(join(dir, 'runtime'), { recursive: true, mode: 0o700 });
+  writeFileSync(join(dir, 'runtime/coordinator.json'), JSON.stringify(d), {
+    mode: 0o600,
+  });
 }
 
 console.log(`Bun.revision: ${Bun.revision}`);
@@ -188,21 +213,33 @@ try {
 
   // Case 0 (only when HTTPS_PROXY is set)
   if (process.env.HTTPS_PROXY) {
-    const res = await coordinatorFetch(descB, descB.httpsPort, '/health');
-    if (res.status !== 200) {
-      throw new Error(`FAIL proxy-env-direct: status ${res.status}`);
+    try {
+      const res = await coordinatorFetch(descB, descB.httpsPort, '/health');
+      if (res.status !== 200) {
+        throw new Error(`status ${res.status}`);
+      }
+      console.log(
+        'PASS proxy-env-direct name=Response code= errno= message=status 200'
+      );
+    } catch (error) {
+      throw new Error(
+        `FAIL proxy-env-direct: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
-    console.log(
-      'PASS proxy-env-direct name=Response code= errno= message=status 200'
-    );
   }
 
   // Case 1: refused-https
   const closedPort1 = await getClosedPort();
   try {
     await coordinatorFetch(descA, closedPort1, '/health');
-    throw new Error('FAIL refused-https: fetch succeeded on closed port');
+    throw new Error('UNEXPECTED_SUCCESS: fetch succeeded on closed port');
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith('UNEXPECTED_SUCCESS')
+    ) {
+      throw new Error(`FAIL refused-https: ${error.message}`);
+    }
     if (!(error instanceof CoordinatorConnectionRefusedError)) {
       throw new Error(
         `FAIL refused-https: not CoordinatorConnectionRefusedError (${error})`
@@ -236,8 +273,14 @@ try {
   await Bun.sleep(100);
   try {
     await coordinatorFetch(descC, descC.httpsPort, '/health');
-    throw new Error('FAIL killed-coordinator-https: succeeded after SIGKILL');
+    throw new Error('UNEXPECTED_SUCCESS: succeeded after SIGKILL');
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith('UNEXPECTED_SUCCESS')
+    ) {
+      throw new Error(`FAIL killed-coordinator-https: ${error.message}`);
+    }
     if (!(error instanceof CoordinatorConnectionRefusedError)) {
       throw new Error(
         `FAIL killed-coordinator-https: not CoordinatorConnectionRefusedError (${error})`
@@ -245,6 +288,16 @@ try {
     }
     if (!isExplicitConnectionRefusal(error)) {
       throw new Error('FAIL killed-coordinator-https: classifier false');
+    }
+    const inner = extractInnermost(error);
+    const code =
+      inner && typeof inner === 'object' && 'code' in inner
+        ? inner.code
+        : undefined;
+    if (code === 'ECONNRESET') {
+      throw new Error(
+        'FAIL killed-coordinator-https: showed ECONNRESET instead of refusal'
+      );
     }
     logPass('killed-coordinator-https', error);
   }
@@ -256,18 +309,30 @@ try {
     // A's descriptor on B's port: A's cert won't match B's TLS cert
     await coordinatorFetch(descA, descB.httpsPort, '/health');
     throw new Error(
-      'FAIL pin-mismatch-https: succeeded with mismatched certificate pin'
+      'UNEXPECTED_SUCCESS: succeeded with mismatched certificate pin'
     );
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith('UNEXPECTED_SUCCESS')
+    ) {
+      throw new Error(`FAIL pin-mismatch-https: ${error.message}`);
+    }
     if (error instanceof CoordinatorConnectionRefusedError) {
       throw new Error('FAIL pin-mismatch-https: typed');
     }
     if (isExplicitConnectionRefusal(error)) {
       throw new Error('FAIL pin-mismatch-https: classifier true');
     }
+    if (!(error instanceof CoordinatorSecurityError)) {
+      throw new Error(
+        `FAIL pin-mismatch-https: not CoordinatorSecurityError (${error})`
+      );
+    }
+    const inner = extractInnermost(error);
     const causeCode =
-      error && typeof error === 'object' && 'cause' in error
-        ? (error.cause as { code?: unknown })?.code
+      inner && typeof inner === 'object' && 'code' in inner
+        ? inner.code
         : undefined;
     if (causeCode === 'ECONNREFUSED') {
       throw new Error('FAIL pin-mismatch-https: cause code was ECONNREFUSED');
@@ -280,10 +345,14 @@ try {
     // B's PEM with A's token
     const tampered = { ...descB, bearerToken: descA.bearerToken };
     await coordinatorFetch(tampered, descB.httpsPort, '/health');
-    throw new Error(
-      'FAIL bearer-rejected-https: succeeded with invalid bearer token'
-    );
+    throw new Error('UNEXPECTED_SUCCESS: succeeded with invalid bearer token');
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith('UNEXPECTED_SUCCESS')
+    ) {
+      throw new Error(`FAIL bearer-rejected-https: ${error.message}`);
+    }
     if (error instanceof CoordinatorConnectionRefusedError) {
       throw new Error('FAIL bearer-rejected-https: typed');
     }
@@ -313,13 +382,34 @@ try {
   const dropPort = dropAddr.port;
   try {
     await coordinatorFetch(descB, dropPort, '/health');
-    throw new Error('FAIL listener-drops-connection: succeeded');
+    throw new Error('UNEXPECTED_SUCCESS: succeeded');
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith('UNEXPECTED_SUCCESS')
+    ) {
+      throw new Error(`FAIL listener-drops-connection: ${error.message}`);
+    }
     if (error instanceof CoordinatorConnectionRefusedError) {
       throw new Error('FAIL listener-drops-connection: typed');
     }
     if (isExplicitConnectionRefusal(error)) {
       throw new Error('FAIL listener-drops-connection: classifier true');
+    }
+    if (!(error instanceof CoordinatorSecurityError)) {
+      throw new Error(
+        `FAIL listener-drops-connection: not CoordinatorSecurityError (${error})`
+      );
+    }
+    const inner = extractInnermost(error);
+    const code =
+      inner && typeof inner === 'object' && 'code' in inner
+        ? inner.code
+        : undefined;
+    if (code === 'ECONNREFUSED') {
+      throw new Error(
+        'FAIL listener-drops-connection: cause code was ECONNREFUSED'
+      );
     }
     logPass('listener-drops-connection', error);
   } finally {
@@ -328,13 +418,25 @@ try {
     await closed.promise;
   }
 
+  const prevEnv = process.env.HAN_DATA_DIR;
+
   // Case 6: refused-grpc
   const closedPort6 = await getClosedPort();
-  const clients6 = createCoordinatorClients(closedPort6, descA);
+  const dir6 = directory();
+  const desc6 = { ...descA, grpcPort: closedPort6 };
+  writeProtectedDescriptor(dir6, desc6);
   try {
+    process.env.HAN_DATA_DIR = dir6;
+    const clients6 = createCoordinatorClients(closedPort6, desc6);
     await clients6.coordinator.health({});
-    throw new Error('FAIL refused-grpc: succeeded on closed port');
+    throw new Error('UNEXPECTED_SUCCESS: succeeded on closed port');
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith('UNEXPECTED_SUCCESS')
+    ) {
+      throw new Error(`FAIL refused-grpc: ${error.message}`);
+    }
     if (!(error instanceof ConnectError)) {
       throw new Error(`FAIL refused-grpc: not ConnectError (${error})`);
     }
@@ -347,34 +449,76 @@ try {
       throw new Error('FAIL refused-grpc: classifier false');
     }
     logPass('refused-grpc', error);
+  } finally {
+    if (prevEnv !== undefined) process.env.HAN_DATA_DIR = prevEnv;
+    else delete process.env.HAN_DATA_DIR;
   }
 
   // Case 7: pin-mismatch-grpc
   assert.ok(descB.grpcPort !== null && descB.grpcPort > 0);
   const grpcPortB = descB.grpcPort ?? 0;
-  const clients7 = createCoordinatorClients(grpcPortB, descA);
+  const dir7 = directory();
+  const desc7 = { ...descA, grpcPort: grpcPortB };
+  writeProtectedDescriptor(dir7, desc7);
   try {
+    process.env.HAN_DATA_DIR = dir7;
+    const clients7 = createCoordinatorClients(grpcPortB, desc7);
     await clients7.coordinator.health({});
     throw new Error(
-      'FAIL pin-mismatch-grpc: succeeded with certificate pin mismatch'
+      'UNEXPECTED_SUCCESS: succeeded with certificate pin mismatch'
     );
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith('UNEXPECTED_SUCCESS')
+    ) {
+      throw new Error(`FAIL pin-mismatch-grpc: ${error.message}`);
+    }
+    if (!(error instanceof ConnectError)) {
+      throw new Error(`FAIL pin-mismatch-grpc: not ConnectError (${error})`);
+    }
+    if (!(error.cause instanceof CoordinatorSecurityError)) {
+      throw new Error(
+        `FAIL pin-mismatch-grpc: cause is not CoordinatorSecurityError (${error.cause})`
+      );
+    }
     if (isExplicitConnectionRefusal(error)) {
       throw new Error('FAIL pin-mismatch-grpc: classifier true');
     }
     logPass('pin-mismatch-grpc', error);
+  } finally {
+    if (prevEnv !== undefined) process.env.HAN_DATA_DIR = prevEnv;
+    else delete process.env.HAN_DATA_DIR;
   }
 
   // Case 8: bearer-rejected-grpc
-  const clientsB = createCoordinatorClients(grpcPortB, descB);
-  const bHealth = await clientsB.coordinator.health({});
-  assert.ok(bHealth.healthy);
-  const tamperedDescB = { ...descB, bearerToken: descA.bearerToken };
-  const clients8 = createCoordinatorClients(grpcPortB, tamperedDescB);
+  // First, verify baseline plain B's health succeeds with B's real data dir
   try {
+    process.env.HAN_DATA_DIR = dirB;
+    const clientsB = createCoordinatorClients(grpcPortB, descB);
+    const bHealth = await clientsB.coordinator.health({});
+    assert.ok(bHealth.healthy);
+  } finally {
+    if (prevEnv !== undefined) process.env.HAN_DATA_DIR = prevEnv;
+    else delete process.env.HAN_DATA_DIR;
+  }
+
+  // Then tampered descriptor (B's cert/port with A's token)
+  const dir8 = directory();
+  const desc8 = { ...descB, bearerToken: descA.bearerToken };
+  writeProtectedDescriptor(dir8, desc8);
+  try {
+    process.env.HAN_DATA_DIR = dir8;
+    const clients8 = createCoordinatorClients(grpcPortB, desc8);
     await clients8.coordinator.health({});
-    throw new Error('FAIL bearer-rejected-grpc: succeeded with invalid token');
+    throw new Error('UNEXPECTED_SUCCESS: succeeded with invalid token');
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith('UNEXPECTED_SUCCESS')
+    ) {
+      throw new Error(`FAIL bearer-rejected-grpc: ${error.message}`);
+    }
     if (!(error instanceof ConnectError)) {
       throw new Error(`FAIL bearer-rejected-grpc: not ConnectError (${error})`);
     }
@@ -387,24 +531,27 @@ try {
       throw new Error('FAIL bearer-rejected-grpc: classifier true');
     }
     logPass('bearer-rejected-grpc', error);
+  } finally {
+    if (prevEnv !== undefined) process.env.HAN_DATA_DIR = prevEnv;
+    else delete process.env.HAN_DATA_DIR;
   }
 
   // Case 9: checkhealth-refused
   const closedPort9 = await getClosedPort();
   const dir9 = directory();
-  mkdirSync(join(dir9, 'runtime'), { mode: 0o700 });
   const desc9 = { ...descA, httpsPort: closedPort9 };
-  writeFileSync(join(dir9, 'runtime/coordinator.json'), JSON.stringify(desc9), {
-    mode: 0o600,
-  });
-  const prevEnv = process.env.HAN_DATA_DIR;
+  writeProtectedDescriptor(dir9, desc9);
   try {
     process.env.HAN_DATA_DIR = dir9;
     await checkHealth(closedPort9);
-    throw new Error(
-      'FAIL checkhealth-refused: checkHealth succeeded on closed port'
-    );
+    throw new Error('UNEXPECTED_SUCCESS: checkHealth succeeded on closed port');
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith('UNEXPECTED_SUCCESS')
+    ) {
+      throw new Error(`FAIL checkhealth-refused: ${error.message}`);
+    }
     if (!(error instanceof CoordinatorConnectionRefusedError)) {
       throw new Error(
         `FAIL checkhealth-refused: not CoordinatorConnectionRefusedError (${error})`
@@ -421,25 +568,29 @@ try {
 
   // Case 10: checkhealth-pin-mismatch
   const dir10 = directory();
-  mkdirSync(join(dir10, 'runtime'), { mode: 0o700 });
   const desc10 = { ...descA, httpsPort: descB.httpsPort };
-  writeFileSync(
-    join(dir10, 'runtime/coordinator.json'),
-    JSON.stringify(desc10),
-    { mode: 0o600 }
-  );
+  writeProtectedDescriptor(dir10, desc10);
   try {
     process.env.HAN_DATA_DIR = dir10;
     await checkHealth(descB.httpsPort);
-    throw new Error(
-      'FAIL checkhealth-pin-mismatch: succeeded with pin mismatch'
-    );
+    throw new Error('UNEXPECTED_SUCCESS: succeeded with pin mismatch');
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith('UNEXPECTED_SUCCESS')
+    ) {
+      throw new Error(`FAIL checkhealth-pin-mismatch: ${error.message}`);
+    }
     if (error instanceof CoordinatorConnectionRefusedError) {
       throw new Error('FAIL checkhealth-pin-mismatch: typed error');
     }
     if (isExplicitConnectionRefusal(error)) {
       throw new Error('FAIL checkhealth-pin-mismatch: classifier true');
+    }
+    if (!(error instanceof CoordinatorSecurityError)) {
+      throw new Error(
+        `FAIL checkhealth-pin-mismatch: not CoordinatorSecurityError (${error})`
+      );
     }
     logPass('checkhealth-pin-mismatch', error);
   } finally {

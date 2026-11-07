@@ -7,13 +7,12 @@ import {
   validSupervisorBinding,
 } from './connection.ts';
 import { findCoordinatorBinary, spawnSync } from './windows-helper.ts';
+import { CoordinatorSecurityError } from './errors.ts';
 
-export class CoordinatorSecurityError extends Error {
-  constructor(message: string, options?: ErrorOptions) {
-    super(message, options);
-    this.name = 'CoordinatorSecurityError';
-  }
-}
+export {
+  CoordinatorConnectionRefusedError,
+  CoordinatorSecurityError,
+} from './errors.ts';
 export interface WindowsFileIdentity {
   volumeSerial: string;
   fileId: string;

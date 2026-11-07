@@ -5,13 +5,17 @@ if (process.env.CI !== 'true') {
   throw new Error('Transport mutation proof requires an isolated CI checkout');
 }
 
-const sourcePath = join(import.meta.dir, '../lib/coordinator/connection.ts');
-const original = readFileSync(sourcePath, 'utf8');
+const connectionPath = join(
+  import.meta.dir,
+  '../lib/coordinator/connection.ts'
+);
+const errorsPath = join(import.meta.dir, '../lib/coordinator/errors.ts');
 const name = process.argv[2];
 
 const mutations: Record<
   string,
   {
+    file: string;
     anchor: string;
     replacement: string;
     expectedFailure: string;
@@ -19,6 +23,7 @@ const mutations: Record<
   }
 > = {
   untypedRefusal: {
+    file: connectionPath,
     anchor:
       'throw new CoordinatorConnectionRefusedError(\n        `Coordinator connection failed: ${error.message}`,\n        { cause: error }\n      );',
     replacement:
@@ -26,6 +31,7 @@ const mutations: Record<
     expectedFailure: 'refused-https: not CoordinatorConnectionRefusedError',
   },
   refusalNotSecurity: {
+    file: errorsPath,
     anchor:
       'export class CoordinatorConnectionRefusedError extends CoordinatorSecurityError {',
     replacement:
@@ -33,32 +39,39 @@ const mutations: Record<
     expectedFailure: 'refused-https: not CoordinatorSecurityError',
   },
   anyCodeAsRefusal: {
+    file: connectionPath,
     anchor: "(error as { code?: unknown }).code === 'ECONNREFUSED'",
     replacement: 'true',
     expectedFailure: 'pin-mismatch-https: typed',
   },
   securityAsRefusal: {
+    file: connectionPath,
     anchor:
       'error instanceof CoordinatorConnectionRefusedError ||\n    (error instanceof ConnectError &&\n      error.cause instanceof CoordinatorConnectionRefusedError)',
     replacement: 'error instanceof CoordinatorSecurityError',
     expectedFailure: 'pin-mismatch-https: classifier true',
   },
   causeIgnored: {
+    file: connectionPath,
     anchor:
       '(error instanceof ConnectError &&\n      error.cause instanceof CoordinatorConnectionRefusedError)',
     replacement: 'false',
     expectedFailure: 'refused-grpc: classifier false',
   },
   proxyInherited: {
+    file: connectionPath,
     anchor: 'proxy: false as unknown as undefined,',
     replacement: '',
-    expectedFailure: 'proxy-env-direct',
+    expectedFailure: 'FAIL proxy-env-direct',
     env: { HTTPS_PROXY: 'http://127.0.0.1:9' },
   },
 };
 
 const mutation = mutations[name];
 if (!mutation) throw new Error(`Unknown transport mutation: ${name}`);
+
+const targetFile = mutation.file;
+const original = readFileSync(targetFile, 'utf8');
 
 if (!original.includes(mutation.anchor)) {
   throw new Error(`Mutation anchor not found in source: ${name}`);
@@ -73,15 +86,15 @@ if (modified === original) {
 }
 
 function restoreSource(): void {
-  writeFileSync(sourcePath, original);
-  if (readFileSync(sourcePath, 'utf8') !== original) {
-    console.error('Failed to restore connection.ts source');
+  writeFileSync(targetFile, original);
+  if (readFileSync(targetFile, 'utf8') !== original) {
+    console.error(`Failed to restore ${targetFile} source`);
     process.exitCode = 1;
   }
 }
 
 try {
-  writeFileSync(sourcePath, modified);
+  writeFileSync(targetFile, modified);
   const result = Bun.spawnSync(
     [process.execPath, 'run', 'scripts/prove-transport-classification.ts'],
     {

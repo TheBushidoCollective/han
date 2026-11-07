@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { describe, expect, test, afterEach } from 'bun:test';
 import { ConnectError, Code } from '@connectrpc/connect';
 import {
@@ -164,5 +165,78 @@ describe('coordinator transport error classification', () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+});
+
+describe('coordinator module import order independence', () => {
+  const connectionPath = resolve(
+    import.meta.dir,
+    '../lib/coordinator/connection.ts'
+  );
+  const runtimePath = resolve(
+    import.meta.dir,
+    '../lib/coordinator/windows-runtime.ts'
+  );
+  const errorsPath = resolve(import.meta.dir, '../lib/coordinator/errors.ts');
+
+  test('windows-runtime imported before connection succeeds without TDZ error', async () => {
+    const code = `
+      await import(${JSON.stringify(runtimePath)});
+      await import(${JSON.stringify(connectionPath)});
+    `;
+    const proc = Bun.spawn([process.execPath, '-e', code], {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    const exitCode = await proc.exited;
+    const stderr = await new Response(proc.stderr as ReadableStream).text();
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+  });
+
+  test('connection imported before windows-runtime succeeds without TDZ error', async () => {
+    const code = `
+      await import(${JSON.stringify(connectionPath)});
+      await import(${JSON.stringify(runtimePath)});
+    `;
+    const proc = Bun.spawn([process.execPath, '-e', code], {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    const exitCode = await proc.exited;
+    const stderr = await new Response(proc.stderr as ReadableStream).text();
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+  });
+
+  test('windows-runtime standalone import succeeds without TDZ error', async () => {
+    const code = `
+      await import(${JSON.stringify(runtimePath)});
+    `;
+    const proc = Bun.spawn([process.execPath, '-e', code], {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    const exitCode = await proc.exited;
+    const stderr = await new Response(proc.stderr as ReadableStream).text();
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
+  });
+
+  test('errors module standalone import succeeds and exports classes', async () => {
+    const code = `
+      const errors = await import(${JSON.stringify(errorsPath)});
+      if (!errors.CoordinatorSecurityError || !errors.CoordinatorConnectionRefusedError) {
+        process.exit(1);
+      }
+    `;
+    const proc = Bun.spawn([process.execPath, '-e', code], {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    const exitCode = await proc.exited;
+    const stderr = await new Response(proc.stderr as ReadableStream).text();
+    expect(exitCode).toBe(0);
+    expect(stderr).toBe('');
   });
 });

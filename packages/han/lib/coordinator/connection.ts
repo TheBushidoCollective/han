@@ -11,20 +11,19 @@ import { join, resolve } from 'node:path';
 import WebSocket from 'ws';
 import { ConnectError } from '@connectrpc/connect';
 import {
+  CoordinatorConnectionRefusedError,
   CoordinatorSecurityError,
+} from './errors.ts';
+import {
   validWindowsProcessIdentity,
   type WindowsProcessIdentity,
   windowsReadDescriptor,
 } from './windows-runtime.ts';
 
-export { CoordinatorSecurityError } from './windows-runtime.ts';
-
-export class CoordinatorConnectionRefusedError extends CoordinatorSecurityError {
-  constructor(message: string, options: ErrorOptions) {
-    super(message, options);
-    this.name = 'CoordinatorConnectionRefusedError';
-  }
-}
+export {
+  CoordinatorConnectionRefusedError,
+  CoordinatorSecurityError,
+} from './errors.ts';
 export const LOCAL_TRANSPORT_VERSION = 1;
 export interface SupervisorBinding {
   pid: number;
