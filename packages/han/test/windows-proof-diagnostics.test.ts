@@ -254,7 +254,7 @@ describe('installed Windows proof diagnostics', () => {
       ).toBeUndefined();
     }
 
-    for (const invalidProofKilled of ['true', 1, null, 'false']) {
+    for (const invalidProofKilled of ['true', 1, 'false']) {
       expect(
         safeProcessDiagnostic({
           ...validProcess,
@@ -262,6 +262,12 @@ describe('installed Windows proof diagnostics', () => {
         })
       ).toBeUndefined();
     }
+    const unknownProofKill = safeProcessDiagnostic({
+      ...validProcess,
+      supervisorProofKilled: null,
+    });
+    expect(unknownProofKill).toBeDefined();
+    expect(unknownProofKill).not.toHaveProperty('supervisorProofKilled');
 
     for (const invalidMarker of ['invalid-marker', 'held', 'ok', secret]) {
       expect(
