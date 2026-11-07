@@ -15,8 +15,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
   abortableSleep,
-  barrierIdentityScript,
   type BoundedChild,
+  barrierIdentityScript,
   waitFor as boundsWaitFor,
   createProofClock,
   establishedConnectionScript,
@@ -531,25 +531,25 @@ async function main(): Promise<void> {
   > => {
     if (phase.startsWith('fast-exit-')) {
       let marker: SafeProcessDiagnostic['markerFile'] = 'none';
-      const fastExitData = join(root, 'fast-exit-data');
-      if (existsSync(join(fastExitData, 'startup-completed'))) {
+      const fastExitControl = join(root, 'fast-exit-control');
+      if (existsSync(join(fastExitControl, 'startup-completed'))) {
         marker = 'startup-completed';
-      } else if (existsSync(join(fastExitData, 'receipt-release'))) {
+      } else if (existsSync(join(fastExitControl, 'receipt-release'))) {
         marker = 'receipt-released';
-      } else if (existsSync(join(fastExitData, 'receipt-held'))) {
+      } else if (existsSync(join(fastExitControl, 'receipt-held'))) {
         marker = 'receipt-held';
-      } else if (existsSync(join(fastExitData, 'start-daemon-called'))) {
+      } else if (existsSync(join(fastExitControl, 'start-daemon-called'))) {
         marker = 'start-daemon-called';
-      } else if (existsSync(join(fastExitData, 'daemon-imported'))) {
+      } else if (existsSync(join(fastExitControl, 'daemon-imported'))) {
         marker = 'daemon-imported';
-      } else if (existsSync(join(fastExitData, 'runtime-imported'))) {
+      } else if (existsSync(join(fastExitControl, 'runtime-imported'))) {
         marker = 'runtime-imported';
-      } else if (existsSync(join(fastExitData, 'mock-installed'))) {
+      } else if (existsSync(join(fastExitControl, 'mock-installed'))) {
         marker = 'mock-installed';
       }
 
       let errorCat: SafeProcessDiagnostic['errorCategory'] = 'none';
-      const errorCatFile = join(fastExitData, 'error-category');
+      const errorCatFile = join(fastExitControl, 'error-category');
       if (existsSync(errorCatFile)) {
         try {
           const raw = readFileSync(errorCatFile, 'utf8').trim();
@@ -596,7 +596,7 @@ async function main(): Promise<void> {
       }
       let helperDiag: SafeHelperDiagnostic | null = null;
       let helperStatus: SafeProcessDiagnostic['helperMarkerStatus'] = 'none';
-      const helperDiagFile = join(fastExitData, 'runtime-diagnostic.json');
+      const helperDiagFile = join(fastExitControl, 'runtime-diagnostic.json');
       if (existsSync(helperDiagFile)) {
         try {
           const rawDiag = JSON.parse(readFileSync(helperDiagFile, 'utf8'));
@@ -605,7 +605,7 @@ async function main(): Promise<void> {
         } catch {}
       }
 
-      const helperStatusFile = join(fastExitData, 'runtime-marker-status');
+      const helperStatusFile = join(fastExitControl, 'runtime-marker-status');
       if (existsSync(helperStatusFile)) {
         try {
           const rawStatus = readFileSync(helperStatusFile, 'utf8').trim();
@@ -1022,15 +1022,16 @@ async function main(): Promise<void> {
       // until the child has received authenticated shutdown, committed intent, and exited.
       // This exercises accepting shutdown-requested when child is already gone.
       const fastExitData = join(root, 'fast-exit-data');
-      mkdirSync(fastExitData);
+      const fastExitControl = join(root, 'fast-exit-control');
+      mkdirSync(fastExitControl);
       const fastExitEnv: Record<string, string> = {
         ...env,
         HAN_DATA_DIR: fastExitData,
         HAN_COORDINATOR_PORT: '0',
       };
       delete fastExitEnv.HAN_PROOF_STARTUP_BARRIER;
-      const receiptHoldBarrier = join(fastExitData, 'receipt-held');
-      const receiptReleaseSignal = join(fastExitData, 'receipt-release');
+      const receiptHoldBarrier = join(fastExitControl, 'receipt-held');
+      const receiptReleaseSignal = join(fastExitControl, 'receipt-release');
       const runtimeModPath = resolve(
         import.meta.dir,
         '../lib/coordinator/windows-runtime.ts'
@@ -1063,10 +1064,10 @@ async function main(): Promise<void> {
             ...realHelper,
             findCoordinatorBinary: () => ${JSON.stringify(coordinator)},
           }));
-          fs.writeFileSync(${JSON.stringify(join(fastExitData, 'mock-installed'))}, 'ok');
+          fs.writeFileSync(${JSON.stringify(join(fastExitControl, 'mock-installed'))}, 'ok');
 
           const realRuntime = await import(${JSON.stringify(runtimeModPath)});
-          fs.writeFileSync(${JSON.stringify(join(fastExitData, 'runtime-imported'))}, 'ok');
+          fs.writeFileSync(${JSON.stringify(join(fastExitControl, 'runtime-imported'))}, 'ok');
           const origRead = realRuntime.readWindowsChildDescriptor;
           mock.module(${JSON.stringify(runtimeModPath)}, () => ({
             ...realRuntime,
@@ -1088,26 +1089,26 @@ async function main(): Promise<void> {
           }));
 
           const { startDaemon } = await import(${JSON.stringify(daemonModPath)});
-          fs.writeFileSync(${JSON.stringify(join(fastExitData, 'daemon-imported'))}, 'ok');
+          fs.writeFileSync(${JSON.stringify(join(fastExitControl, 'daemon-imported'))}, 'ok');
 
-          fs.writeFileSync(${JSON.stringify(join(fastExitData, 'start-daemon-called'))}, 'ok');
+          fs.writeFileSync(${JSON.stringify(join(fastExitControl, 'start-daemon-called'))}, 'ok');
           await startDaemon({ port: 0, foreground: true });
-          fs.writeFileSync(${JSON.stringify(join(fastExitData, 'startup-completed'))}, 'ok');
+          fs.writeFileSync(${JSON.stringify(join(fastExitControl, 'startup-completed'))}, 'ok');
         } catch (e) {
           try {
-            fs.writeFileSync(${JSON.stringify(join(fastExitData, 'error-category'))}, classifySupervisorError(e));
+            fs.writeFileSync(${JSON.stringify(join(fastExitControl, 'error-category'))}, classifySupervisorError(e));
             const errMsg = e instanceof Error ? (e.name + ': ' + e.message) : String(e);
-            fs.writeFileSync(${JSON.stringify(join(fastExitData, 'runtime-marker-status'))}, evaluateHelperMarkerStatus(errMsg));
+            fs.writeFileSync(${JSON.stringify(join(fastExitControl, 'runtime-marker-status'))}, evaluateHelperMarkerStatus(errMsg));
             const helper = safeHelperDiagnostic(errMsg);
             if (helper) {
-              fs.writeFileSync(${JSON.stringify(join(fastExitData, 'runtime-diagnostic.json'))}, JSON.stringify(helper));
+              fs.writeFileSync(${JSON.stringify(join(fastExitControl, 'runtime-diagnostic.json'))}, JSON.stringify(helper));
             }
           } catch {}
           process.exit(1);
         }
       `;
       const fastExitSupervisorFile = join(
-        fastExitData,
+        fastExitControl,
         'fast-exit-supervisor.ts'
       );
       writeFileSync(fastExitSupervisorFile, fastExitSupervisorScript);
