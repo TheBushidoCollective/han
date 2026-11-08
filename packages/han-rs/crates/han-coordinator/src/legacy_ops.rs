@@ -1,4 +1,6 @@
 use crate::legacy_identity;
+#[allow(unused_imports)]
+use crate::legacy_identity::Escalation;
 use han_proto::coordinator::coordinator_service_client::CoordinatorServiceClient;
 use han_proto::coordinator::ShutdownRequest;
 use serde::{Deserialize, Serialize};
