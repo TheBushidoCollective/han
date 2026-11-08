@@ -23,6 +23,19 @@ function isPidAlive(pid: number): boolean {
   }
 }
 
+async function waitFor(
+  label: string,
+  predicate: () => boolean | Promise<boolean>,
+  timeoutMs = 15000
+): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (await predicate()) return;
+    await Bun.sleep(100);
+  }
+  throw new Error(`Timed out waiting for ${label}`);
+}
+
 // ---------------------------------------------------------------------------
 // V1: Real v3.22 pair, default layout
 // ---------------------------------------------------------------------------
@@ -52,12 +65,8 @@ try {
     );
   }
 
-  // 1. Legacy coordinator exited
-  if (isPidAlive(oldCoordPid)) {
-    throw new Error(
-      `V1 FAIL: old coordinator (PID ${oldCoordPid}) is still alive`
-    );
-  }
+  // 1. Wait for legacy coordinator to exit
+  await waitFor('legacy coordinator to exit', () => !isPidAlive(oldCoordPid));
 
   // 2. Supervisor still alive
   if (!isPidAlive(oldSuperPid)) {
@@ -66,9 +75,7 @@ try {
 
   // 3. New descriptor exists and points to 127.0.0.1
   const descPath = join(testHomeV1, '.han', 'runtime', 'coordinator.json');
-  if (!existsSync(descPath)) {
-    throw new Error('V1 FAIL: modern coordinator.json was not created');
-  }
+  await waitFor('modern coordinator.json', () => existsSync(descPath));
   const desc = JSON.parse(readFileSync(descPath, 'utf8'));
   if (desc.httpsPort !== 41957) {
     throw new Error(
@@ -78,9 +85,10 @@ try {
 
   // 4. coordinator.pid was renamed
   const legacyPidFile = join(testHomeV1, '.han', 'coordinator.pid');
-  if (existsSync(legacyPidFile)) {
-    throw new Error('V1 FAIL: coordinator.pid was not renamed aside');
-  }
+  await waitFor(
+    'coordinator.pid to be renamed',
+    () => !existsSync(legacyPidFile)
+  );
 
   // 5. $HOME certificates are gone
   const certFiles = [
@@ -137,9 +145,10 @@ try {
   }
 
   // Leftovers were renamed aside
-  if (existsSync(join(dataDir, 'coordinator.pid'))) {
-    throw new Error('V3 FAIL: dead coordinator.pid was not renamed aside');
-  }
+  await waitFor(
+    'dead coordinator.pid to be renamed aside',
+    () => !existsSync(join(dataDir, 'coordinator.pid'))
+  );
   console.log('V3 PASS');
 } finally {
   try {
