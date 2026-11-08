@@ -2,6 +2,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -81,11 +82,10 @@ try {
     );
   }
 
-  // 4. coordinator.pid was renamed
-  const legacyPidFile = join(testHomeV1, '.han', 'coordinator.pid');
-  await waitFor(
-    'coordinator.pid to be renamed',
-    () => !existsSync(legacyPidFile)
+  // 4. coordinator.pid was renamed aside
+  const hanDir = join(testHomeV1, '.han');
+  await waitFor('coordinator.pid to be renamed aside', () =>
+    readdirSync(hanDir).some((f) => f.startsWith('coordinator.pid.legacy.'))
   );
 
   // 5. $HOME certificates are gone
@@ -143,9 +143,8 @@ try {
   }
 
   // Leftovers were renamed aside
-  await waitFor(
-    'dead coordinator.pid to be renamed aside',
-    () => !existsSync(join(dataDir, 'coordinator.pid'))
+  await waitFor('dead coordinator.pid to be renamed aside', () =>
+    readdirSync(dataDir).some((f) => f.startsWith('coordinator.pid.legacy.'))
   );
   console.log('V3 PASS');
 } finally {
