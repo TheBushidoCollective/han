@@ -1,24 +1,25 @@
 use super::{Escalation, Facts, Listener};
-use crate::windows_process_identity::{current_identity, identity_for_pid};
 use std::ffi::OsString;
 use std::io;
-use std::mem;
+use std::mem::{size_of, zeroed};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::os::windows::ffi::OsStringExt;
 use std::path::PathBuf;
-use std::ptr;
+use std::ptr::{null_mut, null};
 use std::time::Duration;
 use windows_sys::Win32::Foundation::{
-    CloseHandle, LocalFree, HANDLE, INVALID_HANDLE_VALUE, WAIT_OBJECT_0, WAIT_TIMEOUT,
+    CloseHandle, LocalFree, FILETIME, HANDLE, INVALID_HANDLE_VALUE, WAIT_OBJECT_0, WAIT_TIMEOUT,
 };
 use windows_sys::Win32::NetworkManagement::IpHelper::{
     GetExtendedTcpTable, TCP_TABLE_OWNER_PID_LISTENER,
 };
 use windows_sys::Win32::Networking::WinSock::{AF_INET, AF_INET6};
+use windows_sys::Win32::Security::Authorization::ConvertSidToStringSidW;
+use windows_sys::Win32::Security::{GetTokenInformation, TokenUser, TOKEN_QUERY, TOKEN_USER};
 use windows_sys::Win32::System::Threading::{
-    GetProcessId, OpenProcess, QueryFullProcessImageNameW, TerminateProcess,
-    WaitForSingleObject, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE,
-    PROCESS_TERMINATE,
+    GetCurrentProcess, GetCurrentProcessId, GetProcessId, GetProcessTimes, OpenProcess,
+    OpenProcessToken, QueryFullProcessImageNameW, TerminateProcess, WaitForSingleObject,
+    PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE, PROCESS_TERMINATE,
 };
 use windows_sys::Win32::UI::Shell::CommandLineToArgvW;
 
@@ -87,11 +88,69 @@ pub fn wait_exit(p: &Pinned, timeout: Duration) -> io::Result<bool> {
     Ok(res == WAIT_OBJECT_0)
 }
 
+fn get_creation_time(handle: HANDLE) -> io::Result<String> {
+    let mut creation: FILETIME = unsafe { zeroed() };
+    let mut exit: FILETIME = unsafe { zeroed() };
+    let mut kernel: FILETIME = unsafe { zeroed() };
+    let mut user: FILETIME = unsafe { zeroed() };
+    let ok = unsafe { GetProcessTimes(handle, &mut creation, &mut exit, &mut kernel, &mut user) };
+    if ok == 0 {
+        return Err(io::Error::last_os_error());
+    }
+    let raw = ((creation.dwHighDateTime as u64) << 32) | (creation.dwLowDateTime as u64);
+    Ok(raw.to_string())
+}
+
+fn get_process_sid(handle: HANDLE) -> io::Result<String> {
+    let mut token: HANDLE = null_mut();
+    if unsafe { OpenProcessToken(handle, TOKEN_QUERY, &mut token) } == 0 {
+        return Err(io::Error::last_os_error());
+    }
+    let mut needed = 0;
+    unsafe {
+        GetTokenInformation(token, TokenUser, null_mut(), 0, &mut needed);
+    }
+    if needed == 0 {
+        unsafe { CloseHandle(token) };
+        return Err(io::Error::last_os_error());
+    }
+    let mut buffer = vec![0usize; (needed as usize + size_of::<usize>() - 1) / size_of::<usize>()];
+    let ok = unsafe {
+        GetTokenInformation(
+            token,
+            TokenUser,
+            buffer.as_mut_ptr().cast(),
+            needed,
+            &mut needed,
+        )
+    };
+    unsafe { CloseHandle(token) };
+    if ok == 0 {
+        return Err(io::Error::last_os_error());
+    }
+    let token_user = unsafe { &*(buffer.as_ptr().cast::<TOKEN_USER>()) };
+    let mut text: *mut u16 = null_mut();
+    let res = unsafe { ConvertSidToStringSidW(token_user.User.Sid, &mut text) };
+    if res == 0 || text.is_null() {
+        return Err(io::Error::last_os_error());
+    }
+    let mut len = 0;
+    while unsafe { *text.add(len) } != 0 {
+        len += 1;
+    }
+    let result = String::from_utf16_lossy(unsafe { std::slice::from_raw_parts(text, len) });
+    unsafe { LocalFree(text.cast()) };
+    Ok(result)
+}
+
 pub fn facts(p: &Pinned) -> io::Result<Facts> {
     let pid = p.pid;
-    let proc_identity = identity_for_pid(pid)?;
-    let my_identity = current_identity()?;
-    let same_user = proc_identity.user_sid == my_identity.user_sid;
+    let start_time = get_creation_time(p.handle)?;
+
+    let proc_sid = get_process_sid(p.handle).unwrap_or_default();
+    let current_proc = unsafe { GetCurrentProcess() };
+    let current_sid = get_process_sid(current_proc).unwrap_or_default();
+    let same_user = !proc_sid.is_empty() && proc_sid == current_sid;
 
     let mut path_buf = vec![0u16; 1024];
     let mut size = path_buf.len() as u32;
@@ -109,7 +168,7 @@ pub fn facts(p: &Pinned) -> io::Result<Facts> {
         same_user,
         exe,
         argv,
-        start_time: proc_identity.creation_time,
+        start_time,
     })
 }
 
@@ -137,7 +196,7 @@ fn get_process_cmdline(handle: HANDLE) -> io::Result<Vec<OsString>> {
         NtQueryInformationProcess(
             handle,
             PROCESS_COMMAND_LINE_INFORMATION,
-            ptr::null_mut(),
+            null_mut(),
             0,
             &mut len,
         );
@@ -150,7 +209,7 @@ fn get_process_cmdline(handle: HANDLE) -> io::Result<Vec<OsString>> {
         NtQueryInformationProcess(
             handle,
             PROCESS_COMMAND_LINE_INFORMATION,
-            buf.as_mut_ptr() as *mut _,
+            buf.as_mut_ptr().cast(),
             len,
             &mut len,
         )
@@ -185,7 +244,7 @@ fn get_process_cmdline(handle: HANDLE) -> io::Result<Vec<OsString>> {
             result.push(OsString::from_wide(slice));
         }
     }
-    unsafe { LocalFree(argv_ptr as *mut _) };
+    unsafe { LocalFree(argv_ptr.cast()) };
     Ok(result)
 }
 
@@ -194,11 +253,11 @@ pub fn confirm(p: &Pinned, f: &Facts) -> io::Result<bool> {
     if actual_pid != p.pid {
         return Ok(false);
     }
-    let proc_identity = match identity_for_pid(p.pid) {
-        Ok(id) => id,
+    let current_start = match get_creation_time(p.handle) {
+        Ok(t) => t,
         Err(_) => return Ok(false),
     };
-    Ok(proc_identity.creation_time == f.start_time)
+    Ok(current_start == f.start_time)
 }
 
 #[repr(C)]
@@ -245,7 +304,7 @@ pub fn listeners(port: u16) -> io::Result<Vec<Listener>> {
     let mut size: u32 = 0;
     unsafe {
         GetExtendedTcpTable(
-            ptr::null_mut(),
+            null_mut(),
             &mut size,
             0,
             AF_INET as u32,
@@ -257,7 +316,7 @@ pub fn listeners(port: u16) -> io::Result<Vec<Listener>> {
         let mut buf = vec![0u8; size as usize];
         let ret = unsafe {
             GetExtendedTcpTable(
-                buf.as_mut_ptr() as *mut _,
+                buf.as_mut_ptr().cast(),
                 &mut size,
                 0,
                 AF_INET as u32,
@@ -289,7 +348,7 @@ pub fn listeners(port: u16) -> io::Result<Vec<Listener>> {
     let mut size6: u32 = 0;
     unsafe {
         GetExtendedTcpTable(
-            ptr::null_mut(),
+            null_mut(),
             &mut size6,
             0,
             AF_INET6 as u32,
@@ -301,7 +360,7 @@ pub fn listeners(port: u16) -> io::Result<Vec<Listener>> {
         let mut buf6 = vec![0u8; size6 as usize];
         let ret = unsafe {
             GetExtendedTcpTable(
-                buf6.as_mut_ptr() as *mut _,
+                buf6.as_mut_ptr().cast(),
                 &mut size6,
                 0,
                 AF_INET6 as u32,
