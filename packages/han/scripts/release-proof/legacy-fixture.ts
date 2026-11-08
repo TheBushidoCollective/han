@@ -150,7 +150,7 @@ export async function setupLegacyFixture(
   while (Date.now() < deadline) {
     await Bun.sleep(200);
     try {
-      const resp = await fetch('http://127.0.0.1:41957/health', {
+      const resp = await fetch('https://127.0.0.1:41957/health', {
         tls: { rejectUnauthorized: false },
       } as RequestInit);
       if (resp.ok) {
