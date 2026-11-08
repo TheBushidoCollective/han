@@ -236,7 +236,10 @@ export function validateRetireResult(res: unknown): LegacyRetireResult {
   throw new CoordinatorSecurityError(`Unknown retire status: ${status}`);
 }
 
-function requestRuntime(op: string, args: Record<string, unknown>): unknown {
+function requestRuntime(
+  op: 'legacy.inspect' | 'legacy.stop' | 'legacy.retire',
+  args: Record<string, unknown>
+): unknown {
   const dataDir = getCoordinatorDataDir();
   if (process.platform === 'win32') {
     return requestWindowsRuntime(dataDir, op, args);
