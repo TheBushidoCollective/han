@@ -202,6 +202,7 @@ function request(
     throw new CoordinatorSecurityError('Invalid local runtime response');
   return response.result;
 }
+export const requestPosixRuntime = request;
 const validPid = (n: unknown): n is number =>
   Number.isSafeInteger(n) && (n as number) > 0 && (n as number) <= 0x7fffffff;
 const validIdentity = (v: unknown): v is PosixFileIdentity =>

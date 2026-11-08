@@ -115,7 +115,7 @@ if needs_update_check; then
     case "$han_path" in
       "$HAN_CLAUDE_BIN"|"$HAN_LOCAL_BIN")
         if update_binary "$han_path" "$latest_version"; then
-          "$han_path" coordinator restart || echo "Han coordinator restart requires your attention." >&2
+          "$han_path" coordinator restart --background || echo "Han coordinator restart requires your attention." >&2
         fi
         ;;
     esac

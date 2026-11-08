@@ -113,7 +113,8 @@ export function registerCoordinatorCommands(program: Command): void {
     .command('restart')
     .description('Restart the coordinator daemon')
     .option('-p, --port <port>', `Port number (default: ${defaultPort})`)
-    .action(async (options: { port?: string }) => {
+    .option('--background', 'Run detached in background')
+    .action(async (options: { port?: string; background?: boolean }) => {
       try {
         const port = options.port
           ? parseInt(options.port, 10)
@@ -124,7 +125,7 @@ export function registerCoordinatorCommands(program: Command): void {
 
         // Start
         console.log('[coordinator] Starting...');
-        await startDaemon({ port });
+        await startDaemon({ port, daemon: options.background });
       } catch (error: unknown) {
         console.error(
           'Error restarting coordinator:',

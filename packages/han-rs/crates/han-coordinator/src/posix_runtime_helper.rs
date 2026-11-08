@@ -36,7 +36,7 @@ struct Claim { pid: u32, nonce: String, reservation: Identity, owner_file: Ident
 struct Owner { version: u32, pid: u32, nonce: String }
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase", deny_unknown_fields)]
-struct Request { version: u32, data_dir: PathBuf, op: String, target: Option<Target>, snapshot: Option<Snapshot>, claim: Option<Claim>, binding: Option<SupervisorBinding>, descriptor: Option<Descriptor>, pid: Option<u32>, nonce: Option<String> }
+struct Request { version: u32, data_dir: PathBuf, op: String, target: Option<Target>, snapshot: Option<Snapshot>, claim: Option<Claim>, binding: Option<SupervisorBinding>, descriptor: Option<Descriptor>, pid: Option<u32>, nonce: Option<String>, port: Option<u16>, identity: Option<crate::legacy_ops::LegacyIdentity>, escalate: Option<bool> }
 fn open_at(dir: &fs::File, name: &OsStr, flags: i32, mode: u32) -> io::Result<fs::File> {
     let n = c(name)?; let fd = unsafe { libc::openat(dir.as_raw_fd(), n.as_ptr(), flags | libc::O_CLOEXEC | libc::O_NOFOLLOW, mode as libc::c_uint) };
     if fd < 0 { return Err(io::Error::last_os_error()); }
@@ -280,6 +280,12 @@ fn dispatch(r: Request) -> io::Result<Value> {
             return Ok(json!({"status":"prepared"}));
         }
     }
+    match r.op.as_str() {
+        "legacy.inspect" => return crate::legacy_ops::inspect(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?),
+        "legacy.stop" => return tokio::runtime::Builder::new_current_thread().enable_all().build()?.block_on(crate::legacy_ops::stop(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?, r.identity.ok_or_else(invalid)?, r.escalate.unwrap_or(true))),
+        "legacy.retire" => return crate::legacy_ops::retire(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?),
+        _ => {}
+    }
     let roots = match Roots::open(&r.data_dir) { Ok(r) => r, Err(e) if e.kind() == io::ErrorKind::NotFound && r.op == "supervisor.read" => return Ok(json!({"status":"absent"})), Err(e) => return Err(e) };
     match r.op.as_str() {
         "supervisor.acquire" => acquire(&roots, r.pid.ok_or_else(invalid)?, r.nonce.as_deref().ok_or_else(invalid)?),
@@ -288,13 +294,13 @@ fn dispatch(r: Request) -> io::Result<Value> {
         "recovery.inspect" => inspect(&roots,r.target.as_ref().ok_or_else(invalid)?),
         "recovery.reclaim" => reclaim(&roots,r.snapshot.as_ref().ok_or_else(invalid)?),
         "intent.remove" => { let b = r.binding.as_ref().ok_or_else(invalid)?; let d = r.descriptor.as_ref().ok_or_else(invalid)?; let claim = r.claim.as_ref().ok_or_else(invalid)?; let snap = snapshot(&roots,&Target::Stopping {binding:b.clone()})?; if !own_claim(&snap.claim,claim)? || b.pid != claim.pid || b.nonce != claim.nonce || d.supervisor.as_ref() != Some(b) { return Err(invalid()); } let Some(record) = selected(&snap.target,&snap.active,&snap.stopping)? else { return Ok(json!({"status":"absent"})); }; if &parse(record)? != d { return Ok(json!({"status":"changed"})); } unlink(&roots.runtime,&name(&snap.target)?,false)?; Ok(json!({"status":"removed"})) },
-        _ => Err(invalid())
+        _ => Err(invalid()),
     }
 }
 pub(crate) fn run() -> io::Result<()> {
     let result = (|| { let mut input = Vec::new(); io::stdin().lock().take((LIMIT+1) as u64).read_to_end(&mut input)?; if input.len() > LIMIT { return Err(invalid()); }
         let raw: Value = serde_json::from_slice(&input).map_err(|_| invalid())?; let object = raw.as_object().ok_or_else(invalid)?;
-        let extras: &[&str] = match object.get("op").and_then(Value::as_str) { Some("runtime.prepare" | "supervisor.read") => &[], Some("supervisor.acquire") => &["pid","nonce"], Some("supervisor.check" | "supervisor.release") => &["claim"], Some("recovery.inspect") => &["target"], Some("recovery.reclaim") => &["snapshot"], Some("intent.remove") => &["binding","descriptor","claim"], _ => return Err(invalid()) };
+        let extras: &[&str] = match object.get("op").and_then(Value::as_str) { Some("runtime.prepare" | "supervisor.read") => &[], Some("supervisor.acquire") => &["pid","nonce"], Some("supervisor.check" | "supervisor.release") => &["claim"], Some("recovery.inspect") => &["target"], Some("recovery.reclaim") => &["snapshot"], Some("intent.remove") => &["binding","descriptor","claim"], Some("legacy.inspect" | "legacy.retire") => &["port"], Some("legacy.stop") => &["port","identity","escalate"], _ => return Err(invalid()) };
         if object.len() != extras.len()+3 || !["version","dataDir","op"].iter().chain(extras).all(|k| object.get(*k).is_some_and(|v| !v.is_null())) { return Err(invalid()); }
         let result = dispatch(serde_json::from_value(raw).map_err(|_| invalid())?)?; let out = serde_json::to_vec(&json!({"version":1,"ok":true,"result":result})).map_err(|_| invalid())?; if out.len() > LIMIT { return Err(invalid()); } io::stdout().lock().write_all(&out)
     })();

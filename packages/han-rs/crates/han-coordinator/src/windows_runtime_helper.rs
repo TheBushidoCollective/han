@@ -58,6 +58,9 @@ struct Request {
     identity: Option<WireFileIdentity>,
     process: Option<ProcessIdentity>,
     snapshot: Option<RecoverySnapshot>,
+    port: Option<u16>,
+    legacy_identity: Option<crate::legacy_ops::LegacyIdentity>,
+    escalate: Option<bool>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -707,6 +710,12 @@ fn dispatch(r: Request) -> io::Result<Value> {
         r.descriptor.is_some(), r.origin.is_some(), r.token.is_some(), r.name.is_some(), r.identity.is_some(), r.process.is_some(), r.snapshot.is_some()];
     let count = fields.iter().filter(|&&v| v).count();
     match r.op.as_str() {
+        "legacy.inspect" => return crate::legacy_ops::inspect(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?),
+        "legacy.stop" => return tokio::runtime::Builder::new_current_thread().enable_all().build()?.block_on(crate::legacy_ops::stop(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?, r.legacy_identity.ok_or_else(invalid)?, r.escalate.unwrap_or(true))),
+        "legacy.retire" => return crate::legacy_ops::retire(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?),
+        _ => {}
+    }
+    match r.op.as_str() {
         "runtime.prepare" if count == 0 => {
             directory(&r.data_dir, true)?;
             Ok(json!({"status":"prepared"}))
@@ -769,8 +778,8 @@ fn run_request() -> io::Result<()> {
         "launcher.create" => &["origin", "token"],
         "launcher.remove" => &["name", "identity"],
         "process.state" => &["process"],
-
-        _ => return Err(invalid()),
+        "legacy.inspect" | "legacy.retire" => &["port"],
+        "legacy.stop" => &["port", "legacyIdentity", "escalate"],
     };
     if object.len() != extras.len() + 3 || !["version", "dataDir", "op"].iter().chain(extras)
         .all(|key| object.get(*key).is_some_and(|value| !value.is_null())) {

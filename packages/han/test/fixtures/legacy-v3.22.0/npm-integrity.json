@@ -1,0 +1,7 @@
+{
+  "linux-x64": "sha512-E8zhLz1sOZ8viOH2WUqbQq8vwn1knEbOlrEuz2//V+lV7irC+BbjPL1p0sZi0SGUY3E1s5Uzx/rvt1kFDu0BUQ==",
+  "linux-arm64": "sha512-McwXBKAxQVIHVlSC4kd3Zw48Qlc0HTzSd8PwMf4/pAMrns6g6ymhWr1gHhE2DOnHua1tRzVe+0jr8pNmxAYO/g==",
+  "darwin-x64": "sha512-B0BxIKOys1w9c9HQXSiJTmKeMLA6WYzTc7X6EzXf1W8ph7gfHkSJAmBub8sqO8WZLsC2JhTo4ydjxbByrhWJAg==",
+  "darwin-arm64": "sha512-A11aan6jrMcC8kOTkEj76CgTSZ3hRTGDeX/wPvyub5Io2tuqTJxn9h+mWkmGp834XNaSUoIH4fmZ21Wp1TQf1w==",
+  "win32-x64": "sha512-YkHsuPL6satbXeTWs2t+G3hjqsy3pw/1dh7O1WRTx1M70wVbYmDPLAop+/7Onp6JKyIc8f0n/WWvGjobH3x//Q=="
+}

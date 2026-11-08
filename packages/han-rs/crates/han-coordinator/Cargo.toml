@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 description = "Han coordinator daemon - GraphQL, gRPC, hooks, and real-time indexing"
 
+[lib]
+name = "han_coordinator"
+path = "src/lib.rs"
+
 [[bin]]
 name = "han-coordinator"
 path = "src/main.rs"
@@ -13,6 +17,7 @@ default = ["sqlite"]
 sqlite = ["han-db/sqlite", "han-indexer/sqlite", "han-api/sqlite"]
 postgres = ["han-db/postgres", "han-indexer/postgres", "han-api/postgres"]
 proof-startup-barrier = []
+proof-legacy-barrier = []
 
 [dependencies]
 han-db = { path = "../han-db" }
@@ -76,7 +81,7 @@ nix = { version = "0.29", features = ["signal", "process"] }
 libc = "0.2"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "=0.61.2", features = ["Wdk_Foundation", "Wdk_Storage_FileSystem", "Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_FileSystem", "Win32_System_IO", "Win32_System_Threading", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Console"] }
+windows-sys = { version = "=0.61.2", features = ["Wdk_Foundation", "Wdk_Storage_FileSystem", "Wdk_System_Threading", "Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_FileSystem", "Win32_System_IO", "Win32_System_Threading", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Console", "Win32_NetworkManagement_IpHelper", "Win32_Networking_WinSock", "Win32_UI_Shell"] }
 
 [dev-dependencies]
 tempfile = "3"

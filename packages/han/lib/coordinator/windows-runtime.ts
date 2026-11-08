@@ -181,6 +181,7 @@ function request(
   }
   return parseWindowsRuntimeResponse(result, op);
 }
+export const requestWindowsRuntime = request;
 
 /** Validate a completed helper invocation without exposing its diagnostics. */
 export function parseWindowsRuntimeResponse(

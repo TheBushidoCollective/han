@@ -34,7 +34,7 @@ import {
   sameCoordinator,
   sameSupervisor,
 } from '../../coordinator/connection.ts';
-import { stopLegacyCoordinator } from '../../coordinator/legacy-stop.ts';
+import { stopLegacyCoordinator } from '../../coordinator/legacy.ts';
 import { repairCoordinator } from '../../coordinator/pair-repair.ts';
 import {
   assertRecoveryFence,
