@@ -160,10 +160,15 @@ console.log('--> Checking V4: Leftovers naming live unrelated process...');
 const testHomeV4 = mkdtempSync(join(tmpdir(), 'han-legacy-v4-'));
 let victimV4: ReturnType<typeof Bun.spawn> | null = null;
 try {
-  victimV4 = Bun.spawn(['bun', '-e', 'setInterval(()=>{},1e9)'], {
-    stdout: 'ignore',
-    stderr: 'ignore',
-  });
+  victimV4 = Bun.spawn(
+    process.platform === 'win32'
+      ? ['powershell', '-Command', 'Start-Sleep -Seconds 1000']
+      : ['sleep', '1000'],
+    {
+      stdout: 'ignore',
+      stderr: 'ignore',
+    }
+  );
   const victimPid = victimV4.pid;
 
   const dataDir = join(testHomeV4, '.han');

@@ -94,9 +94,18 @@ if (isRelease) {
     console.error('Error: --release requires --version <semver>');
     process.exit(1);
   }
+  const cleanVersion = explicitVersion.replace(/^v/, '');
+  if (!cleanVersion.includes('-pr.') && cleanVersion !== packageJson.version) {
+    console.error(
+      `Error: --release version (${cleanVersion}) does not match package.json version (${packageJson.version})`
+    );
+    process.exit(1);
+  }
 }
 
-const buildVersion = explicitVersion || packageJson.version;
+const buildVersion = explicitVersion
+  ? explicitVersion.replace(/^v/, '')
+  : packageJson.version;
 const buildKind = isRelease ? 'release' : 'dev';
 
 let coordinatorSha256 = null;

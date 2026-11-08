@@ -258,7 +258,21 @@ export async function startDaemon(
 ): Promise<CoordinatorStatus> {
   const isSupervisorChild = process.env.HAN_COORDINATOR_DAEMON === '1';
 
-  // Prepare runtime directory
+  const port = options.port ?? getCoordinatorPort();
+  console.log(`[coordinator] Using port: ${port}`);
+
+  // 1. If coordinator is already healthy, return immediately per §3.6
+  const selected = readOptionalDescriptor();
+  const predecessor = selected && descriptorIsDead(selected) ? selected : null;
+  if (!predecessor) {
+    const status = await getStatus(port);
+    if (status.running) {
+      console.log(`[coordinator] Already running (PID: ${status.pid})`);
+      return status;
+    }
+  }
+
+  // 2. Prepare runtime directory
   if (process.platform === 'win32') {
     windowsPrepareRuntime(getCoordinatorDataDir());
   } else {
@@ -278,19 +292,6 @@ export async function startDaemon(
       }
     }
     posixPrepare(getCoordinatorDataDir());
-  }
-
-  const port = options.port ?? getCoordinatorPort();
-  console.log(`[coordinator] Using port: ${port}`);
-
-  const selected = readOptionalDescriptor();
-  const predecessor = selected && descriptorIsDead(selected) ? selected : null;
-  if (!predecessor) {
-    const status = await getStatus(port);
-    if (status.running) {
-      console.log(`[coordinator] Already running (PID: ${status.pid})`);
-      return status;
-    }
   }
 
   // Launcher: stop legacy coordinator if present on port

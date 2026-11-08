@@ -293,14 +293,11 @@ fn dispatch(r: Request) -> io::Result<Value> {
             return Ok(json!({"status":"prepared"}));
         }
     }
-    match r.op.as_str() {
-        "legacy.inspect" => return crate::legacy_ops::inspect(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?),
-        "legacy.stop" => return run_async(crate::legacy_ops::stop(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?, r.identity.ok_or_else(invalid)?, r.escalate.unwrap_or(true))),
-        "legacy.retire" => return crate::legacy_ops::retire(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?),
-        _ => {}
-    }
     let roots = match Roots::open(&r.data_dir) { Ok(r) => r, Err(e) if e.kind() == io::ErrorKind::NotFound && r.op == "supervisor.read" => return Ok(json!({"status":"absent"})), Err(e) => return Err(e) };
     match r.op.as_str() {
+        "legacy.inspect" => crate::legacy_ops::inspect(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?),
+        "legacy.stop" => run_async(crate::legacy_ops::stop(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?, r.identity.ok_or_else(invalid)?, r.escalate.unwrap_or(true))),
+        "legacy.retire" => crate::legacy_ops::retire(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?),
         "supervisor.acquire" => acquire(&roots, r.pid.ok_or_else(invalid)?, r.nonce.as_deref().ok_or_else(invalid)?),
         "supervisor.read" => { let snap = snapshot(&roots,&Target::Active)?; match owner_for(&snap.claim)? { Some(o) => Ok(json!({"status":"present","pid":o.pid,"nonce":o.nonce})), None if matches!(snap.claim,ClaimSnapshot::Absent) => Ok(json!({"status":"absent"})), None => Ok(json!({"status":"recoverable"})) } },
         "supervisor.check" | "supervisor.release" => claim_operation(&roots, r.claim.as_ref().ok_or_else(invalid)?, r.op == "supervisor.release"),

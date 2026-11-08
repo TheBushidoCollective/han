@@ -120,11 +120,30 @@ export async function setupLegacyFixture(
   // 5. Seed $HOME/.claude/han/certs/
   const certsDir = join(homeDir, '.claude', 'han', 'certs');
   mkdirSync(certsDir, { recursive: true });
-  writeFileSync(join(certsDir, 'coordinator.crt'), 'DUMMY_LEGACY_CERT');
-  writeFileSync(join(certsDir, 'coordinator.key'), 'DUMMY_LEGACY_KEY');
+  const keyPath = join(certsDir, 'coordinator.key');
+  const crtPath = join(certsDir, 'coordinator.crt');
+  Bun.spawnSync(
+    [
+      'openssl',
+      'req',
+      '-x509',
+      '-newkey',
+      'rsa:2048',
+      '-keyout',
+      keyPath,
+      '-out',
+      crtPath,
+      '-days',
+      '365',
+      '-nodes',
+      '-subj',
+      '/CN=127.0.0.1',
+    ],
+    { stdout: 'ignore', stderr: 'ignore' }
+  );
   writeFileSync(
     join(certsDir, 'metadata.json'),
-    JSON.stringify({ expires: 1893456000000 })
+    JSON.stringify({ expires: Date.now() + 365 * 24 * 3600 * 1000 })
   );
 
   // 6. Start legacy supervisor: han coordinator start --foreground --port 41957

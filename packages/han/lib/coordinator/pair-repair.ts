@@ -340,8 +340,9 @@ export async function repairCoordinator(): Promise<boolean> {
       }
 
       const assetName = getPlatformAsset();
+      const versionTag = `v${HAN_VERSION.replace(/^v/, '')}`;
       const downloadUrl = new URL(
-        `${baseUrl.pathname.replace(/\/$/, '')}/v${HAN_VERSION}/${assetName}`,
+        `${baseUrl.pathname.replace(/\/$/, '')}/${versionTag}/${assetName}`,
         baseUrl
       );
 

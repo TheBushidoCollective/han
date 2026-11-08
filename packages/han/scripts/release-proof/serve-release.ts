@@ -132,10 +132,22 @@ const server = createServer((req, res: ServerResponse) => {
   }
 
   // 3. Release download assets
-  if (pathname.includes('/releases/download/')) {
-    const fileName = basename(pathname);
+  const downloadMatch = pathname.match(
+    /\/releases\/download\/([^/]+)\/([^/]+)$/
+  );
+  if (downloadMatch) {
+    const reqTag = downloadMatch[1];
+    const fileName = downloadMatch[2];
+    const expectedTag = `v${version.replace(/^v/, '')}`;
+    if (reqTag !== expectedTag && reqTag !== version) {
+      res
+        .writeHead(404)
+        .end(
+          `Not Found (tag mismatch: expected ${expectedTag}, got ${reqTag})`
+        );
+      return;
+    }
     const filePath = join(resolvedAssetDir, fileName);
-
     const respondWithAsset = () => {
       if (existsSync(filePath)) {
         let bytes = readFileSync(filePath);

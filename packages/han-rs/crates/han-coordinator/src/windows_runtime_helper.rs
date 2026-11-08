@@ -729,12 +729,19 @@ fn dispatch(r: Request) -> io::Result<Value> {
         r.descriptor.is_some(), r.origin.is_some(), r.token.is_some(), r.name.is_some(), r.identity.is_some(), r.process.is_some(), r.snapshot.is_some()];
     let count = fields.iter().filter(|&&v| v).count();
     match r.op.as_str() {
-        "legacy.inspect" => return crate::legacy_ops::inspect(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?),
+        "legacy.inspect" => {
+            let _guard = RecordGuard::open(&r.data_dir)?;
+            return crate::legacy_ops::inspect(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?);
+        }
         "legacy.stop" => {
+            let _guard = RecordGuard::open(&r.data_dir)?;
             let Some(AnyIdentity::Legacy(id)) = &r.identity else { return Err(invalid()); };
             return run_async(crate::legacy_ops::stop(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?, id.clone(), r.escalate.unwrap_or(true)));
         }
-        "legacy.retire" => return crate::legacy_ops::retire(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?),
+        "legacy.retire" => {
+            let _guard = RecordGuard::open(&r.data_dir)?;
+            return crate::legacy_ops::retire(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?);
+        }
         _ => {}
     }
     match r.op.as_str() {

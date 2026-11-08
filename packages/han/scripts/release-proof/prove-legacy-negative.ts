@@ -134,6 +134,11 @@ try {
   if (!out.includes('UPGRADE_REQUIRED')) {
     throw new Error(`N1 FAIL: expected UPGRADE_REQUIRED message, got:\n${out}`);
   }
+  if (!out.includes(String(process.pid))) {
+    throw new Error(
+      `N1 FAIL: expected message to name PID ${process.pid}, got:\n${out}`
+    );
+  }
   console.log('N1 PASS');
 } finally {
   if (listenerN1) {
@@ -181,23 +186,26 @@ try {
     const symlinkTarget = join(testHomeN5, 'target.pid');
     writeFileSync(symlinkTarget, '12345\n');
     const pidFile = join(dataDir, 'coordinator.pid');
-    try {
-      if (existsSync(pidFile)) rmSync(pidFile);
-      symlinkSync(symlinkTarget, pidFile);
-      const env = {
-        ...process.env,
-        HOME: testHomeN5,
-      };
-      delete env.HAN_DATA_DIR;
-      delete env.CLAUDE_CONFIG_DIR;
-
-      Bun.spawnSync([installedHan, 'coordinator', 'start', '--port', '41957'], {
-        env,
-        stdout: 'pipe',
-        stderr: 'pipe',
-      });
-      // Symlink was not followed
-    } catch {}
+    if (existsSync(pidFile)) rmSync(pidFile);
+    symlinkSync(symlinkTarget, pidFile);
+    const env = {
+      ...process.env,
+      HOME: testHomeN5,
+    };
+    delete env.HAN_DATA_DIR;
+    delete env.CLAUDE_CONFIG_DIR;
+    Bun.spawnSync([installedHan, 'coordinator', 'start', '--port', '41957'], {
+      env,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    // Symlink was not followed or target modified
+    if (
+      !existsSync(symlinkTarget) ||
+      readFileSync(symlinkTarget, 'utf8') !== '12345\n'
+    ) {
+      throw new Error('N5 FAIL: symlink target was modified or deleted');
+    }
   }
   console.log('N5 PASS');
 } finally {

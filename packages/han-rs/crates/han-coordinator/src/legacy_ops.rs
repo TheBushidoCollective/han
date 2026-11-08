@@ -274,31 +274,49 @@ pub async fn stop(
     expected_identity: LegacyIdentity,
     escalate: bool,
 ) -> io::Result<Value> {
-    // 1. Inspect again
-    let current_inspect = inspect(data_dir, port)?;
-    if current_inspect.get("status").and_then(|s| s.as_str()) != Some("legacy") {
-        return Ok(json!({ "status": "changed" }));
-    }
+    // 1. Pin coordinator process handle FIRST before inspecting
+    let pinned = legacy_identity::pin(expected_identity.pid)?;
 
-    let ident = current_inspect.get("identity");
-    let current_pid = ident.and_then(|i| i.get("pid")).and_then(|p| p.as_u64());
-    let current_start = ident.and_then(|i| i.get("startTime")).and_then(|s| s.as_str());
-    if current_pid != Some(expected_identity.pid as u64)
-        || current_start != Some(&expected_identity.start_time)
+    // 2. Read facts directly through this pinned handle
+    let initial_facts = legacy_identity::facts(&pinned)?;
+
+    // 3. Verify handle facts match expected_identity exactly
+    if initial_facts.start_time != expected_identity.start_time
+        || !initial_facts.same_user
+        || initial_facts.exe.to_string_lossy() != expected_identity.exe
     {
         return Ok(json!({ "status": "changed" }));
     }
-    // 2. Pin coordinator process
-    let pinned = legacy_identity::pin(expected_identity.pid)?;
 
-    // 3. Send unauthenticated gRPC shutdown request
+    // 4. Verify listener ownership on port and grpcPort through this held handle
+    let discovered = legacy_identity::listeners(port)?;
+    if !discovered.iter().any(|l| l.addr.is_unspecified() && l.owners.contains(&expected_identity.pid)) {
+        return Ok(json!({ "status": "changed" }));
+    }
+    let grpc_discovered = legacy_identity::listeners(expected_identity.grpc_port)?;
+    if !grpc_discovered.iter().any(|l| l.addr.is_unspecified() && l.owners.contains(&expected_identity.pid)) {
+        return Ok(json!({ "status": "changed" }));
+    }
+
+    // 5. Ensure modern descriptor hasn't appeared
+    let descriptor_path = Path::new(data_dir).join("runtime").join("coordinator.json");
+    if descriptor_path.exists() {
+        return Ok(json!({ "status": "changed" }));
+    }
+
+    // 6. Confirm pinned handle is still valid and un-reused
+    if !legacy_identity::confirm(&pinned, &initial_facts)? {
+        return Ok(json!({ "status": "changed" }));
+    }
+
+    // 7. Send unauthenticated gRPC shutdown request
     let _ = send_shutdown_grpc(expected_identity.grpc_port).await;
 
-    // 4. Wait up to 5s for exit
+    // 8. Wait up to 5s for exit
     let mut exited = legacy_identity::wait_exit(&pinned, Duration::from_secs(5))?;
     let mut escalation_used = "none";
 
-    // 5. Escalate if not exited
+    // 9. Escalate if not exited
     if !exited && escalate {
         #[cfg(feature = "proof-legacy-barrier")]
         {
@@ -309,13 +327,12 @@ pub async fn stop(
         #[cfg(target_os = "linux")]
         {
             // Check through same pidfd
-            let f = legacy_identity::facts(&pinned)?;
-            if legacy_identity::confirm(&pinned, &f)? {
+            if legacy_identity::confirm(&pinned, &initial_facts)? {
                 let _ = legacy_identity::signal(&pinned, Escalation::Term);
                 if legacy_identity::wait_exit(&pinned, Duration::from_secs(3))? {
                     exited = true;
                     escalation_used = "pidfd";
-                } else if legacy_identity::confirm(&pinned, &f)? {
+                } else if legacy_identity::confirm(&pinned, &initial_facts)? {
                     let _ = legacy_identity::signal(&pinned, Escalation::Kill);
                     if legacy_identity::wait_exit(&pinned, Duration::from_secs(2))? {
                         exited = true;
@@ -325,11 +342,9 @@ pub async fn stop(
             }
         }
 
-
         #[cfg(windows)]
         {
-            let f = legacy_identity::facts(&pinned)?;
-            if legacy_identity::confirm(&pinned, &f)? {
+            if legacy_identity::confirm(&pinned, &initial_facts)? {
                 let _ = legacy_identity::signal(&pinned, Escalation::Kill);
                 if legacy_identity::wait_exit(&pinned, Duration::from_secs(2))? {
                     exited = true;

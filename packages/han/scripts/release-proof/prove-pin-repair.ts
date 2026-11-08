@@ -256,14 +256,77 @@ try {
     }
   );
 
-  // Stale lock was renamed aside during takeover
+  // Assert stale lock was taken over
+  if (existsSync(staleLockPath)) {
+    const lockContent = JSON.parse(readFileSync(staleLockPath, 'utf8'));
+    if (lockContent.pid === 999999) {
+      throw new Error('P4 FAIL: stale lock with PID 999999 was not taken over');
+    }
+  }
   console.log('P4 PASS');
 } finally {
   try {
     rmSync(testRootP4, { recursive: true, force: true });
-  } catch {
-    // ignore
+  } catch {}
+}
+
+// P3: Corrupt download records hash-mismatch and throttles subsequent attempts
+console.log('--> Checking P3: Hash mismatch recording and throttle...');
+const testRootP3 = mkdtempSync(join(tmpdir(), 'han-p3-'));
+try {
+  const dataDir = join(testRootP3, '.han');
+  const repairDir = join(dataDir, 'repair');
+  mkdirSync(repairDir, { recursive: true, mode: 0o700 });
+  const statePath = join(repairDir, 'repair-state.json');
+
+  // Seed state as hash-mismatch attempted just now
+  writeFileSync(
+    statePath,
+    JSON.stringify({
+      version: pinData.version,
+      status: 'hash-mismatch',
+      lastAttemptMs: Date.now() - 5000,
+    })
+  );
+
+  const binDir = join(testRootP3, '.local', 'bin');
+  mkdirSync(binDir, { recursive: true });
+  const testHan = join(binDir, `han${binSuffix}`);
+  copyFileSync(hanBin, testHan);
+  chmodSync(testHan, 0o755);
+
+  // Run start: should throttle because lastAttemptMs < 6 hours
+  Bun.spawnSync(
+    [testHan, 'coordinator', 'start', '--foreground', '--port', '41975'],
+    {
+      env: {
+        ...process.env,
+        HOME: testRootP3,
+        USERPROFILE: testRootP3,
+        HAN_DATA_DIR: dataDir,
+        HAN_RELEASE_DOWNLOAD_BASE: 'http://127.0.0.1:41999/releases/download',
+      },
+      stdout: 'pipe',
+      stderr: 'pipe',
+    }
+  );
+
+  // State remains throttled and no coordinator was installed
+  const installedCoord = join(binDir, `han-coordinator${binSuffix}`);
+  if (existsSync(installedCoord)) {
+    throw new Error('P3 FAIL: coordinator was downloaded despite throttle');
   }
+  const stateAfter = JSON.parse(readFileSync(statePath, 'utf8'));
+  if (stateAfter.status !== 'hash-mismatch') {
+    throw new Error(
+      `P3 FAIL: expected hash-mismatch status, got ${stateAfter.status}`
+    );
+  }
+  console.log('P3 PASS');
+} finally {
+  try {
+    rmSync(testRootP3, { recursive: true, force: true });
+  } catch {}
 }
 
 console.log('PROOF PASS: prove-pin-repair');
