@@ -6,6 +6,8 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { setupLegacyFixture } from './legacy-fixture.ts';
 
 console.log('==> Running prove-legacy-upgrade (V1-V4, H1)...');

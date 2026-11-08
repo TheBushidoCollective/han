@@ -56,7 +56,9 @@ jobs:
 
       - name: Install protoc (macOS)
         if: runner.os == 'macOS'
-        run: brew install protobuf
+        uses: taiki-e/install-action@v2
+        with:
+          tool: protoc
 
       - name: Install protoc (Windows)
         if: runner.os == 'Windows'
@@ -81,6 +83,7 @@ jobs:
           echo "HAN_INSTALLED_BIN=${{ github.workspace }}/bin/han${suffix}" >> $GITHUB_ENV
 
       - name: Run legacy_identity unit tests
+        working-directory: packages/han-rs
         run: cargo test --locked -p han-coordinator --test legacy_identity
 
       - name: Run legacy upgrade proof
