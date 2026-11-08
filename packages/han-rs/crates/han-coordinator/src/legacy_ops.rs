@@ -12,7 +12,7 @@ use std::time::Duration;
 use tonic::transport::Channel;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LegacyIdentity {
     pub pid: u32,
