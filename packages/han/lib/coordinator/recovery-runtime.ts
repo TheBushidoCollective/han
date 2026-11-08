@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { findCoordinatorBinary } from './binary.ts';
 import {
+  CoordinatorBinaryMissingError,
   CoordinatorSecurityError,
   type LocalCoordinatorDescriptor,
   type SupervisorBinding,
@@ -168,7 +169,7 @@ function request(
 ): unknown {
   const binary = findCoordinatorBinary();
   if (!binary)
-    throw new CoordinatorSecurityError('Local runtime helper unavailable');
+    throw new CoordinatorBinaryMissingError('Local runtime helper unavailable');
   const input = JSON.stringify({ version: 1, dataDir, op, ...args });
   if (Buffer.byteLength(input) > MAX_MESSAGE)
     throw new CoordinatorSecurityError('Local runtime request exceeds limit');

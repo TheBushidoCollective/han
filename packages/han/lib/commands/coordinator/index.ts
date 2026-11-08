@@ -30,6 +30,7 @@ import {
   installLaunchd,
   uninstallLaunchd,
 } from './launchd/install.ts';
+import { registerCoordinatorPinCommand } from './pin.ts';
 import { getCoordinatorPort } from './types.ts';
 
 /**
@@ -42,6 +43,8 @@ export function registerCoordinatorCommands(program: Command): void {
   const coordinator = program
     .command('coordinator')
     .description('Manage the coordinator daemon');
+  // coordinator pin
+  registerCoordinatorPinCommand(coordinator);
 
   // coordinator start
   coordinator

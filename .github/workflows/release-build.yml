@@ -148,7 +148,7 @@ jobs:
           cd packages/han
           bun install --frozen-lockfile
           mkdir -p dist/binaries
-          bun scripts/build-bundle.js ${{ matrix.bun_target }} --release --coordinator "dist/binaries/${{ matrix.coordinator_binary }}" --dashboard "../browse-client/out"
+          bun scripts/build-bundle.js ${{ matrix.bun_target }} --release --coordinator "dist/binaries/${{ matrix.coordinator_binary }}" --dashboard "../browse-client/out" --version "${{ inputs.version }}"
           echo "Built binary:"
           ls -la dist/binaries/
 

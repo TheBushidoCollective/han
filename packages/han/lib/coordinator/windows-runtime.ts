@@ -6,7 +6,10 @@ import {
   validateCoordinatorDescriptor,
   validSupervisorBinding,
 } from './connection.ts';
-import { CoordinatorSecurityError } from './errors.ts';
+import {
+  CoordinatorBinaryMissingError,
+  CoordinatorSecurityError,
+} from './errors.ts';
 import { findCoordinatorBinary, spawnSync } from './windows-helper.ts';
 
 export {
@@ -138,9 +141,11 @@ function fail(
   category: Category,
   extra: Record<string, string | number | null> = {}
 ): never {
-  throw new CoordinatorSecurityError(
-    `Windows local-runtime helper failed HAN_WINDOWS_RUNTIME_DIAGNOSTIC=${JSON.stringify({ operation, category, ...extra })}`
-  );
+  const msg = `Windows local-runtime helper failed HAN_WINDOWS_RUNTIME_DIAGNOSTIC=${JSON.stringify({ operation, category, ...extra })}`;
+  if (category === 'binary_missing') {
+    throw new CoordinatorBinaryMissingError(msg);
+  }
+  throw new CoordinatorSecurityError(msg);
 }
 
 /** One bounded request on inherited pipes. Never expose arbitrary native output. */

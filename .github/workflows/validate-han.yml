@@ -269,17 +269,7 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Generate CLI build metadata
         working-directory: packages/han
-        run: |
-          cat > lib/build-info.generated.ts << 'EOF'
-          export const HAN_VERSION = "0.0.0-ci";
-          export const COORDINATOR_SHA256: string | null = null;
-          export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
-          export const version = "0.0.0-ci";
-          export const gitCommit = "ci";
-          export const buildDate = new Date().toISOString();
-          export const platform = "linux";
-          export const arch = "x64";
-          EOF
+        run: ../../.github/scripts/write-build-info-stub.sh lib/build-info.generated.ts "0.0.0-ci" "dev" "null"
       - name: Compare identical gateway fixture
         working-directory: packages/han
         env:
@@ -350,17 +340,7 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Generate CLI build metadata
         working-directory: packages/han
-        run: |
-          cat > lib/build-info.generated.ts << 'EOF'
-          export const HAN_VERSION = "0.0.0-ci";
-          export const COORDINATOR_SHA256: string | null = null;
-          export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
-          export const version = "0.0.0-ci";
-          export const gitCommit = "ci";
-          export const buildDate = new Date().toISOString();
-          export const platform = "linux";
-          export const arch = "x64";
-          EOF
+        run: ../../.github/scripts/write-build-info-stub.sh lib/build-info.generated.ts "0.0.0-ci" "dev" "null"
       - name: Prove transport classification
         working-directory: packages/han
         run: bun run scripts/prove-transport-classification.ts
@@ -404,17 +384,7 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Generate CLI build metadata
         working-directory: packages/han
-        run: |
-          cat > lib/build-info.generated.ts << 'EOF'
-          export const HAN_VERSION = "0.0.0-ci";
-          export const COORDINATOR_SHA256: string | null = null;
-          export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
-          export const version = "0.0.0-ci";
-          export const gitCommit = "ci";
-          export const buildDate = new Date().toISOString();
-          export const platform = "linux";
-          export const arch = "x64";
-          EOF
+        run: ../../.github/scripts/write-build-info-stub.sh lib/build-info.generated.ts "0.0.0-ci" "dev" "null"
       - name: Prove transport classification rejects mutation
         working-directory: packages/han
         run: bun run scripts/prove-transport-classification-mutations.ts "${{ matrix.mutation }}"
@@ -490,17 +460,7 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Generate CLI build metadata
         working-directory: packages/han
-        run: |
-          cat > lib/build-info.generated.ts << 'EOF'
-          export const HAN_VERSION = "0.0.0-ci";
-          export const COORDINATOR_SHA256: string | null = null;
-          export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
-          export const version = "0.0.0-ci";
-          export const gitCommit = "ci";
-          export const buildDate = new Date().toISOString();
-          export const platform = "linux";
-          export const arch = "x64";
-          EOF
+        run: ../../.github/scripts/write-build-info-stub.sh lib/build-info.generated.ts "0.0.0-ci" "dev" "null"
       - name: Install browse dependencies
         working-directory: packages/browse-client
         run: bun install --frozen-lockfile
@@ -559,17 +519,7 @@ jobs:
       - name: Generate build-info stub
         working-directory: ./packages/han
         run: |
-          cat > lib/build-info.generated.ts << 'EOF'
-          // Auto-generated stub for CI
-          export const HAN_VERSION = "0.0.0-ci";
-          export const COORDINATOR_SHA256: string | null = null;
-          export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
-          export const version = "0.0.0-ci";
-          export const gitCommit = "ci";
-          export const buildDate = new Date().toISOString();
-          export const platform = "linux";
-          export const arch = "x64";
-          EOF
+          ../../.github/scripts/write-build-info-stub.sh lib/build-info.generated.ts "0.0.0-ci" "dev" "null"
           cat > lib/commands/browse/embedded-dashboard.generated.ts << 'EOF'
           export const EMBEDDED_DASHBOARD_ASSETS: Record<string, string> = {};
           EOF
