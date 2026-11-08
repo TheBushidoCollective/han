@@ -354,7 +354,22 @@ pub async fn stop(
     if pid_path.is_file() && !pid_path.is_symlink() && !takeover_path.exists() && !descriptor_path.exists() {
         if let Ok(content) = fs::read_to_string(&pid_path) {
             if let Ok(stored_pid) = content.trim().parse::<u32>() {
-                if stored_pid == expected_identity.pid {
+                let should_rename = if stored_pid == expected_identity.pid {
+                    true
+                } else if legacy_identity::pin(stored_pid).is_err() {
+                    true
+                } else if let Ok(pinned_sup) = legacy_identity::pin(stored_pid) {
+                    if let Ok(facts) = legacy_identity::facts(&pinned_sup) {
+                        let exe_name = facts.exe.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+                        exe_name == "han" || exe_name == "han.exe" || exe_name == "bun" || exe_name == "node"
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                };
+
+                if should_rename {
                     let legacy_uuid = Uuid::new_v4();
                     let new_name = format!("coordinator.pid.legacy.{legacy_uuid}");
                     let target_path = data_path.join(&new_name);
