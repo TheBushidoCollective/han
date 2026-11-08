@@ -730,16 +730,19 @@ fn dispatch(r: Request) -> io::Result<Value> {
     let count = fields.iter().filter(|&&v| v).count();
     match r.op.as_str() {
         "legacy.inspect" => {
-            let _guard = RecordGuard::open(&r.data_dir)?;
+            let dir = directory(&r.data_dir, false)?;
+            let _guard = RecordGuard::open(&dir)?;
             return crate::legacy_ops::inspect(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?);
         }
         "legacy.stop" => {
-            let _guard = RecordGuard::open(&r.data_dir)?;
+            let dir = directory(&r.data_dir, false)?;
+            let _guard = RecordGuard::open(&dir)?;
             let Some(AnyIdentity::Legacy(id)) = &r.identity else { return Err(invalid()); };
             return run_async(crate::legacy_ops::stop(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?, id.clone(), r.escalate.unwrap_or(true)));
         }
         "legacy.retire" => {
-            let _guard = RecordGuard::open(&r.data_dir)?;
+            let dir = directory(&r.data_dir, false)?;
+            let _guard = RecordGuard::open(&dir)?;
             return crate::legacy_ops::retire(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?);
         }
         _ => {}

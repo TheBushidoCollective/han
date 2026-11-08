@@ -150,8 +150,10 @@ export async function setupLegacyFixture(
   const env: Record<string, string> = {
     ...(process.env as Record<string, string>),
     HOME: homeDir,
-    USERPROFILE: homeDir,
   };
+  if (process.platform !== 'win32') {
+    env.USERPROFILE = homeDir;
+  }
   delete env.HAN_DATA_DIR;
   delete env.CLAUDE_CONFIG_DIR;
 

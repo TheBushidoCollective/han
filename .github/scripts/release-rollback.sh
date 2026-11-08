@@ -48,7 +48,7 @@ PACKAGES=(
   "@thebushidocollective/han-linux-arm64"
   "@thebushidocollective/han-darwin-x64"
   "@thebushidocollective/han-darwin-arm64"
-  "@thebushidocollective/han-windows-x64"
+  "@thebushidocollective/han-win32-x64"
 )
 
 for pkg in "${PACKAGES[@]}"; do

@@ -23,10 +23,18 @@ pub struct LegacyIdentity {
 }
 
 fn home_dir() -> Option<PathBuf> {
-    std::env::var_os("HOME")
-        .or_else(|| std::env::var_os("USERPROFILE"))
-        .map(PathBuf::from)
-        .or_else(dirs::home_dir)
+    #[cfg(windows)]
+    {
+        std::env::var_os("USERPROFILE")
+            .map(PathBuf::from)
+            .or_else(dirs::home_dir)
+    }
+    #[cfg(not(windows))]
+    {
+        std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .or_else(dirs::home_dir)
+    }
 }
 
 pub fn inspect(data_dir: &str, port: u16) -> io::Result<Value> {

@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { createServer, type ServerResponse } from 'node:http';
-import { basename, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 
 // Parse arguments
 let assetDir = '';
@@ -138,8 +138,8 @@ const server = createServer((req, res: ServerResponse) => {
   if (downloadMatch) {
     const reqTag = downloadMatch[1];
     const fileName = downloadMatch[2];
-    const expectedTag = `v${version.replace(/^v/, '')}`;
-    if (reqTag !== expectedTag && reqTag !== version) {
+    const expectedTag = `v${tag.replace(/^v/, '')}`;
+    if (reqTag !== expectedTag && reqTag !== tag) {
       res
         .writeHead(404)
         .end(
