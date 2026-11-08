@@ -663,3 +663,56 @@ jobs:
     uses: ./.github/workflows/release-proofs.yml
     with:
       version: han-pr.${{ github.run_number }}
+
+  legacy-containment:
+    name: Legacy Containment Proof
+    needs: pr-release-build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: han-linux-x64
+            binary_name: han-linux-x64
+            coordinator_binary: han-coordinator-linux-x64
+          - os: macos-latest
+            artifact: han-darwin-arm64
+            binary_name: han-darwin-arm64
+            coordinator_binary: han-coordinator-darwin-arm64
+          - os: windows-latest
+            artifact: han-windows-x64
+            binary_name: han-windows-x64.exe
+            coordinator_binary: han-coordinator-windows-x64.exe
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: artifacts/
+
+      - name: Setup test binaries
+        shell: bash
+        run: |
+          mkdir -p bin
+          suffix=""
+          if [[ "${{ matrix.os }}" == *windows* ]]; then suffix=".exe"; fi
+          cp "artifacts/${{ matrix.binary_name }}" "bin/han${suffix}"
+          cp "artifacts/${{ matrix.coordinator_binary }}" "bin/han-coordinator${suffix}"
+          cp "artifacts/${{ matrix.coordinator_binary }}" "bin/${{ matrix.coordinator_binary }}" 2>/dev/null || true
+          chmod +x bin/* 2>/dev/null || true
+          echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
+          echo "HAN_INSTALLED_BIN=${{ github.workspace }}/bin/han${suffix}" >> $GITHUB_ENV
+
+      - name: Prove Legacy Containment
+        shell: bash
+        run: bun packages/han/scripts/release-proof/prove-legacy-containment.ts
