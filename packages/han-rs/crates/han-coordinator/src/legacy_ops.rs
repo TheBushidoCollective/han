@@ -311,7 +311,10 @@ pub async fn stop(
                                     let _ = fs::rename(&pid_path, target_path);
 
                                     let _ = legacy_identity::signal(&pinned_sup, Escalation::Term);
-                                    let _ = legacy_identity::wait_exit(&pinned_sup, Duration::from_secs(5));
+                                    if !legacy_identity::wait_exit(&pinned_sup, Duration::from_millis(500)).unwrap_or(false) {
+                                        let _ = legacy_identity::signal(&pinned_sup, Escalation::Kill);
+                                        let _ = legacy_identity::wait_exit(&pinned_sup, Duration::from_secs(2));
+                                    }
                                 }
                             }
                         }
