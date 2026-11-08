@@ -55,12 +55,18 @@ struct Request {
     origin: Option<String>,
     token: Option<String>,
     name: Option<String>,
-    identity: Option<WireFileIdentity>,
+    identity: Option<AnyIdentity>,
     process: Option<ProcessIdentity>,
     snapshot: Option<RecoverySnapshot>,
     port: Option<u16>,
-    legacy_identity: Option<crate::legacy_ops::LegacyIdentity>,
     escalate: Option<bool>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+enum AnyIdentity {
+    Wire(WireFileIdentity),
+    Legacy(crate::legacy_ops::LegacyIdentity),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -711,7 +717,10 @@ fn dispatch(r: Request) -> io::Result<Value> {
     let count = fields.iter().filter(|&&v| v).count();
     match r.op.as_str() {
         "legacy.inspect" => return crate::legacy_ops::inspect(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?),
-        "legacy.stop" => return tokio::runtime::Builder::new_current_thread().enable_all().build()?.block_on(crate::legacy_ops::stop(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?, r.legacy_identity.ok_or_else(invalid)?, r.escalate.unwrap_or(true))),
+        "legacy.stop" => {
+            let Some(AnyIdentity::Legacy(id)) = &r.identity else { return Err(invalid()); };
+            return tokio::runtime::Builder::new_current_thread().enable_all().build()?.block_on(crate::legacy_ops::stop(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?, id.clone(), r.escalate.unwrap_or(true)));
+        }
         "legacy.retire" => return crate::legacy_ops::retire(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?),
         _ => {}
     }
@@ -749,7 +758,10 @@ fn dispatch(r: Request) -> io::Result<Value> {
         "intent.remove" if count == 3 && r.binding.is_some() && r.child_pid.is_some() && r.descriptor.is_some() =>
             remove_intent(&r.data_dir, r.binding.as_ref().unwrap(), r.child_pid.unwrap(), r.descriptor.as_ref().unwrap()),
         "launcher.create" if count == 2 && r.origin.is_some() && r.token.is_some() => launcher(&r.data_dir, r.origin.as_deref().unwrap(), r.token.as_deref().unwrap()),
-        "launcher.remove" if count == 2 && r.name.is_some() && r.identity.is_some() => remove_launcher(&r.data_dir, r.name.as_deref().unwrap(), r.identity.as_ref().unwrap()),
+        "launcher.remove" if count == 2 && r.name.is_some() && r.identity.is_some() => {
+            let Some(AnyIdentity::Wire(id)) = &r.identity else { return Err(invalid()); };
+            remove_launcher(&r.data_dir, r.name.as_deref().unwrap(), id)
+        }
 
         "process.state" if count == 1 && r.process.is_some() => {
             stage("process_state");
@@ -779,7 +791,8 @@ fn run_request() -> io::Result<()> {
         "launcher.remove" => &["name", "identity"],
         "process.state" => &["process"],
         "legacy.inspect" | "legacy.retire" => &["port"],
-        "legacy.stop" => &["port", "legacyIdentity", "escalate"],
+        "legacy.stop" => &["port", "identity", "escalate"],
+        _ => return Err(invalid()),
     };
     if object.len() != extras.len() + 3 || !["version", "dataDir", "op"].iter().chain(extras)
         .all(|key| object.get(*key).is_some_and(|value| !value.is_null())) {
