@@ -81,9 +81,16 @@ export function checkRepairEligibility(): RepairEligibility {
     };
   }
 
+  let realHome: string;
+  try {
+    realHome = realpathSync(home);
+  } catch {
+    realHome = home;
+  }
+
   const allowedBins = [
-    resolve(home, '.local/bin'),
-    resolve(home, '.claude/bin'),
+    resolve(realHome, '.local/bin'),
+    resolve(realHome, '.claude/bin'),
   ];
 
   let targetDir: string | undefined;
@@ -460,7 +467,10 @@ export async function repairCoordinator(): Promise<boolean> {
           // ignore
         }
         try {
-          unlinkSync(lockPath);
+          const current = readFileSync(lockPath, 'utf8');
+          if (JSON.parse(current).pid === process.pid) {
+            unlinkSync(lockPath);
+          }
         } catch {
           // ignore
         }

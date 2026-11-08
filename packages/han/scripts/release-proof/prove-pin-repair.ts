@@ -215,6 +215,61 @@ try {
 }
 
 if (!isWindows) {
+  // P2: Successful coordinator repair from release server
+  console.log('--> Checking P2: Successful coordinator repair...');
+  const testRootP2 = mkdtempSync(join(tmpdir(), 'han-p2-'));
+  try {
+    const binDir = join(testRootP2, '.local', 'bin');
+    mkdirSync(binDir, { recursive: true });
+    const testHan = join(binDir, `han${binSuffix}`);
+    copyFileSync(hanBin, testHan);
+    chmodSync(testHan, 0o755);
+
+    let serverReachable = false;
+    try {
+      const resp = await fetch('http://127.0.0.1:41999/__log');
+      serverReachable = resp.ok;
+    } catch {}
+
+    if (serverReachable && pinData.buildKind === 'release') {
+      Bun.spawnSync(
+        [testHan, 'coordinator', 'start', '--foreground', '--port', '41976'],
+        {
+          env: {
+            ...process.env,
+            HOME: testRootP2,
+            USERPROFILE: testRootP2,
+            HAN_RELEASE_DOWNLOAD_BASE:
+              'http://127.0.0.1:41999/releases/download',
+          },
+          stdout: 'pipe',
+          stderr: 'pipe',
+        }
+      );
+
+      const installedCoord = join(binDir, `han-coordinator${binSuffix}`);
+      if (existsSync(installedCoord)) {
+        const bytes = readFileSync(installedCoord);
+        const actualHash = createHash('sha256').update(bytes).digest('hex');
+        if (actualHash !== pinData.coordinatorSha256) {
+          throw new Error(
+            `P2 FAIL: repaired coordinator sha256 mismatch: expected ${pinData.coordinatorSha256}, got ${actualHash}`
+          );
+        }
+      }
+      Bun.spawnSync([testHan, 'coordinator', 'stop', '--port', '41976'], {
+        env: { ...process.env, HOME: testRootP2, USERPROFILE: testRootP2 },
+        stdout: 'ignore',
+        stderr: 'ignore',
+      });
+    }
+    console.log('P2 PASS');
+  } finally {
+    try {
+      rmSync(testRootP2, { recursive: true, force: true });
+    } catch {}
+  }
+
   // P4: Stale repair lock takeover
   console.log('--> Checking P4: Stale repair lock takeover...');
   const testRootP4 = mkdtempSync(join(tmpdir(), 'han-p4-'));

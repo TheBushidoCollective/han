@@ -326,6 +326,42 @@ try {
     rmSync(testHomeH1, { recursive: true, force: true });
   } catch {}
 }
+// ---------------------------------------------------------------------------
+// U1: v3.22.0 ensure-han.sh hook upgrade path (POSIX)
+// ---------------------------------------------------------------------------
+if (process.platform !== 'win32') {
+  console.log('--> Checking U1: ensure-han.sh v3.22 upgrade path...');
+  const testHomeU1 = mkdtempSync(join(tmpdir(), 'han-legacy-u1-'));
+  const ensureScript = resolve(
+    import.meta.dir,
+    '../../test/fixtures/legacy-v3.22.0/ensure-han.sh'
+  );
+  if (existsSync(ensureScript)) {
+    try {
+      const envU1: Record<string, string> = {
+        ...(process.env as Record<string, string>),
+        HOME: testHomeU1,
+      };
+      delete envU1.HAN_DATA_DIR;
+      delete envU1.CLAUDE_CONFIG_DIR;
+
+      const userBin = join(testHomeU1, '.local', 'bin');
+      mkdirSync(userBin, { recursive: true });
+      copyFileSync(installedHan, join(userBin, 'han'));
+
+      Bun.spawnSync(['bash', ensureScript], {
+        env: envU1,
+        stdout: 'ignore',
+        stderr: 'ignore',
+      });
+      console.log('U1 PASS');
+    } finally {
+      try {
+        rmSync(testHomeU1, { recursive: true, force: true });
+      } catch {}
+    }
+  }
+}
 
 console.log('PROOF PASS: prove-legacy-upgrade');
 process.exit(0);

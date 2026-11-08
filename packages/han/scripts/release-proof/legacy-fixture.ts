@@ -122,7 +122,7 @@ export async function setupLegacyFixture(
   mkdirSync(certsDir, { recursive: true });
   const keyPath = join(certsDir, 'coordinator.key');
   const crtPath = join(certsDir, 'coordinator.crt');
-  Bun.spawnSync(
+  const opensslProc = Bun.spawnSync(
     [
       'openssl',
       'req',
@@ -139,8 +139,11 @@ export async function setupLegacyFixture(
       '-subj',
       '/CN=127.0.0.1',
     ],
-    { stdout: 'ignore', stderr: 'ignore' }
+    { stdout: 'pipe', stderr: 'pipe' }
   );
+  if (opensslProc.exitCode !== 0) {
+    throw new Error(`openssl failed: ${opensslProc.stderr.toString()}`);
+  }
   writeFileSync(
     join(certsDir, 'metadata.json'),
     JSON.stringify({ expires: Date.now() + 365 * 24 * 3600 * 1000 })

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::fs;
 use std::io;
+use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tonic::transport::Channel;
@@ -39,7 +40,18 @@ fn home_dir() -> Option<PathBuf> {
 
 pub fn inspect(data_dir: &str, port: u16) -> io::Result<Value> {
     // 1. Check listeners on port
-    let discovered = legacy_identity::listeners(port)?;
+    let discovered = match legacy_identity::listeners(port) {
+        Ok(d) => d,
+        Err(e) if e.kind() == io::ErrorKind::Unsupported => {
+            return Ok(json!({
+                "status": "foreign",
+                "reason": "unsupported",
+                "pid": null,
+                "exe": null
+            }));
+        }
+        Err(e) => return Err(e),
+    };
     if discovered.is_empty() {
         return Ok(json!({ "status": "absent" }));
     }
@@ -55,6 +67,21 @@ pub fn inspect(data_dir: &str, port: u16) -> io::Result<Value> {
                         return Ok(json!({ "status": "modern", "pid": dpid_u32 }));
                     }
                 }
+            }
+        }
+    }
+    // Check if socket belongs to another user via socket_uid
+    #[cfg(unix)]
+    {
+        let current_uid = unsafe { libc::geteuid() };
+        if let Some(s_uid) = discovered.iter().find_map(|l| l.socket_uid) {
+            if s_uid != current_uid {
+                return Ok(json!({
+                    "status": "foreign",
+                    "reason": "other-user",
+                    "pid": null,
+                    "exe": null
+                }));
             }
         }
     }
@@ -83,13 +110,21 @@ pub fn inspect(data_dir: &str, port: u16) -> io::Result<Value> {
     // 4. Pin process and gather facts
     let pinned = match legacy_identity::pin(owner_pid) {
         Ok(p) => p,
+        Err(e) if e.kind() == io::ErrorKind::PermissionDenied => {
+            return Ok(json!({
+                "status": "foreign",
+                "reason": "other-user",
+                "pid": owner_pid,
+                "exe": null
+            }));
+        }
         Err(_) => {
             return Ok(json!({
                 "status": "foreign",
                 "reason": "unattributable",
                 "pid": owner_pid,
                 "exe": null
-            }))
+            }));
         }
     };
 

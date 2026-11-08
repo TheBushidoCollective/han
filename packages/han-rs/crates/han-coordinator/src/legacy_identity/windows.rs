@@ -328,6 +328,9 @@ pub fn listeners(port: u16) -> io::Result<Vec<Listener>> {
                 0,
             )
         };
+        if ret != 0 {
+            return Err(io::Error::from_raw_os_error(ret as i32));
+        }
         if ret == 0 {
             let table = unsafe { &*(buf.as_ptr() as *const MibTcpTableOwnerPid) };
             let entries = table.dw_num_entries as usize;
@@ -372,6 +375,9 @@ pub fn listeners(port: u16) -> io::Result<Vec<Listener>> {
                 0,
             )
         };
+        if ret != 0 {
+            return Err(io::Error::from_raw_os_error(ret as i32));
+        }
         if ret == 0 {
             let table6 = unsafe { &*(buf6.as_ptr() as *const MibTcp6TableOwnerPid) };
             let entries = table6.dw_num_entries as usize;

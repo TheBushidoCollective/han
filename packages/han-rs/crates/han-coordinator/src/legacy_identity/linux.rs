@@ -175,7 +175,7 @@ pub fn listeners(port: u16) -> io::Result<Vec<Listener>> {
         std::collections::HashMap::new();
 
     // 1. Read /proc/net/tcp
-    if let Ok(content) = fs::read_to_string("/proc/net/tcp") {
+    let content = fs::read_to_string("/proc/net/tcp")?;
         for line in content.lines().skip(1) {
             let fields: Vec<&str> = line.split_whitespace().collect();
             if fields.len() < 10 {
@@ -200,30 +200,33 @@ pub fn listeners(port: u16) -> io::Result<Vec<Listener>> {
     }
 
     // 2. Read /proc/net/tcp6
-    if let Ok(content) = fs::read_to_string("/proc/net/tcp6") {
-        for line in content.lines().skip(1) {
-            let fields: Vec<&str> = line.split_whitespace().collect();
-            if fields.len() < 10 {
-                continue;
-            }
-            if fields[3] != "0A" {
-                continue;
-            }
-            let mut addr_parts = fields[1].split(':');
-            let addr_hex = addr_parts.next().unwrap_or("");
-            let port_hex = addr_parts.next().unwrap_or("");
-            if let (Some(laddr), Some(lport)) = (parse_ipv6_addr(addr_hex), parse_hex_port(port_hex)) {
-                if lport == port {
-                    let uid = fields[7].parse::<u32>().ok();
-                    let inode = fields[9].parse::<u64>().unwrap_or(0);
-                    if inode > 0 {
-                        socket_map.insert(inode, (IpAddr::V6(laddr), lport, uid));
+    match fs::read_to_string("/proc/net/tcp6") {
+        Ok(content) => {
+            for line in content.lines().skip(1) {
+                let fields: Vec<&str> = line.split_whitespace().collect();
+                if fields.len() < 10 {
+                    continue;
+                }
+                if fields[3] != "0A" {
+                    continue;
+                }
+                let mut addr_parts = fields[1].split(':');
+                let addr_hex = addr_parts.next().unwrap_or("");
+                let port_hex = addr_parts.next().unwrap_or("");
+                if let (Some(laddr), Some(lport)) = (parse_ipv6_addr(addr_hex), parse_hex_port(port_hex)) {
+                    if lport == port {
+                        let uid = fields[7].parse::<u32>().ok();
+                        let inode = fields[9].parse::<u64>().unwrap_or(0);
+                        if inode > 0 {
+                            socket_map.insert(inode, (IpAddr::V6(laddr), lport, uid));
+                        }
                     }
                 }
             }
         }
+        Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+        Err(e) => return Err(e),
     }
-
     if socket_map.is_empty() {
         return Ok(Vec::new());
     }

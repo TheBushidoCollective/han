@@ -31,7 +31,11 @@ function verifyCandidate(filePath: string): boolean {
         return false;
       }
 
-      const dirPath = dirname(filePath);
+      let realFile = filePath;
+      try {
+        realFile = realpathSync(filePath);
+      } catch {}
+      const dirPath = dirname(realFile);
       const dirSt = statSync(dirPath, { bigint: true });
       if (!dirSt.isDirectory()) return false;
       if (currentUid !== null && dirSt.uid !== currentUid && dirSt.uid !== 0n) {

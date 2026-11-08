@@ -214,6 +214,50 @@ try {
     rmSync(testHomeN5, { recursive: true, force: true });
   } catch {}
 }
+// ---------------------------------------------------------------------------
+// N2: Fake coordinator variants (127.0.0.1 loopback bind)
+// ---------------------------------------------------------------------------
+console.log('--> Checking N2: Fake coordinator variants...');
+const testHomeN2 = mkdtempSync(join(tmpdir(), 'han-neg-n2-'));
+let listenerN2: ReturnType<typeof Bun.listen> | null = null;
+try {
+  listenerN2 = Bun.listen({
+    hostname: '127.0.0.1',
+    port: 41957,
+    socket: { data() {}, open() {}, close() {}, error() {} },
+  });
+
+  const envN2 = {
+    ...process.env,
+    HOME: testHomeN2,
+    USERPROFILE: testHomeN2,
+  };
+  delete envN2.HAN_DATA_DIR;
+  delete envN2.CLAUDE_CONFIG_DIR;
+
+  const startProc = Bun.spawnSync(
+    [installedHan, 'coordinator', 'start', '--port', '41957'],
+    { env: envN2, stdout: 'pipe', stderr: 'pipe' }
+  );
+
+  if (startProc.exitCode === 0) {
+    throw new Error('N2 FAIL: start succeeded on loopback-bound foreign port');
+  }
+  const out = `${startProc.stdout.toString()}\n${startProc.stderr.toString()}`;
+  if (!out.includes('UPGRADE_REQUIRED')) {
+    throw new Error(`N2 FAIL: expected UPGRADE_REQUIRED, got:\n${out}`);
+  }
+  console.log('N2 PASS');
+} finally {
+  if (listenerN2) {
+    try {
+      listenerN2.stop(true);
+    } catch {}
+  }
+  try {
+    rmSync(testHomeN2, { recursive: true, force: true });
+  } catch {}
+}
 
 console.log('PROOF PASS: prove-legacy-negative');
 process.exit(0);
