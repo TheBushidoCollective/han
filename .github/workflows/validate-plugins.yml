@@ -62,6 +62,9 @@ jobs:
             exit 1
           fi
 
+      - name: Prove Kanban skill discovery in an isolated consumer
+        run: bun plugins/patterns/kanban/test/consumer.ts
+
       - name: Validate plugins
         run: |
           han_cli="$PWD/packages/han/lib/main.ts"
