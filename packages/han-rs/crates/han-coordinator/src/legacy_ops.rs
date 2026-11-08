@@ -306,6 +306,10 @@ pub async fn stop(
                                 let args_str: Vec<String> = facts.argv.iter().map(|a| a.to_string_lossy().to_string()).collect();
                                 let is_supervisor = is_han && (args_str.windows(2).any(|w| w[0] == "coordinator" && (w[1] == "start" || w[1] == "--foreground")) || args_str.iter().any(|a| a == "--foreground" || a == "coordinator"));
                                 if is_supervisor {
+                                    let legacy_uuid = Uuid::new_v4();
+                                    let target_path = data_path.join(format!("coordinator.pid.legacy.{legacy_uuid}"));
+                                    let _ = fs::rename(&pid_path, target_path);
+
                                     let _ = legacy_identity::signal(&pinned_sup, Escalation::Term);
                                     let _ = legacy_identity::wait_exit(&pinned_sup, Duration::from_secs(5));
                                 }

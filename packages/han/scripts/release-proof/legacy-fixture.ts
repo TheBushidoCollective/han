@@ -162,9 +162,23 @@ export async function setupLegacyFixture(
         const body = (await resp.json()) as {
           status?: string;
           version?: string;
+          pid?: number;
         };
         if (body.status === 'ok' && body.version === '0.1.0') {
-          // Read coordinator.pid from $HOME/.han/coordinator.pid
+          if (typeof body.pid === 'number' && body.pid > 0) {
+            coordinatorPid = body.pid;
+            break;
+          }
+          const lockFile = join(homeDir, '.han', 'coordinator.lock');
+          if (existsSync(lockFile)) {
+            try {
+              const parsed = JSON.parse(readFileSync(lockFile, 'utf8'));
+              if (typeof parsed.pid === 'number' && parsed.pid > 0) {
+                coordinatorPid = parsed.pid;
+                break;
+              }
+            } catch {}
+          }
           const pidFile = join(homeDir, '.han', 'coordinator.pid');
           if (existsSync(pidFile)) {
             const raw = readFileSync(pidFile, 'utf8').trim();
