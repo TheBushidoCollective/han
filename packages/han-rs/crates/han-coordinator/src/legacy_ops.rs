@@ -117,24 +117,35 @@ pub fn inspect(data_dir: &str, port: u16) -> io::Result<Value> {
         }));
     }
 
-    // Check starting coordinator
-    let is_localhost = discovered.iter().all(|l| l.addr.is_loopback());
-    let data_dir_arg = format!("--data-dir={data_dir}");
-    let has_data_dir = facts.argv.iter().any(|a| {
-        let s = a.to_string_lossy();
-        s == "--data-dir" || s == data_dir_arg
-    });
-    if is_localhost && has_data_dir {
-        return Ok(json!({ "status": "starting", "pid": owner_pid }));
-    }
-
     // 6. Check executable basename is exactly han-coordinator[.exe]
     let exe_name = facts
         .exe
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default();
-    if exe_name != "han-coordinator" && exe_name != "han-coordinator.exe" {
+    let is_han_coordinator = exe_name == "han-coordinator" || exe_name == "han-coordinator.exe";
+
+    // Check starting coordinator: must be han-coordinator bound to loopback with exact --data-dir
+    let is_localhost = discovered.iter().all(|l| l.addr.is_loopback());
+    let data_dir_arg = format!("--data-dir={data_dir}");
+    let mut matches_data_dir = false;
+    let mut arg_idx = 0;
+    while arg_idx < facts.argv.len() {
+        let s = facts.argv[arg_idx].to_string_lossy();
+        if s == "--data-dir" && arg_idx + 1 < facts.argv.len() {
+            if facts.argv[arg_idx + 1].to_string_lossy() == data_dir {
+                matches_data_dir = true;
+            }
+        } else if s == data_dir_arg {
+            matches_data_dir = true;
+        }
+        arg_idx += 1;
+    }
+    if is_han_coordinator && is_localhost && matches_data_dir {
+        return Ok(json!({ "status": "starting", "pid": owner_pid }));
+    }
+
+    if !is_han_coordinator {
         return Ok(json!({
             "status": "foreign",
             "reason": "not-legacy",
@@ -142,7 +153,6 @@ pub fn inspect(data_dir: &str, port: u16) -> io::Result<Value> {
             "exe": exe_str
         }));
     }
-
     // 7. Check legacy argv shape
     let mut has_foreground = false;
     let mut has_port = false;
@@ -210,9 +220,11 @@ pub fn inspect(data_dir: &str, port: u16) -> io::Result<Value> {
         }));
     }
 
-    // 8. Check 0.0.0.0 listeners for both HTTPS and gRPC
-    let has_unspecified_https = discovered.iter().any(|l| l.addr.is_unspecified());
-    if !has_unspecified_https {
+    // 8. Check exclusive 0.0.0.0 listeners for both HTTPS and gRPC
+    let is_unspecified_https = discovered.len() == 1
+        && discovered[0].addr == IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED)
+        && discovered[0].owners == vec![owner_pid];
+    if !is_unspecified_https {
         return Ok(json!({
             "status": "foreign",
             "reason": "not-legacy",
@@ -222,10 +234,10 @@ pub fn inspect(data_dir: &str, port: u16) -> io::Result<Value> {
     }
 
     let grpc_discovered = legacy_identity::listeners(grpc_port)?;
-    let has_unspecified_grpc = grpc_discovered
-        .iter()
-        .any(|l| l.addr.is_unspecified() && l.owners.contains(&owner_pid));
-    if !has_unspecified_grpc {
+    let is_unspecified_grpc = grpc_discovered.len() == 1
+        && grpc_discovered[0].addr == IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED)
+        && grpc_discovered[0].owners == vec![owner_pid];
+    if !is_unspecified_grpc {
         return Ok(json!({
             "status": "foreign",
             "reason": "not-legacy",
@@ -233,7 +245,6 @@ pub fn inspect(data_dir: &str, port: u16) -> io::Result<Value> {
             "exe": exe_str
         }));
     }
-
     // 9. Confirm pin
     let confirmed = legacy_identity::confirm(&pinned, &facts)?;
     if !confirmed {
@@ -296,13 +307,19 @@ pub async fn stop(
         return Ok(json!({ "status": "changed" }));
     }
 
-    // 4. Verify listener ownership on port and grpcPort through this held handle
+    // 4. Verify exclusive listener ownership on port and grpcPort through this held handle
     let discovered = legacy_identity::listeners(port)?;
-    if !discovered.iter().any(|l| l.addr.is_unspecified() && l.owners.contains(&expected_identity.pid)) {
+    let is_unspecified_https = discovered.len() == 1
+        && discovered[0].addr == IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED)
+        && discovered[0].owners == vec![expected_identity.pid];
+    if !is_unspecified_https {
         return Ok(json!({ "status": "changed" }));
     }
     let grpc_discovered = legacy_identity::listeners(expected_identity.grpc_port)?;
-    if !grpc_discovered.iter().any(|l| l.addr.is_unspecified() && l.owners.contains(&expected_identity.pid)) {
+    let is_unspecified_grpc = grpc_discovered.len() == 1
+        && grpc_discovered[0].addr == IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED)
+        && grpc_discovered[0].owners == vec![expected_identity.pid];
+    if !is_unspecified_grpc {
         return Ok(json!({ "status": "changed" }));
     }
 

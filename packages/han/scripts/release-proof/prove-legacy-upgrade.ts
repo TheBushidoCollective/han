@@ -99,11 +99,69 @@ try {
     }
   }
 
+  Bun.spawnSync([installedHan, 'coordinator', 'stop', '--port', '41957'], {
+    env,
+    stdout: 'ignore',
+    stderr: 'ignore',
+  });
   await fixture.stop();
   console.log('V1 PASS');
 } finally {
   try {
     rmSync(testHomeV1, { recursive: true, force: true });
+  } catch {}
+}
+
+// ---------------------------------------------------------------------------
+// V2: V1 with CLAUDE_CONFIG_DIR set
+// ---------------------------------------------------------------------------
+console.log('--> Checking V2: Upgrade with CLAUDE_CONFIG_DIR set...');
+const testHomeV2 = mkdtempSync(join(tmpdir(), 'han-legacy-v2-'));
+const customClaudeConfig = join(testHomeV2, 'custom-claude');
+try {
+  const dataDirV2 = join(customClaudeConfig, 'han');
+  mkdirSync(dataDirV2, { recursive: true });
+  writeFileSync(join(dataDirV2, 'coordinator.pid'), '999999\n');
+  writeFileSync(
+    join(dataDirV2, 'coordinator.lock'),
+    JSON.stringify({ pid: 999999, port: 41957, version: '0.1.0' })
+  );
+
+  const envV2: Record<string, string> = {
+    ...(process.env as Record<string, string>),
+    HOME: testHomeV2,
+    USERPROFILE: testHomeV2,
+    CLAUDE_CONFIG_DIR: customClaudeConfig,
+  };
+  delete envV2.HAN_DATA_DIR;
+
+  const startProc = Bun.spawnSync(
+    [installedHan, 'coordinator', 'start', '--port', '41957'],
+    { env: envV2, stdout: 'pipe', stderr: 'pipe' }
+  );
+  if (startProc.exitCode !== 0) {
+    throw new Error(
+      `V2 FAIL: start failed with custom CLAUDE_CONFIG_DIR:\n${startProc.stderr.toString()}`
+    );
+  }
+
+  await waitFor(
+    'V2 coordinator.pid to be renamed aside in custom config dir',
+    () =>
+      readdirSync(dataDirV2).some((f) =>
+        f.startsWith('coordinator.pid.legacy.')
+      )
+  );
+
+  Bun.spawnSync([installedHan, 'coordinator', 'stop', '--port', '41957'], {
+    env: envV2,
+    stdout: 'ignore',
+    stderr: 'ignore',
+  });
+  console.log('V2 PASS');
+} finally {
+  try {
+    rmSync(testHomeV2, { recursive: true, force: true });
   } catch {}
 }
 
@@ -146,13 +204,17 @@ try {
   await waitFor('dead coordinator.pid to be renamed aside', () =>
     readdirSync(dataDir).some((f) => f.startsWith('coordinator.pid.legacy.'))
   );
+  Bun.spawnSync([installedHan, 'coordinator', 'stop', '--port', '41957'], {
+    env,
+    stdout: 'ignore',
+    stderr: 'ignore',
+  });
   console.log('V3 PASS');
 } finally {
   try {
     rmSync(testHomeV3, { recursive: true, force: true });
   } catch {}
 }
-
 // ---------------------------------------------------------------------------
 // V4: Leftovers naming a live, unrelated process (e.g. sleep)
 // ---------------------------------------------------------------------------
@@ -195,6 +257,11 @@ try {
   if (!isPidAlive(victimPid)) {
     throw new Error('V4 FAIL: unrelated process was killed');
   }
+  Bun.spawnSync([installedHan, 'coordinator', 'stop', '--port', '41957'], {
+    env,
+    stdout: 'ignore',
+    stderr: 'ignore',
+  });
   console.log('V4 PASS');
 } finally {
   if (victimV4) {
@@ -248,6 +315,11 @@ try {
   if (firstDescBytes.compare(secondDescBytes) !== 0) {
     throw new Error('H1 FAIL: coordinator descriptor changed on second start');
   }
+  Bun.spawnSync([installedHan, 'coordinator', 'stop', '--port', '41957'], {
+    env,
+    stdout: 'ignore',
+    stderr: 'ignore',
+  });
   console.log('H1 PASS');
 } finally {
   try {
