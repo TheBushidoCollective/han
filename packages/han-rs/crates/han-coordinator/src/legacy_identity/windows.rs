@@ -1,11 +1,11 @@
 use super::{Escalation, Facts, Listener};
 use std::ffi::OsString;
 use std::io;
-use std::mem::{size_of, zeroed};
+use std::mem::{self, size_of, zeroed};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::os::windows::ffi::OsStringExt;
 use std::path::PathBuf;
-use std::ptr::{null_mut, null};
+use std::ptr::null_mut;
 use std::time::Duration;
 use windows_sys::Win32::Foundation::{
     CloseHandle, LocalFree, FILETIME, HANDLE, INVALID_HANDLE_VALUE, WAIT_OBJECT_0, WAIT_TIMEOUT,
