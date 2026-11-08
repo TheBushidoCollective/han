@@ -75,11 +75,10 @@ export async function setupLegacyFixture(
   }
 
   // Extract tarball
-  const tgzFileName = `${pkgName}-${LEGACY_VERSION}.tgz`;
   const tarProc = Bun.spawnSync(
     process.platform === 'win32'
-      ? ['tar', '--force-local', '-xzf', tgzFileName]
-      : ['tar', '-xzf', tgzFileName],
+      ? ['tar', '--force-local', '-xzf', tgzFile]
+      : ['tar', '-xzf', tgzFile],
     {
       cwd: tempExtractDir,
       stdout: 'pipe',
