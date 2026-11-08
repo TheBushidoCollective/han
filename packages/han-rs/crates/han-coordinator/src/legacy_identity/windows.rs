@@ -1,4 +1,5 @@
 use super::{Escalation, Facts, Listener};
+use crate::windows_process_identity::{current_identity, identity_for_pid};
 use std::ffi::OsString;
 use std::io;
 use std::mem;
@@ -8,15 +9,14 @@ use std::path::PathBuf;
 use std::ptr;
 use std::time::Duration;
 use windows_sys::Win32::Foundation::{
-    CloseHandle, HANDLE, WAIT_OBJECT_0, WAIT_TIMEOUT,
+    CloseHandle, LocalFree, HANDLE, INVALID_HANDLE_VALUE, WAIT_OBJECT_0, WAIT_TIMEOUT,
 };
 use windows_sys::Win32::NetworkManagement::IpHelper::{
     GetExtendedTcpTable, TCP_TABLE_OWNER_PID_LISTENER,
 };
 use windows_sys::Win32::Networking::WinSock::{AF_INET, AF_INET6};
-use windows_sys::Win32::Security::GetTokenInformation, TokenUser, TOKEN_QUERY, TOKEN_USER;
 use windows_sys::Win32::System::Threading::{
-    GetProcessId, GetProcessTimes, OpenProcess, OpenProcessToken, TerminateProcess,
+    GetProcessId, OpenProcess, QueryFullProcessImageNameW, TerminateProcess,
     WaitForSingleObject, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE,
     PROCESS_TERMINATE,
 };
@@ -24,12 +24,12 @@ use windows_sys::Win32::UI::Shell::CommandLineToArgvW;
 
 pub struct Pinned {
     pub pid: u32,
-    pub handle: HANDLE,
+    pub(crate) handle: HANDLE,
 }
 
 impl Drop for Pinned {
     fn drop(&mut self) {
-        if !self.handle.is_null() {
+        if !self.handle.is_null() && self.handle != INVALID_HANDLE_VALUE {
             unsafe { CloseHandle(self.handle) };
         }
     }
@@ -45,7 +45,7 @@ pub fn pin(pid: u32) -> io::Result<Pinned> {
     let desired_access =
         PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE | PROCESS_TERMINATE;
     let handle = unsafe { OpenProcess(desired_access, 0, pid) };
-    if handle.is_null() {
+    if handle.is_null() || handle == INVALID_HANDLE_VALUE {
         return Err(io::Error::last_os_error());
     }
 
@@ -87,88 +87,12 @@ pub fn wait_exit(p: &Pinned, timeout: Duration) -> io::Result<bool> {
     Ok(res == WAIT_OBJECT_0)
 }
 
-fn get_process_sid(handle: HANDLE) -> io::Result<String> {
-    let mut token: HANDLE = ptr::null_mut();
-    if unsafe { OpenProcessToken(handle, TOKEN_QUERY, &mut token) } == 0 {
-        return Err(io::Error::last_os_error());
-    }
-    let mut len: u32 = 0;
-    unsafe {
-        GetTokenInformation(token, TokenUser, ptr::null_mut(), 0, &mut len);
-    }
-    if len == 0 {
-        unsafe { CloseHandle(token) };
-        return Err(io::Error::last_os_error());
-    }
-    let mut buf = vec![0u8; len as usize];
-    let ok = unsafe {
-        GetTokenInformation(
-            token,
-            TokenUser,
-            buf.as_mut_ptr() as *mut _,
-            len,
-            &mut len,
-        )
-    };
-    unsafe { CloseHandle(token) };
-    if ok == 0 {
-        return Err(io::Error::last_os_error());
-    }
-    let tu = unsafe { &*(buf.as_ptr() as *const TOKEN_USER) };
-    let sid = tu.User.Sid;
-    let mut str_sid: *mut u16 = ptr::null_mut();
-    #[link(name = "advapi32")]
-    extern "system" {
-        fn ConvertSidToStringSidW(sid: *mut libc::c_void, string_sid: *mut *mut u16) -> i32;
-        fn LocalFree(hmem: *mut libc::c_void) -> *mut libc::c_void;
-    }
-    let res = unsafe { ConvertSidToStringSidW(sid as *mut _, &mut str_sid) };
-    if res == 0 || str_sid.is_null() {
-        return Err(io::Error::last_os_error());
-    }
-    let mut slice_len = 0;
-    while unsafe { *str_sid.add(slice_len) } != 0 {
-        slice_len += 1;
-    }
-    let wide = unsafe { std::slice::from_raw_parts(str_sid, slice_len) };
-    let result = String::from_utf16_lossy(wide);
-    unsafe { LocalFree(str_sid as *mut _) };
-    Ok(result)
-}
-
-fn get_creation_time(handle: HANDLE) -> io::Result<String> {
-    let mut creation = unsafe { mem::zeroed() };
-    let mut exit = unsafe { mem::zeroed() };
-    let mut kernel = unsafe { mem::zeroed() };
-    let mut user = unsafe { mem::zeroed() };
-    let ok = unsafe { GetProcessTimes(handle, &mut creation, &mut exit, &mut kernel, &mut user) };
-    if ok == 0 {
-        return Err(io::Error::last_os_error());
-    }
-    let raw = ((creation.dwHighDateTime as u64) << 32) | (creation.dwLowDateTime as u64);
-    Ok(raw.to_string())
-}
-
 pub fn facts(p: &Pinned) -> io::Result<Facts> {
     let pid = p.pid;
-    let start_time = get_creation_time(p.handle)?;
+    let proc_identity = identity_for_pid(pid)?;
+    let my_identity = current_identity()?;
+    let same_user = proc_identity.user_sid == my_identity.user_sid;
 
-    // Check SID vs current user
-    let proc_sid = get_process_sid(p.handle)?;
-    let current_proc = unsafe { windows_sys::Win32::System::Threading::GetCurrentProcess() };
-    let current_sid = get_process_sid(current_proc).unwrap_or_default();
-    let same_user = !proc_sid.is_empty() && proc_sid == current_sid;
-
-    // Executable path via QueryFullProcessImageNameW
-    #[link(name = "kernel32")]
-    extern "system" {
-        fn QueryFullProcessImageNameW(
-            hprocess: HANDLE,
-            dwflags: u32,
-            lpexename: *mut u16,
-            lpsize: *mut u32,
-        ) -> i32;
-    }
     let mut path_buf = vec![0u16; 1024];
     let mut size = path_buf.len() as u32;
     let ok = unsafe { QueryFullProcessImageNameW(p.handle, 0, path_buf.as_mut_ptr(), &mut size) };
@@ -178,7 +102,6 @@ pub fn facts(p: &Pinned) -> io::Result<Facts> {
     path_buf.truncate(size as usize);
     let exe = PathBuf::from(OsString::from_wide(&path_buf));
 
-    // Read argv via NtQueryInformationProcess
     let argv = get_process_cmdline(p.handle).unwrap_or_default();
 
     Ok(Facts {
@@ -186,7 +109,7 @@ pub fn facts(p: &Pinned) -> io::Result<Facts> {
         same_user,
         exe,
         argv,
-        start_time,
+        start_time: proc_identity.creation_time,
     })
 }
 
@@ -262,10 +185,6 @@ fn get_process_cmdline(handle: HANDLE) -> io::Result<Vec<OsString>> {
             result.push(OsString::from_wide(slice));
         }
     }
-    #[link(name = "kernel32")]
-    extern "system" {
-        fn LocalFree(hmem: *mut libc::c_void) -> *mut libc::c_void;
-    }
     unsafe { LocalFree(argv_ptr as *mut _) };
     Ok(result)
 }
@@ -275,11 +194,11 @@ pub fn confirm(p: &Pinned, f: &Facts) -> io::Result<bool> {
     if actual_pid != p.pid {
         return Ok(false);
     }
-    let current_start = match get_creation_time(p.handle) {
-        Ok(s) => s,
+    let proc_identity = match identity_for_pid(p.pid) {
+        Ok(id) => id,
         Err(_) => return Ok(false),
     };
-    Ok(current_start == f.start_time)
+    Ok(proc_identity.creation_time == f.start_time)
 }
 
 #[repr(C)]
