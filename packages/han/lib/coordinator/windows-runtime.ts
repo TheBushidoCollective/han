@@ -102,7 +102,10 @@ type RuntimeOperation =
   | 'intent.remove'
   | 'launcher.create'
   | 'launcher.remove'
-  | 'process.state';
+  | 'process.state'
+  | 'legacy.inspect'
+  | 'legacy.stop'
+  | 'legacy.retire';
 type Category =
   | 'binary_missing'
   | 'request_too_large'

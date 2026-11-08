@@ -31,6 +31,7 @@ export interface CoordinatorStatus {
 export interface CoordinatorOptions {
   port?: number;
   foreground?: boolean; // Run in foreground (don't daemonize)
+  daemon?: boolean; // Force daemon mode
 }
 
 // PID and log files now live in ~/.han/ (see daemon.ts getLogFilePath/getPidFilePath)
