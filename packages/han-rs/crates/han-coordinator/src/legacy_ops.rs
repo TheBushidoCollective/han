@@ -288,44 +288,9 @@ pub async fn stop(
     {
         return Ok(json!({ "status": "changed" }));
     }
-    // 2. Stop legacy supervisor first if present
-    let data_path = Path::new(data_dir);
-    let pid_path = data_path.join("coordinator.pid");
-    let takeover_path = data_path.join("coordinator.pid.takeover");
-    let descriptor_path = data_path.join("runtime").join("coordinator.json");
-
-    if pid_path.is_file() && !pid_path.is_symlink() && !takeover_path.exists() && !descriptor_path.exists() {
-        if let Ok(content) = fs::read_to_string(&pid_path) {
-            if let Ok(sup_pid) = content.trim().parse::<u32>() {
-                if sup_pid != expected_identity.pid && sup_pid > 0 {
-                    if let Ok(pinned_sup) = legacy_identity::pin(sup_pid) {
-                        if let Ok(facts) = legacy_identity::facts(&pinned_sup) {
-                            if facts.same_user {
-                                let exe_name = facts.exe.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
-                                let is_han = exe_name == "han" || exe_name == "han.exe" || exe_name == "bun" || exe_name == "node";
-                                let args_str: Vec<String> = facts.argv.iter().map(|a| a.to_string_lossy().to_string()).collect();
-                                let is_supervisor = is_han && (args_str.windows(2).any(|w| w[0] == "coordinator" && (w[1] == "start" || w[1] == "--foreground")) || args_str.iter().any(|a| a == "--foreground" || a == "coordinator"));
-                                if is_supervisor {
-                                    let legacy_uuid = Uuid::new_v4();
-                                    let target_path = data_path.join(format!("coordinator.pid.legacy.{legacy_uuid}"));
-                                    let _ = fs::rename(&pid_path, target_path);
-
-                                    let _ = legacy_identity::signal(&pinned_sup, Escalation::Term);
-                                    if !legacy_identity::wait_exit(&pinned_sup, Duration::from_millis(500)).unwrap_or(false) {
-                                        let _ = legacy_identity::signal(&pinned_sup, Escalation::Kill);
-                                        let _ = legacy_identity::wait_exit(&pinned_sup, Duration::from_secs(2));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // 3. Pin coordinator process
+    // 2. Pin coordinator process
     let pinned = legacy_identity::pin(expected_identity.pid)?;
+
     // 3. Send unauthenticated gRPC shutdown request
     let _ = send_shutdown_grpc(expected_identity.grpc_port).await;
 
@@ -359,23 +324,7 @@ pub async fn stop(
                 }
             }
         }
-        #[cfg(target_os = "macos")]
-        {
-            let f = legacy_identity::facts(&pinned)?;
-            if legacy_identity::confirm(&pinned, &f)? {
-                let _ = legacy_identity::signal(&pinned, Escalation::Term);
-                if legacy_identity::wait_exit(&pinned, Duration::from_secs(3))? {
-                    exited = true;
-                    escalation_used = "signal";
-                } else if legacy_identity::confirm(&pinned, &f)? {
-                    let _ = legacy_identity::signal(&pinned, Escalation::Kill);
-                    if legacy_identity::wait_exit(&pinned, Duration::from_secs(2))? {
-                        exited = true;
-                        escalation_used = "signal";
-                    }
-                }
-            }
-        }
+
 
         #[cfg(windows)]
         {
