@@ -1,4 +1,4 @@
-use super::{Facts, Listener};
+use super::{Escalation, Facts, Listener};
 use std::ffi::{OsStr, OsString};
 use std::io;
 use std::mem;
@@ -108,6 +108,18 @@ pub fn confirm(p: &Pinned, f: &Facts) -> io::Result<bool> {
     let current_start = format!("{tvsec}.{tvusec}");
     Ok(current_start == f.start_time && uid == p.uid)
 }
+pub fn signal(p: &Pinned, e: Escalation) -> io::Result<()> {
+    let sig = match e {
+        Escalation::Term => libc::SIGTERM,
+        Escalation::Kill => libc::SIGKILL,
+    };
+    let res = unsafe { libc::kill(p.pid as libc::pid_t, sig) };
+    if res != 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(())
+}
+
 
 pub fn wait_exit(p: &Pinned, timeout: Duration) -> io::Result<bool> {
     let start = Instant::now();

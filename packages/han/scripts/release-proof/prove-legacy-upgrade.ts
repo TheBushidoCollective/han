@@ -68,10 +68,8 @@ try {
   // 1. Wait for legacy coordinator to exit
   await waitFor('legacy coordinator to exit', () => !isPidAlive(oldCoordPid));
 
-  // 2. Supervisor still alive
-  if (!isPidAlive(oldSuperPid)) {
-    throw new Error(`V1 FAIL: supervisor (PID ${oldSuperPid}) died`);
-  }
+  // 2. Legacy supervisor exited
+  await waitFor('legacy supervisor to exit', () => !isPidAlive(oldSuperPid));
 
   // 3. New descriptor exists and points to 127.0.0.1
   const descPath = join(testHomeV1, '.han', 'runtime', 'coordinator.json');

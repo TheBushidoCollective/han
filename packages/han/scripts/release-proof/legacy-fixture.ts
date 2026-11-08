@@ -75,11 +75,17 @@ export async function setupLegacyFixture(
   }
 
   // Extract tarball
-  const tarProc = Bun.spawnSync(['tar', '-xzf', tgzPath], {
-    cwd: tempExtractDir,
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
+  const tgzFileName = `${pkgName}-${LEGACY_VERSION}.tgz`;
+  const tarProc = Bun.spawnSync(
+    process.platform === 'win32'
+      ? ['tar', '--force-local', '-xzf', tgzFileName]
+      : ['tar', '-xzf', tgzFileName],
+    {
+      cwd: tempExtractDir,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    }
+  );
   if (tarProc.exitCode !== 0) {
     throw new Error(`tar extract failed: ${tarProc.stderr.toString()}`);
   }

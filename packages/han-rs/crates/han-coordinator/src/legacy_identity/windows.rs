@@ -249,6 +249,10 @@ fn get_process_cmdline(handle: HANDLE) -> io::Result<Vec<OsString>> {
 }
 
 pub fn confirm(p: &Pinned, f: &Facts) -> io::Result<bool> {
+    let wait_res = unsafe { WaitForSingleObject(p.handle, 0) };
+    if wait_res == WAIT_OBJECT_0 {
+        return Ok(false);
+    }
     let actual_pid = unsafe { GetProcessId(p.handle) };
     if actual_pid != p.pid {
         return Ok(false);
