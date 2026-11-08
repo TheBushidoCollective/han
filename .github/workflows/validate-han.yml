@@ -272,6 +272,7 @@ jobs:
         run: |
           cat > lib/build-info.generated.ts << 'EOF'
           export const HAN_VERSION = "0.0.0-ci";
+          export const HAN_BUILD_KIND: 'release' | 'dev' = 'dev';
           export const COORDINATOR_SHA256: string | null = null;
           export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
           export const version = "0.0.0-ci";
@@ -353,6 +354,7 @@ jobs:
         run: |
           cat > lib/build-info.generated.ts << 'EOF'
           export const HAN_VERSION = "0.0.0-ci";
+          export const HAN_BUILD_KIND: 'release' | 'dev' = 'dev';
           export const COORDINATOR_SHA256: string | null = null;
           export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
           export const version = "0.0.0-ci";
@@ -407,6 +409,7 @@ jobs:
         run: |
           cat > lib/build-info.generated.ts << 'EOF'
           export const HAN_VERSION = "0.0.0-ci";
+          export const HAN_BUILD_KIND: 'release' | 'dev' = 'dev';
           export const COORDINATOR_SHA256: string | null = null;
           export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
           export const version = "0.0.0-ci";
@@ -493,6 +496,7 @@ jobs:
         run: |
           cat > lib/build-info.generated.ts << 'EOF'
           export const HAN_VERSION = "0.0.0-ci";
+          export const HAN_BUILD_KIND: 'release' | 'dev' = 'dev';
           export const COORDINATOR_SHA256: string | null = null;
           export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
           export const version = "0.0.0-ci";
@@ -557,6 +561,7 @@ jobs:
           cat > lib/build-info.generated.ts << 'EOF'
           // Auto-generated stub for CI
           export const HAN_VERSION = "0.0.0-ci";
+          export const HAN_BUILD_KIND: 'release' | 'dev' = 'dev';
           export const COORDINATOR_SHA256: string | null = null;
           export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
           export const version = "0.0.0-ci";

@@ -73,6 +73,7 @@ jobs:
           echo "HAN_VERSION=${{ inputs.version }}" >> $GITHUB_ENV
           cat > packages/han/lib/build-info.generated.ts << 'EOF'
           export const HAN_VERSION = "${{ inputs.version }}";
+          export const HAN_BUILD_KIND: 'release' | 'dev' = 'dev';
           export const COORDINATOR_SHA256: string | null = null;
           export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
           EOF

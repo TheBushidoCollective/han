@@ -42,7 +42,7 @@ test.skipIf(process.platform !== 'win32')(
       );
       writeFileSync(
         join(moduleDir, '..', 'build-info.generated.ts'),
-        'export const COORDINATOR_SHA256: string | null = null;\n'
+        "export const HAN_BUILD_KIND = 'dev';\nexport const COORDINATOR_SHA256: string | null = null;\n"
       );
       const jsEntry = join(root, 'entry.js');
       const tsEntry = join(root, 'entry.ts');

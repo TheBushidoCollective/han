@@ -2,23 +2,18 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 
-let COORDINATOR_SHA256: string | null = null;
-try {
-  const buildInfo = await import('../build-info.generated.ts');
-  COORDINATOR_SHA256 =
-    'COORDINATOR_SHA256' in buildInfo
-      ? (buildInfo.COORDINATOR_SHA256 as string | null)
-      : null;
-} catch {}
+import { COORDINATOR_SHA256, HAN_BUILD_KIND } from '../build-info.generated.ts';
 
 const hashCache = new Map<string, string>();
 
 function verifyCandidateHash(filePath: string): boolean {
+  if (HAN_BUILD_KIND === 'dev') return true;
   if (
+    HAN_BUILD_KIND !== 'release' ||
     typeof COORDINATOR_SHA256 !== 'string' ||
-    COORDINATOR_SHA256.length !== 64
+    !/^[a-f0-9]{64}$/.test(COORDINATOR_SHA256)
   ) {
-    return true; // Dev builds behave as today
+    return false;
   }
   try {
     const st = statSync(filePath);
@@ -56,8 +51,7 @@ export function findCoordinatorBinary(): string | null {
     const suffixed = join(siblingDir, suffixedBinary);
     if (existsSync(suffixed) && verifyCandidateHash(suffixed)) return suffixed;
   } catch {}
-  const isRelease =
-    typeof COORDINATOR_SHA256 === 'string' && COORDINATOR_SHA256.length === 64;
+  const isRelease = HAN_BUILD_KIND === 'release';
   // In release builds, Windows stays sibling-only, with the same hash check.
   if (isRelease && process.platform === 'win32') return null;
 
