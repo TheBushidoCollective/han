@@ -1,6 +1,7 @@
 //! POSIX supervisor and recovery transactions, serialized with publication.
 #![cfg(unix)]
 use std::{ffi::{CString, OsStr}, fs, io::{self, Read, Write}, os::{fd::{AsRawFd, FromRawFd}, unix::{ffi::OsStrExt, fs::{MetadataExt, OpenOptionsExt, PermissionsExt}}}, path::{Path, PathBuf}};
+use std::future::Future;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -271,6 +272,18 @@ fn claim_operation(roots: &Roots, claim: &Claim, release: bool) -> io::Result<Va
     if release { remove_claim(roots, &snap.claim)?; Ok(json!({"status":"released"})) }
     else { Ok(json!({"status":"owned"})) }
 }
+fn run_async<F: Future>(f: F) -> F::Output {
+    if let Ok(handle) = tokio::runtime::Handle::try_current() {
+        tokio::task::block_in_place(|| handle.block_on(f))
+    } else {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("Failed to build tokio runtime")
+            .block_on(f)
+    }
+}
+
 fn dispatch(r: Request) -> io::Result<Value> {
     if r.version != 1 || !r.data_dir.is_absolute() { return Err(invalid()); }
     if r.op == "runtime.prepare" || r.op == "supervisor.acquire" {
@@ -282,7 +295,7 @@ fn dispatch(r: Request) -> io::Result<Value> {
     }
     match r.op.as_str() {
         "legacy.inspect" => return crate::legacy_ops::inspect(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?),
-        "legacy.stop" => return tokio::runtime::Builder::new_current_thread().enable_all().build()?.block_on(crate::legacy_ops::stop(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?, r.identity.ok_or_else(invalid)?, r.escalate.unwrap_or(true))),
+        "legacy.stop" => return run_async(crate::legacy_ops::stop(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?, r.identity.ok_or_else(invalid)?, r.escalate.unwrap_or(true))),
         "legacy.retire" => return crate::legacy_ops::retire(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?),
         _ => {}
     }

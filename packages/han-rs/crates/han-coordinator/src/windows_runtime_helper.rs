@@ -3,6 +3,7 @@
 #![cfg(windows)]
 
 use std::{ffi::OsStr, io::{self, Read, Write}, path::{Path, PathBuf}};
+use std::future::Future;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -707,6 +708,18 @@ fn remove_launcher(path: &Path, name: &str, identity: &WireFileIdentity) -> io::
     guard.remove(OsStr::new(name), &record)?;
     Ok(json!({"status":"removed"}))
 }
+fn run_async<F: Future>(f: F) -> F::Output {
+    if let Ok(handle) = tokio::runtime::Handle::try_current() {
+        tokio::task::block_in_place(|| handle.block_on(f))
+    } else {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("Failed to build tokio runtime")
+            .block_on(f)
+    }
+}
+
 
 fn dispatch(r: Request) -> io::Result<Value> {
     if r.version != 1 || !r.data_dir.is_absolute() { return Err(invalid()); }
@@ -719,7 +732,7 @@ fn dispatch(r: Request) -> io::Result<Value> {
         "legacy.inspect" => return crate::legacy_ops::inspect(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?),
         "legacy.stop" => {
             let Some(AnyIdentity::Legacy(id)) = &r.identity else { return Err(invalid()); };
-            return tokio::runtime::Builder::new_current_thread().enable_all().build()?.block_on(crate::legacy_ops::stop(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?, id.clone(), r.escalate.unwrap_or(true)));
+            return run_async(crate::legacy_ops::stop(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?, id.clone(), r.escalate.unwrap_or(true)));
         }
         "legacy.retire" => return crate::legacy_ops::retire(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?),
         _ => {}
