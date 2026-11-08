@@ -16,9 +16,23 @@ function verifyCandidateHash(filePath: string): boolean {
     return false;
   }
   try {
-    const st = statSync(filePath);
+    const realFile = realpathSync(filePath);
+    const st = statSync(realFile, { bigint: true });
     if (!st.isFile()) return false;
-    const cacheKey = `${st.dev}:${st.ino}:${st.size}:${st.mtimeMs}`;
+    if (process.platform !== 'win32') {
+      const uid = process.getuid?.();
+      if (uid === undefined) return false;
+      const dir = statSync(dirname(realFile), { bigint: true });
+      if (
+        !dir.isDirectory() ||
+        (st.uid !== 0n && st.uid !== BigInt(uid)) ||
+        (dir.uid !== 0n && dir.uid !== BigInt(uid)) ||
+        (st.mode & 0o022n) !== 0n ||
+        (dir.mode & 0o022n) !== 0n
+      )
+        return false;
+    }
+    const cacheKey = `${st.dev}:${st.ino}:${st.size}:${st.mtimeNs}:${st.ctimeNs}`;
     let hash = hashCache.get(cacheKey);
     if (!hash) {
       const bytes = readFileSync(filePath);
