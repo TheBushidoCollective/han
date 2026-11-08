@@ -270,6 +270,9 @@ export async function retireLegacy(port: number): Promise<LegacyRetireResult> {
 
 export async function stopLegacyCoordinator(port: number): Promise<boolean> {
   const dataDir = getCoordinatorDataDir();
+  if (port <= 0 || port > 65535) {
+    return false;
+  }
 
   if (process.env.HAN_LEGACY_MIGRATION === 'off') {
     // S0 behavior when migration is off: if port occupied, fail closed
