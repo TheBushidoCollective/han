@@ -13,35 +13,20 @@ pub struct Pinned {
     pub uid: u32,
 }
 
-#[repr(C)]
-struct ProcBsdInfo {
-    pbi_flags: u32,
-    pbi_status: u32,
-    pbi_xstatus: u32,
-    pbi_pid: u32,
-    pbi_ppid: u32,
-    pbi_uid: u32,
-    pbi_gid: u32,
-    pbi_ruid: u32,
-    pbi_rgid: u32,
-    pbi_svuid: u32,
-    pbi_svgid: u32,
-    rfu_1: u32,
-    pbi_comm: [u8; 16],
-    pbi_name: [u8; 32],
-    pbi_nfiles: u32,
-    pbi_pgid: u32,
-    pbi_pjobc: u32,
-    rfu_2: u32,
-    pbi_start_tvsec: u64,
-    pbi_start_tvusec: u64,
-}
-
 const PROC_PIDTBSDINFO: libc::c_int = 3;
+const PROC_PIDTBSDINFO_SIZE: usize = 136;
+
 const PROC_ALL_PIDS: u32 = 1;
 const PROC_PIDLISTFDS: libc::c_int = 1;
 const PROX_FDTYPE_SOCKET: u32 = 2;
+
 const PROC_PIDFDSOCKETINFO: libc::c_int = 3;
+const PROC_PIDFDSOCKETINFO_SIZE: usize = 792;
+
+const SOCKINFO_TCP: i32 = 2;
+const TSI_S_LISTEN: i32 = 1;
+const INI_IPV4: u8 = 0x1;
+const INI_IPV6: u8 = 0x2;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -50,81 +35,13 @@ struct ProcFdInfo {
     proc_fdtype: u32,
 }
 
-#[repr(C)]
-#[derive(Copy, Clone)]
-struct InSockAddr {
-    sin_len: u8,
-    sin_family: u8,
-    sin_port: u16,
-    sin_addr: [u8; 4],
-    sin_zero: [u8; 8],
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-struct In6SockAddr {
-    sin6_len: u8,
-    sin6_family: u8,
-    sin6_port: u16,
-    sin6_flowinfo: u32,
-    sin6_addr: [u8; 16],
-    sin6_scope_id: u32,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-union SockAddrInUnion {
-    ina_46: InSockAddr,
-    ina_6: In6SockAddr,
-}
-
-#[repr(C)]
-struct SocketFdInfo {
-    pfi: [u8; 56], // vinfo_stat
-    psi: SocketInfo,
-}
-
-#[repr(C)]
-struct SocketInfo {
-    soi_stat: [u8; 64],
-    soi_so: u64,
-    soi_pcb: u64,
-    soi_type: i32,
-    soi_family: i32,
-    soi_protocol: i32,
-    soi_options: i16,
-    soi_linger: i16,
-    soi_state: i16,
-    soi_qlen: i16,
-    soi_incqlen: i16,
-    soi_qlimit: i16,
-    soi_timeo: i16,
-    soi_error: u16,
-    soi_oobmark: u32,
-    soi_rcv: [u8; 32],
-    soi_snd: [u8; 32],
-    soi_kind: i32,
-    rfu_1: u32,
-    proto: InSockInfo,
-}
-
-#[repr(C)]
-struct InSockInfo {
-    insi_fport: i32,
-    insi_lport: i32,
-    insi_gencnt: u64,
-    insi_flags: u32,
-    insi_flow: u32,
-    insi_vflag: u8,
-    insi_ip_ttl: u8,
-    rfu_1: u32,
-    insi_faddr: SockAddrInUnion,
-    insi_laddr: SockAddrInUnion,
-    tcp_info: [u8; 256],
-}
-
 extern "C" {
-    fn proc_listpids(type_: u32, typeinfo: u32, buffer: *mut libc::c_void, buffersize: libc::c_int) -> libc::c_int;
+    fn proc_listpids(
+        type_: u32,
+        typeinfo: u32,
+        buffer: *mut libc::c_void,
+        buffersize: libc::c_int,
+    ) -> libc::c_int;
     fn proc_pidinfo(
         pid: libc::c_int,
         flavor: libc::c_int,
@@ -139,25 +56,32 @@ extern "C" {
         buffer: *mut libc::c_void,
         buffersize: libc::c_int,
     ) -> libc::c_int;
-    fn proc_pidpath(pid: libc::c_int, buffer: *mut libc::c_void, buffersize: u32) -> libc::c_int;
+    fn proc_pidpath(
+        pid: libc::c_int,
+        buffer: *mut libc::c_void,
+        buffersize: u32,
+    ) -> libc::c_int;
 }
 
-fn get_bsd_info(pid: u32) -> io::Result<ProcBsdInfo> {
-    let mut info: ProcBsdInfo = unsafe { mem::zeroed() };
-    let size = mem::size_of::<ProcBsdInfo>() as libc::c_int;
+fn get_bsd_info(pid: u32) -> io::Result<(u32, u64, u64)> {
+    let mut buf = [0u8; PROC_PIDTBSDINFO_SIZE];
     let ret = unsafe {
         proc_pidinfo(
             pid as libc::c_int,
             PROC_PIDTBSDINFO,
             0,
-            &mut info as *mut _ as *mut libc::c_void,
-            size,
+            buf.as_mut_ptr() as *mut libc::c_void,
+            PROC_PIDTBSDINFO_SIZE as libc::c_int,
         )
     };
-    if ret < size {
+    if (ret as usize) < PROC_PIDTBSDINFO_SIZE {
         return Err(io::Error::last_os_error());
     }
-    Ok(info)
+    // offsets from Darwin SDK: pbi_uid at 20, pbi_start_tvsec at 120, pbi_start_tvusec at 128
+    let uid = u32::from_ne_bytes(buf[20..24].try_into().unwrap());
+    let tvsec = u64::from_ne_bytes(buf[120..128].try_into().unwrap());
+    let tvusec = u64::from_ne_bytes(buf[128..136].try_into().unwrap());
+    Ok((uid, tvsec, tvusec))
 }
 
 pub fn pin(pid: u32) -> io::Result<Pinned> {
@@ -167,22 +91,22 @@ pub fn pin(pid: u32) -> io::Result<Pinned> {
             "Invalid PID for pin",
         ));
     }
-    let bsd = get_bsd_info(pid)?;
-    let start_time = format!("{}.{}", bsd.pbi_start_tvsec, bsd.pbi_start_tvusec);
+    let (uid, tvsec, tvusec) = get_bsd_info(pid)?;
+    let start_time = format!("{tvsec}.{tvusec}");
     Ok(Pinned {
         pid,
         start_time,
-        uid: bsd.pbi_uid,
+        uid,
     })
 }
 
 pub fn confirm(p: &Pinned, f: &Facts) -> io::Result<bool> {
-    let bsd = match get_bsd_info(p.pid) {
+    let (uid, tvsec, tvusec) = match get_bsd_info(p.pid) {
         Ok(b) => b,
         Err(_) => return Ok(false),
     };
-    let current_start = format!("{}.{}", bsd.pbi_start_tvsec, bsd.pbi_start_tvusec);
-    Ok(current_start == f.start_time && bsd.pbi_uid == p.uid)
+    let current_start = format!("{tvsec}.{tvusec}");
+    Ok(current_start == f.start_time && uid == p.uid)
 }
 
 pub fn wait_exit(p: &Pinned, timeout: Duration) -> io::Result<bool> {
@@ -190,8 +114,8 @@ pub fn wait_exit(p: &Pinned, timeout: Duration) -> io::Result<bool> {
     while start.elapsed() < timeout {
         match get_bsd_info(p.pid) {
             Err(_) => return Ok(true),
-            Ok(bsd) => {
-                let current_start = format!("{}.{}", bsd.pbi_start_tvsec, bsd.pbi_start_tvusec);
+            Ok((_, tvsec, tvusec)) => {
+                let current_start = format!("{tvsec}.{tvusec}");
                 if current_start != p.start_time {
                     return Ok(true);
                 }
@@ -204,14 +128,14 @@ pub fn wait_exit(p: &Pinned, timeout: Duration) -> io::Result<bool> {
 
 pub fn facts(p: &Pinned) -> io::Result<Facts> {
     let pid = p.pid;
-    let bsd_before = get_bsd_info(pid)?;
-    let start_before = format!("{}.{}", bsd_before.pbi_start_tvsec, bsd_before.pbi_start_tvusec);
+    let (uid_before, tvsec_before, tvusec_before) = get_bsd_info(pid)?;
+    let start_before = format!("{tvsec_before}.{tvusec_before}");
     if start_before != p.start_time {
         return Err(io::Error::new(io::ErrorKind::NotFound, "PID reused before facts"));
     }
 
     let current_euid = unsafe { libc::geteuid() };
-    let same_user = bsd_before.pbi_uid == current_euid;
+    let same_user = uid_before == current_euid;
 
     let mut path_buf = vec![0u8; 4096];
     let path_len = unsafe {
@@ -281,9 +205,9 @@ pub fn facts(p: &Pinned) -> io::Result<Facts> {
         }
     }
 
-    let bsd_after = get_bsd_info(pid)?;
-    let start_after = format!("{}.{}", bsd_after.pbi_start_tvsec, bsd_after.pbi_start_tvusec);
-    if start_after != p.start_time || bsd_after.pbi_uid != bsd_before.pbi_uid {
+    let (uid_after, tvsec_after, tvusec_after) = get_bsd_info(pid)?;
+    let start_after = format!("{tvsec_after}.{tvusec_after}");
+    if start_after != p.start_time || uid_after != uid_before {
         return Err(io::Error::new(io::ErrorKind::NotFound, "Process changed during facts"));
     }
 
@@ -323,7 +247,7 @@ pub fn listeners(port: u16) -> io::Result<Vec<Listener>> {
         if pid <= 0 {
             continue;
         }
-        let bsd = match get_bsd_info(pid as u32) {
+        let (uid, _, _) = match get_bsd_info(pid as u32) {
             Ok(b) => b,
             Err(_) => continue,
         };
@@ -357,40 +281,52 @@ pub fn listeners(port: u16) -> io::Result<Vec<Listener>> {
 
         for fd in fds {
             if fd.proc_fdtype == PROX_FDTYPE_SOCKET {
-                let mut sock_info: SocketFdInfo = unsafe { mem::zeroed() };
-                let expected_size = mem::size_of::<SocketFdInfo>() as libc::c_int;
+                let mut buf = [0u8; PROC_PIDFDSOCKETINFO_SIZE];
                 let actual_size = unsafe {
                     proc_pidfdinfo(
                         pid,
                         fd.proc_fd,
                         PROC_PIDFDSOCKETINFO,
-                        &mut sock_info as *mut _ as *mut libc::c_void,
-                        expected_size,
+                        buf.as_mut_ptr() as *mut libc::c_void,
+                        PROC_PIDFDSOCKETINFO_SIZE as libc::c_int,
                     )
                 };
                 if actual_size <= 0 {
                     continue;
                 }
-                if actual_size < expected_size {
+                if (actual_size as usize) < PROC_PIDFDSOCKETINFO_SIZE {
                     return Err(io::Error::new(
                         io::ErrorKind::Unsupported,
                         "kernel returned different socket_fdinfo size than expected",
                     ));
                 }
 
-                let lport = u16::from_be(sock_info.psi.proto.insi_lport as u16);
+                // Check TCP socket
+                let soi_kind = i32::from_ne_bytes(buf[256..260].try_into().unwrap());
+                if soi_kind != SOCKINFO_TCP {
+                    continue;
+                }
+
+                let tcpsi_state = i32::from_ne_bytes(buf[344..348].try_into().unwrap());
+                if tcpsi_state != TSI_S_LISTEN {
+                    continue;
+                }
+
+                let raw_port = i32::from_ne_bytes(buf[268..272].try_into().unwrap());
+                let lport = u16::from_be(raw_port as u16);
                 if lport == port {
-                    let addr = if sock_info.psi.soi_family == libc::AF_INET {
-                        let raw_addr = unsafe { sock_info.psi.proto.insi_laddr.ina_46.sin_addr };
-                        IpAddr::V4(Ipv4Addr::from(raw_addr))
-                    } else if sock_info.psi.soi_family == libc::AF_INET6 {
-                        let raw_addr = unsafe { sock_info.psi.proto.insi_laddr.ina_6.sin6_addr };
-                        IpAddr::V6(Ipv6Addr::from(raw_addr))
+                    let vflag = buf[288];
+                    let addr = if (vflag & INI_IPV4) != 0 {
+                        let ip_bytes: [u8; 4] = buf[324..328].try_into().unwrap();
+                        IpAddr::V4(Ipv4Addr::from(ip_bytes))
+                    } else if (vflag & INI_IPV6) != 0 {
+                        let ip_bytes: [u8; 16] = buf[312..328].try_into().unwrap();
+                        IpAddr::V6(Ipv6Addr::from(ip_bytes))
                     } else {
                         continue;
                     };
 
-                    let entry = result_map.entry((addr, lport)).or_insert_with(|| (Vec::new(), Some(bsd.pbi_uid)));
+                    let entry = result_map.entry((addr, lport)).or_insert_with(|| (Vec::new(), Some(uid)));
                     if !entry.0.contains(&(pid as u32)) {
                         entry.0.push(pid as u32);
                     }
