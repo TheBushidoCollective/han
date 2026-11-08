@@ -125,7 +125,7 @@ fn get_process_cmdline(handle: HANDLE) -> io::Result<Vec<OsString>> {
         fn NtQueryInformationProcess(
             process_handle: HANDLE,
             process_information_class: u32,
-            process_information: *mut libc::c_void,
+            process_information: *mut core::ffi::c_void,
             process_information_length: u32,
             return_length: *mut u32,
         ) -> i32;
