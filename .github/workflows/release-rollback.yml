@@ -33,6 +33,6 @@ jobs:
           echo "Dry run: ${{ inputs.dry_run }}"
 
       - name: Execute rollback
-        if: ${{ inputs.dry_run == false }}
         run: |
-          echo "Executing release rollback to ${{ inputs.target_version }}..."
+          chmod +x ./.github/scripts/release-rollback.sh
+          ./.github/scripts/release-rollback.sh "${{ inputs.target_version }}" "${{ inputs.dry_run }}"
