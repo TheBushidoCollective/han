@@ -45,10 +45,18 @@ try {
     hostname: '0.0.0.0',
     port: 41957,
     socket: {
-      data() {},
-      open() {},
-      close() {},
-      error() {},
+      data() {
+        // no-op
+      },
+      open() {
+        // no-op
+      },
+      close() {
+        // no-op
+      },
+      error() {
+        // no-op
+      },
     },
   });
 
@@ -136,14 +144,20 @@ try {
   if (victim) {
     try {
       victim.kill();
-    } catch {}
+    } catch {
+      // ignore
+    }
   }
   if (server) {
     try {
       server.stop(true);
-    } catch {}
+    } catch {
+      // ignore
+    }
   }
   try {
     rmSync(testHome, { recursive: true, force: true });
-  } catch {}
+  } catch {
+    // ignore
+  }
 }
