@@ -71,7 +71,11 @@ jobs:
           echo "HAN_PROOF_SERVER=http://127.0.0.1:41999" >> $GITHUB_ENV
           echo "HAN_RELEASE_DOWNLOAD_BASE=http://127.0.0.1:41999/TheBushidoCollective/han/releases/download" >> $GITHUB_ENV
           echo "HAN_VERSION=${{ inputs.version }}" >> $GITHUB_ENV
-          ./.github/scripts/write-build-info-stub.sh packages/han/lib/build-info.generated.ts "${{ inputs.version }}" "dev" "null"
+          cat > packages/han/lib/build-info.generated.ts << 'EOF'
+          export const HAN_VERSION = "${{ inputs.version }}";
+          export const COORDINATOR_SHA256: string | null = null;
+          export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
+          EOF
           cat > packages/han/lib/commands/browse/embedded-dashboard.generated.ts << 'EOF'
           export const EMBEDDED_DASHBOARD_ASSETS: Record<string, string> = {};
           EOF
@@ -84,14 +88,6 @@ jobs:
           cd ../browse-client
           bun install --frozen-lockfile
           bunx playwright install --with-deps chromium
-
-      - name: 0. Prove Pin and Repair
-        shell: bash
-        env:
-          HAN_INSTALLED_BIN: ${{ github.workspace }}/artifacts/${{ matrix.binary_name }}
-          HAN_COORDINATOR_BIN: ${{ github.workspace }}/artifacts/${{ matrix.coordinator_binary }}
-        run: |
-          bun packages/han/scripts/release-proof/prove-pin-repair.ts
 
       - name: 1. Prove Installer
         shell: bash

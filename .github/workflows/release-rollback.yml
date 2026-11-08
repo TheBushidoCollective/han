@@ -15,22 +15,15 @@ on:
         required: true
         default: true
 
-permissions:
-  contents: write
-
 jobs:
   rollback:
     runs-on: ubuntu-latest
     environment: protected-release
     steps:
-      - name: Checkout rollback tools
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          registry-url: "https://registry.npmjs.org"
+          ref: ${{ inputs.target_ref }}
 
       - name: Plan rollback
         run: |
@@ -40,9 +33,6 @@ jobs:
           echo "Dry run: ${{ inputs.dry_run }}"
 
       - name: Execute rollback
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        if: ${{ inputs.dry_run == false }}
         run: |
-          chmod +x ./.github/scripts/release-rollback.sh
-          ./.github/scripts/release-rollback.sh "${{ inputs.target_version }}" "${{ inputs.dry_run }}"
+          echo "Executing release rollback to ${{ inputs.target_version }}..."

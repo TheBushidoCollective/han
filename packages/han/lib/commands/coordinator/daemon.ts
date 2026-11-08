@@ -34,7 +34,7 @@ import {
   sameCoordinator,
   sameSupervisor,
 } from '../../coordinator/connection.ts';
-import { stopLegacyCoordinator } from '../../coordinator/legacy.ts';
+import { stopLegacyCoordinator } from '../../coordinator/legacy-stop.ts';
 import { repairCoordinator } from '../../coordinator/pair-repair.ts';
 import {
   assertRecoveryFence,
@@ -256,12 +256,12 @@ export async function getStatus(port?: number): Promise<CoordinatorStatus> {
 export async function startDaemon(
   options: CoordinatorOptions = {}
 ): Promise<CoordinatorStatus> {
-  const isSupervisorChild = process.env.HAN_COORDINATOR_DAEMON === '1';
-
+  if (process.platform === 'win32')
+    windowsPrepareRuntime(getCoordinatorDataDir());
+  else posixPrepare(getCoordinatorDataDir());
   const port = options.port ?? getCoordinatorPort();
   console.log(`[coordinator] Using port: ${port}`);
 
-  // 1. If coordinator is already healthy, return immediately per §3.6
   const selected = readOptionalDescriptor();
   const predecessor = selected && descriptorIsDead(selected) ? selected : null;
   if (!predecessor) {
@@ -272,36 +272,22 @@ export async function startDaemon(
     }
   }
 
-  // 2. Prepare runtime directory
-  if (process.platform === 'win32') {
-    windowsPrepareRuntime(getCoordinatorDataDir());
-  } else {
-    // POSIX launcher: repair if binary is missing before attempting runtime preparation
-    if (!isSupervisorChild) {
-      if (!findCoordinatorBinary()) {
-        try {
-          await repairCoordinator();
-        } catch (e) {
-          console.error('[coordinator] Self-repair failed:', e);
-        }
-      }
-      if (!findCoordinatorBinary()) {
-        throw new CoordinatorBinaryMissingError(
-          'han-coordinator binary not found. Install it or check your release package.'
-        );
-      }
+  // K3: Self-repair if binary is missing
+  if (!findCoordinatorBinary()) {
+    try {
+      await repairCoordinator();
+    } catch (e) {
+      console.error('[coordinator] Self-repair failed:', e);
     }
-    posixPrepare(getCoordinatorDataDir());
   }
 
-  // Launcher: stop legacy coordinator if present on port
-  if (!isSupervisorChild) {
-    try {
-      await stopLegacyCoordinator(port);
-    } catch (e) {
-      if (e instanceof CoordinatorSecurityError) throw e;
-    }
+  // K4: Stop legacy coordinator if present on port
+  try {
+    await stopLegacyCoordinator(port);
+  } catch (e) {
+    if (e instanceof CoordinatorSecurityError) throw e;
   }
+
   // Run in foreground mode
   if (options.foreground) {
     console.log('[coordinator] Starting in foreground mode...');

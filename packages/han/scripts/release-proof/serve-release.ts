@@ -1,14 +1,12 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { createServer, type ServerResponse } from 'node:http';
-import { join, resolve } from 'node:path';
+import { createServer } from 'node:http';
+import { basename, join, resolve } from 'node:path';
 
 // Parse arguments
 let assetDir = '';
 let tag = 'v3.23.0';
 let installerPath = '';
 let port = 0;
-const holdAssets = new Set<string>();
-const corruptAssets = new Set<string>();
 
 for (let i = 2; i < Bun.argv.length; i++) {
   const arg = Bun.argv[i];
@@ -24,14 +22,6 @@ for (let i = 2; i < Bun.argv.length; i++) {
     port = parseInt(Bun.argv[++i], 10);
   } else if (arg.startsWith('--port=')) {
     port = parseInt(arg.slice('--port='.length), 10);
-  } else if (arg === '--hold' && i + 1 < Bun.argv.length) {
-    holdAssets.add(Bun.argv[++i]);
-  } else if (arg.startsWith('--hold=')) {
-    holdAssets.add(arg.slice('--hold='.length));
-  } else if (arg === '--corrupt' && i + 1 < Bun.argv.length) {
-    corruptAssets.add(Bun.argv[++i]);
-  } else if (arg.startsWith('--corrupt=')) {
-    corruptAssets.add(arg.slice('--corrupt='.length));
   } else if (!arg.startsWith('-')) {
     assetDir = arg;
   }
@@ -56,44 +46,9 @@ const assets = files.map((file) => ({
   browser_download_url: `http://127.0.0.1:PORT/TheBushidoCollective/han/releases/download/${tag}/${file}`,
 }));
 
-interface RequestLogEntry {
-  method: string;
-  pathname: string;
-  time: number;
-}
-const requestLog: RequestLogEntry[] = [];
-const heldWaiters = new Map<string, Array<() => void>>();
-
-const server = createServer((req, res: ServerResponse) => {
+const server = createServer((req, res) => {
   const url = new URL(req.url ?? '/', `http://127.0.0.1:${serverPort}`);
   const pathname = url.pathname;
-
-  requestLog.push({
-    method: req.method ?? 'GET',
-    pathname,
-    time: Date.now(),
-  });
-
-  // GET /__log: request log as JSON lines
-  if (req.method === 'GET' && pathname === '/__log') {
-    res.writeHead(200, { 'Content-Type': 'application/x-ndjson' });
-    res.end(requestLog.map((r) => JSON.stringify(r)).join('\n'));
-    return;
-  }
-
-  // POST /__release/<asset>: release held asset
-  if (req.method === 'POST' && pathname.startsWith('/__release/')) {
-    const assetToRelease = pathname.slice('/__release/'.length);
-    const waiters = heldWaiters.get(assetToRelease);
-    if (waiters && waiters.length > 0) {
-      for (const wake of waiters) wake();
-      heldWaiters.delete(assetToRelease);
-    }
-    holdAssets.delete(assetToRelease);
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ released: assetToRelease }));
-    return;
-  }
 
   // 1. GitHub API latest release
   if (
@@ -123,7 +78,7 @@ const server = createServer((req, res: ServerResponse) => {
     const scriptPath =
       process.env.HAN_PROOF_INSTALLER ||
       installerPath ||
-      resolve(import.meta.dir, '../../../../website/public/install.sh');
+      resolve(__dirname, '../../../../website/public/install.sh');
     if (existsSync(scriptPath)) {
       res.writeHead(200, { 'Content-Type': 'text/x-shellscript' });
       res.end(readFileSync(scriptPath));
@@ -132,49 +87,18 @@ const server = createServer((req, res: ServerResponse) => {
   }
 
   // 3. Release download assets
-  const downloadMatch = pathname.match(
-    /\/releases\/download\/([^/]+)\/([^/]+)$/
-  );
-  if (downloadMatch) {
-    const reqTag = downloadMatch[1];
-    const fileName = downloadMatch[2];
-    const expectedTag = `v${tag.replace(/^v/, '')}`;
-    if (reqTag !== expectedTag && reqTag !== tag) {
-      res
-        .writeHead(404)
-        .end(
-          `Not Found (tag mismatch: expected ${expectedTag}, got ${reqTag})`
-        );
-      return;
-    }
+  const downloadPrefix = `/TheBushidoCollective/han/releases/download/${tag}/`;
+  if (
+    pathname.startsWith(downloadPrefix) ||
+    pathname.includes('/releases/download/')
+  ) {
+    const fileName = basename(pathname);
     const filePath = join(resolvedAssetDir, fileName);
-    const respondWithAsset = () => {
-      if (existsSync(filePath)) {
-        let bytes = readFileSync(filePath);
-        if (corruptAssets.has(fileName)) {
-          // Corrupt one byte
-          bytes = Buffer.from(bytes);
-          bytes[0] ^= 0xff;
-        }
-        res.writeHead(200, { 'Content-Type': 'application/octet-stream' });
-        res.end(bytes);
-      } else {
-        res.writeHead(404).end('Not Found');
-      }
-    };
-
-    if (holdAssets.has(fileName)) {
-      let list = heldWaiters.get(fileName);
-      if (!list) {
-        list = [];
-        heldWaiters.set(fileName, list);
-      }
-      list.push(respondWithAsset);
+    if (existsSync(filePath)) {
+      res.writeHead(200, { 'Content-Type': 'application/octet-stream' });
+      res.end(readFileSync(filePath));
       return;
     }
-
-    respondWithAsset();
-    return;
   }
 
   res.writeHead(404).end('Not Found');

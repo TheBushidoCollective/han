@@ -30,7 +30,6 @@ import {
   installLaunchd,
   uninstallLaunchd,
 } from './launchd/install.ts';
-import { registerCoordinatorPinCommand } from './pin.ts';
 import { getCoordinatorPort } from './types.ts';
 
 /**
@@ -43,8 +42,6 @@ export function registerCoordinatorCommands(program: Command): void {
   const coordinator = program
     .command('coordinator')
     .description('Manage the coordinator daemon');
-  // coordinator pin
-  registerCoordinatorPinCommand(coordinator);
 
   // coordinator start
   coordinator
@@ -113,8 +110,7 @@ export function registerCoordinatorCommands(program: Command): void {
     .command('restart')
     .description('Restart the coordinator daemon')
     .option('-p, --port <port>', `Port number (default: ${defaultPort})`)
-    .option('--background', 'Run detached in background')
-    .action(async (options: { port?: string; background?: boolean }) => {
+    .action(async (options: { port?: string }) => {
       try {
         const port = options.port
           ? parseInt(options.port, 10)
@@ -125,7 +121,7 @@ export function registerCoordinatorCommands(program: Command): void {
 
         // Start
         console.log('[coordinator] Starting...');
-        await startDaemon({ port, daemon: options.background });
+        await startDaemon({ port });
       } catch (error: unknown) {
         console.error(
           'Error restarting coordinator:',

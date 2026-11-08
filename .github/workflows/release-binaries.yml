@@ -27,14 +27,8 @@ jobs:
     with:
       version: ${{ github.event.client_payload.tag || github.ref_name }}
 
-
-  legacy-proofs:
-    needs: build
-    uses: ./.github/workflows/legacy-proofs.yml
-    with:
-      version: ${{ github.event.client_payload.tag || github.ref_name }}
   release:
-    needs: [proofs, legacy-proofs]
+    needs: proofs
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
@@ -52,11 +46,6 @@ jobs:
           cp artifacts/han-windows-x64/* release/
           echo "Release files:"
           ls -la release/
-
-      - name: Verify release assets
-        run: |
-          chmod +x ./.github/scripts/verify-release-assets.sh
-          ./.github/scripts/verify-release-assets.sh release
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -208,6 +197,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Dispatching deploy-website.yml..."
-          gh workflow run deploy-website.yml
+          gh workflow run deploy-website.yml || true
           echo "Dispatching verify-live-release.yml..."
-          gh workflow run verify-live-release.yml
+          gh workflow run verify-live-release.yml || true

@@ -100,7 +100,17 @@ jobs:
 
       - name: Generate build-info stub
         working-directory: ./packages/han
-        run: ../../.github/scripts/write-build-info-stub.sh lib/build-info.generated.ts "0.0.0-ci" "dev" "null"
+        run: |
+          cat > lib/build-info.generated.ts << 'EOF'
+          export const HAN_VERSION = "0.0.0-ci";
+          export const COORDINATOR_SHA256: string | null = null;
+          export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
+          export const version = "0.0.0-ci";
+          export const gitCommit = "ci";
+          export const buildDate = new Date().toISOString();
+          export const platform = "linux";
+          export const arch = "x64";
+          EOF
 
       - name: Run han tests with coverage and JUnit output
         working-directory: ./packages/han

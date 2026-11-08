@@ -11,8 +11,6 @@ mod rpc_guard;
 mod server;
 mod tls;
 mod watcher_bridge;
-pub(crate) mod legacy_identity;
-pub(crate) mod legacy_ops;
 #[cfg(unix)]
 mod posix_runtime_helper;
 #[cfg(windows)]

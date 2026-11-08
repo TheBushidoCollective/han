@@ -6,10 +6,7 @@ import {
   validateCoordinatorDescriptor,
   validSupervisorBinding,
 } from './connection.ts';
-import {
-  CoordinatorBinaryMissingError,
-  CoordinatorSecurityError,
-} from './errors.ts';
+import { CoordinatorSecurityError } from './errors.ts';
 import { findCoordinatorBinary, spawnSync } from './windows-helper.ts';
 
 export {
@@ -102,10 +99,7 @@ type RuntimeOperation =
   | 'intent.remove'
   | 'launcher.create'
   | 'launcher.remove'
-  | 'process.state'
-  | 'legacy.inspect'
-  | 'legacy.stop'
-  | 'legacy.retire';
+  | 'process.state';
 type Category =
   | 'binary_missing'
   | 'request_too_large'
@@ -144,11 +138,9 @@ function fail(
   category: Category,
   extra: Record<string, string | number | null> = {}
 ): never {
-  const msg = `Windows local-runtime helper failed HAN_WINDOWS_RUNTIME_DIAGNOSTIC=${JSON.stringify({ operation, category, ...extra })}`;
-  if (category === 'binary_missing') {
-    throw new CoordinatorBinaryMissingError(msg);
-  }
-  throw new CoordinatorSecurityError(msg);
+  throw new CoordinatorSecurityError(
+    `Windows local-runtime helper failed HAN_WINDOWS_RUNTIME_DIAGNOSTIC=${JSON.stringify({ operation, category, ...extra })}`
+  );
 }
 
 /** One bounded request on inherited pipes. Never expose arbitrary native output. */
@@ -172,7 +164,7 @@ function request(
       input,
       encoding: 'utf8',
       maxBuffer: MAX_MESSAGE,
-      timeout: op === 'legacy.stop' ? 20000 : 10000,
+      timeout: 10000,
       windowsHide: true,
     });
   } catch (error) {
@@ -184,7 +176,6 @@ function request(
   }
   return parseWindowsRuntimeResponse(result, op);
 }
-export const requestWindowsRuntime = request;
 
 /** Validate a completed helper invocation without exposing its diagnostics. */
 export function parseWindowsRuntimeResponse(

@@ -3,7 +3,6 @@
 #![cfg(windows)]
 
 use std::{ffi::OsStr, io::{self, Read, Write}, path::{Path, PathBuf}};
-use std::future::Future;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -56,18 +55,9 @@ struct Request {
     origin: Option<String>,
     token: Option<String>,
     name: Option<String>,
-    identity: Option<AnyIdentity>,
+    identity: Option<WireFileIdentity>,
     process: Option<ProcessIdentity>,
     snapshot: Option<RecoverySnapshot>,
-    port: Option<u16>,
-    escalate: Option<bool>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(untagged)]
-enum AnyIdentity {
-    Wire(WireFileIdentity),
-    Legacy(crate::legacy_ops::LegacyIdentity),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -708,18 +698,6 @@ fn remove_launcher(path: &Path, name: &str, identity: &WireFileIdentity) -> io::
     guard.remove(OsStr::new(name), &record)?;
     Ok(json!({"status":"removed"}))
 }
-fn run_async<F: Future>(f: F) -> F::Output {
-    if let Ok(handle) = tokio::runtime::Handle::try_current() {
-        tokio::task::block_in_place(|| handle.block_on(f))
-    } else {
-        tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .expect("Failed to build tokio runtime")
-            .block_on(f)
-    }
-}
-
 
 fn dispatch(r: Request) -> io::Result<Value> {
     if r.version != 1 || !r.data_dir.is_absolute() { return Err(invalid()); }
@@ -728,25 +706,6 @@ fn dispatch(r: Request) -> io::Result<Value> {
     let fields = [r.target.is_some(), r.claim.is_some(), r.binding.is_some(), r.child_pid.is_some(),
         r.descriptor.is_some(), r.origin.is_some(), r.token.is_some(), r.name.is_some(), r.identity.is_some(), r.process.is_some(), r.snapshot.is_some()];
     let count = fields.iter().filter(|&&v| v).count();
-    match r.op.as_str() {
-        "legacy.inspect" => {
-            let dir = directory(&r.data_dir, false)?;
-            let _guard = RecordGuard::open(&dir)?;
-            return crate::legacy_ops::inspect(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?);
-        }
-        "legacy.stop" => {
-            let dir = directory(&r.data_dir, false)?;
-            let _guard = RecordGuard::open(&dir)?;
-            let Some(AnyIdentity::Legacy(id)) = &r.identity else { return Err(invalid()); };
-            return run_async(crate::legacy_ops::stop(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?, id.clone(), r.escalate.unwrap_or(true)));
-        }
-        "legacy.retire" => {
-            let dir = directory(&r.data_dir, false)?;
-            let _guard = RecordGuard::open(&dir)?;
-            return crate::legacy_ops::retire(&r.data_dir.to_string_lossy(), r.port.ok_or_else(invalid)?);
-        }
-        _ => {}
-    }
     match r.op.as_str() {
         "runtime.prepare" if count == 0 => {
             directory(&r.data_dir, true)?;
@@ -781,10 +740,7 @@ fn dispatch(r: Request) -> io::Result<Value> {
         "intent.remove" if count == 3 && r.binding.is_some() && r.child_pid.is_some() && r.descriptor.is_some() =>
             remove_intent(&r.data_dir, r.binding.as_ref().unwrap(), r.child_pid.unwrap(), r.descriptor.as_ref().unwrap()),
         "launcher.create" if count == 2 && r.origin.is_some() && r.token.is_some() => launcher(&r.data_dir, r.origin.as_deref().unwrap(), r.token.as_deref().unwrap()),
-        "launcher.remove" if count == 2 && r.name.is_some() && r.identity.is_some() => {
-            let Some(AnyIdentity::Wire(id)) = &r.identity else { return Err(invalid()); };
-            remove_launcher(&r.data_dir, r.name.as_deref().unwrap(), id)
-        }
+        "launcher.remove" if count == 2 && r.name.is_some() && r.identity.is_some() => remove_launcher(&r.data_dir, r.name.as_deref().unwrap(), r.identity.as_ref().unwrap()),
 
         "process.state" if count == 1 && r.process.is_some() => {
             stage("process_state");
@@ -813,8 +769,7 @@ fn run_request() -> io::Result<()> {
         "launcher.create" => &["origin", "token"],
         "launcher.remove" => &["name", "identity"],
         "process.state" => &["process"],
-        "legacy.inspect" | "legacy.retire" => &["port"],
-        "legacy.stop" => &["port", "identity", "escalate"],
+
         _ => return Err(invalid()),
     };
     if object.len() != extras.len() + 3 || !["version", "dataDir", "op"].iter().chain(extras)

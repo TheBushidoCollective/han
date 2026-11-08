@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { findCoordinatorBinary } from './binary.ts';
 import {
-  CoordinatorBinaryMissingError,
   CoordinatorSecurityError,
   type LocalCoordinatorDescriptor,
   type SupervisorBinding,
@@ -169,7 +168,7 @@ function request(
 ): unknown {
   const binary = findCoordinatorBinary();
   if (!binary)
-    throw new CoordinatorBinaryMissingError('Local runtime helper unavailable');
+    throw new CoordinatorSecurityError('Local runtime helper unavailable');
   const input = JSON.stringify({ version: 1, dataDir, op, ...args });
   if (Buffer.byteLength(input) > MAX_MESSAGE)
     throw new CoordinatorSecurityError('Local runtime request exceeds limit');
@@ -177,7 +176,7 @@ function request(
     input,
     encoding: 'utf8',
     maxBuffer: MAX_MESSAGE,
-    timeout: op === 'legacy.stop' ? 20000 : 10000,
+    timeout: 10000,
     windowsHide: true,
   });
   if (
@@ -202,7 +201,6 @@ function request(
     throw new CoordinatorSecurityError('Invalid local runtime response');
   return response.result;
 }
-export const requestPosixRuntime = request;
 const validPid = (n: unknown): n is number =>
   Number.isSafeInteger(n) && (n as number) > 0 && (n as number) <= 0x7fffffff;
 const validIdentity = (v: unknown): v is PosixFileIdentity =>
