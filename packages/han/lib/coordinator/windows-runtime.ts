@@ -172,7 +172,7 @@ function request(
       input,
       encoding: 'utf8',
       maxBuffer: MAX_MESSAGE,
-      timeout: 10000,
+      timeout: op === 'legacy.stop' ? 20000 : 10000,
       windowsHide: true,
     });
   } catch (error) {
