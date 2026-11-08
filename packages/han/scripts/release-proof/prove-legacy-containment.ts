@@ -1,8 +1,8 @@
-import type { Server, Subprocess } from 'bun';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { connect } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { Server, Subprocess } from 'bun';
 
 console.log('==> Running prove-legacy-containment...');
 
