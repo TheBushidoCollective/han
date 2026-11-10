@@ -69,6 +69,7 @@ async function _getCreateCommands() {
  */
 export function getVersionInfo(): string {
   const lines = [`han ${version}`];
+  lines.push(`  Bun: ${Bun.version} (${Bun.revision})`);
 
   // Show binary location
   const binaryPath = process.argv[1] || 'unknown';
@@ -266,13 +267,15 @@ export function makeProgram(options: MakeProgramOptions = {}): Command {
     .option('-p, --port <port>', 'Port to run the server on', '41956')
     .option(
       '-l, --local',
-      'Run local dev server with HTTP (for offline use; default: open remote dashboard)'
+      'Build and serve dashboard assets from the local checkout'
     )
+    .option('--no-open', 'Do not open the dashboard launcher')
     .action(async (opts) => {
       try {
         await browse({
           port: parseInt(opts.port, 10),
           local: opts.local === true,
+          open: opts.open,
         });
       } catch (error: unknown) {
         const message = `Error starting browse server: ${error instanceof Error ? error.message : error}`;

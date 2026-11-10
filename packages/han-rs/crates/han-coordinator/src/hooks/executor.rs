@@ -49,6 +49,8 @@ pub async fn execute_hook(
     cmd.arg("-c").arg(command);
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
+    #[cfg(windows)]
+    cmd.creation_flags(windows_sys::Win32::System::Threading::CREATE_NO_WINDOW);
 
     if let Some(dir) = cwd {
         cmd.current_dir(dir);
@@ -300,5 +302,200 @@ mod tests {
         }
 
         assert_eq!(stdout_lines, vec!["line1", "line2", "line3"]);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_console_probe_fixture() {
+        if std::env::var_os("HAN_TEST_CONSOLE_PROBE").is_none() {
+            return;
+        }
+        let nonce = std::env::var("HAN_TEST_NONCE").unwrap_or_default();
+        unsafe {
+            let cp = windows_sys::Win32::System::Console::GetConsoleCP();
+            let hwnd = windows_sys::Win32::System::Console::GetConsoleWindow();
+            let mut pids = [0u32; 16];
+            let count = windows_sys::Win32::System::Console::GetConsoleProcessList(
+                pids.as_mut_ptr(),
+                pids.len() as u32,
+            );
+            println!("PROBE:{}:{}:{}:{}", nonce, cp, hwnd as isize, count);
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_hook_spawn_creates_no_window() {
+        use std::process::Command;
+        use std::os::windows::process::CommandExt;
+
+        if std::env::var_os("HAN_TEST_DETACHED_HARNESS").is_some() {
+            // Running inside the detached harness.
+            // Precondition 1: The detached harness must have no console (GetConsoleCP == 0).
+            let harness_cp = unsafe { windows_sys::Win32::System::Console::GetConsoleCP() };
+            assert_eq!(
+                harness_cp, 0,
+                "harness must be detached with no console, got cp {}",
+                harness_cp
+            );
+
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+
+            rt.block_on(async {
+                let exe = std::env::current_exe().unwrap();
+                let exe_str = exe.to_string_lossy().to_string();
+                let git_bash_path = r"C:\Program Files\Git\bin";
+                let path_env = match std::env::var("PATH") {
+                    Ok(p) => format!("{};{}", git_bash_path, p),
+                    Err(_) => git_bash_path.to_string(),
+                };
+
+                let probe_cmd = format!(
+                    "\"{}\" --exact hooks::executor::tests::windows_console_probe_fixture --nocapture",
+                    exe_str.replace('\\', "/")
+                );
+
+                // 1. Positive run: execute_hook uses CREATE_NO_WINDOW
+                let pos_nonce = "pos-nonce-42";
+                let pos_env = vec![
+                    ("HAN_TEST_CONSOLE_PROBE".to_string(), "1".to_string()),
+                    ("HAN_TEST_NONCE".to_string(), pos_nonce.to_string()),
+                    ("PATH".to_string(), path_env.clone()),
+                    ("MSYS2_ARG_CONV_EXCL".to_string(), "*".to_string()),
+                ];
+
+                let (tx, mut rx) = mpsc::channel(100);
+                let pos_res = execute_hook(&probe_cmd, None, &pos_env, Some(10000), tx).await;
+                let mut stdout_lines = Vec::new();
+                let mut stderr_lines = Vec::new();
+                while let Ok(msg) = rx.try_recv() {
+                    match msg {
+                        HookOutputLine::Stdout(l) => stdout_lines.push(l),
+                        HookOutputLine::Stderr(l) => stderr_lines.push(l),
+                        _ => {}
+                    }
+                }
+
+                assert_eq!(
+                    pos_res.as_ref().copied().unwrap_or(-1),
+                    0,
+                    "positive execute_hook failed: res={:?}, stderr={:?}",
+                    pos_res,
+                    stderr_lines
+                );
+
+                let pos_prefix = format!("PROBE:{}:", pos_nonce);
+                let pos_line = stdout_lines
+                    .iter()
+                    .find_map(|l| {
+                        l.find(&pos_prefix)
+                            .map(|idx| &l[idx..])
+                    })
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "missing positive probe line; stdout={:?}, stderr={:?}",
+                            stdout_lines, stderr_lines
+                        )
+                    });
+
+                let pos_parts: Vec<&str> = pos_line.split(':').collect();
+                let pos_cp: u32 = pos_parts[2].parse().unwrap();
+                let pos_hwnd: isize = pos_parts[3].parse().unwrap();
+                let pos_procs: u32 = pos_parts[4].parse().unwrap();
+
+                assert_ne!(pos_cp, 0, "hook must have a console (GetConsoleCP != 0)");
+                assert_eq!(
+                    pos_hwnd, 0,
+                    "hook window must be NULL with CREATE_NO_WINDOW, got {}",
+                    pos_hwnd
+                );
+                assert!(
+                    pos_procs >= 2,
+                    "hook console must have at least 2 processes (bash + probe), got {}",
+                    pos_procs
+                );
+
+                // 2. Negative control: plain tokio Command::new("bash") without CREATE_NO_WINDOW
+                let neg_nonce = "neg-nonce-99";
+                let mut neg_cmd = tokio::process::Command::new("bash");
+                neg_cmd.arg("-c").arg(&probe_cmd);
+                neg_cmd.stdout(std::process::Stdio::piped());
+                neg_cmd.stderr(std::process::Stdio::piped());
+                neg_cmd.env("HAN_TEST_CONSOLE_PROBE", "1");
+                neg_cmd.env("HAN_TEST_NONCE", neg_nonce);
+                neg_cmd.env("PATH", &path_env);
+                neg_cmd.env("MSYS2_ARG_CONV_EXCL", "*");
+
+                let neg_child = neg_cmd.spawn().expect("failed to spawn negative bash control");
+                let neg_output = neg_child
+                    .wait_with_output()
+                    .await
+                    .expect("failed to wait on negative bash control");
+                let neg_stdout = String::from_utf8_lossy(&neg_output.stdout);
+                let neg_stderr = String::from_utf8_lossy(&neg_output.stderr);
+
+                let neg_prefix = format!("PROBE:{}:", neg_nonce);
+                let neg_line = neg_stdout
+                    .lines()
+                    .find_map(|l| {
+                        l.find(&neg_prefix)
+                            .map(|idx| &l[idx..])
+                    })
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "missing negative probe line; stdout={}, stderr={}",
+                            neg_stdout, neg_stderr
+                        )
+                    });
+
+                let neg_parts: Vec<&str> = neg_line.split(':').collect();
+                let neg_hwnd: isize = neg_parts[3].parse().unwrap();
+                assert_ne!(
+                    neg_hwnd, 0,
+                    "negative control without CREATE_NO_WINDOW must have a non-NULL window"
+                );
+            });
+                println!("HARNESS-INNER-OK");
+            return;
+        }
+
+        // Parent harness launcher: spawn self with DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+        let exe = std::env::current_exe().unwrap();
+        let mut harness = Command::new(exe);
+        harness.args([
+            "--exact",
+            "hooks::executor::tests::windows_hook_spawn_creates_no_window",
+            "--nocapture",
+        ]);
+        harness.env("HAN_TEST_DETACHED_HARNESS", "1");
+        harness.stdout(std::process::Stdio::piped());
+        harness.stderr(std::process::Stdio::piped());
+
+        // DETACHED_PROCESS (0x00000008) | CREATE_NEW_PROCESS_GROUP (0x00000200)
+        let detached_flags = 0x0000_0008 | 0x0000_0200;
+        harness.creation_flags(detached_flags);
+
+        let output = harness
+            .output()
+            .expect("failed to execute detached harness");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            output.status.success(),
+            "detached harness failed with status {:?}\nSTDOUT:\n{}\nSTDERR:\n{}",
+            output.status,
+            stdout,
+            stderr
+        );
+        assert!(
+            stdout.contains("HARNESS-INNER-OK"),
+            "detached harness did not execute inner tests\nSTDOUT:\n{}\nSTDERR:\n{}",
+            stdout,
+            stderr
+        );
     }
 }

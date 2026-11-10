@@ -3,7 +3,7 @@
   "name": "han",
   "owner": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "metadata": {
     "description": "Honor in software development. Follow the seven virtues of bushido through disciplined practice, quality craftsmanship, and continuous improvement.",
@@ -237,9 +237,9 @@
       "keywords": ["checkstyle", "linting", "java", "skill"]
     },
     {
-      "name": "claude-agent-sdk",
+      "name": "agent-sdk",
       "description": "Validation and quality enforcement for Claude Agent SDK projects with TypeScript type checking and structure validation.",
-      "source": "./plugins/specialized/claude-agent-sdk",
+      "source": "./plugins/specialized/agent-sdk",
       "category": "Specialized",
       "keywords": [
         "claude",
@@ -757,6 +757,20 @@
       "keywords": ["junit", "testing", "java", "skill"]
     },
     {
+      "name": "kanban",
+      "description": "Kanban task and dependency management for AI coding agents using the YYLO Ledger CLI.",
+      "source": "./plugins/patterns/kanban",
+      "category": "Pattern",
+      "keywords": [
+        "kanban",
+        "task-management",
+        "yylo",
+        "agile",
+        "workflow",
+        "planning"
+      ]
+    },
+    {
       "name": "kotlin",
       "description": "Advanced Kotlin programming skills for coroutines and DSL patterns",
       "source": "./plugins/languages/kotlin",
@@ -1113,9 +1127,9 @@
       "keywords": ["mcp", "playwright", "testing", "automation", "server"]
     },
     {
-      "name": "claude-plugin-development",
+      "name": "plugin-authoring",
       "description": "Specialized agents for developing, testing, and maintaining Claude Code plugins with quality enforcement hooks.",
-      "source": "./plugins/disciplines/claude-plugin-development",
+      "source": "./plugins/disciplines/plugin-authoring",
       "category": "Discipline",
       "keywords": ["plugin", "development", "claude-code", "quality", "agent"]
     },
@@ -1668,9 +1682,9 @@
       "keywords": ["blockchain", "web3", "smart-contracts", "agent"]
     },
     {
-      "name": "do-claude-plugin-development",
+      "name": "do-plugin-authoring",
       "description": "Specialized agents for developing, testing, and maintaining Claude Code plugins with quality enforcement hooks.",
-      "source": "./plugins/disciplines/claude-plugin-development",
+      "source": "./plugins/disciplines/plugin-authoring",
       "category": "Discipline",
       "keywords": ["plugin", "development", "claude-code", "quality", "agent"]
     },
@@ -1894,7 +1908,7 @@
     {
       "name": "do-plugin-development",
       "description": "Specialized agents for developing, testing, and maintaining Claude Code plugins with quality enforcement hooks.",
-      "source": "./plugins/disciplines/claude-plugin-development",
+      "source": "./plugins/disciplines/plugin-authoring",
       "category": "Discipline",
       "keywords": ["plugin", "development", "claude-code", "quality", "agent"]
     },
@@ -2695,9 +2709,9 @@
       "keywords": ["android", "gradle", "kotlin", "java", "build", "validation"]
     },
     {
-      "name": "jutsu-claude-agent-sdk",
+      "name": "jutsu-agent-sdk",
       "description": "Validation and quality enforcement for Claude Agent SDK projects with TypeScript type checking and structure validation.",
-      "source": "./plugins/specialized/claude-agent-sdk",
+      "source": "./plugins/specialized/agent-sdk",
       "category": "Specialized",
       "keywords": [
         "claude",

@@ -19,8 +19,12 @@ RUN test -f schema.graphql || (echo "ERROR: schema.graphql missing" && exit 1)
 ARG GRAPHQL_URL
 ENV GRAPHQL_URL=${GRAPHQL_URL}
 
-# Build the application
-RUN bun run build
+# Build the application: team-app when GRAPHQL_URL is non-empty, otherwise local-dashboard
+RUN if [ -n "$GRAPHQL_URL" ]; then \
+      HAN_BUILD_TARGET=team-app bun run build; \
+    else \
+      HAN_BUILD_TARGET=local-dashboard bun run build; \
+    fi
 
 # Verify build output
 RUN test -f out/index.html || (echo "ERROR: Build failed - no index.html" && exit 1)

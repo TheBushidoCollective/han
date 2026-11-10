@@ -403,6 +403,7 @@ impl CoordinatorLock {
     }
 
     /// Check if a lock is stale (process dead or heartbeat too old).
+    #[cfg(unix)]
     fn is_stale(&self, data: &LockData) -> bool {
         // Check if process still exists
         if !process_exists(data.pid) {
@@ -422,6 +423,13 @@ impl CoordinatorLock {
         }
 
         false
+    }
+
+    // Heartbeat age does not establish that a Windows process has exited.
+    // Access denied and other uncertainty must not authorize a takeover.
+    #[cfg(windows)]
+    fn is_stale(&self, data: &LockData) -> bool {
+        !process_exists(data.pid)
     }
 }
 
@@ -443,18 +451,47 @@ fn process_exists(pid: u32) -> bool {
 
 #[cfg(windows)]
 fn process_exists(pid: u32) -> bool {
-    use std::process::Command;
-    Command::new("tasklist")
-        .args(["/FI", &format!("PID eq {pid}"), "/NH"])
-        .output()
-        .map(|o| String::from_utf8_lossy(&o.stdout).contains(&pid.to_string()))
-        .unwrap_or(false)
+    use windows_sys::Win32::Foundation::{CloseHandle, ERROR_INVALID_PARAMETER, WAIT_OBJECT_0, WAIT_TIMEOUT};
+    use windows_sys::Win32::System::Threading::{
+        OpenProcess, WaitForSingleObject, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE,
+    };
+
+    let handle = unsafe {
+        OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE, 0, pid)
+    };
+    if handle.is_null() {
+        // Only an invalid PID proves absence. In particular, access denied
+        // is unknown and must not permit the existing owner to be reclaimed.
+        return std::io::Error::last_os_error().raw_os_error() != Some(ERROR_INVALID_PARAMETER as i32);
+    }
+    let state = unsafe { WaitForSingleObject(handle, 0) };
+    unsafe { CloseHandle(handle) };
+    match state {
+        WAIT_OBJECT_0 => false,
+        WAIT_TIMEOUT => true,
+        _ => true,
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use tempfile::TempDir;
+
+    #[cfg(windows)]
+    #[test]
+    fn live_process_is_not_stale_when_heartbeat_is_old_or_invalid() {
+        let dir = TempDir::new().unwrap();
+        let lock = test_lock(&dir);
+        let data = LockData {
+            pid: std::process::id(),
+            acquired_at: String::new(),
+            heartbeat_at: String::new(),
+            port: None,
+        };
+        assert!(process_exists(data.pid));
+        assert!(!lock.is_stale(&data));
+    }
 
     fn test_lock(dir: &TempDir) -> CoordinatorLock {
         CoordinatorLock::with_path(dir.path().join("test.lock"))

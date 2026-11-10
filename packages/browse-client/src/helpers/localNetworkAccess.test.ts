@@ -23,10 +23,8 @@ describe("isLoopbackOrigin", () => {
 });
 
 describe("coordinatorIsLoopback", () => {
-	test("counts the coordinator's public DNS name, which resolves to 127.0.0.1", () => {
-		expect(
-			coordinatorIsLoopback("https://coordinator.local.han.guru:41957/graphql"),
-		).toBe(true);
+	test("recognises loopback coordinator endpoints", () => {
+		expect(coordinatorIsLoopback("http://localhost:41957/graphql")).toBe(true);
 		expect(coordinatorIsLoopback("http://127.0.0.1:41957/graphql")).toBe(true);
 	});
 
@@ -43,9 +41,7 @@ describe("coordinatorIsLoopback", () => {
 });
 
 describe("isBlockedByLocalNetworkAccess", () => {
-	const coordinatorEndpoint =
-		"https://coordinator.local.han.guru:41957/graphql";
-
+	const coordinatorEndpoint = "http://127.0.0.1:41957/graphql";
 	test("the hosted dashboard reaching a loopback coordinator is blocked", () => {
 		// This is the case that showed a spinner and coordinator instructions
 		// forever, however healthy the coordinator was.

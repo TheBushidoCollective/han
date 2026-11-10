@@ -73,9 +73,9 @@ describe('deriveSessionIdFromFile', () => {
 
   test('falls back to the stem when the underscore is trailing', () => {
     // Returning "" here would produce a nameless events file.
-    expect(deriveSessionIdFromFile('/tmp/2026-01-01T00-00-00-000Z_.jsonl')).toBe(
-      '2026-01-01T00-00-00-000Z_'
-    );
+    expect(
+      deriveSessionIdFromFile('/tmp/2026-01-01T00-00-00-000Z_.jsonl')
+    ).toBe('2026-01-01T00-00-00-000Z_');
   });
 
   test('returns null when there is no usable name', () => {
@@ -133,9 +133,7 @@ describe('resolveSessionId', () => {
     const path = writeSessionFile('renamed_zzz.jsonl', [
       '{"type":"session","version":3,"id":"019fef6a-0063-7000-8a19-d9914e3949f0","cwd":"/x"}',
     ]);
-    expect(resolveSessionId(path)).toBe(
-      '019fef6a-0063-7000-8a19-d9914e3949f0'
-    );
+    expect(resolveSessionId(path)).toBe('019fef6a-0063-7000-8a19-d9914e3949f0');
   });
 
   test('falls back to the filename before the session exists on disk', () => {
@@ -145,9 +143,7 @@ describe('resolveSessionId', () => {
       workspace,
       '2026-08-11T06-02-09-379Z_019fef6a-0063-7000-8a19-d9914e3949f0.jsonl'
     );
-    expect(resolveSessionId(path)).toBe(
-      '019fef6a-0063-7000-8a19-d9914e3949f0'
-    );
+    expect(resolveSessionId(path)).toBe('019fef6a-0063-7000-8a19-d9914e3949f0');
   });
 
   test('returns null when omp reports no session file at all', () => {

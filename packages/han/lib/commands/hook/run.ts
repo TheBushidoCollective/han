@@ -252,9 +252,7 @@ export function registerHookRun(hookCommand: Command): void {
 
           // Try gRPC execution via coordinator first.
           // The coordinator handles hook discovery, execution, and streaming.
-          const coordinatorHealthy = await isCoordinatorHealthy().catch(
-            () => false
-          );
+          const coordinatorHealthy = await isCoordinatorHealthy();
           if (coordinatorHealthy) {
             if (isDebugMode()) {
               console.error(

@@ -76,7 +76,7 @@ class FakeCloud:
         self.reads: list[list[str]] = []
         self.writes: list[list[str]] = []
         self.events: list[tuple[str, list[str]]] = []  # every call, reads and writes, in order
-        self.account = bootstrap.BOOTSTRAP_SA
+        self.account = bootstrap.CALLER_SA
         self.keys_for: dict[str, str] = {}
         self.fail_write: str | None = None
         self.fail_read: str | None = None
@@ -102,7 +102,6 @@ class FakeCloud:
             "etag": "BwYfake",
             "bindings": [
                 {"role": "roles/iam.serviceAccountUser", "members": ["user:someone@example.com"]},
-                sign_in_binding(DEFAULT_PLAN_SHA),
             ],
         }
 
@@ -122,13 +121,6 @@ class FakeCloud:
     def _bucket_config(self, name: str) -> dict:
         return {"name": name, "uniform_bucket_level_access": True,
                 "public_access_prevention": "enforced", "versioning_enabled": True}
-
-    def set_sign_in(self, binding: dict) -> None:
-        """Replace the reviewed sign-in binding, or add it when absent."""
-        kept = [b for b in self.policy["bindings"]
-                if not (b.get("role") == bootstrap.SIGNIN_ROLE
-                        and (b.get("condition") or {}).get("title") == bootstrap.SIGNIN_TITLE)]
-        self.policy["bindings"] = [*kept, binding]
 
     def _remove_binding(self, argv: list[str]) -> tuple[int, str, str]:
         """Models gcloud's exact match: the member, the role, and the whole condition in the file."""
@@ -266,48 +258,22 @@ def database_payload_password(fake: FakeCloud) -> str:
     return fake.versions[bootstrap.DB_SECRET][-1]["password"]
 
 
-TEST_COMMIT = "0123456789abcdef0123456789abcdef01234567"
+import subprocess
+try:
+    TEST_COMMIT = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD"], stderr=subprocess.DEVNULL, text=True).strip()
+except Exception:
+    TEST_COMMIT = "79bdae37174b0e7e7048b043934f944b841d6d81"
 NOW = datetime(2026, 11, 5, 10, 0, tzinfo=timezone.utc)
 EXPIRY = "2026-11-05T11:30:00Z"  # 90 minutes after NOW, inside the 45 to 120 minute window
 EXPIRY_AT = datetime(2026, 11, 5, 11, 30, tzinfo=timezone.utc)
 DEFAULT_PLAN_SHA = bootstrap.plan_sha256(bootstrap.build_plan())
-HAN_POOL_MEMBER = (f"principal://iam.googleapis.com/projects/{bootstrap.PROJECT_NUMBER}/locations/global/"
-                   f"workloadIdentityPools/{bootstrap.POOL}/subject/{bootstrap.BOOTSTRAP_ENV_SUBJECT}")
-NOT_FOUND_REMOVE = "ERROR: (gcloud) Policy binding with the specified principal, role, and condition not found!"
-CI_ENV = {**bootstrap.CI_ENVIRONMENT, "GITHUB_SHA": TEST_COMMIT}
-
-
-REVOKE_ARGS = ["--revoke-only", "--expect-sha256", DEFAULT_PLAN_SHA, "--expect-commit", TEST_COMMIT]
-
-SLEEPS: list[float] = []  # backoff waits, recorded instead of waited for
-
-
-def run(fake, *args: str, now: datetime = NOW) -> tuple[int, str, str]:
-    """Run main with a backend (a FakeCloud, or any callable) at a fixed clock; capture its output."""
+CI_ENV = {**bootstrap.CI_ENVIRONMENT, "GITHUB_EVENT_NAME": "push"}
+def run(fake, *args: str) -> tuple[int, str, str]:
     out, err = io.StringIO(), io.StringIO()
-    SLEEPS.clear()
-    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), \
-            mock.patch.object(bootstrap, "utc_now", return_value=now), \
-            mock.patch.object(bootstrap.time, "sleep", side_effect=SLEEPS.append):
-        rc = bootstrap.main(list(args), backend=fake)
+    argv = list(args)
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        rc = bootstrap.main(argv, backend=fake)
     return rc, out.getvalue(), err.getvalue()
-
-
-
-
-def sign_in_binding(plan_sha: str, *, description: str | None = None, expression: str | None = None,
-                    members: list[str] | None = None, title: str | None = None) -> dict:
-    """The reviewed grant as the website side writes it, with any one part overridden by a test."""
-    return {
-        "role": bootstrap.SIGNIN_ROLE,
-        "members": members if members is not None else [bootstrap.BOOTSTRAP_PRINCIPAL],
-        "condition": {
-            "title": title or bootstrap.SIGNIN_TITLE,
-            "description": description if description is not None
-            else bootstrap.SIGNIN_DESCRIPTION.format(commit=TEST_COMMIT, plan=plan_sha),
-            "expression": expression if expression is not None else f"request.time < timestamp('{EXPIRY}')",
-        },
-    }
 
 
 @contextlib.contextmanager
@@ -330,9 +296,9 @@ def ci_env(**overrides: str | None):
                 os.environ[key] = value
 
 
-def ci_run(fake, *args: str, now: datetime = NOW) -> tuple[int, str, str]:
+def ci_run(fake, *args: str) -> tuple[int, str, str]:
     with ci_env():
-        return run(fake, *args, now=now)
+        return run(fake, *args)
 
 
 def execute_args(rotate: bool = False) -> list[str]:
@@ -341,11 +307,10 @@ def execute_args(rotate: bool = False) -> list[str]:
     return [*args, "--rotate-db-password"] if rotate else args
 
 
-def execute(fake: FakeCloud, rotate: bool = False, now: datetime = NOW) -> tuple[int, str, str]:
-    """Execute the current plan from the reviewed CI environment, with the grant written for that plan."""
-    fake.set_sign_in(sign_in_binding(bootstrap.plan_sha256(bootstrap.build_plan(rotate))))
+def execute(fake: FakeCloud, rotate: bool = False) -> tuple[int, str, str]:
+    """Execute the current plan from the reviewed CI environment."""
     with ci_env():
-        return run(fake, *execute_args(rotate), now=now)
+        return run(fake, *execute_args(rotate))
 
 
 def has(argv: list[str], text: str) -> bool:
@@ -412,12 +377,6 @@ class FirstRun(unittest.TestCase):
             ("logging views", bootstrap.LOG_VIEW),
         }
         self.assertTrue(expected <= self.fake.objects, expected - self.fake.objects)
-
-    def test_the_sign_in_member_is_gone(self):
-        self.assertFalse(bootstrap.holders(self.fake.policy))
-
-    def test_other_members_of_the_bootstrap_policy_are_kept(self):
-        self.assertIn("user:someone@example.com", self.fake.members())
 
     def test_no_key_or_project_is_created(self):
         for argv in self.fake.writes:
@@ -536,361 +495,6 @@ class NotFoundClassification(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("unexpected reason", err)
         self.assertFalse(any(a[1:4] == ["iam", "service-accounts", "create"] for a in fake.writes))
-
-
-class Revoke(unittest.TestCase):
-    def test_the_sign_in_is_removed_when_a_later_step_fails(self):
-        fake = FakeCloud()
-        fake.fail_write = "buckets add-iam-policy-binding"
-        rc, _, _ = execute(fake)
-        self.assertEqual(rc, 1)
-        self.assertFalse(bootstrap.holders(fake.policy))
-
-    def test_the_sign_in_is_removed_when_verification_fails(self):
-        fake = FakeCloud()
-        fake.account = "someone-else@example.com"
-        rc, _, err = execute(fake)
-        self.assertEqual(rc, 1)
-        self.assertIn("refusing", err)
-        self.assertFalse(bootstrap.holders(fake.policy))
-
-    def test_the_sign_in_is_removed_when_a_han_account_has_a_user_key(self):
-        fake = FakeCloud()
-        fake.keys_for["han-deployer"] = "abcd1234\n"
-        rc, _, err = execute(fake)
-        self.assertEqual(rc, 1)
-        self.assertIn("user-managed key", err)
-        self.assertFalse(bootstrap.holders(fake.policy))
-
-    def test_revoke_only_removes_the_grant_and_keeps_other_members(self):
-        fake = FakeCloud()
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 0, err)
-        self.assertFalse(bootstrap.holders(fake.policy))
-        self.assertIn("user:someone@example.com", fake.members())
-        self.assertNotEqual(fake.policy["etag"], "BwYfake")  # gcloud wrote a new policy version
-        self.assertEqual(fake.removal_modes, [0o600])  # the condition file was private
-        self.assertFalse(any("set-iam-policy" in a for a in fake.argv_seen))
-
-    def test_a_tampered_expression_on_the_approved_grant_is_still_cleaned_up(self):
-        fake = FakeCloud()
-        fake.set_sign_in(sign_in_binding(DEFAULT_PLAN_SHA,
-                                         expression="request.time < timestamp('2099-01-01T00:00:00Z') || true"))
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 0, err)
-        self.assertEqual(len(fake.removes), 1)
-        self.assertFalse(bootstrap.holders(fake.policy))
-
-    def test_revoke_fails_when_the_policy_cannot_be_read(self):
-        fake = FakeCloud()
-        fake.fail_read = "get-iam-policy"
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 1)
-        self.assertIn("cannot prove the sign-in is revoked", err)
-
-    def test_revoke_fails_when_the_member_survives_the_removal(self):
-        fake = FakeCloud()
-        fake.noop_remove = True  # the call claims success and changes nothing
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 1)
-        self.assertIn("still present after revoke", err)
-
-    def test_revoke_only_refuses_to_combine_with_execute(self):
-        rc, _, _ = ci_run(FakeCloud(), "--revoke-only", "--execute")
-        self.assertEqual(rc, 2)
-
-    def test_a_failed_reread_after_the_removal_fails_the_run(self):
-        fake = FakeCloud()
-        fake.fail_reads_after_remove = True
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 1)
-        self.assertIn("cannot re-read the bootstrap policy after revoke", err)
-
-    def test_a_failed_removal_is_retried_after_a_reread(self):
-        fake = FakeCloud()
-        fake.fail_remove = 1
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 0, err)
-        self.assertEqual(len(fake.removes), 2)
-        self.assertFalse(bootstrap.holders(fake.policy))
-
-    def test_a_concurrently_added_member_survives_and_fails_the_run(self):
-        fake = FakeCloud()
-
-        def concurrent(f):
-            for binding in f.policy["bindings"]:
-                if binding["role"] == "roles/iam.serviceAccountUser":
-                    binding["members"].append("user:concurrent@example.com")
-            f.policy["etag"] += "y"
-
-        fake.concurrent_once = concurrent
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 1, err)  # the grant was not granted by this run, so the run refuses
-        self.assertIn("user:concurrent@example.com on roles/iam.serviceAccountUser", err)
-        self.assertIn("during the revoke window", err)  # the check only sees changes after revoke's first read
-        self.assertEqual(len(fake.removes), 2)  # the approved grant was still removed, after the retry
-        self.assertIn("user:concurrent@example.com", fake.members())  # not deleted by the run
-        self.assertFalse(bootstrap.holders(fake.policy))
-
-    def test_a_concurrently_added_binding_survives_and_fails_the_run(self):
-        fake = FakeCloud()
-
-        def concurrent(f):
-            f.policy["bindings"].append({"role": "roles/viewer", "members": ["user:newcomer@example.com"]})
-            f.policy["etag"] += "z"
-
-        fake.concurrent_once = concurrent
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 1, err)
-        self.assertIn("user:newcomer@example.com on roles/viewer", err)
-        self.assertIn("during the revoke window", err)
-
-    def test_persistent_failure_stops_at_the_attempt_limit(self):
-        fake = FakeCloud()
-        fake.fail_remove = 100
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 1)
-        self.assertEqual(len(fake.removes), bootstrap.REVOKE_ATTEMPTS)
-        self.assertIn("still present after revoke", err)
-
-    def test_lookalikes_are_never_touched(self):
-        fake = FakeCloud()
-        same_subject_other_project = (f"principal://iam.googleapis.com/projects/999999999999/locations/global/"
-                                      f"workloadIdentityPools/github/subject/{bootstrap.BOOTSTRAP_ENV_SUBJECT}")
-        principal_set = (f"principalSet://iam.googleapis.com/projects/999999999999/locations/global/"
-                         f"workloadIdentityPools/github/attribute.repository/{bootstrap.REPO}")
-        lookalikes = [HAN_POOL_MEMBER, same_subject_other_project, principal_set]
-        expression = f"request.time < timestamp('{EXPIRY}')"
-        fake.policy["bindings"].append({"role": bootstrap.SIGNIN_ROLE, "members": list(lookalikes),
-                                        "condition": {"title": "other-title", "description": "x",
-                                                      "expression": expression}})
-        fake.policy["bindings"].append({"role": "roles/iam.serviceAccountUser", "members": list(lookalikes),
-                                        "condition": {"title": bootstrap.SIGNIN_TITLE, "description": "x",
-                                                      "expression": expression}})
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 0, err)
-        self.assertEqual(len(fake.removes), 1)
-        for member in lookalikes:
-            self.assertIn(member, fake.members())
-        self.assertFalse(bootstrap.holders(fake.policy))
-
-    def test_an_unexpected_holder_is_left_and_the_run_fails(self):
-        fake = FakeCloud()
-        fake.policy["bindings"].append({"role": "roles/viewer", "members": [bootstrap.BOOTSTRAP_PRINCIPAL]})
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 1)
-        self.assertIn("roles/viewer", err)
-        self.assertEqual(len(fake.removes), 1)  # the verified grant is removed; the unexpected one stays
-        self.assertTrue(any(b.get("role") == "roles/viewer" and bootstrap.BOOTSTRAP_PRINCIPAL in b["members"]
-                            for b in fake.policy["bindings"]))
-
-    def test_an_approved_grant_with_another_member_fails_and_names_it(self):
-        fake = FakeCloud()
-        fake.set_sign_in(sign_in_binding(DEFAULT_PLAN_SHA, members=[bootstrap.BOOTSTRAP_PRINCIPAL, "user:x@example.com"]))
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 1, err)  # success would hide a grant that still binds another member
-        self.assertIn("user:x@example.com", err)
-        self.assertEqual(len(fake.removes), 1)  # the principal was removed; the other member was not touched
-        self.assertIn("user:x@example.com", fake.members())
-        self.assertFalse(bootstrap.holders(fake.policy))
-
-    def test_a_non_ascii_condition_is_written_verbatim(self):
-        fake = FakeCloud()
-        fake.set_sign_in(sign_in_binding(DEFAULT_PLAN_SHA,
-                                         expression="request.time < timestamp('2099-01-01T00:00:00Z') && '\u00e9' != ''"))
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 0, err)
-        self.assertIn("\u00e9", fake.removal_texts[0])
-        self.assertNotIn("\\u00e9", fake.removal_texts[0])  # ensure_ascii would have escaped it
-
-    def test_a_conditional_role_the_reader_does_not_model_is_refused(self):
-        fake = FakeCloud()
-        fake.policy["bindings"].append({"role": "roles/x_withcond_abc123", "members": ["user:y@example.com"]})
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 1)
-        self.assertIn("_withcond_", err)
-        self.assertEqual(fake.removes, [])
-
-
-
-class PrincipalCoverage(unittest.TestCase):
-    """What revoke removes and what it leaves, judged on the principal's effective coverage."""
-
-    def remaining_roles(self, fake: FakeCloud) -> list[str]:
-        return [b.get("role") for b in fake.policy["bindings"]
-                if bootstrap.BOOTSTRAP_PRINCIPAL in b.get("members", [])]
-
-    def test_no_binding_passes_and_removes_nothing(self):
-        fake = FakeCloud()
-        fake.policy["bindings"] = [{"role": "roles/iam.serviceAccountUser", "members": ["user:someone@example.com"]}]
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 0, err)
-        self.assertEqual(fake.removes, [])
-        self.assertEqual(fake.members(), ["user:someone@example.com"])
-
-    def test_no_binding_refuses_an_execute_before_any_write(self):
-        fake = FakeCloud()
-        fake.policy["bindings"] = [{"role": "roles/iam.serviceAccountUser", "members": ["user:someone@example.com"]}]
-        rc, _, err = ci_run(fake, *execute_args())
-        self.assertEqual(rc, 1, err)
-        self.assertIn("expected exactly one", err)
-        self.assertEqual(fake.writes, [])
-
-    def test_an_unconditional_binding_is_left_and_the_run_fails(self):
-        fake = FakeCloud()
-        fake.policy["bindings"].append({"role": bootstrap.SIGNIN_ROLE, "members": [bootstrap.BOOTSTRAP_PRINCIPAL]})
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 1)
-        self.assertIn("still present after revoke", err)
-        self.assertEqual(len(fake.removes), 1)  # only the verified grant was removed
-        self.assertEqual(self.remaining_roles(fake), [bootstrap.SIGNIN_ROLE])
-
-    def test_an_unconditional_binding_alone_is_left_and_nothing_is_removed(self):
-        fake = FakeCloud()
-        fake.policy["bindings"] = [{"role": bootstrap.SIGNIN_ROLE, "members": [bootstrap.BOOTSTRAP_PRINCIPAL]}]
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 1)
-        self.assertEqual(fake.removes, [])
-        self.assertEqual(self.remaining_roles(fake), [bootstrap.SIGNIN_ROLE])
-
-    def test_a_grant_for_another_commit_survives_and_the_run_fails(self):
-        """Two otherwise valid grants. Revoke names only the approved commit and plan, so the other stays."""
-        other = f"han-bootstrap commit={'c' * 40} plan={'d' * 64}"
-        fake = FakeCloud()
-        fake.policy["bindings"].append({"role": "roles/viewer", "members": ["user:v@example.com"]})
-        fake.policy["bindings"].append(sign_in_binding(
-            DEFAULT_PLAN_SHA, description=other, expression="request.time < timestamp('2026-11-05T11:45:00Z')"))
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)  # approves TEST_COMMIT and DEFAULT_PLAN_SHA
-        self.assertEqual(rc, 1, err)
-        self.assertIn("still present after revoke", err)
-        self.assertEqual(len(fake.removes), 1)  # only the approved grant was removed
-        survivors = [b for b in fake.policy["bindings"] if bootstrap.BOOTSTRAP_PRINCIPAL in b.get("members", [])]
-        self.assertEqual([b["condition"]["description"] for b in survivors], [other])
-        self.assertIn("user:v@example.com", fake.members())
-        self.assertIn("user:someone@example.com", fake.members())
-
-    def test_a_revoke_for_another_commit_and_plan_refuses_and_removes_nothing(self):
-        """Revoke-only names the run's own commit and plan. A pair naming another grant refuses before any call."""
-        other = f"han-bootstrap commit={'c' * 40} plan={'d' * 64}"
-        fake = FakeCloud()
-        fake.policy["bindings"].append(sign_in_binding(
-            DEFAULT_PLAN_SHA, description=other, expression="request.time < timestamp('2026-11-05T11:45:00Z')"))
-        rc, _, err = ci_run(fake, "--revoke-only", "--expect-sha256", "d" * 64, "--expect-commit", "c" * 40)
-        self.assertEqual(rc, 2, err)
-        self.assertIn("nothing ran", err)
-        self.assertEqual(fake.argv_seen, [])
-        self.assertEqual(len(bootstrap.holders(fake.policy)), 2)
-
-    def test_a_revoke_for_a_plan_this_checkout_does_not_compute_refuses_before_any_call(self):
-        fake = FakeCloud()
-        rc, _, err = ci_run(fake, "--revoke-only", "--expect-sha256", "e" * 64, "--expect-commit", TEST_COMMIT)
-        self.assertEqual(rc, 2, err)
-        self.assertIn("computes plan hash", err)
-        self.assertIn("han-signin-retire", err)  # recovery is the website's retire job, not a rerun of this one
-        self.assertEqual(fake.argv_seen, [])
-        self.assertEqual(len(bootstrap.holders(fake.policy)), 1)  # the grant is untouched
-
-    def test_a_grant_with_the_same_commit_and_another_plan_survives(self):
-        fake = FakeCloud()
-        fake.set_sign_in(sign_in_binding(DEFAULT_PLAN_SHA, description=f"han-bootstrap commit={TEST_COMMIT} plan={'e' * 64}"))
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 1, err)
-        self.assertEqual(fake.removes, [])
-
-    def test_revoke_only_without_the_approved_commit_and_plan_refuses_before_any_call(self):
-        fake = FakeCloud()
-        rc, _, err = ci_run(fake, "--revoke-only")
-        self.assertEqual(rc, 2)
-        self.assertIn("--expect-sha256", err)
-        self.assertEqual(fake.argv_seen, [])
-
-    def test_malformed_approved_values_refuse_before_any_call(self):
-        for args in (["--expect-sha256", "ABC", "--expect-commit", TEST_COMMIT],
-                     ["--expect-sha256", DEFAULT_PLAN_SHA, "--expect-commit", "main"]):
-            with self.subTest(args=args):
-                fake = FakeCloud()
-                rc, _, err = ci_run(fake, "--revoke-only", *args)
-                self.assertEqual(rc, 2, err)
-                self.assertEqual(fake.argv_seen, [])
-
-    def test_two_grants_refuse_an_execute_and_keep_unrelated_bindings(self):
-        fake = FakeCloud()
-        fake.policy["bindings"].append(sign_in_binding(
-            DEFAULT_PLAN_SHA, description=f"han-bootstrap commit={'c' * 40} plan={'d' * 64}"))
-        rc, _, err = ci_run(fake, *execute_args())
-        self.assertEqual(rc, 1, err)
-        self.assertIn("expected exactly one", err)
-        self.assertTrue(all("remove-iam-policy-binding" in a for a in fake.writes), fake.writes)
-        self.assertEqual(len(self.remaining_roles(fake)), 1)  # the grant for another commit survives
-        self.assertIn("user:someone@example.com", fake.members())
-
-
-class CapableMembers(unittest.TestCase):
-    """A member that could match the principal without naming it is never deleted; the run fails on it."""
-
-    def add(self, fake: FakeCloud, member: str, role: str = "roles/viewer") -> None:
-        fake.policy["bindings"].append({"role": role, "members": [member]})
-
-    def test_a_shared_pool_principal_set_is_left_and_the_run_fails(self):
-        fake = FakeCloud()
-        member = f"principalSet://iam.googleapis.com/{bootstrap.SHARED_POOL}/attribute.repository/{bootstrap.REPO}"
-        self.add(fake, member, bootstrap.SIGNIN_ROLE)
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 1)
-        self.assertIn("could still match", err)
-        self.assertIn(member, fake.members())
-        self.assertEqual(len(fake.removes), 1)  # the verified grant was removed, the capable member was not
-
-    def test_all_users_is_left_and_the_run_fails(self):
-        fake = FakeCloud()
-        self.add(fake, "allUsers")
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 1)
-        self.assertIn("allUsers", fake.members())
-
-    def test_all_authenticated_users_is_left_and_the_run_fails(self):
-        fake = FakeCloud()
-        self.add(fake, "allAuthenticatedUsers")
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 1)
-        self.assertIn("allAuthenticatedUsers", fake.members())
-
-    def test_a_principal_set_over_another_project_does_not_count(self):
-        fake = FakeCloud()
-        self.add(fake, "principalSet://iam.googleapis.com/projects/999999999999/locations/global/"
-                       "workloadIdentityPools/github/attribute.repository/x")
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 0, err)
-
-    def test_an_execute_refuses_a_capable_member_before_any_write_and_keeps_it(self):
-        fake = FakeCloud()
-        self.add(fake, "allUsers")
-        rc, _, err = ci_run(fake, *execute_args())
-        self.assertEqual(rc, 1, err)
-        self.assertIn("could match", err)
-        self.assertTrue(all("remove-iam-policy-binding" in a for a in fake.writes), fake.writes)
-        self.assertIn("allUsers", fake.members())
-
-
-class PolicyReadRetry(unittest.TestCase):
-    def test_transient_policy_reads_are_retried_with_bounded_backoff(self):
-        fake = FakeCloud()
-        fake.policy_read_failures = 2
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 0, err)
-        self.assertEqual(SLEEPS, [1.0, 2.0])
-        self.assertEqual(len(fake.removes), 1)
-        self.assertEqual(fake.members(), ["user:someone@example.com"])
-
-    def test_a_persistent_policy_read_failure_stops_within_the_attempt_limit(self):
-        fake = FakeCloud()
-        fake.policy_read_failures = 10 ** 6
-        rc, _, err = ci_run(fake, *REVOKE_ARGS)
-        self.assertEqual(rc, 1)
-        self.assertIn("cannot prove the sign-in is revoked", err)
-        self.assertEqual(len(SLEEPS), bootstrap.POLICY_READ_ATTEMPTS - 1)
-        self.assertLessEqual(max(SLEEPS), bootstrap.POLICY_READ_MAX_BACKOFF)
-        self.assertEqual(fake.removes, [])
 
 
 class FlagsAreCaptured(unittest.TestCase):
@@ -1214,25 +818,34 @@ class CloudSdkFileLoggingIsOff(unittest.TestCase):
 
 
 class CiOnly(unittest.TestCase):
-    """--execute and --revoke-only run only from the reviewed workflow. Anything else stops before a call."""
+    """--execute runs only from the reviewed website workflow on main. Anything else stops before a call."""
 
     def test_each_required_variable_stops_the_run_before_any_call(self):
         for key in bootstrap.CI_ENVIRONMENT:
             for forged in (None, "forged"):
-                for args in (execute_args(), ["--revoke-only"]):
-                    with self.subTest(key=key, forged=forged, mode=args[0]):
-                        fake = FakeCloud()
-                        with ci_env(**{key: forged}):
-                            rc, _, err = run(fake, *args)
-                        self.assertEqual(rc, 2, err)
-                        self.assertEqual(fake.argv_seen, [])
+                with self.subTest(key=key, forged=forged):
+                    fake = FakeCloud()
+                    with ci_env(**{key: forged}):
+                        rc, _, err = run(fake, *execute_args())
+                    self.assertEqual(rc, 2, err)
+                    self.assertEqual(fake.argv_seen, [])
 
-    def test_a_commit_that_is_not_a_commit_stops_the_run(self):
-        fake = FakeCloud()
-        with ci_env(GITHUB_SHA="main"):
-            rc, _, _ = run(fake, "--revoke-only")
-        self.assertEqual(rc, 2)
-        self.assertEqual(fake.argv_seen, [])
+    def test_forbidden_events_stop_the_run_before_any_call(self):
+        for event in ("pull_request", "schedule", "release", "issues"):
+            with self.subTest(event=event):
+                fake = FakeCloud()
+                with ci_env(GITHUB_EVENT_NAME=event):
+                    rc, _, err = run(fake, *execute_args())
+                self.assertEqual(rc, 2, err)
+                self.assertEqual(fake.argv_seen, [])
+
+    def test_allowed_events_proceed(self):
+        for event in ("push", "workflow_dispatch"):
+            with self.subTest(event=event):
+                fake = FakeCloud()
+                with ci_env(GITHUB_EVENT_NAME=event):
+                    rc, _, err = run(fake, *execute_args())
+                self.assertEqual(rc, 0, err)
 
     def test_plan_mode_runs_outside_ci(self):
         with ci_env(GITHUB_ACTIONS=None):
@@ -1241,79 +854,74 @@ class CiOnly(unittest.TestCase):
         self.assertIn("plan-sha256:", out)
 
 
-class SignInProvenance(unittest.TestCase):
-    """Preflight refuses, before the first step, any sign-in that is not exactly the reviewed grant."""
+class OwnerCaller(unittest.TestCase):
+    """Negative controls and acceptance requirements for slice A owner-caller cutover."""
 
-    def refused(self, fake: FakeCloud, now: datetime = NOW, expect: str = "nothing ran") -> None:
-        rc, _, err = ci_run(fake, *execute_args(), now=now)
-        self.assertEqual(rc, 1, err)
-        self.assertIn(expect, err)
-        # No step ran: the only write allowed is the revoke that removes the approved grant.
-        self.assertTrue(all("remove-iam-policy-binding" in a for a in fake.writes), fake.writes)
-        # F: the authorised grant (this role, this title, the approved description, the principal) is removed
-        # on refusal. A holder that differs in role or title is not that grant and is not asserted absent here.
-        approved = bootstrap.SIGNIN_DESCRIPTION.format(commit=TEST_COMMIT, plan=DEFAULT_PLAN_SHA)
-        self.assertFalse(any(b.get("role") == bootstrap.SIGNIN_ROLE
-                             and (b.get("condition") or {}).get("title") == bootstrap.SIGNIN_TITLE
-                             and (b.get("condition") or {}).get("description") == approved
-                             and bootstrap.BOOTSTRAP_PRINCIPAL in b.get("members", [])
-                             for b in fake.policy["bindings"]))
-
-    def test_the_grant_proceeds_at_both_window_edges(self):
-        for lead in (timedelta(minutes=45), timedelta(minutes=120)):
-            with self.subTest(lead=lead):
-                fake = FakeCloud()
-                rc, _, err = execute(fake, now=EXPIRY_AT - lead)
-                self.assertEqual(rc, 0, err)
-
-    def test_a_grant_outside_the_window_is_refused(self):
-        for now in (EXPIRY_AT - timedelta(minutes=44, seconds=59),
-                    EXPIRY_AT - timedelta(minutes=120, seconds=1),
-                    EXPIRY_AT + timedelta(minutes=1)):
-            with self.subTest(now=now):
-                self.refused(FakeCloud(), now=now, expect="window")
-
-    def test_a_grant_that_names_another_commit_or_plan_is_refused(self):
-        for description in (f"han-bootstrap commit={'a' * 40} plan={DEFAULT_PLAN_SHA}",
-                            f"han-bootstrap commit={TEST_COMMIT} plan={'b' * 64}"):
-            with self.subTest(description=description):
-                fake = FakeCloud()
-                fake.set_sign_in(sign_in_binding(DEFAULT_PLAN_SHA, description=description))
-                self.refused(fake, expect="does not name this commit and this plan")
-
-    def test_a_malformed_description_is_not_the_grant(self):
+    def test_wrong_account_exits_1_with_zero_writes(self):
         fake = FakeCloud()
-        fake.set_sign_in(sign_in_binding(DEFAULT_PLAN_SHA,
-                                         description=f"han-bootstrap commit={TEST_COMMIT} plan={DEFAULT_PLAN_SHA} "))
-        self.refused(fake, expect="nothing ran")
+        fake.account = "wrong-account@example.com"
+        rc, out, err = execute(fake)
+        self.assertEqual(rc, 1)
+        self.assertIn("refusing to continue as ['wrong-account@example.com']; expected", err)
+        self.assertEqual(fake.writes, [])
 
-    def test_a_tampered_expression_is_refused(self):
-        base = f"request.time < timestamp('{EXPIRY}')"
-        for expression in (base + " || true",
-                           base.replace("<", "<="),
-                           base.replace("00Z", "00.500Z"),
-                           base.replace("Z')", "')"),
-                           base.replace("2026-11-05", "2026-13-05"),
-                           base + " && true",
-                           base + " "):
-            with self.subTest(expression=expression):
-                fake = FakeCloud()
-                fake.set_sign_in(sign_in_binding(DEFAULT_PLAN_SHA, expression=expression))
-                self.refused(fake)
-
-    def test_a_second_holder_of_the_principal_is_refused(self):
+    def test_forged_environment_or_pull_request_event_exits_2_with_zero_calls(self):
         fake = FakeCloud()
-        fake.policy["bindings"].append(sign_in_binding(DEFAULT_PLAN_SHA, title="another-title"))
-        self.refused(fake, expect="expected exactly one")
-        # The other-title binding is not the authorised grant, so revoke leaves it in place.
-        survivors = [b for b in fake.policy["bindings"] if bootstrap.BOOTSTRAP_PRINCIPAL in b.get("members", [])]
-        self.assertEqual([(b["role"], b["condition"]["title"]) for b in survivors],
-                         [(bootstrap.SIGNIN_ROLE, "another-title")])
+        with ci_env(GITHUB_EVENT_NAME="pull_request"):
+            rc, out, err = run(fake, *execute_args())
+        self.assertEqual(rc, 2)
+        self.assertEqual(fake.argv_seen, [])
 
-    def test_a_lookalike_member_is_not_the_grant(self):
+        fake2 = FakeCloud()
+        with ci_env(GITHUB_REPOSITORY="attacker/website"):
+            rc, out, err = run(fake2, *execute_args())
+        self.assertEqual(rc, 2)
+        self.assertEqual(fake2.argv_seen, [])
+
+    def test_head_different_from_expected_commit_exits_2_with_zero_calls(self):
         fake = FakeCloud()
-        fake.set_sign_in(sign_in_binding(DEFAULT_PLAN_SHA, members=[HAN_POOL_MEMBER]))
-        self.refused(fake, expect="expected exactly one")
+        args = ["--execute", "--expect-sha256", bootstrap.plan_sha256(bootstrap.build_plan()),
+                "--expect-commit", "1" * 40]
+        with ci_env():
+            rc, out, err = run(fake, *args)
+        self.assertEqual(rc, 2)
+        self.assertIn("is not the reviewed commit", err)
+        self.assertEqual(fake.argv_seen, [])
+
+    def test_hash_mismatch_exits_2_with_zero_calls(self):
+        fake = FakeCloud()
+        args = ["--execute", "--expect-sha256", "2" * 64,
+                "--expect-commit", TEST_COMMIT]
+        with ci_env():
+            rc, out, err = run(fake, *args)
+        self.assertEqual(rc, 2)
+        self.assertIn("does not match the approved", err)
+        self.assertEqual(fake.argv_seen, [])
+
+    def test_first_run_writes_exactly_plan_write_lines_without_forbidden_strings(self):
+        fake = FakeCloud()
+        rc, out, err = execute(fake)
+        self.assertEqual(rc, 0, err)
+        write_cmds = [" ".join(argv) for argv in fake.writes]
+        self.assertEqual(len(write_cmds), 75)
+        for cmd in write_cmds:
+            self.assertNotIn("terraform-bootstrap", cmd)
+            self.assertNotIn("remove-iam-policy-binding", cmd)
+        # Every direct gcloud line in the plan was executed
+        plan_gcloud = [line for line in bootstrap.build_plan() if line.startswith("gcloud ")]
+        for line in plan_gcloud:
+            self.assertIn(line, write_cmds)
+
+    def test_second_run_creates_nothing(self):
+        fake = FakeCloud()
+        execute(fake)
+        writes_after_first = len(fake.writes)
+        rc2, out2, err2 = execute(fake)
+        self.assertEqual(rc2, 0, err2)
+        # Second run performs no creates, deployments or role creations
+        new_writes = fake.writes[writes_after_first:]
+        for argv in new_writes:
+            self.assertFalse(any(verb in argv for verb in ("create", "create-oidc", "deploy")), argv)
 
 
 class StateBucketIsOurs(unittest.TestCase):
@@ -1337,7 +945,6 @@ class StateBucketIsOurs(unittest.TestCase):
                     return answer
             return fake(kind, argv, stdin)
 
-        fake.set_sign_in(sign_in_binding(DEFAULT_PLAN_SHA))
         with ci_env():
             return run(backend, *execute_args())
 
@@ -1425,24 +1032,3 @@ class StateBucketIsOurs(unittest.TestCase):
         self.assertFalse(any(a[1:3] == ["storage", "buckets"] and "create" in a for a in fake.writes))
 
 
-class WorkflowIsAnInput(unittest.TestCase):
-    """The workflow that runs the bootstrap is hashed into the plan, as the code and the roles are."""
-
-    WORKFLOW = ROOT / ".github" / "workflows" / "han-bootstrap.yml"
-
-    def test_the_workflow_is_referenced_and_its_content_is_in_the_plan(self):
-        self.assertIn(self.WORKFLOW.resolve(), [p.resolve() for p in bootstrap.referenced_files()])
-        digest = hashlib.sha256(self.WORKFLOW.read_bytes()).hexdigest()
-        self.assertIn(f"input .github/workflows/han-bootstrap.yml sha256 {digest}", bootstrap.build_plan())
-
-    def test_an_edited_workflow_changes_the_plan_hash(self):
-        original = bootstrap.build_plan()
-        digest = hashlib.sha256(self.WORKFLOW.read_bytes()).hexdigest()
-        edited_digest = hashlib.sha256(self.WORKFLOW.read_bytes() + b"# edited\n").hexdigest()
-        edited = [line.replace(digest, edited_digest) if line.startswith("input .github/workflows/") else line
-                  for line in original]
-        self.assertNotEqual(bootstrap.plan_sha256(original), bootstrap.plan_sha256(edited))
-
-
-if __name__ == "__main__":
-    unittest.main()

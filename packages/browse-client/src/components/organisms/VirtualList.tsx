@@ -70,6 +70,12 @@ interface VirtualListProps<T> {
 	initialRenderIndex?: number;
 }
 
+const LoadingIndicator = () => (
+	<Center style={{ padding: theme.spacing.lg }}>
+		<Spinner />
+	</Center>
+);
+
 function VirtualListInner<T>(
 	{
 		data,
@@ -166,13 +172,6 @@ function VirtualListInner<T>(
 			}
 		},
 		[onTailStateChange, inverted, tailThreshold],
-	);
-
-	// Loading indicator components
-	const LoadingIndicator = () => (
-		<Center style={{ padding: theme.spacing.lg }}>
-			<Spinner />
-		</Center>
 	);
 
 	// Effective initial scroll index (handle deprecated prop)

@@ -6,41 +6,106 @@
  */
 
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import {
   closeSync,
   existsSync,
   mkdirSync,
   openSync,
-  readFileSync,
   renameSync,
   rmSync,
   statSync,
-  unlinkSync,
-  writeFileSync,
 } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, win32 } from 'node:path';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { getHanDataDir } from '../../config/claude-settings.ts';
 import { getHanBinary } from '../../config/han-settings.ts';
-import { checkHealth, waitForHealth } from './health.ts';
+import { findCoordinatorBinary } from '../../coordinator/binary.ts';
+import {
+  CoordinatorBinaryMissingError,
+  CoordinatorConnectionRefusedError,
+  CoordinatorPortOccupiedError,
+  CoordinatorSecurityError,
+  getCoordinatorDataDir,
+  isExplicitConnectionRefusal,
+  type LocalCoordinatorDescriptor,
+  readCoordinatorDescriptor,
+  type SupervisorBinding,
+  sameCoordinator,
+  sameSupervisor,
+} from '../../coordinator/connection.ts';
+import { stopLegacyCoordinator } from '../../coordinator/legacy-stop.ts';
+import { repairCoordinator } from '../../coordinator/pair-repair.ts';
+import {
+  assertRecoveryFence,
+  posixPrepare,
+  type RecoveryInspection,
+  recoveryInspect,
+  recoveryReclaim,
+} from '../../coordinator/recovery-runtime.ts';
+import {
+  windowsPrepareRuntime,
+  windowsProcessState,
+  windowsReadSupervisor,
+} from '../../coordinator/windows-runtime.ts';
+import { createCoordinatorClients } from '../../grpc/client.ts';
+import {
+  checkHealth,
+  descriptorIsDead,
+  type HealthCheckResponse,
+  readOptionalDescriptor,
+  waitForHealth,
+} from './health.ts';
+import {
+  claimStillOwned,
+  claimSupervisorPid,
+  readSupervisorPid,
+  releaseSupervisorPid,
+  type SupervisorClaim,
+} from './pid-claim.ts';
 import { startServer, stopServer } from './server.ts';
+import { readShutdownIntent, removeShutdownIntent } from './shutdown-intent.ts';
 import {
   type CoordinatorOptions,
   type CoordinatorStatus,
   getCoordinatorPort,
 } from './types.ts';
 
+/** Resolve cmd.exe without searching the caller cwd or PATH. */
+export function trustedWindowsCommandInterpreter(
+  systemRoot = process.env.SystemRoot
+): string {
+  // Drive-letter only: a relative, UNC, or cwd-relative root must not select cmd.exe.
+  if (
+    !systemRoot ||
+    !/^[A-Za-z]:\\[^/]*$/.test(systemRoot) ||
+    systemRoot.includes('..')
+  ) {
+    throw new CoordinatorSecurityError(
+      'Windows command interpreter is not in a trusted location'
+    );
+  }
+  return win32.join(systemRoot, 'System32', 'cmd.exe');
+}
+
 /**
  * Get the log file path (~/.han/coordinator.log)
  */
 export function getLogFilePath(): string {
-  return join(getHanDataDir(), 'coordinator.log');
+  return join(
+    process.platform === 'win32' ? getCoordinatorDataDir() : getHanDataDir(),
+    'coordinator.log'
+  );
 }
 
 /**
  * Get the PID file path (~/.han/coordinator.pid)
  */
 function getPidFilePath(): string {
-  return join(getHanDataDir(), 'coordinator.pid');
+  return join(
+    process.platform === 'win32' ? getCoordinatorDataDir() : getHanDataDir(),
+    'coordinator.pid'
+  );
 }
 
 /**
@@ -78,137 +143,36 @@ export function rotateLogIfNeeded(): void {
   }
 }
 
-/**
- * Read PID from file
- */
-function readPid(): number | null {
-  const pidPath = getPidFilePath();
-  try {
-    if (existsSync(pidPath)) {
-      const pid = parseInt(readFileSync(pidPath, 'utf-8').trim(), 10);
-      return Number.isNaN(pid) ? null : pid;
-    }
-  } catch {
-    // Ignore errors
+export class CoordinatorChildExitError extends Error {
+  constructor(message = 'Coordinator child exited', options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'CoordinatorChildExitError';
   }
+}
+
+const claims = new Map<string, SupervisorClaim>();
+
+function readPid(): number | null {
+  return readSupervisorPid(getPidFilePath());
+}
+
+export function claimPidFile(): number | null {
+  const path = getPidFilePath();
+  const existing = claims.get(path);
+  if (existing && !existing.released) {
+    if (!claimStillOwned(existing))
+      throw new Error('Supervisor claim no longer belongs to this process');
+    return null;
+  }
+  const result = claimSupervisorPid(path);
+  if (result.kind === 'blocked') return result.pid;
+  claims.set(path, result.claim);
   return null;
 }
 
-/**
- * How long a takeover marker is honored before it is treated as abandoned.
- */
-const TAKEOVER_MARKER_STALE_MS = 5000;
-
-/**
- * Claim the supervisor PID file for this process, atomically.
- *
- * Returns the live pid already holding it, or null once we own it.
- *
- * A plain read-then-write loses the race it exists to win: several
- * `han coordinator start --foreground` invocations landing together all read
- * an empty file, all conclude they are first, and all sit in the keep-alive
- * loop forever. An exclusive create has exactly one winner.
- *
- * Taking over a dead holder's file needs its own serialization, because
- * "unlink what I just saw" can delete a file a fresh winner created a
- * moment ago, and then two callers both believe they won. So the removal
- * runs behind an exclusively created marker: only one caller ever removes a
- * stale file, and a caller that wins the pid file by fast path in that
- * window simply blocks the marker holder instead.
- *
- * Exported so the concurrency behaviour can be tested across real processes.
- */
-export function claimPidFile(): number | null {
-  const pidPath = getPidFilePath();
-  const markerPath = `${pidPath}.takeover`;
-
-  for (let attempt = 0; attempt < 5; attempt++) {
-    if (tryCreateExclusive(pidPath, String(process.pid))) return null;
-
-    const holder = readPid();
-    if (holder === process.pid) return null;
-    if (holder && isProcessRunning(holder)) return holder;
-
-    // The file names a dead pid, or holds nothing readable. Serialize the
-    // takeover so only one caller removes it.
-    if (!tryCreateExclusive(markerPath, String(process.pid))) {
-      clearStaleMarker(markerPath);
-      Bun.sleepSync(25);
-      continue;
-    }
-
-    try {
-      const current = readPid();
-      const revived =
-        current && current !== process.pid && isProcessRunning(current);
-      if (!revived) {
-        try {
-          unlinkSync(pidPath);
-        } catch {
-          // Already gone.
-        }
-      }
-    } finally {
-      try {
-        unlinkSync(markerPath);
-      } catch {
-        // Already gone.
-      }
-    }
-  }
-
-  const holder = readPid();
-  return holder && holder !== process.pid ? holder : null;
-}
-
-/**
- * Create `path` with `contents` only if it does not exist yet. Returns
- * whether this call created it.
- */
-function tryCreateExclusive(path: string, contents: string): boolean {
-  try {
-    writeFileSync(path, contents, { encoding: 'utf-8', flag: 'wx' });
-    return true;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EEXIST') return false;
-    throw error;
-  }
-}
-
-/**
- * Drop a takeover marker whose owner died or which is simply too old to
- * still be meaningful, so a crash mid-takeover cannot wedge every later
- * claim.
- */
-function clearStaleMarker(markerPath: string): void {
-  try {
-    const owner = parseInt(readFileSync(markerPath, 'utf-8').trim(), 10);
-    const ageMs = Date.now() - statSync(markerPath).mtimeMs;
-    if (
-      ageMs > TAKEOVER_MARKER_STALE_MS ||
-      (!Number.isNaN(owner) && !isProcessRunning(owner))
-    ) {
-      unlinkSync(markerPath);
-    }
-  } catch {
-    // Missing or unreadable marker: nothing to clear.
-  }
-}
-
-/**
- * Remove the PID file. Owner-checked by default: a supervisor that lost the
- * claim race must never delete the winner's file on its way out. `stopDaemon`
- * passes force after killing the holder, since the pid it names is gone.
- */
-function removePidFile(force = false): void {
-  const pidPath = getPidFilePath();
-  try {
-    if (existsSync(pidPath) && (force || readPid() === process.pid)) {
-      unlinkSync(pidPath);
-    }
-  } catch {
-    // Ignore errors
-  }
+function releaseClaim(claim: SupervisorClaim): void {
+  releaseSupervisorPid(claim);
+  if (claims.get(claim.pidPath) === claim) claims.delete(claim.pidPath);
 }
 
 /**
@@ -218,57 +182,66 @@ function isProcessRunning(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ESRCH') return false;
+    if ((error as NodeJS.ErrnoException).code === 'EPERM') return true;
+    throw error;
   }
 }
 
-/**
- * Get coordinator status
- * Automatically cleans up stale locks (dead process or old heartbeat)
- */
+/** Get coordinator status without changing supervisor ownership. */
 export async function getStatus(port?: number): Promise<CoordinatorStatus> {
   const effectivePort = port ?? getCoordinatorPort();
-  const health = await checkHealth(effectivePort);
+  let health: HealthCheckResponse | null = null;
+  try {
+    health = await checkHealth(effectivePort);
+  } catch (error) {
+    if (
+      error instanceof CoordinatorPortOccupiedError ||
+      error instanceof CoordinatorBinaryMissingError ||
+      error instanceof CoordinatorConnectionRefusedError
+    ) {
+      health = null;
+    } else {
+      throw error;
+    }
+  }
 
   if (health?.status === 'ok') {
     return {
       running: true,
       pid: health.pid,
-      port: effectivePort,
+      port: readCoordinatorDescriptor().httpsPort,
       uptime: health.uptime,
     };
   }
 
-  // Health check failed - try to clean up stale locks
-  try {
-    await import('../../grpc/data-access.ts');
-    // In gRPC architecture, stale lock cleanup is handled by the Rust coordinator
-    removePidFile();
-    return {
-      running: false,
-      port: effectivePort,
-    };
-  } catch (error) {
-    // gRPC data access not available or error - fall back to PID check
-    if (process.env.HAN_DEBUG) {
-      console.error('[coordinator] Failed to cleanup stale lock:', error);
-    }
-  }
+  // A supervisor PID file is not proof of daemon identity.
 
   // Check if PID file exists with a running process
-  const pid = readPid();
-  if (pid && isProcessRunning(pid)) {
+  const supervisor =
+    process.platform === 'win32'
+      ? windowsReadSupervisor(getCoordinatorDataDir())
+      : null;
+  const pid =
+    supervisor?.status === 'present'
+      ? supervisor.pid
+      : process.platform === 'win32'
+        ? null
+        : readPid();
+  if (
+    pid &&
+    (process.platform === 'win32'
+      ? supervisor?.status === 'present' &&
+        windowsProcessState(getCoordinatorDataDir(), supervisor.process) ===
+          'alive'
+      : isProcessRunning(pid))
+  ) {
     return {
       running: false, // Not responding but process exists
       pid,
       port: effectivePort,
     };
-  }
-
-  // Clean up stale PID file
-  if (pid && !isProcessRunning(pid)) {
-    removePidFile(true);
   }
 
   return {
@@ -283,20 +256,36 @@ export async function getStatus(port?: number): Promise<CoordinatorStatus> {
 export async function startDaemon(
   options: CoordinatorOptions = {}
 ): Promise<CoordinatorStatus> {
+  if (process.platform === 'win32')
+    windowsPrepareRuntime(getCoordinatorDataDir());
+  else posixPrepare(getCoordinatorDataDir());
   const port = options.port ?? getCoordinatorPort();
   console.log(`[coordinator] Using port: ${port}`);
 
-  // Check if already running
-  const status = await getStatus(port);
-  if (status.running) {
-    console.log(`[coordinator] Already running (PID: ${status.pid})`);
-    return status;
+  const selected = readOptionalDescriptor();
+  const predecessor = selected && descriptorIsDead(selected) ? selected : null;
+  if (!predecessor) {
+    const status = await getStatus(port);
+    if (status.running) {
+      console.log(`[coordinator] Already running (PID: ${status.pid})`);
+      return status;
+    }
   }
 
-  // Clean up stale PID file
-  const stalePid = readPid();
-  if (stalePid && !isProcessRunning(stalePid)) {
-    removePidFile(true);
+  // K3: Self-repair if binary is missing
+  if (!findCoordinatorBinary()) {
+    try {
+      await repairCoordinator();
+    } catch (e) {
+      console.error('[coordinator] Self-repair failed:', e);
+    }
+  }
+
+  // K4: Stop legacy coordinator if present on port
+  try {
+    await stopLegacyCoordinator(port);
+  } catch (e) {
+    if (e instanceof CoordinatorSecurityError) throw e;
   }
 
   // Run in foreground mode
@@ -329,9 +318,12 @@ export async function startDaemon(
   if (configuredBinary && configuredBinary !== 'han') {
     // hanBinary is set (e.g., `bun "/path/to/main.ts"`)
     // Use shell to handle the full command string
-    spawnCommand = '/bin/bash';
+    spawnCommand =
+      process.platform === 'win32'
+        ? trustedWindowsCommandInterpreter()
+        : '/bin/bash';
     spawnArgs = [
-      '-c',
+      process.platform === 'win32' ? '/c' : '-c',
       `${configuredBinary} coordinator start --foreground --port ${port}`,
     ];
   } else {
@@ -367,7 +359,7 @@ export async function startDaemon(
     process.env.HAN_COORDINATOR_TIMEOUT || '60000',
     10
   );
-  const healthy = await waitForHealth(port, timeoutMs, 100);
+  const healthy = await waitForHealth(port, timeoutMs, 100, predecessor);
 
   if (!healthy) {
     throw new Error(
@@ -381,95 +373,138 @@ export async function startDaemon(
   return newStatus;
 }
 
-/**
- * Find PID of process listening on a port (fallback when health check has no PID).
- */
-function findPidOnPort(port: number): number | null {
-  try {
-    const result = Bun.spawnSync(['lsof', '-ti', `tcp:${port}`], {
-      stdout: 'pipe',
-      stderr: 'ignore',
-    });
-    if (result.exitCode === 0) {
-      const pids = result.stdout
-        .toString()
-        .trim()
-        .split('\n')
-        .map((s) => parseInt(s, 10))
-        .filter((n) => !Number.isNaN(n) && n > 0);
-      return pids[0] ?? null;
-    }
-  } catch {
-    // lsof not available
-  }
-  return null;
+function reclaimRecovery(inspection: RecoveryInspection): boolean {
+  if (
+    inspection.childState === 'alive' ||
+    inspection.supervisorState === 'alive' ||
+    (inspection.claimState !== undefined && inspection.claimState === 'alive')
+  )
+    return false;
+  const result = recoveryReclaim(getCoordinatorDataDir(), inspection.snapshot);
+  if (result === 'changed')
+    throw new CoordinatorSecurityError('Coordinator recovery snapshot changed');
+  return result !== 'busy';
 }
 
-/**
- * Kill a process by PID with graceful shutdown and forced kill fallback.
- */
-async function killProcess(pid: number): Promise<void> {
-  try {
-    process.kill(pid, 'SIGTERM');
-
-    // Wait for process to stop
-    let attempts = 0;
-    while (attempts < 50 && isProcessRunning(pid)) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      attempts++;
-    }
-
-    // Force kill if still running
-    if (isProcessRunning(pid)) {
-      console.log('[coordinator] Force killing...');
-      process.kill(pid, 'SIGKILL');
-    }
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') {
-      throw error;
-    }
-  }
-}
-
-/**
- * Stop coordinator daemon
- */
-export async function stopDaemon(port?: number): Promise<void> {
-  const effectivePort = port ?? getCoordinatorPort();
-  const status = await getStatus(effectivePort);
-
-  if (!status.running && !status.pid) {
-    console.log('[coordinator] Not running');
-    removePidFile();
-    return;
-  }
-
-  // Resolve the PID: prefer health response, then PID file, then port scan
-  const pid = status.pid ?? readPid() ?? findPidOnPort(effectivePort);
-
-  if (pid) {
-    console.log(`[coordinator] Stopping (PID: ${pid})...`);
-    await killProcess(pid);
-  } else if (status.running) {
-    // Health check says running but we can't find the PID at all
-    console.warn(
-      '[coordinator] Running but PID unknown. Trying port-based kill...'
+/** Stop the exact authenticated instance or recover its verified-dead records. */
+export async function stopDaemon(_port?: number): Promise<void> {
+  const dataDir = getCoordinatorDataDir();
+  if (process.platform === 'win32') windowsPrepareRuntime(dataDir);
+  else posixPrepare(dataDir);
+  let active = recoveryInspect(dataDir, { kind: 'active' });
+  const fence = active.snapshot;
+  if (!active.descriptor && active.stoppingBindings.length > 1)
+    throw new CoordinatorSecurityError(
+      'Multiple shutdown generations require recovery'
     );
-    const portPid = findPidOnPort(effectivePort);
-    if (portPid) {
-      await killProcess(portPid);
-    } else {
-      console.error(
-        `[coordinator] Could not find process on port ${effectivePort}. ` +
-          `Try: lsof -ti tcp:${effectivePort} | xargs kill -9`
+  let selected = active;
+  if (!active.descriptor && active.stoppingBindings.length === 1)
+    selected = recoveryInspect(dataDir, {
+      kind: 'stopping',
+      binding: active.stoppingBindings[0],
+    });
+  assertRecoveryFence(
+    fence,
+    selected.snapshot,
+    selected.descriptor?.supervisor ?? null
+  );
+  const original = selected.descriptor;
+  const binding = original?.supervisor ?? null;
+  const supervisorProcess = selected.supervisorProcess;
+  if (process.platform === 'win32' && binding && !supervisorProcess)
+    throw new CoordinatorSecurityError('Missing supervisor process identity');
+  if (active.descriptor && active.childState === 'alive') {
+    try {
+      await createCoordinatorClients(
+        active.descriptor.httpsPort,
+        active.descriptor
+      ).coordinator.shutdown(
+        { graceful: true, timeoutSeconds: 5 },
+        { timeoutMs: 10000 }
       );
+    } catch (error) {
+      if (
+        !(error instanceof ConnectError) ||
+        error.code !== Code.DeadlineExceeded
+      )
+        throw error;
+      const current = recoveryInspect(dataDir, { kind: 'active' });
+      assertRecoveryFence(fence, current.snapshot, binding);
+      const intent = binding
+        ? recoveryInspect(dataDir, { kind: 'stopping', binding })
+        : null;
+      if (intent) assertRecoveryFence(fence, intent.snapshot, binding);
+      if (
+        current.descriptor &&
+        !sameCoordinator(current.descriptor, active.descriptor)
+      )
+        throw new CoordinatorSecurityError(
+          'A different coordinator appeared during shutdown'
+        );
+      if (
+        !(
+          intent?.descriptor &&
+          sameCoordinator(intent.descriptor, active.descriptor)
+        ) &&
+        !descriptorIsDead(active.descriptor)
+      )
+        throw error;
     }
   }
-
-  // The supervisor this named has just been killed, so its file is ours to
-  // clear even though we never owned it.
-  removePidFile(true);
-  console.log('[coordinator] Stopped');
+  const deadline = Date.now() + 10000;
+  while (Date.now() < deadline) {
+    active = recoveryInspect(dataDir, { kind: 'active' });
+    assertRecoveryFence(fence, active.snapshot, binding);
+    if (
+      active.descriptor &&
+      (!original || !sameCoordinator(active.descriptor, original))
+    )
+      throw new CoordinatorSecurityError(
+        'A different coordinator appeared during shutdown'
+      );
+    if (active.descriptor) {
+      selected = active;
+    } else if (binding) {
+      selected = recoveryInspect(dataDir, { kind: 'stopping', binding });
+      assertRecoveryFence(fence, selected.snapshot, binding);
+      if (
+        selected.descriptor &&
+        (!original || !sameCoordinator(selected.descriptor, original))
+      )
+        throw new CoordinatorSecurityError(
+          'A different shutdown generation appeared'
+        );
+      if (selected.stoppingBindings.some((b) => !sameSupervisor(b, binding)))
+        throw new CoordinatorSecurityError(
+          'A different shutdown generation appeared'
+        );
+    } else {
+      selected = active;
+      if (active.stoppingBindings.length)
+        throw new CoordinatorSecurityError(
+          'A different shutdown generation appeared'
+        );
+    }
+    if (
+      selected.childState !== 'alive' &&
+      selected.supervisorState !== 'alive' &&
+      (selected.claimState === undefined || selected.claimState !== 'alive') &&
+      (!original ||
+        selected.descriptor !== null ||
+        descriptorIsDead(original)) &&
+      (!binding ||
+        (process.platform === 'win32'
+          ? !!supervisorProcess &&
+            windowsProcessState(dataDir, supervisorProcess) === 'gone'
+          : !isProcessRunning(binding.pid)))
+    ) {
+      if (reclaimRecovery(selected)) return;
+    }
+    await Bun.sleep(100);
+  }
+  throw new Error(
+    'Coordinator shutdown did not release its descriptor and supervisor'
+  );
 }
 
 // Constants for auto-restart
@@ -492,96 +527,163 @@ async function runForeground(port: number): Promise<void> {
     );
     return;
   }
+  const claim = claims.get(getPidFilePath());
+  if (!claim) throw new Error('Supervisor claim disappeared');
 
   rotateLogIfNeeded();
 
-  let shuttingDown = false;
-
-  // Setup signal handlers
+  let signal = false;
+  let stopping: LocalCoordinatorDescriptor | null = null;
+  let binding: SupervisorBinding | null = null;
+  let child: Bun.Subprocess | null = null;
+  let owned: LocalCoordinatorDescriptor | undefined;
   const shutdown = () => {
-    shuttingDown = true;
-    console.log('\n[coordinator] Shutting down...');
-    stopServer();
-    removePidFile();
-    process.exit(0);
+    signal = true;
   };
-
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
-
-  // Catch uncaught exceptions to allow restart
-  process.on('uncaughtException', (error) => {
-    console.error('[coordinator] Uncaught exception:', error);
-    // Don't exit - let the restart loop handle it
-  });
-
-  process.on('unhandledRejection', (reason) => {
-    console.error('[coordinator] Unhandled rejection:', reason);
-    // Don't exit - let the restart loop handle it
-  });
-
-  // Auto-restart loop
   let restartAttempts = 0;
   let currentDelay = RESTART_DELAY_MS;
 
-  while (!shuttingDown) {
-    try {
-      // Start server
-      await startServer({ port });
-
-      // startServer resolving is not proof the coordinator is reachable:
-      // startCoordinatorService swallows a failed spawn or health check
-      // into a logged error instead of throwing, so without this check a
-      // silent no-op "success" fell straight into the keep-alive loop below
-      // with no coordinator ever listening on the port.
-      const timeoutMs = parseInt(
-        process.env.HAN_COORDINATOR_TIMEOUT || '60000',
-        10
-      );
-      const healthy = await waitForHealth(port, timeoutMs, 100);
-      if (!healthy) {
-        console.error(
-          `[coordinator] Coordinator on port ${port} never became reachable ` +
-            `within ${timeoutMs / 1000}s. See ${getLogFilePath()} for details.`
-        );
-        removePidFile();
-        process.exit(1);
-      }
-
-      console.log('[coordinator] Running. Press Ctrl+C to stop.');
-
-      // Reset restart attempts on successful start
-      restartAttempts = 0;
-      currentDelay = RESTART_DELAY_MS;
-
-      // Keep process alive until shutdown signal
-      // Use a simple polling approach that properly exits
-      while (!shuttingDown) {
-        const { promise, resolve } = Promise.withResolvers<void>();
-        setTimeout(resolve, 1000);
-        await promise;
-      }
-    } catch (error) {
-      if (shuttingDown) break;
-
-      restartAttempts++;
-      console.error(
-        `[coordinator] Server crashed (attempt ${restartAttempts}/${MAX_RESTART_ATTEMPTS}):`,
-        error
-      );
-
-      if (restartAttempts >= MAX_RESTART_ATTEMPTS) {
-        console.error('[coordinator] Max restart attempts reached. Exiting.');
-        removePidFile();
-        process.exit(1);
-      }
-
-      console.log(
-        `[coordinator] Restarting in ${Math.round(currentDelay / 1000)}s...`
-      );
-      await new Promise((r) => setTimeout(r, currentDelay));
-      currentDelay *= RESTART_BACKOFF_MULTIPLIER;
+  const observeIntent = () => {
+    if (binding && child) {
+      const intent = readShutdownIntent(binding, child.pid, owned);
+      if (intent) stopping = intent;
     }
+    return stopping !== null;
+  };
+  const finishIntent = async () => {
+    if (!binding || !child || !stopping)
+      throw new Error('Missing shutdown ownership');
+    await child.exited;
+    removeShutdownIntent(binding, child.pid, stopping, claim);
+  };
+
+  try {
+    while (!signal) {
+      if (observeIntent()) break;
+      binding = {
+        pid: process.pid,
+        nonce: claim.nonce,
+        generationId: randomUUID(),
+      };
+      child = null;
+      owned = undefined;
+      let childExited = false;
+      const hasChildExited = () =>
+        childExited || (child !== null && child.exitCode !== null);
+      const awaitChildExit = async (timeoutMs = 2000): Promise<boolean> => {
+        if (!child || hasChildExited()) return true;
+        const res = await Promise.race([child.exited, Bun.sleep(timeoutMs)]);
+        return typeof res === 'number' || hasChildExited();
+      };
+      try {
+        const result = await startServer({ port }, binding);
+        if (result.kind === 'attached') return;
+        child = result.child;
+        owned = result.descriptor;
+        child.exited.then(() => {
+          childExited = true;
+        });
+        if (result.kind === 'shutdown-requested') {
+          stopping = result.descriptor;
+          break;
+        }
+        if (observeIntent() || signal) break;
+        restartAttempts = 0;
+        currentDelay = RESTART_DELAY_MS;
+        console.log('[coordinator] Running. Press Ctrl+C to stop.');
+        while (!signal) {
+          if (hasChildExited())
+            throw new CoordinatorChildExitError('Coordinator child exited');
+          if (observeIntent()) break;
+          let healthy: boolean;
+          try {
+            healthy = (await checkHealth(port)) !== null;
+          } catch (error) {
+            if (isExplicitConnectionRefusal(error)) {
+              if (observeIntent()) break;
+              if (await awaitChildExit(2000)) {
+                if (observeIntent()) break;
+                throw new CoordinatorChildExitError(
+                  'Coordinator child exited',
+                  { cause: error }
+                );
+              }
+            }
+            throw error;
+          }
+          if (observeIntent()) break;
+          if (hasChildExited())
+            throw new CoordinatorChildExitError('Coordinator child exited');
+          if (!healthy) {
+            if (await awaitChildExit(2000)) {
+              if (observeIntent()) break;
+              throw new CoordinatorChildExitError('Coordinator child exited');
+            }
+            throw new Error('Coordinator stopped responding');
+          }
+          await Bun.sleep(1000);
+        }
+        if (signal || observeIntent()) break;
+      } catch (error) {
+        if (signal) break;
+        if (
+          error instanceof CoordinatorSecurityError ||
+          (error instanceof Error &&
+            !isExplicitConnectionRefusal(error) &&
+            !(error instanceof CoordinatorChildExitError))
+        )
+          throw error;
+        if (observeIntent()) break;
+        if (child && !hasChildExited()) {
+          if (observeIntent()) break;
+          // Only the authenticated descriptor may authorize shutdown.
+          if (!owned)
+            throw new CoordinatorSecurityError(
+              'Cannot authenticate coordinator shutdown'
+            );
+          try {
+            await stopServer();
+          } catch (e) {
+            if (!isExplicitConnectionRefusal(e)) throw e;
+          }
+          if (observeIntent()) break;
+          await awaitChildExit(10000);
+          if (observeIntent()) break;
+          if (!hasChildExited())
+            throw new CoordinatorSecurityError(
+              'Coordinator did not exit after authenticated shutdown'
+            );
+          if (observeIntent()) break;
+        }
+        restartAttempts++;
+        console.error(
+          `[coordinator] Server crashed (attempt ${restartAttempts}/${MAX_RESTART_ATTEMPTS}):`,
+          error
+        );
+        if (restartAttempts >= MAX_RESTART_ATTEMPTS) throw error;
+        if (observeIntent()) break;
+        await Bun.sleep(currentDelay);
+        if (observeIntent()) break;
+        currentDelay *= RESTART_BACKOFF_MULTIPLIER;
+      }
+    }
+    if (stopping) {
+      await finishIntent();
+    } else if (signal && child) {
+      if (observeIntent()) {
+        await finishIntent();
+      } else {
+        await stopServer();
+        if (observeIntent()) await finishIntent();
+        else await child.exited;
+      }
+    }
+  } finally {
+    process.off('SIGINT', shutdown);
+    process.off('SIGTERM', shutdown);
+    releaseClaim(claim);
   }
 }
 
@@ -594,6 +696,8 @@ async function runForeground(port: number): Promise<void> {
 export async function ensureCoordinator(
   port?: number
 ): Promise<CoordinatorStatus> {
+  if (process.platform === 'win32')
+    windowsPrepareRuntime(getCoordinatorDataDir());
   const effectivePort = port ?? getCoordinatorPort();
   const status = await getStatus(effectivePort);
 

@@ -1,0 +1,40 @@
+name: Test Release Version Automation
+
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/bump-website-version.sh'
+      - '.github/scripts/update-package-version.cjs'
+      - '.github/scripts/release-version.test.cjs'
+      - '.github/workflows/auto-tag-release.yml'
+      - '.github/workflows/bump-website-version.yml'
+      - '.github/workflows/test-release-version.yml'
+      - 'packages/han/package.json'
+      - 'biome.json'
+  push:
+    branches: [main]
+    paths:
+      - '.github/scripts/bump-website-version.sh'
+      - '.github/scripts/update-package-version.cjs'
+      - '.github/scripts/release-version.test.cjs'
+      - '.github/workflows/auto-tag-release.yml'
+      - '.github/workflows/bump-website-version.yml'
+      - '.github/workflows/test-release-version.yml'
+      - 'packages/han/package.json'
+      - 'biome.json'
+
+permissions:
+  contents: read
+
+jobs:
+  fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: biomejs/setup-biome@v2
+        with:
+          version: 2.3.7
+      - run: node --test .github/scripts/release-version.test.cjs

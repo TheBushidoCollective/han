@@ -192,7 +192,7 @@ export async function requestMagicLink(
   const normalizedEmail = email.toLowerCase().trim();
 
   // Basic email validation
-  if (!normalizedEmail || !normalizedEmail.includes('@')) {
+  if (!normalizedEmail.includes('@')) {
     return {
       success: false,
       message: 'Invalid email address',

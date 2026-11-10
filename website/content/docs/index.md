@@ -42,4 +42,4 @@ Browse over 139 plugins across nine categories at [han.guru/plugins](https://han
 
 - Browse the [plugin marketplace](https://han.guru/plugins/)
 - Read the [blog](https://han.guru/blog/) for in-depth articles
-- Visit [The Bushido Collective](https://thebushido.co) for support
+- Visit [The Bushido Collective](https://withbushido.ai) for support

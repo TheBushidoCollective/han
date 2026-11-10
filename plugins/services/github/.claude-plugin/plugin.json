@@ -4,7 +4,7 @@
   "description": "GitHub integration providing repository management, issues, pull requests, actions, and code search via GitHub Copilot's hosted MCP server. Zero configuration required.",
   "author": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",

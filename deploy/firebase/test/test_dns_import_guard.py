@@ -2,7 +2,7 @@
 import copy
 import importlib.util
 import unittest
-from unittest import mock
+import unittest.mock as mock
 import yaml
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer

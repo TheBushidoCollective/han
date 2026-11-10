@@ -6,6 +6,7 @@
 
 import { type Client, createClient } from "graphql-ws";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { dashboardAuthorization } from "../bootstrap.ts";
 import { getGraphQLEndpoints } from "../config/urls.ts";
 
 /**
@@ -22,6 +23,9 @@ function getWsClient(): Client {
 		const endpoints = getGraphQLEndpoints();
 		wsClient = createClient({
 			url: endpoints.ws,
+			connectionParams: () => ({
+				authorization: dashboardAuthorization().Authorization,
+			}),
 			retryAttempts: 5,
 			shouldRetry: () => true,
 		});

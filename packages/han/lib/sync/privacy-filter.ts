@@ -220,7 +220,7 @@ export function checkSyncEligibility(
   const syncConfig = resolveConfig(config);
 
   // No repo means we can't determine eligibility
-  if (!repo || !repo.remote_url) {
+  if (!repo?.remote_url) {
     return {
       eligible: false,
       reason: 'No repository information available',

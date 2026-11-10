@@ -209,7 +209,8 @@ interface RawPluginConfig {
  * Handles the subset of YAML used by Han plugin configs.
  */
 function parseSimpleYaml(content: string): RawPluginConfig {
-  const result: RawPluginConfig = { hooks: {} };
+  const hooks: Record<string, RawHookDef> = {};
+  const result: RawPluginConfig = { hooks };
   const lines = content.split('\n');
 
   let currentSection: string | null = null;
@@ -231,13 +232,13 @@ function parseSimpleYaml(content: string): RawPluginConfig {
     const hookMatch = trimmed.match(/^ {2}(\S+):\s*$/);
     if (hookMatch) {
       currentHook = hookMatch[1];
-      result.hooks![currentHook] = {};
+      hooks[currentHook] = {};
       currentField = null;
       continue;
     }
 
     if (!currentHook) continue;
-    const hook = result.hooks![currentHook];
+    const hook = hooks[currentHook];
 
     // Simple key-value (4-space indent)
     const kvMatch = trimmed.match(/^ {4}(\S+):\s*(.+)$/);
@@ -267,7 +268,7 @@ function parseSimpleYaml(content: string): RawPluginConfig {
         key === 'dirs_with'
       ) {
         if (cleanValue.startsWith('[')) {
-          (hook as any)[key] = cleanValue
+          hook[key] = cleanValue
             .replace(/^\[|\]$/g, '')
             .split(',')
             .map((s) => s.trim().replace(/^["']|["']$/g, ''));
@@ -282,10 +283,10 @@ function parseSimpleYaml(content: string): RawPluginConfig {
     const arrayMatch = trimmed.match(/^ {6}- (.+)$/);
     if (arrayMatch && currentField) {
       const value = arrayMatch[1].replace(/^["']|["']$/g, '');
-      if (!(hook as any)[currentField]) {
-        (hook as any)[currentField] = [];
+      if (!Reflect.get(hook, currentField)) {
+        Reflect.set(hook, currentField, []);
       }
-      (hook as any)[currentField].push(value);
+      (Reflect.get(hook, currentField) as string[]).push(value);
       continue;
     }
 

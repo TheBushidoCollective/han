@@ -43,7 +43,7 @@ if [ ! -f "$BACKUP_FILE" ]; then
 fi
 
 # Show backup info
-BACKUP_SIZE=$(ls -lh "$BACKUP_FILE" | awk '{print $5}')
+BACKUP_SIZE=$(find "$BACKUP_FILE" -prune -exec ls -lh {} + | awk '{print $5}')
 echo "Backup file: $BACKUP_FILE"
 echo "Backup size: $BACKUP_SIZE"
 
@@ -57,7 +57,36 @@ if [ "$CONFIRM" != "--confirm" ]; then
   echo "WARNING: This will DROP and recreate the database '$DB_NAME'"
   echo "All existing data will be PERMANENTLY LOST"
   echo ""
-  read -p "Type 'RESTORE' to confirm: " CONFIRMATION
+  # Preserve read's backslash escapes and IFS whitespace handling.
+  CONFIRMATION=""
+  pending_space=""
+  escaped=false
+  prompt="Type 'RESTORE' to confirm: "
+  while :; do
+    IFS= read -r -p "$prompt" line
+    prompt=""
+    for ((i = 0; i < ${#line}; i++)); do
+      char=${line:i:1}
+      if "$escaped"; then
+        CONFIRMATION+="${pending_space}${char}"
+        pending_space=""
+        escaped=false
+      elif [[ "$char" == "\\" ]]; then
+        escaped=true
+      elif [[ "$char" == ' ' || "$char" == $'\t' ]]; then
+        if [[ -n "$CONFIRMATION" ]]; then
+          pending_space+="$char"
+        fi
+      else
+        CONFIRMATION+="${pending_space}${char}"
+        pending_space=""
+      fi
+    done
+    if ! "$escaped"; then
+      break
+    fi
+    escaped=false
+  done
   if [ "$CONFIRMATION" != "RESTORE" ]; then
     echo "Restore cancelled"
     exit 1

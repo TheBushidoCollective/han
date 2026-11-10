@@ -1,0 +1,172 @@
+name: Release Build
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Git ref to build"
+        type: string
+        required: false
+        default: ""
+      version:
+        description: "Version to build"
+        type: string
+        required: false
+        default: ""
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            bun_target: bun-linux-x64
+            binary_name: han-linux-x64
+            coordinator_binary: han-coordinator
+            build_method: zigbuild
+          - target: aarch64-unknown-linux-gnu
+            bun_target: bun-linux-arm64
+            binary_name: han-linux-arm64
+            coordinator_binary: han-coordinator
+            build_method: zigbuild
+          - target: x86_64-apple-darwin
+            bun_target: bun-darwin-x64
+            binary_name: han-darwin-x64
+            coordinator_binary: han-coordinator
+            build_method: docker-zigbuild
+          - target: aarch64-apple-darwin
+            bun_target: bun-darwin-arm64
+            binary_name: han-darwin-arm64
+            coordinator_binary: han-coordinator
+            build_method: docker-zigbuild
+          - target: x86_64-pc-windows-msvc
+            bun_target: bun-windows-x64
+            binary_name: han-windows-x64
+            coordinator_binary: han-coordinator.exe
+            build_method: xwin
+
+    runs-on: ${{ contains(matrix.target, 'aarch64-unknown-linux') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Setup Zig
+        if: ${{ !contains(matrix.target, 'windows') }}
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.13.0
+
+      - name: Install cargo-zigbuild
+        if: ${{ !contains(matrix.target, 'windows') }}
+        uses: taiki-e/install-action@v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          tool: cargo-zigbuild
+
+      - name: Install cargo-xwin
+        if: contains(matrix.target, 'windows')
+        uses: taiki-e/install-action@v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          tool: cargo-xwin
+
+      - name: Install cross-compilation dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu protobuf-compiler
+
+      - name: Install LLVM and NASM (for Windows builds)
+        if: contains(matrix.target, 'windows')
+        run: |
+          sudo apt-get install -y llvm clang nasm
+
+      - name: Build han-coordinator (zigbuild for Linux)
+        if: matrix.build_method == 'zigbuild'
+        working-directory: ./packages/han-rs
+        shell: bash
+        run: |
+          cargo zigbuild --release --target ${{ matrix.target }} -p han-coordinator
+          mkdir -p ../han/dist/binaries
+          cp target/${{ matrix.target }}/release/${{ matrix.coordinator_binary }} ../han/dist/binaries/
+          echo "Built han-coordinator:"
+          ls -la ../han/dist/binaries/${{ matrix.coordinator_binary }}
+
+      - name: Build han-coordinator (zigbuild for Darwin via Docker)
+        if: matrix.build_method == 'docker-zigbuild'
+        shell: bash
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/io \
+            -w /io/packages/han-rs \
+            ghcr.io/rust-cross/cargo-zigbuild:latest \
+            bash -c "apt-get update && apt-get install -y protobuf-compiler && rustup update stable && rustup default stable && rustup target add ${{ matrix.target }} && cargo zigbuild --release --target ${{ matrix.target }} -p han-coordinator"
+          mkdir -p packages/han/dist/binaries
+          cp packages/han-rs/target/${{ matrix.target }}/release/${{ matrix.coordinator_binary }} packages/han/dist/binaries/
+          echo "Built han-coordinator:"
+          ls -la packages/han/dist/binaries/${{ matrix.coordinator_binary }}
+
+      - name: Build han-coordinator (xwin for Windows)
+        if: matrix.build_method == 'xwin'
+        working-directory: ./packages/han-rs
+        shell: bash
+        run: |
+          cargo xwin build --release --target ${{ matrix.target }} -p han-coordinator
+          mkdir -p ../han/dist/binaries
+          cp target/${{ matrix.target }}/release/${{ matrix.coordinator_binary }} ../han/dist/binaries/
+          echo "Built han-coordinator:"
+          ls -la ../han/dist/binaries/${{ matrix.coordinator_binary }}
+
+      - name: Build browse-client dashboard
+        run: |
+          cd packages/browse-client
+          bun install --frozen-lockfile
+          bun run build
+
+      - name: Build bun binary
+        shell: bash
+        run: |
+          cd packages/han
+          bun install --frozen-lockfile
+          mkdir -p dist/binaries
+          bun scripts/build-bundle.js ${{ matrix.bun_target }} --release --coordinator "dist/binaries/${{ matrix.coordinator_binary }}" --dashboard "../browse-client/out"
+          echo "Built binary:"
+          ls -la dist/binaries/
+
+      - name: Name and checksum release binaries
+        shell: bash
+        working-directory: ./packages/han/dist/binaries
+        run: |
+          set -euo pipefail
+          suffix=""
+          if [[ "${{ matrix.target }}" == *windows* ]]; then suffix=".exe"; fi
+          binary="${{ matrix.binary_name }}"
+          coordinator="han-coordinator-${binary#han-}${suffix}"
+          mv "${{ matrix.coordinator_binary }}" "$coordinator"
+          sha256sum "${{ matrix.binary_name }}${suffix}" > "${{ matrix.binary_name }}${suffix}.sha256"
+          sha256sum "$coordinator" > "$coordinator.sha256"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.binary_name }}
+          path: packages/han/dist/binaries/

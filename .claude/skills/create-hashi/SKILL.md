@@ -47,7 +47,7 @@ Create `.claude-plugin/plugin.json` (metadata only, NO mcpServers):
   "description": "MCP server configuration for {Service Name} integration providing {key capabilities}.",
   "author": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "homepage": "https://github.com/thebushidocollective/han",
   "repository": "https://github.com/thebushidocollective/han",

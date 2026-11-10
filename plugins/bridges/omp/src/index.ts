@@ -104,7 +104,8 @@ function describeToolError(result: unknown): string {
           : undefined
       )
       .filter(
-        (value): value is string => typeof value === 'string' && value.length > 0
+        (value): value is string =>
+          typeof value === 'string' && value.length > 0
       )
       .join('\n');
     if (text) return text;

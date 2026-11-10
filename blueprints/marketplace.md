@@ -40,7 +40,7 @@ https://raw.githubusercontent.com/thebushidocollective/han/main/.claude-plugin/m
   "name": "han",
   "owner": {
     "name": "The Bushido Collective",
-    "url": "https://thebushido.co"
+    "url": "https://withbushido.ai"
   },
   "metadata": {
     "description": "Honor in software development...",
@@ -334,10 +334,12 @@ const searchEntry = {
 
 ### Removal
 
-1. **DO NOT remove alias entries** (breaks existing installations)
+1. Keep alias entries for compatibility, except reserved names rejected by Claude Code. The reserved names are retained in migration mappings rather than in the marketplace.
 2. Can remove canonical entry if plugin is fully deprecated
 3. Website regenerates without removed plugin
 4. CLI will no longer find plugin in searches (unless alias exists)
+
+`han plugin migrate` updates user, project and local Claude settings and Han YAML configurations. Conflicting enabled states and YAML keys that would collide are left unchanged and reported for manual resolution; unrelated keys can still migrate. Migration preserves disabled settings and can be rerun.
 
 ### Versioning
 

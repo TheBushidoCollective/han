@@ -193,4 +193,4 @@ Claude: [Uses create_branch then push_files to create branch and commit file]
 
 - **gitlab**: GitLab integration via MCP
 - **git**: Git workflow hooks and validation
-- **claude-plugin-development**: Plugin linting includes git operations
+- **plugin-authoring**: Plugin linting includes git operations

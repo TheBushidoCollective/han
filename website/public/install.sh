@@ -12,8 +12,11 @@ NC='\033[0m' # No Color
 
 # Install to user's local bin directory
 # HAN_INSTALL_TARGET allows wrapper to specify 'han-bin' while manual installs use 'han'
-BIN_DIR="${HOME}/.local/bin"
-HAN_BIN="${BIN_DIR}/${HAN_INSTALL_TARGET:-han}"
+BIN_DIR="${HAN_INSTALL_DIR:-${HOME}/.local/bin}"
+BIN_DIR="${BIN_DIR//\\//}"
+HAN_TARGET="${HAN_INSTALL_TARGET:-han}"
+HAN_TARGET="${HAN_TARGET//\\//}"
+HAN_BIN="${BIN_DIR}/${HAN_TARGET}"
 
 echo -e "${GREEN}Installing han binary to $HAN_BIN...${NC}"
 
@@ -49,8 +52,10 @@ detect_platform() {
 		esac
 		;;
 	MINGW* | MSYS* | CYGWIN*)
-		# Match the release asset naming (han-windows-x64.exe).
-		echo "windows-x64"
+		case "$arch" in
+		x86_64 | amd64) echo "windows-x64" ;;
+		*) echo -e "${RED}Unsupported architecture: $arch${NC}" >&2; exit 1 ;;
+		esac
 		;;
 	*)
 		echo -e "${RED}Unsupported operating system: $os${NC}" >&2
@@ -89,7 +94,7 @@ get_latest_version() {
 	fi
 }
 
-LATEST_VERSION=$(get_latest_version)
+LATEST_VERSION="${HAN_VERSION:-$(get_latest_version)}"
 
 if [ -z "$LATEST_VERSION" ]; then
 	echo -e "${RED}Could not determine latest version.${NC}" >&2
@@ -98,90 +103,111 @@ fi
 
 echo -e "${GREEN}Installing han v$LATEST_VERSION...${NC}"
 
-DOWNLOAD_URL="https://github.com/TheBushidoCollective/han/releases/download/v${LATEST_VERSION}/han-${PLATFORM}${BINARY_SUFFIX}"
-CHECKSUM_URL="${DOWNLOAD_URL}.sha256"
-
-# Download to temp files first for atomic replacement
-# This prevents corruption if download fails or han is already running
-TEMP_BIN="${HAN_BIN}.tmp.$$"
-TEMP_CHECKSUM="${HAN_BIN}.sha256.tmp.$$"
-
+DOWNLOAD_BASE="${HAN_RELEASE_DOWNLOAD_BASE:-https://github.com/TheBushidoCollective/han/releases/download}"
+BASE_URL="${DOWNLOAD_BASE}/v${LATEST_VERSION}"
+TEMP_DIR=$(mktemp -d "${BIN_DIR}/.han-install.XXXXXXXX")
+RELEASE_DIR=""
 cleanup() {
-	rm -f "$TEMP_BIN" "$TEMP_CHECKSUM"
+	rm -rf "$TEMP_DIR"
+	if [ -n "$RELEASE_DIR" ]; then
+		rm -rf "$RELEASE_DIR"
+	fi
 }
 trap cleanup EXIT
 
-echo -e "${YELLOW}Downloading binary...${NC}"
-if command -v curl >/dev/null 2>&1; then
-	curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_BIN"
-elif command -v wget >/dev/null 2>&1; then
-	wget -qO "$TEMP_BIN" "$DOWNLOAD_URL"
+download() {
+	if command -v curl >/dev/null 2>&1; then
+		curl -fsSL "$1" -o "$2"
+	elif command -v wget >/dev/null 2>&1; then
+		wget -qO "$2" "$1"
+	else
+		echo "Neither curl nor wget found." >&2
+		return 1
+	fi
+}
+
+download_verified() {
+	local asset="$1"
+	local expected actual
+	echo -e "${YELLOW}Downloading and verifying ${asset}...${NC}"
+	download "${BASE_URL}/${asset}" "${TEMP_DIR}/${asset}"
+	download "${BASE_URL}/${asset}.sha256" "${TEMP_DIR}/${asset}.sha256"
+	expected=$(awk 'NR == 1 {print $1}' "${TEMP_DIR}/${asset}.sha256")
+	if ! [[ "$expected" =~ ^[[:xdigit:]]{64}$ ]]; then
+		echo "Invalid checksum for ${asset}" >&2
+		return 1
+	fi
+	if command -v sha256sum >/dev/null 2>&1; then
+		actual=$(sha256sum "${TEMP_DIR}/${asset}" | awk '{print $1}')
+	elif command -v shasum >/dev/null 2>&1; then
+		actual=$(shasum -a 256 "${TEMP_DIR}/${asset}" | awk '{print $1}')
+	else
+		echo "A SHA-256 utility is required." >&2
+		return 1
+	fi
+	if [ "$expected" != "$actual" ]; then
+		echo "Checksum verification failed for ${asset}" >&2
+		return 1
+	fi
+	chmod +x "${TEMP_DIR}/${asset}"
+}
+
+CLI_ASSET="han-${PLATFORM}${BINARY_SUFFIX}"
+COORDINATOR_ASSET="han-coordinator-${PLATFORM}${BINARY_SUFFIX}"
+download_verified "$CLI_ASSET"
+download_verified "$COORDINATOR_ASSET"
+
+# Publish a complete pair per K6 install layout
+if [ -n "$BINARY_SUFFIX" ]; then
+	# Delete leftover *.old-* from previous installs
+	rm -f "${BIN_DIR}"/*.old-* 2>/dev/null || true
+
+	# Coordinator first: rename existing to .old-<rand> and move verified new file in
+	COORD_BIN="${BIN_DIR}/han-coordinator.exe"
+	if [ -f "$COORD_BIN" ]; then
+		RAND_SUFFIX="${RANDOM}${RANDOM}"
+		mv "$COORD_BIN" "${BIN_DIR}/han-coordinator.old-${RAND_SUFFIX}" || true
+	fi
+	mv "${TEMP_DIR}/${COORDINATOR_ASSET}" "$COORD_BIN"
+
+	# CLI binary next: rename existing to .old-<rand> and move verified new file in
+	if [ -f "$HAN_BIN" ]; then
+		RAND_SUFFIX="${RANDOM}${RANDOM}"
+		mv "$HAN_BIN" "${BIN_DIR}/han.old-${RAND_SUFFIX}" || true
+	fi
+	mv "${TEMP_DIR}/${CLI_ASSET}" "$HAN_BIN"
+	RELEASE_DIR=""
 else
-	echo -e "${RED}Neither curl nor wget found. Cannot download han binary.${NC}" >&2
-	exit 1
-fi
+	# POSIX: store in .han-releases/<name>/{han,han-coordinator} with symlink
+	mkdir -p "${BIN_DIR}/.han-releases"
+	RELEASE_NAME="$(basename "$TEMP_DIR")"
+	RELEASE_DIR="${BIN_DIR}/.han-releases/${RELEASE_NAME}"
+	mkdir -p "$RELEASE_DIR"
+	mv "${TEMP_DIR}/${CLI_ASSET}" "${RELEASE_DIR}/han"
+	mv "${TEMP_DIR}/${COORDINATOR_ASSET}" "${RELEASE_DIR}/han-coordinator"
 
-# Download checksum
-echo -e "${YELLOW}Downloading checksum for verification...${NC}"
-if command -v curl >/dev/null 2>&1; then
-	if ! curl -fsSL "$CHECKSUM_URL" -o "$TEMP_CHECKSUM" 2>/dev/null; then
-		echo -e "${YELLOW}Warning: Could not download checksum file. Skipping verification.${NC}" >&2
-		echo -e "${YELLOW}This may indicate an older release without checksums.${NC}" >&2
-		SKIP_CHECKSUM=1
-	fi
-elif command -v wget >/dev/null 2>&1; then
-	if ! wget -qO "$TEMP_CHECKSUM" "$CHECKSUM_URL" 2>/dev/null; then
-		echo -e "${YELLOW}Warning: Could not download checksum file. Skipping verification.${NC}" >&2
-		echo -e "${YELLOW}This may indicate an older release without checksums.${NC}" >&2
-		SKIP_CHECKSUM=1
-	fi
-fi
-
-# Verify checksum if downloaded
-if [ -z "$SKIP_CHECKSUM" ]; then
-	echo -e "${YELLOW}Verifying checksum...${NC}"
-
-	# Extract expected checksum from file
-	EXPECTED_CHECKSUM=$(awk '{print $1}' "$TEMP_CHECKSUM")
-
-	# Validate checksum is non-empty
-	if [ -z "$EXPECTED_CHECKSUM" ]; then
-		echo -e "${YELLOW}Warning: Checksum file is empty. Skipping verification.${NC}" >&2
-		SKIP_CHECKSUM=1
+	# Delete stale regular file at $BIN/han-coordinator when publishing symlink
+	if [ -f "${BIN_DIR}/han-coordinator" ] && [ ! -L "${BIN_DIR}/han-coordinator" ]; then
+		rm -f "${BIN_DIR}/han-coordinator"
 	fi
 
-	# Calculate actual checksum (only if we haven't decided to skip)
-	if [ -z "$SKIP_CHECKSUM" ]; then
-		if command -v sha256sum >/dev/null 2>&1; then
-			ACTUAL_CHECKSUM=$(sha256sum "$TEMP_BIN" | awk '{print $1}')
-		elif command -v shasum >/dev/null 2>&1; then
-			ACTUAL_CHECKSUM=$(shasum -a 256 "$TEMP_BIN" | awk '{print $1}')
-		else
-			echo -e "${YELLOW}Warning: No checksum utility found (sha256sum or shasum). Skipping verification.${NC}" >&2
-			SKIP_CHECKSUM=1
-		fi
-	fi
+	ln -s ".han-releases/${RELEASE_NAME}/han" "${TEMP_DIR}/han-link"
+	# Once the pair is complete, keep it even if publishing is interrupted.
+	RELEASE_DIR=""
+	mv -f "${TEMP_DIR}/han-link" "$HAN_BIN"
 
-	# Verify checksums match
-	if [ -z "$SKIP_CHECKSUM" ]; then
-		if [ "$EXPECTED_CHECKSUM" = "$ACTUAL_CHECKSUM" ]; then
-			echo -e "${GREEN}✓ Checksum verified successfully${NC}"
-		else
-			echo -e "${RED}✗ Checksum verification failed!${NC}" >&2
-			echo -e "${RED}Expected: $EXPECTED_CHECKSUM${NC}" >&2
-			echo -e "${RED}Actual:   $ACTUAL_CHECKSUM${NC}" >&2
-			echo -e "${RED}The downloaded binary may be corrupted or tampered with.${NC}" >&2
-			exit 1
-		fi
+	# Prune to the current pair and one previous pair
+	if [ -d "${BIN_DIR}/.han-releases" ]; then
+		(
+			cd "${BIN_DIR}/.han-releases" 2>/dev/null || exit 0
+			ls -1dt .han-install.* 2>/dev/null | tail -n +3 | while read -r old_rel; do
+				if [ -n "$old_rel" ]; then
+					rm -rf "$old_rel"
+				fi
+			done
+		)
 	fi
 fi
-
-# Make it executable
-chmod +x "$TEMP_BIN"
-
-# Atomic replacement - safe even if han is currently running
-mv -f "$TEMP_BIN" "$HAN_BIN"
-
 echo -e "${GREEN}✓ Han v$LATEST_VERSION installed successfully!${NC}"
 echo ""
 echo -e "Han binary installed to: ${YELLOW}$HAN_BIN${NC}"

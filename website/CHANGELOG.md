@@ -5,6 +5,104 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.38.2] - 2026-11-10
+
+### Added
+
+- configure proof harness server and curl shim in release-proofs.yml and install.sh ([8183e0ba](../../commit/8183e0ba))
+- catalog and track metrics from every harness, and bridge omp (#109) ([a7a02ccc](../../commit/a7a02ccc))
+- bring han current with the Claude Code 2.1.228 harness surface (#107) ([3405f340](../../commit/3405f340))
+
+### Fixed
+
+- normalize Windows path separators in install.sh and prove-installer.ts ([2004dd6a](../../commit/2004dd6a))
+- run Next build on Node ([6bce2225](../../commit/6bce2225))
+- preserve website manifest formatting ([bce6f5a6](../../commit/bce6f5a6))
+- detect Next applications and use project lint script ([48688018](../../commit/48688018))
+- distribute matched coordinator binaries ([abcbfc23](../../commit/abcbfc23))
+- preserve conflicting migration settings ([f11fc288](../../commit/f11fc288))
+- rename reserved plugin names and migrate installs ([ff836c6f](../../commit/ff836c6f))
+- clear Biome lint errors blocking the validate gate ([5217c19f](../../commit/5217c19f))
+
+### Other
+
+- format website header and activity indicator with biome ([bafbbdfe](../../commit/bafbbdfe))
+- implement safe cutover per NotableBeaver K1-K6 and slices 1-6 ([7cb1d66d](../../commit/7cb1d66d))
+- Fix release CI, dashboard manifest build, and hook upgrade fallback ([b449ba1d](../../commit/b449ba1d))
+- Merge branch 'main' of github.com:TheBushidoCollective/han into integrate/secure-local-transport-20261105 ([b128349b](../../commit/b128349b))
+- format domain proof script ([66e7e5d3](../../commit/66e7e5d3))
+- prove domain outputs in CI ([9ef5098d](../../commit/9ef5098d))
+- Merge branch 'main' of github.com:TheBushidoCollective/han into integrate/secure-local-transport-20261105 ([c27575b7](../../commit/c27575b7))
+- Merge branch 'main' of github.com:TheBushidoCollective/han into work/pr119-domain ([85c835db](../../commit/85c835db))
+- Merge branch 'integrate/han-hook-validation-20261105' of github.com:TheBushidoCollective/han into integrate/secure-local-transport-20261105 ([6c88addb](../../commit/6c88addb))
+- Fix coordinator bind and publish matched installer pairs ([8c271641](../../commit/8c271641))
+- verify Stop validation diagnostics ([9aae7809](../../commit/9aae7809))
+- Merge branch 'fix/plugin-reserved-names' of github.com:TheBushidoCollective/han into integrate/han-hook-validation-20261105 ([7298f9b9](../../commit/7298f9b9))
+- Merge branch 'fix/bdd-hook-discovery' of github.com:TheBushidoCollective/han into integrate/han-hook-validation-20261105 ([3527c8e6](../../commit/3527c8e6))
+- Fix Playwright BDD hook discovery and configuration ([ad4f0c38](../../commit/ad4f0c38))
+- Merge branch 'main' of github.com:TheBushidoCollective/han into pr-121 ([d848edf4](../../commit/d848edf4))
+- Merge branch 'main' of github.com:TheBushidoCollective/han into work/pr119-domain ([5b42f332](../../commit/5b42f332))
+- live-test results and current setup for all bridges ([62accccd](../../commit/62accccd))
+
+## [1.38.1] - 2026-11-06
+
+### Added
+
+- catalog and track metrics from every harness, and bridge omp (#109) ([a7a02ccc](../../commit/a7a02ccc))
+- bring han current with the Claude Code 2.1.228 harness surface (#107) ([3405f340](../../commit/3405f340))
+- add Han bridge for Google Antigravity IDE via MCP ([fac22376](../../commit/fac22376))
+
+### Fixed
+
+- preserve website manifest formatting ([bce6f5a6](../../commit/bce6f5a6))
+- detect Next applications and use project lint script ([48688018](../../commit/48688018))
+- preserve conflicting migration settings ([f11fc288](../../commit/f11fc288))
+- rename reserved plugin names and migrate installs ([ff836c6f](../../commit/ff836c6f))
+- clear Biome lint errors blocking the validate gate ([5217c19f](../../commit/5217c19f))
+
+### Other
+
+- format domain proof script ([66e7e5d3](../../commit/66e7e5d3))
+- prove domain outputs in CI ([9ef5098d](../../commit/9ef5098d))
+- Merge branch 'main' of github.com:TheBushidoCollective/han into work/pr119-domain ([85c835db](../../commit/85c835db))
+- verify Stop validation diagnostics ([9aae7809](../../commit/9aae7809))
+- Merge branch 'fix/plugin-reserved-names' of github.com:TheBushidoCollective/han into integrate/han-hook-validation-20261105 ([7298f9b9](../../commit/7298f9b9))
+- Merge branch 'fix/bdd-hook-discovery' of github.com:TheBushidoCollective/han into integrate/han-hook-validation-20261105 ([3527c8e6](../../commit/3527c8e6))
+- Fix Playwright BDD hook discovery and configuration ([ad4f0c38](../../commit/ad4f0c38))
+- Merge branch 'main' of github.com:TheBushidoCollective/han into pr-121 ([d848edf4](../../commit/d848edf4))
+- Merge branch 'main' of github.com:TheBushidoCollective/han into work/pr119-domain ([5b42f332](../../commit/5b42f332))
+- live-test results and current setup for all bridges ([62accccd](../../commit/62accccd))
+- format _nav.json with biome ([9f72cdfb](../../commit/9f72cdfb))
+- refresh hook reference and harness installation guides ([da0bfb77](../../commit/da0bfb77))
+
+## [1.38.0] - 2026-11-06
+
+### Added
+
+- catalog and track metrics from every harness, and bridge omp (#109) ([a7a02ccc](../../commit/a7a02ccc))
+- bring han current with the Claude Code 2.1.228 harness surface (#107) ([3405f340](../../commit/3405f340))
+- add Han bridge for Google Antigravity IDE via MCP ([fac22376](../../commit/fac22376))
+
+### Fixed
+
+- preserve website manifest formatting ([bce6f5a6](../../commit/bce6f5a6))
+- detect Next applications and use project lint script ([48688018](../../commit/48688018))
+- preserve conflicting migration settings ([f11fc288](../../commit/f11fc288))
+- rename reserved plugin names and migrate installs ([ff836c6f](../../commit/ff836c6f))
+- clear Biome lint errors blocking the validate gate ([5217c19f](../../commit/5217c19f))
+- correct Windows asset name and .exe suffix (#94) ([455cb8e9](../../commit/455cb8e9))
+
+### Other
+
+- verify Stop validation diagnostics ([9aae7809](../../commit/9aae7809))
+- Merge branch 'fix/plugin-reserved-names' of github.com:TheBushidoCollective/han into integrate/han-hook-validation-20261105 ([7298f9b9](../../commit/7298f9b9))
+- Merge branch 'fix/bdd-hook-discovery' of github.com:TheBushidoCollective/han into integrate/han-hook-validation-20261105 ([3527c8e6](../../commit/3527c8e6))
+- Fix Playwright BDD hook discovery and configuration ([ad4f0c38](../../commit/ad4f0c38))
+- Merge branch 'main' of github.com:TheBushidoCollective/han into pr-121 ([d848edf4](../../commit/d848edf4))
+- live-test results and current setup for all bridges ([62accccd](../../commit/62accccd))
+- format _nav.json with biome ([9f72cdfb](../../commit/9f72cdfb))
+- refresh hook reference and harness installation guides ([da0bfb77](../../commit/da0bfb77))
+
 ## [1.38.0] - 2026-11-05
 
 ### Added
