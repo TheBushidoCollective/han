@@ -5,6 +5,7 @@ on:
     paths:
       - 'deploy/firebase/bootstrap/**'
       - 'deploy/firebase/test/test_bootstrap.py'
+      - 'deploy/firebase/test/test_allow_coverage.py'
       - 'deploy/firebase/test/test_auto_fix_security.py'
       - 'deploy/firebase/test/test_failure_analysis_security.py'
       - '.github/workflows/test-failure-analysis.yml'
@@ -15,6 +16,7 @@ on:
     paths:
       - 'deploy/firebase/bootstrap/**'
       - 'deploy/firebase/test/test_bootstrap.py'
+      - 'deploy/firebase/test/test_allow_coverage.py'
       - 'deploy/firebase/test/test_auto_fix_security.py'
       - 'deploy/firebase/test/test_failure_analysis_security.py'
       - '.github/workflows/test-failure-analysis.yml'
@@ -49,6 +51,8 @@ jobs:
             test_bootstrap.FlagsAreCaptured test_bootstrap.RoleFiles \
             test_bootstrap.DatabasePasswordSequence test_bootstrap.CloudSdkFileLoggingIsOff \
             test_bootstrap.CiOnly test_bootstrap.OwnerCaller test_bootstrap.StateBucketIsOurs
+      - name: Complete allow-coverage controls
+        run: python3 -B -m unittest discover -s deploy/firebase/test -p test_allow_coverage.py -v
       - name: Authenticate auto-fix sources
         run: python3 -B -m unittest discover -s deploy/firebase/test -p test_auto_fix_security.py -v
       - name: Authenticate failure-analysis sources and retries
