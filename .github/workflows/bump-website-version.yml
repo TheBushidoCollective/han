@@ -38,15 +38,15 @@ jobs:
         run: |
           # Check for breaking changes (major bump)
           if echo "$COMMIT_MSG" | grep -qE '^[a-z]+(\(.+\))?!:|BREAKING CHANGE:'; then
-            echo "type=major" >> $GITHUB_OUTPUT
+            echo "type=major" >> "$GITHUB_OUTPUT"
             echo "Detected: MAJOR (breaking change)"
           # Check for features (minor bump)
           elif echo "$COMMIT_MSG" | grep -qE '^feat(\(.+\))?:'; then
-            echo "type=minor" >> $GITHUB_OUTPUT
+            echo "type=minor" >> "$GITHUB_OUTPUT"
             echo "Detected: MINOR (new feature)"
           # Everything else (patch bump) - fix, chore, docs, refactor, etc.
           else
-            echo "type=patch" >> $GITHUB_OUTPUT
+            echo "type=patch" >> "$GITHUB_OUTPUT"
             echo "Detected: PATCH (fix/chore/other)"
           fi
 
@@ -66,11 +66,11 @@ jobs:
           WEBSITE_CHANGES=$(echo "$CHANGED_FILES" | grep "^website/" | grep -v "package.json" | grep -v "bun.lock" || true)
 
           if [ -n "$WEBSITE_CHANGES" ]; then
-            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
             echo "Website has changes:"
             echo "$WEBSITE_CHANGES"
           else
-            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
             echo "No significant website changes"
           fi
 

@@ -87,12 +87,9 @@ class TerraformPlanStepBehaviour(unittest.TestCase):
 
 
 def copy_deploy(into: Path) -> Path:
-    """Copy the deploy tree and the workflow the plan hashes to another root; return the copy's bootstrap.py."""
+    """Copy the deploy tree to another root; return the copy's bootstrap.py."""
     shutil.copytree(ROOT / "deploy", into / "deploy",
                     ignore=shutil.ignore_patterns("__pycache__", ".terraform", "node_modules"))
-    workflows = into / ".github" / "workflows"
-    workflows.mkdir(parents=True)
-    shutil.copy2(ROOT / ".github" / "workflows" / "han-bootstrap.yml", workflows / "han-bootstrap.yml")
     return into / "deploy" / "firebase" / "bootstrap" / "bootstrap.py"
 
 

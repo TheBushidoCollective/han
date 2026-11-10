@@ -136,6 +136,7 @@ jobs:
 
       - name: Build app (API address)
         env:
+          HAN_BUILD_TARGET: team-app
           GRAPHQL_URL: https://api.han.guru/graphql
         run: |
           bun run build

@@ -66,11 +66,11 @@ jobs:
             cp "artifacts/${{ matrix.coordinator_binary }}" "artifacts/han-coordinator" 2>/dev/null || true
           fi
           bun packages/han/scripts/release-proof/serve-release.ts release-assets --tag "v${{ inputs.version }}" --port 41999 &
-          echo "SERVER_PID=$!" >> $GITHUB_ENV
-          echo "${{ github.workspace }}/packages/han/scripts/release-proof/curl-shim" >> $GITHUB_PATH
-          echo "HAN_PROOF_SERVER=http://127.0.0.1:41999" >> $GITHUB_ENV
-          echo "HAN_RELEASE_DOWNLOAD_BASE=http://127.0.0.1:41999/TheBushidoCollective/han/releases/download" >> $GITHUB_ENV
-          echo "HAN_VERSION=${{ inputs.version }}" >> $GITHUB_ENV
+          echo "SERVER_PID=$!" >> "$GITHUB_ENV"
+          echo "${{ github.workspace }}/packages/han/scripts/release-proof/curl-shim" >> "$GITHUB_PATH"
+          echo "HAN_PROOF_SERVER=http://127.0.0.1:41999" >> "$GITHUB_ENV"
+          echo "HAN_RELEASE_DOWNLOAD_BASE=http://127.0.0.1:41999/TheBushidoCollective/han/releases/download" >> "$GITHUB_ENV"
+          echo "HAN_VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
           cat > packages/han/lib/build-info.generated.ts << 'EOF'
           export const HAN_VERSION = "${{ inputs.version }}";
           export const COORDINATOR_SHA256: string | null = null;

@@ -245,12 +245,12 @@ A failed run is repaired by running the bootstrap again, with no change to the c
 1. Run the plan and read it. A normal rerun changes nothing when the user exists, an enabled
    `database-url` version exists and the secret is marked `ready`. Otherwise the plan runs the
    sequence again, with a new password, so the user and the newest enabled version match.
-2. Dispatch Han Bootstrap as section 8 describes, with `expected_sha256` from that plan.
-3. To rotate the password on purpose, dispatch with `rotate_db_password` set to true, and
-   compute the hash with `--rotate-db-password`. The rotation changes the plan, so the hash
-   covers it. Rotation changes the password the database accepts for new connections, so a
-   running revision that opens new connections after the rotation fails them until it is
-   replaced. Rotate only with a deploy ready to follow: `han-server` reads
+2. Run the website's `han-bootstrap` workflow as section 8 describes, with the plan's sha256
+   as `--expect-sha256`.
+3. To rotate the password on purpose, also pass `--rotate-db-password`. The rotation changes the
+   plan, so the hash covers it. Rotation changes the password the database accepts for new
+   connections, so a running revision that opens new connections after the rotation fails them
+   until it is replaced. Rotate only with a deploy ready to follow: `han-server` reads
    `database-url:latest`, so the next revision uses the new password.
 
 Do not edit the secret or the user by hand. The bootstrap is the only writer.
@@ -337,21 +337,21 @@ organisation 949208237676). This PR stays a draft until the blockers in
   project API, no Firebase project and no Hosting site.
 - **The bootstrap** (`bootstrap/bootstrap.py`) has three modes:
   - Default: print the static plan and its `plan-sha256`, reading the local script,
-    role files, condition file and bootstrap workflow. It does not query cloud state.
+    role files and condition file. It does not query cloud state.
     The hash covers their contents and repository-relative paths.
-  - `--execute --expect-sha256 H --expect-commit C`: require the reviewed CI context,
-    matching plan hash and commit, and the exact time-limited sign-in binding before
-    performing bootstrap operations. Bucket ownership is checked before changing it.
+  - `--execute --expect-sha256 H --expect-commit C`: refuse unless the plan hashes to H and
+    C is Han's HEAD, before any call. Then perform the bootstrap operations.
+    Bucket ownership is checked before changing it.
     The run subsequently checks service-account keys and bucket settings.
-  - `--revoke-only`: remove the specifically authorized sign-in binding and verify
-    the policy afterwards. Unrelated bindings must remain untouched.
-- **Failure handling.** The process and workflow attempt revocation after a failure.
-  Cancellation, failed authentication or failed policy writes can prevent cleanup.
-  An independently enforced expiry and a separate CI retirement path are required.
+  - `--rotate-db-password`, with `--execute`: generate a new database password and seed
+    `database-url` with it. The rotation changes the plan, so the hash covers it.
+- **Caller.** The bootstrap runs as `terraform-ci` from the website repository's main-only
+  `han-bootstrap.yml`. Preflight checks that the active gcloud account is exactly that. No
+  temporary sign-in grant is created or removed.
 - **Policy scope limitation.** The bootstrap inspects the service account's own IAM
   policy. It does not prove absence of inherited project, folder or organization grants,
   delegated service-account token minting, or changes to the shared provider mapping.
-  Those require separate read-only security verification before the owner grant.
+  Those require separate read-only security verification.
 - **Existence is read, not guessed.** An object is treated as missing only when its
   describe prints a not-found text captured from the installed gcloud
   (`bootstrap/not-found-markers.json`). Any other error stops the run. The SQL instance
@@ -359,8 +359,8 @@ organisation 949208237676). This PR stays a draft until the blockers in
 
 ### Human steps, in this order
 
-The environment and variable read-backs below do not grant cloud access. The temporary
-sign-in must be created through a separately reviewed CI rail, never from a workstation.
+The environment and variable read-backs below do not grant cloud access. The bootstrap runs only
+from the website repository's main-only workflow, never from a workstation.
 
 1. **Environments (GitHub admin): done, read back.** Created on 2026-11-05 with the GitHub
    API, by an admin session, after checking that none of the four existed. Each has required
@@ -375,20 +375,15 @@ sign-in must be created through a separately reviewed CI rail, never from a work
    names, not secrets. Not set: `HAN_GITHUB_CLIENT_ID`, which needs an OAuth app that belongs
    to slice I. Setting the WIF variable does not grant anything: the pool and provider are
    created only by the bootstrap, which has not run.
-3. **Do not grant owner access yet.** The bootstrap workflow must first be present on
-   the reviewed `main` commit, its checks must pass, and an independently reviewed CI
-   rail must be available to create and retire the exact time-limited sign-in binding.
-   No existing unchanged CI workflow provides that operation. Do not use a local gcloud
-   command or an unconditional grant as a substitute.
+3. **Run the bootstrap from the website repository.** Its main-only `han-bootstrap` workflow runs
+   `bootstrap.py` as `terraform-ci`, after the plan hash and the Han commit are reviewed. Do not
+   run `bootstrap.py` from a workstation, and do not add an unconditional grant as a substitute.
 4. **Review the exact plan and commit.** Do not execute unreviewed repository code on a
    workstation holding cloud credentials. Review the complete commit and inspect the
    plan-only CI artifact. Independently compare its input hashes with the reviewed
-   commit's files and establish the plan hash before granting access.
-5. **Grant and approve only after review.** The CI grant must be limited to the exact
-   principal, role and time condition and tied to the reviewed commit and plan. Check
-   the full run SHA with `gh run view <run-id> --json headSha` before approving the
-   same run. A short SHA is not sufficient. Expiry is a backstop, not proof of revoke.
-   Confirm the exact binding was removed and the grant rail will not recreate it.
+   commit's files and establish the plan hash before running the bootstrap.
+5. **Approve only after review.** Check the full run SHA with `gh run view <run-id> --json headSha`
+   before approving any environment gate on that run. A short SHA is not sufficient.
 6. Then `han-infra` and the deploy workflows run in the order in "How it runs after
    the prerequisites".
 
@@ -406,29 +401,25 @@ revision under review. Results are reported by that run, not assumed here.
 
 - `test_bootstrap.py`: plan mode makes no cloud calls and is deterministic. A
   different hash, or execute without a hash, refuses before any call. A first run creates
-  every object and leaves no sign-in member, while other members of the bootstrap policy
+  every object, and no sign-in grant exists to create or remove. Other members of the policy
   are kept. The logging view filter uses `resource.type` only, the log bucket uses
   `--retention-days`, the sink writes only to the custom bucket, and the Cloud Run shell
   is private. The SQL instance matches Terraform's edition, version, SSL mode and
   deletion protection. Secret grants are per secret with no condition, and only the two
   Terraform secrets, `jwt-secret` and `master-kek`, get the custom roles. A second run creates nothing. A permission error
-  is never treated as missing, and an unexpected describe error creates nothing. Revoke
-  runs after a failed step, after a failed verification, and after a user key is found. It
-  fails when the policy cannot be read or the member survives the write. Every gcloud flag
+  is never treated as missing, and an unexpected describe error creates nothing. Every gcloud flag
   the bootstrap passes is one the installed gcloud 580.0.0 accepts (`gcloud-flags.json`).
   The Terraform schema has every attribute used (`tf-schema.json`). The infra workflow's
   bucket name matches the bootstrap's.
 - `test_isolation.py`: Terraform grants are the reviewed set, no owner, editor or
-  viewer role is used, no Han role can set or create secret IAM, and the shared pool is
-  referenced only by the bootstrap workflow. The least-privilege checks: no `firebase.viewer`,
+  viewer role is used, no Han role can set or create secret IAM, and no Han workflow or Terraform
+  file references the shared pool. The least-privilege checks: no `firebase.viewer`,
   the apply identity reads the registry and holds no `repoAdmin`, Terraform manages no
   Artifact Registry IAM, the KEK version cannot be destroyed by the apply identity, the apply
   SQL role cannot delete the instance, and the SQL condition is an exact match.
-- `test_workflows.py`: the bootstrap plan job has no environment, no sign-in and no
-  owner token, and only the apply job holds the environment. Execution is pinned to the
-  approved hash and commit, and the revoke step runs only when the execute step did not
-  succeed. The Hosting sites are ensured before the deploy. Each identity is used only from
-  its environment, and every third-party action is pinned. These are source-text checks.
+- `test_workflows.py`: each Han workflow keeps its identity to its environment, the gate runs
+  before any environment job, the Hosting sites are ensured before the deploy, and every
+  third-party action is pinned. These are source-text checks.
 - `test_scripts.py`: helper scripts, and the Hosting site creation is tested in
   `test_bootstrap.py` (creates only missing sites, stops on a failed list, and reports a
   failed create).
@@ -457,15 +448,12 @@ Every item here is a fact the repository cannot establish. Each names who suppli
 1. **Environment protections: set and read back (see human step 1).** What remains
    unverified: the admin bypass is read as `false` through the API, and nothing here tests
    that it holds against a real admin attempt. Supplier: a GitHub admin, once, by trying it.
-2. **The time-boxed sign-in and its condition.** Whether WIF exchange honours
-   `request.time` remains unverified. The required binding uses role
-   `roles/iam.workloadIdentityUser`, title `han-bootstrap-sign-in`, description
-   `han-bootstrap commit=<full commit> plan=<plan sha256>`, and expression
-   `request.time < timestamp('<UTC expiry>')`. The bootstrap checks the expiry window
-   and the description against the approved run. Only a reviewed CI rail may grant it.
-3. **The shared pool admits the bootstrap subject.** The `github` pool's provider must
-   accept `repo:TheBushidoCollective/han:environment:han-bootstrap`. Supplier: the owner of
-   that pool (the website team, or Jason). Unverified here.
+2. **The website bootstrap has not run.** The `han-github` pool and provider do not exist yet,
+   so the `plan` check fails with `invalid_target`. Supplier: the website team's main-only
+   `han-bootstrap` run, after review.
+3. **The website identity's access to the shared pool.** The website's `han-bootstrap.yml`
+   authenticates as `terraform-ci` outside this repository. Whether that works is unverified
+   until the run. Supplier: the website team.
 4. **Apply needs `actAs` on `han-server-run` to update the service?** The apply identity
    changes `invoker_iam_disabled` on `han-server`, and the role set grants no
    `iam.serviceAccounts.actAs`. If the first apply fails for it, the grant is a choice

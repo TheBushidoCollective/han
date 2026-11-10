@@ -105,15 +105,11 @@ class TerraformScope(unittest.TestCase):
         for match in re.finditer(r'account_id\s*=\s*"([^"]+)"', text):
             self.assertTrue(match.group(1).startswith("han-"), match.group(1))
 
-    def test_the_shared_pool_is_referenced_only_by_the_bootstrap(self):
-        # Han's runtime never uses the shared github pool. Only the one-shot
-        # bootstrap signs in through it, as the existing bootstrap identity.
+    def test_the_shared_pool_is_never_referenced_by_han(self):
+        # The website repo owns the shared-pool sign-in. Han never references it.
         for path in list(TF.glob("*.tf")) + list(WORKFLOWS.glob("*.yml")):
             text = path.read_text(encoding="utf-8")
-            if "workloadIdentityPools/github/" in text:
-                self.assertEqual(path.name, "han-bootstrap.yml", path.name)
-                self.assertIn("service_account: terraform-bootstrap@thebushido-co.iam.gserviceaccount.com", text)
-                self.assertIn("environment:\n      name: han-bootstrap", text)
+            self.assertNotIn("workloadIdentityPools/github/", text, path.name)
 
     def test_invoker_setting_is_in_terraform(self):
         self.assertIn("invoker_iam_disabled = true", (TF / "cloudrun.tf").read_text(encoding="utf-8"))
