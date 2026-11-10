@@ -10,36 +10,29 @@
 
 import { type Client, createClient } from 'graphql-ws';
 import WebSocket from 'ws';
+import {
+  CoordinatorBinaryMissingError,
+  CoordinatorConnectionRefusedError,
+  CoordinatorPortOccupiedError,
+  coordinatorRequest,
+  readCoordinatorDescriptor,
+} from '../../coordinator/connection.ts';
 import { checkHealth } from './health.ts';
-import { getCoordinatorPort } from './types.ts';
 
-// Lazy coordinator initialization state
 let coordinatorPromise: Promise<void> | null = null;
-let coordinatorReady = false;
 
-/**
- * Ensure the coordinator is running before making requests.
- * This is called automatically by the client on first request.
- * Returns true if coordinator is ready, false if it failed to start.
- */
 export async function ensureCoordinatorReady(): Promise<boolean> {
-  if (coordinatorReady) return true;
-
   if (!coordinatorPromise) {
-    coordinatorPromise = (async () => {
-      try {
-        const { ensureCoordinator } = await import('./daemon.ts');
+    coordinatorPromise = import('./daemon.ts')
+      .then(async ({ ensureCoordinator }) => {
         await ensureCoordinator();
-        coordinatorReady = true;
-      } catch (err) {
-        // Log but don't throw - caller will handle unavailability
-        console.error('[coordinator-client] Failed to start coordinator:', err);
-      }
-    })();
+      })
+      .finally(() => {
+        coordinatorPromise = null;
+      });
   }
-
   await coordinatorPromise;
-  return coordinatorReady;
+  return true;
 }
 
 /**
@@ -66,24 +59,31 @@ export interface GraphQLResponse<T = unknown> {
  * Coordinator GraphQL Client
  */
 export class CoordinatorClient {
-  private readonly url: string;
-  private readonly wsUrl: string;
   private wsClient: Client | null = null;
+  private port?: number;
 
   constructor(port?: number) {
-    const effectivePort = port ?? getCoordinatorPort();
-    this.url = `http://127.0.0.1:${effectivePort}/graphql`;
-    this.wsUrl = `ws://127.0.0.1:${effectivePort}/graphql`;
+    this.port = port;
   }
 
   /**
    * Check if the coordinator is available
    */
   async isAvailable(): Promise<boolean> {
-    const health = await checkHealth();
-    return health?.status === 'ok';
+    try {
+      const health = await checkHealth(this.port);
+      return health?.status === 'ok';
+    } catch (error) {
+      if (
+        error instanceof CoordinatorPortOccupiedError ||
+        error instanceof CoordinatorBinaryMissingError ||
+        error instanceof CoordinatorConnectionRefusedError
+      ) {
+        return false;
+      }
+      throw error;
+    }
   }
-
   /**
    * Execute a GraphQL query or mutation.
    * Automatically ensures the coordinator is running before making requests.
@@ -98,7 +98,7 @@ export class CoordinatorClient {
       throw new Error('Coordinator is not available');
     }
 
-    const response = await fetch(this.url, {
+    const response = await coordinatorRequest('/graphql', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -157,11 +157,21 @@ export class CoordinatorClient {
    */
   private getWsClient(): Client {
     if (!this.wsClient) {
+      const descriptor = readCoordinatorDescriptor();
+      const Socket = class extends WebSocket {
+        constructor(_url: string, protocols?: string | string[]) {
+          const current = readCoordinatorDescriptor();
+          super(`wss://127.0.0.1:${current.httpsPort}/graphql`, protocols, {
+            ca: current.certificatePem,
+            rejectUnauthorized: true,
+            headers: { Authorization: `Bearer ${current.bearerToken}` },
+          });
+        }
+      };
       this.wsClient = createClient({
-        url: this.wsUrl,
-        webSocketImpl: WebSocket,
-        retryAttempts: 3,
-        shouldRetry: () => true,
+        url: `wss://127.0.0.1:${descriptor.httpsPort}/graphql`,
+        webSocketImpl: Socket as unknown as typeof globalThis.WebSocket,
+        retryAttempts: 0,
       });
     }
     return this.wsClient;

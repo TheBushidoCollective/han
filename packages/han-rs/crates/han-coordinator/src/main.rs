@@ -6,9 +6,23 @@
 mod grpc;
 mod hooks;
 mod lock;
+mod runtime;
+mod rpc_guard;
 mod server;
 mod tls;
 mod watcher_bridge;
+#[cfg(unix)]
+mod posix_runtime_helper;
+#[cfg(windows)]
+mod windows_process_identity;
+#[cfg(windows)]
+mod windows_secure_fs;
+#[cfg(windows)]
+mod windows_runtime_helper;
+#[cfg(windows)]
+mod windows_supervisor_authority;
+#[cfg(windows)]
+mod windows_coordinator_runtime;
 
 use clap::Parser;
 use grpc::{
@@ -27,6 +41,8 @@ use hooks::HookEngine;
 use lock::CoordinatorLock;
 use sea_orm_migration::MigratorTrait;
 use std::collections::HashMap;
+#[cfg(unix)]
+use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
@@ -49,9 +65,19 @@ struct Cli {
     #[arg(long)]
     foreground: bool,
 
+    #[arg(long, hide = true)]
+    supervisor_pid: Option<u32>,
+    #[arg(long, hide = true)]
+    supervisor_nonce: Option<String>,
+    #[arg(long, hide = true)]
+    supervisor_generation: Option<String>,
+
     /// Database file path.
     #[arg(long)]
     db_path: Option<String>,
+    /// Shared Han data directory (locks, database and runtime descriptor).
+    #[arg(long)]
+    data_dir: Option<std::path::PathBuf>,
 
     /// Project path for hook discovery.
     #[arg(long)]
@@ -72,6 +98,8 @@ struct Cli {
     /// Write PID to file (daemon mode).
     #[arg(long)]
     pid_file: Option<String>,
+    #[arg(long, hide = true)]
+    startup_receipt: bool,
 }
 
 /// How long a peer gets to finish its TLS handshake before being dropped.
@@ -146,32 +174,99 @@ impl axum::serve::Listener for TlsListener {
         self.inner.local_addr()
     }
 }
+#[cfg(unix)]
+fn shutdown_signal() -> impl Future<Output = ()> {
+    let mut terminate = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+        .expect("install SIGTERM handler");
+    async move {
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {},
+            _ = terminate.recv() => {},
+        }
+    }
+}
 
-/// Resolve the database path.
-fn resolve_db_path(cli_path: Option<&str>) -> String {
-    if let Some(path) = cli_path {
-        return path.to_string();
-    }
-    if let Some(home) = dirs::home_dir() {
-        let han_dir = home.join(".han");
-        let _ = std::fs::create_dir_all(&han_dir);
-        return han_dir.join("han.db").to_string_lossy().to_string();
-    }
-    "han.db".to_string()
+#[cfg(not(unix))]
+async fn shutdown_signal() {
+    let _ = tokio::signal::ctrl_c().await;
+}
+
+
+fn resolve_db_path(cli_path: Option<&str>, data_dir: &std::path::Path) -> String {
+    cli_path.map(str::to_owned)
+        .unwrap_or_else(|| data_dir.join("han.db").to_string_lossy().into_owned())
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(windows)]
+    {
+        let mut args = std::env::args_os();
+        let _program = args.next();
+        if args.next().as_deref() == Some(std::ffi::OsStr::new("--local-runtime"))
+            && args.next().is_none()
+        {
+            windows_runtime_helper::run()?;
+            return Ok(());
+        }
+    }
+    #[cfg(unix)]
+    {
+        let mut args = std::env::args_os();
+        let _program = args.next();
+        if args.next().as_deref() == Some(std::ffi::OsStr::new("--local-runtime"))
+            && args.next().is_none()
+        {
+            posix_runtime_helper::run()?;
+            return Ok(());
+        }
+    }
     // Parse CLI args
     let cli = Cli::parse();
+    let supervisor = match (&cli.supervisor_pid, &cli.supervisor_nonce, &cli.supervisor_generation) {
+        (None, None, None) => None,
+        (Some(pid), Some(nonce), Some(generation)) if cli.foreground => {
+            let binding = runtime::SupervisorBinding::validate(*pid, nonce.clone(), generation.clone())?;
+            #[cfg(unix)]
+            if unsafe { libc::getppid() } as u32 != *pid {
+                return Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "supervisor is not the parent process").into());
+            }
+            #[cfg(not(any(unix, windows)))]
+            return Err(std::io::Error::new(std::io::ErrorKind::Unsupported, "supervisor verification unavailable").into());
+            #[cfg(any(unix, windows))]
+            Some(binding)
+        }
+        _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "supervisor arguments must be supplied together with --foreground").into()),
+    };
+
+    // A path-based PID marker is not an ownership record on Windows.
+    #[cfg(windows)]
+    if cli.pid_file.is_some() {
+        return Err(std::io::Error::new(std::io::ErrorKind::Unsupported, "Windows PID-file publication is unavailable").into());
+    }
+    #[cfg(not(windows))]
+    if cli.startup_receipt {
+        return Err(std::io::Error::new(std::io::ErrorKind::Unsupported, "--startup-receipt is supported only on Windows").into());
+    }
+    #[cfg(windows)]
+    if cli.startup_receipt && !cli.foreground {
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "--startup-receipt requires --foreground").into());
+    }
+
 
     // Initialize tracing
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
-        )
-        .init();
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
+    if cli.startup_receipt {
+        tracing_subscriber::fmt()
+            .with_env_filter(filter)
+            .with_writer(std::io::stderr)
+            .init();
+    } else {
+        tracing_subscriber::fmt()
+            .with_env_filter(filter)
+            .init();
+    }
 
     // Install ring crypto provider for rustls (must be before any TLS operations)
     let _ = rustls::crypto::ring::default_provider().install_default();
@@ -181,9 +276,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Daemon mode: fork if not --foreground
     if !cli.foreground {
         tracing::info!("Daemonizing...");
-        daemonize(&cli)?;
+        daemonize(&cli).await?;
         return Ok(());
     }
+    let shutdown = shutdown_signal();
+    tokio::pin!(shutdown);
+
 
     // Claim the HTTPS port before anything else. `bind` is an atomic,
     // kernel-enforced singleton, so it is the primary mutual exclusion; the
@@ -196,18 +294,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // coordinator that actually owns the port with no record on disk. It
     // also opens the database and runs migrations before finding out it was
     // never needed.
-    let server_addr: SocketAddr = ([0, 0, 0, 0], cli.port).into();
-    let tls_listener = match tokio::net::TcpListener::bind(server_addr).await {
-        Ok(listener) => listener,
-        Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
-            tracing::info!(
-                "Another process is already serving on {}; exiting",
-                server_addr
-            );
-            return Ok(());
-        }
-        Err(e) => return Err(e.into()),
+    let server_addr: SocketAddr = ([127, 0, 0, 1], cli.port).into();
+    let tls_listener = tokio::net::TcpListener::bind(server_addr).await?;
+    let https_port = tls_listener.local_addr()?.port();
+    let grpc_listener = if cli.no_grpc {
+        None
+    } else {
+        Some(tokio::net::TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], cli.grpc_port))).await?)
     };
+    let grpc_port = grpc_listener.as_ref().map(|listener| listener.local_addr().map(|addr| addr.port())).transpose()?;
+    let data_dir = runtime::data_dir(cli.data_dir.as_deref())?;
+    let runtime_dir = runtime::prepare(&data_dir)?;
+    #[cfg(windows)]
+    let windows_directory = windows_coordinator_runtime::retain_directory(&runtime_dir)?;
+    // Keep the pin and lifetime lock through process termination, including
+    // unwinding after server startup. Connection tasks may outlive abort.
+    #[cfg(windows)]
+    let windows_lease = windows_coordinator_runtime::retain_lease(windows_directory)?;
 
     // Acquire coordinator lock. Another live coordinator already holding it
     // is not an error: exit cleanly (status 0) so the TypeScript supervisor's
@@ -215,8 +318,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Nothing has been published at this point, so an exit here leaves no
     // trace: the listener drops and releasing a lock we never owned is a
     // no-op.
-    let lock = CoordinatorLock::new()?;
-    match lock.acquire(Some(cli.port)) {
+    #[cfg(not(windows))]
+    let lock = CoordinatorLock::with_path(runtime_dir.join("coordinator.lock"));
+    #[cfg(not(windows))]
+    match lock.acquire(Some(https_port)) {
         Ok(()) => {}
         Err(lock::LockError::AlreadyLocked { pid, port }) => {
             tracing::info!(
@@ -230,7 +335,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Start heartbeat task
+    #[cfg(not(windows))]
     let lock_path = lock.lock_path().to_path_buf();
+    #[cfg(not(windows))]
     tokio::spawn(async move {
         let heartbeat_lock = lock::CoordinatorLock::with_path(lock_path);
         loop {
@@ -247,9 +354,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     });
+    // This hook exists only in explicitly feature-enabled proof binaries.
+    // Fixture state is private and no transport credentials are recorded.
+    #[cfg(feature = "proof-startup-barrier")]
+    if let Some(path) = std::env::var_os("HAN_PROOF_STARTUP_BARRIER") {
+        let path = std::path::PathBuf::from(path);
+        if path.join("arm").is_file() {
+            let marker = serde_json::json!({
+                "pid": std::process::id(),
+                "httpsPort": https_port,
+                "grpcPort": grpc_port,
+                "supervisor": &supervisor,
+            });
+            std::fs::write(path.join("bound.json"), serde_json::to_vec(&marker)?)?;
+            let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(45);
+            while !path.join("release").is_file() {
+                if tokio::time::Instant::now() >= deadline {
+                    return Err(std::io::Error::new(std::io::ErrorKind::TimedOut, "startup proof barrier timed out").into());
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+            }
+        }
+    }
+
 
     // Initialize database
-    let db_path = resolve_db_path(cli.db_path.as_deref());
+    let db_path = resolve_db_path(cli.db_path.as_deref(), &data_dir);
     tracing::info!("Database: {}", db_path);
 
     let db = establish_connection(DbConfig::Sqlite {
@@ -283,24 +413,70 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let project_path = cli.project_path.map(std::path::PathBuf::from);
     let hook_engine = Arc::new(Mutex::new(HookEngine::new(project_path)));
 
-    // Shared gRPC state
+    let (shutdown_tx, mut shutdown_rx) = broadcast::channel(1);
+
+    // Serve on the listener claimed at startup, above.
+    let certs = tls::generate_identity()?;
+    let bearer = runtime::random_token();
+    let descriptor = runtime::Descriptor {
+        transport_version: runtime::LOCAL_TRANSPORT_VERSION,
+        instance_id: runtime::random_token(),
+        pid: std::process::id(),
+        #[cfg(windows)]
+        process: windows_process_identity::current_identity()?,
+        https_port,
+        grpc_port,
+        certificate_pem: certs.cert_pem.clone(),
+        bearer_token: bearer.clone(),
+        supervisor,
+    };
+    #[cfg(not(windows))]
+    let published_descriptor = runtime::PublishedDescriptor::publish(&runtime_dir, &descriptor)?;
+    #[cfg(windows)]
+    let published_descriptor = runtime::PublishedDescriptor::publish(&runtime_dir, &descriptor, windows_directory.clone(), windows_lease)?;
+    #[cfg(windows)]
+    if cli.startup_receipt {
+        use std::io::Write;
+        let descriptor_bytes = serde_json::to_vec(&descriptor)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        if descriptor_bytes.len() > 65536 {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "descriptor exceeds 64 KiB receipt limit").into());
+        }
+        let receipt = serde_json::json!({
+            "version": 1,
+            "descriptor": descriptor,
+        });
+        let mut receipt_bytes = serde_json::to_vec(&receipt)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        receipt_bytes.push(b'\n');
+        if receipt_bytes.len() > 131072 {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "receipt exceeds 128 KiB envelope limit").into());
+        }
+        let mut stdout = std::io::stdout().lock();
+        stdout.write_all(&receipt_bytes)?;
+        stdout.flush()?;
+    }
+    #[cfg(not(windows))]
+    let shutdown_context = runtime::ShutdownContext { runtime: runtime_dir.clone(), descriptor: descriptor.clone() };
+    #[cfg(windows)]
+    let shutdown_context = published_descriptor.shutdown_context();
     let coordinator_state = Arc::new(CoordinatorState {
         db: db.clone(),
         start_time: Instant::now(),
         hook_engine: hook_engine.clone(),
         slots: Arc::new(RwLock::new(HashMap::new())),
+        shutdown: shutdown_tx,
+        shutdown_context: Some(shutdown_context),
+        shutdown_committed: std::sync::Mutex::new(false),
     });
-
-    // Serve on the listener claimed at startup, above.
-    let router = server::build_router(schema.clone(), coordinator_state.start_time);
-
-    let certs = tls::ensure_certificates()?;
+    let router = server::build_router(schema.clone(), coordinator_state.start_time, https_port, bearer.clone());
     let tls_config = tls::build_tls_config(&certs)?;
     let acceptor = TlsAcceptor::from(Arc::new(tls_config));
+    let grpc_acceptor = acceptor.clone();
 
     tracing::info!("HTTPS server listening on {}", server_addr);
 
-    let server_handle = tokio::spawn(async move {
+    let mut server_handle = tokio::spawn(async move {
         let listener = TlsListener {
             inner: tls_listener,
             acceptor,
@@ -312,13 +488,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // Start gRPC server
-    let grpc_handle = if !cli.no_grpc {
-        let grpc_addr: SocketAddr = ([0, 0, 0, 0], cli.grpc_port).into();
+    let mut grpc_handle = if let Some(grpc_listener) = grpc_listener {
         let state = coordinator_state.clone();
-
-        tracing::info!("gRPC server listening on {}", grpc_addr);
+        let rpc_guard = rpc_guard::GuardLayer::new(grpc_port.expect("bound port"), &bearer);
+        let server = TonicServer::builder();
+        tracing::info!("gRPC server listening on 127.0.0.1:{}", grpc_port.expect("bound port"));
         Some(tokio::spawn(async move {
-            TonicServer::builder()
+            let listener = TlsListener {
+                inner: grpc_listener,
+                acceptor: grpc_acceptor,
+                handshakes: tokio::task::JoinSet::new(),
+            };
+            let incoming = futures_util::stream::unfold(listener, |mut listener| async move {
+                let (stream, _) = axum::serve::Listener::accept(&mut listener).await;
+                Some((Ok::<_, std::io::Error>(stream), listener))
+            });
+            server.accept_http1(true)
+                .layer(rpc_guard)
+                .layer(tonic_web::GrpcWebLayer::new())
                 .add_service(CoordinatorServiceServer::new(CoordinatorServiceImpl {
                     state: state.clone(),
                 }))
@@ -337,13 +524,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .add_service(MemoryServiceServer::new(MemoryServiceImpl {
                     state: state.clone(),
                 }))
-                .serve(grpc_addr)
+                .serve_with_incoming(incoming)
                 .await
                 .unwrap();
         }))
     } else {
         None
     };
+
 
     // Write PID file
     if let Some(pid_path) = &cli.pid_file {
@@ -393,29 +581,55 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
-    // Setup signal handling
-    let shutdown = tokio::signal::ctrl_c();
-
+    #[cfg(windows)]
+    let mut https_finished = false;
+    #[cfg(windows)]
+    let mut grpc_finished = false;
     tokio::select! {
-        _ = shutdown => {
+        _ = &mut shutdown => {
             tracing::info!("Received shutdown signal");
         }
-        _ = server_handle => {
+        _ = &mut server_handle => {
+            #[cfg(windows)]
+            { https_finished = true; }
             tracing::info!("Server stopped");
+        }
+        _ = async {
+            match grpc_handle.as_mut() {
+                Some(handle) => { let _ = handle.await; }
+                None => std::future::pending::<()>().await,
+            }
+        } => {
+            #[cfg(windows)]
+            { grpc_finished = true; }
+            tracing::error!("gRPC server stopped");
+        }
+        _ = shutdown_rx.recv() => {
+            tracing::info!("Received authenticated shutdown request");
+        }
+        _ = tokio::time::sleep(std::time::Duration::from_secs(23 * 60 * 60)) => {
+            tracing::info!("Rotating coordinator identity before certificate expiry");
         }
     }
 
     // Cleanup
     tracing::info!("Shutting down...");
+    server_handle.abort();
+    #[cfg(windows)]
+    if !https_finished { let _ = (&mut server_handle).await; }
     if let Some(handle) = watcher_handle {
         handle.abort();
     }
-    if let Some(handle) = grpc_handle {
+    if let Some(mut handle) = grpc_handle {
         handle.abort();
+        #[cfg(windows)]
+        if !grpc_finished { let _ = (&mut handle).await; }
     }
     if let Some(pid_path) = &cli.pid_file {
         let _ = std::fs::remove_file(pid_path);
     }
+    drop(published_descriptor);
+    #[cfg(not(windows))]
     lock.release()?;
 
     tracing::info!("Coordinator stopped");
@@ -423,7 +637,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// Daemonize by forking and waiting for the child to be healthy.
-fn daemonize(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
+async fn daemonize(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     use std::process::Command;
 
     let exe = std::env::current_exe()?;
@@ -432,6 +646,10 @@ fn daemonize(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
     args.push(cli.port.to_string());
     args.push("--grpc-port".to_string());
     args.push(cli.grpc_port.to_string());
+    let data_dir = runtime::data_dir(cli.data_dir.as_deref())?;
+    let runtime_dir = runtime::prepare(&data_dir)?;
+    args.push("--data-dir".to_string());
+    args.push(data_dir.to_string_lossy().into_owned());
 
     if let Some(ref db) = cli.db_path {
         args.push("--db-path".to_string());
@@ -451,51 +669,63 @@ fn daemonize(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
         args.push("--scan-on-start".to_string());
     }
 
-    // Write PID file for daemon tracking
-    let pid_path = if let Some(home) = dirs::home_dir() {
-        let han_dir = home.join(".han");
-        let _ = std::fs::create_dir_all(&han_dir);
-        han_dir
-            .join("coordinator.pid")
-            .to_string_lossy()
-            .to_string()
-    } else {
-        "coordinator.pid".to_string()
-    };
-    args.push("--pid-file".to_string());
-    args.push(pid_path.clone());
+    if let Some(pid_path) = &cli.pid_file {
+        args.push("--pid-file".to_string());
+        args.push(pid_path.clone());
+    }
 
-    let child = Command::new(exe)
-        .args(&args)
+    let mut cmd = Command::new(exe);
+    cmd.args(&args)
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
-        .stdin(std::process::Stdio::null())
-        .spawn()?;
+        .stdin(std::process::Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    }
+    let mut child = cmd.spawn()?;
 
     tracing::info!("Daemon started with PID {}", child.id());
 
-    // Wait a bit and check health
-    std::thread::sleep(std::time::Duration::from_secs(2));
-
-    let health_url = format!("https://coordinator.local.han.guru:{}/health", cli.port);
-    match std::process::Command::new("curl")
-        .args(["-sk", "-o", "/dev/null", "-w", "%{http_code}", &health_url])
-        .output()
-    {
-        Ok(output) => {
-            let status = String::from_utf8_lossy(&output.stdout);
-            if status.trim() == "200" {
+    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(30);
+    loop {
+        if let Some(status) = child.try_wait()? {
+            return Err(format!("coordinator exited before readiness: {status}").into());
+        }
+        match runtime::read_descriptor(&runtime_dir) {
+            Ok(descriptor) if descriptor.pid == child.id() => {
+                if descriptor.transport_version != runtime::LOCAL_TRANSPORT_VERSION {
+                    return Err("unsupported coordinator transport version".into());
+                }
+                let cert = reqwest::Certificate::from_pem(descriptor.certificate_pem.as_bytes())?;
+                let client = reqwest::Client::builder()
+                    .tls_built_in_root_certs(false)
+                    .add_root_certificate(cert)
+                    .no_proxy()
+                    .timeout(std::time::Duration::from_secs(3))
+                    .build()?;
+                let response = client.get(format!("https://127.0.0.1:{}/health", descriptor.https_port))
+                    .bearer_auth(&descriptor.bearer_token).send().await?;
+                if !response.status().is_success() {
+                    return Err(format!("coordinator health rejected: {}", response.status()).into());
+                }
+                let health: serde_json::Value = response.json().await?;
+                if health.get("pid").and_then(|v| v.as_u64()) != Some(child.id() as u64) {
+                    return Err("coordinator health PID does not match spawned process".into());
+                }
                 tracing::info!("Daemon is healthy");
-            } else {
-                tracing::warn!("Daemon health check returned: {}", status);
+                return Ok(());
             }
+            Ok(_) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e.into()),
         }
-        Err(_) => {
-            tracing::warn!("Could not check daemon health (curl not available)");
+        if tokio::time::Instant::now() >= deadline {
+            return Err("coordinator did not publish its descriptor before the startup deadline".into());
         }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     }
-
-    Ok(())
 }
 
 #[cfg(test)]
@@ -503,14 +733,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_resolve_db_path_explicit() {
-        assert_eq!(resolve_db_path(Some("/tmp/test.db")), "/tmp/test.db");
-    }
-
-    #[test]
-    fn test_resolve_db_path_default() {
-        let path = resolve_db_path(None);
-        assert!(path.ends_with("han.db"));
+    fn test_resolve_db_path() {
+        let data = std::path::Path::new("/tmp/isolated-han");
+        assert_eq!(resolve_db_path(Some("./custom.db"), data), "./custom.db");
+        assert_eq!(resolve_db_path(None, data), "/tmp/isolated-han/han.db");
     }
 
     #[test]
@@ -539,41 +765,4 @@ mod tests {
         assert_eq!(cli.db_path, Some("/tmp/test.db".to_string()));
     }
 
-    #[test]
-    fn test_resolve_db_path_explicit_absolute() {
-        assert_eq!(
-            resolve_db_path(Some("/custom/path/data.db")),
-            "/custom/path/data.db"
-        );
-    }
-
-    #[test]
-    fn test_resolve_db_path_explicit_relative() {
-        assert_eq!(resolve_db_path(Some("./local.db")), "./local.db");
-    }
-
-    #[test]
-    fn test_resolve_db_path_none_falls_back() {
-        // When no explicit path is given, should resolve to something ending in han.db
-        let path = resolve_db_path(None);
-        assert!(
-            path.ends_with("han.db"),
-            "Expected path ending with han.db, got: {}",
-            path
-        );
-        // On a system with a home dir, it should contain .han directory
-        if dirs::home_dir().is_some() {
-            assert!(
-                path.contains(".han"),
-                "Expected path containing .han, got: {}",
-                path
-            );
-        }
-    }
-
-    #[test]
-    fn test_resolve_db_path_explicit_empty_string() {
-        // An empty string is still an explicit path
-        assert_eq!(resolve_db_path(Some("")), "");
-    }
 }

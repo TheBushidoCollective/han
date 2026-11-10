@@ -7,7 +7,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getCoordinatorPort } from "../config/port.ts";
+import { dashboardAuthorization } from "../bootstrap.ts";
+import { getGraphQLEndpoints } from "../config/urls.ts";
 
 interface CoordinatorHealthState {
 	isConnected: boolean;
@@ -32,8 +33,7 @@ let cachedIsConnected = false;
  * which is much cheaper (no GraphQL parsing, no DB access).
  */
 function getHealthUrl(): string {
-	const port = getCoordinatorPort();
-	return `https://coordinator.local.han.guru:${port}/health`;
+	return new URL("/health", getGraphQLEndpoints().http).toString();
 }
 
 export function useCoordinatorHealth(): CoordinatorHealthState {
@@ -59,6 +59,7 @@ export function useCoordinatorHealth(): CoordinatorHealthState {
 		try {
 			const response = await fetch(getHealthUrl(), {
 				method: "GET",
+				headers: dashboardAuthorization(),
 				signal: controller.signal,
 			});
 

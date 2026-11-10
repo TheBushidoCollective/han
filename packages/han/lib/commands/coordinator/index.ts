@@ -15,6 +15,8 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import type { Command } from 'commander';
+import { getCoordinatorDataDir } from '../../coordinator/connection.ts';
+import { windowsPrepareRuntime } from '../../coordinator/windows-runtime.ts';
 import { isDevMode } from '../../shared.ts';
 import {
   ensureCoordinator,
@@ -114,14 +116,8 @@ export function registerCoordinatorCommands(program: Command): void {
           ? parseInt(options.port, 10)
           : getCoordinatorPort();
 
-        // Stop if running
-        const status = await getStatus(port);
-        if (status.running) {
-          console.log('[coordinator] Stopping...');
-          await stopDaemon(port);
-          // Wait a moment for port to be released
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
+        console.log('[coordinator] Stopping...');
+        await stopDaemon(port);
 
         // Start
         console.log('[coordinator] Starting...');
@@ -194,6 +190,8 @@ export function registerCoordinatorCommands(program: Command): void {
           : getCoordinatorPort();
 
         if (options.background) {
+          if (process.platform === 'win32')
+            windowsPrepareRuntime(getCoordinatorDataDir());
           // Non-blocking: start daemon and return immediately
           // Used by SessionStart hook to not block session startup
           const status = await getStatus(port);

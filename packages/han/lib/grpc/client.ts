@@ -6,7 +6,18 @@
  */
 
 import { type Client, createClient } from '@connectrpc/connect';
-import { createConnectTransport } from '@connectrpc/connect-web';
+import { createGrpcWebTransport } from '@connectrpc/connect-web';
+import { checkHealth } from '../commands/coordinator/health.ts';
+import {
+  CoordinatorBinaryMissingError,
+  CoordinatorConnectionRefusedError,
+  CoordinatorPortOccupiedError,
+  CoordinatorSecurityError,
+  coordinatorFetch,
+  type LocalCoordinatorDescriptor,
+  readCoordinatorDescriptor,
+  sameCoordinator,
+} from '../coordinator/connection.ts';
 import {
   CoordinatorService,
   HookService,
@@ -26,17 +37,52 @@ export type CoordinatorClients = {
 };
 
 const DEFAULT_PORT = 41957;
-const COORDINATOR_HOST = 'coordinator.local.han.guru';
 
 /**
  * Create typed gRPC clients for all coordinator services.
  */
 export function createCoordinatorClients(
-  port = DEFAULT_PORT
+  port = DEFAULT_PORT,
+  expected?: LocalCoordinatorDescriptor
 ): CoordinatorClients {
-  const transport = createConnectTransport({
-    baseUrl: `https://${COORDINATOR_HOST}:${port}`,
+  const transport = createGrpcWebTransport({
+    baseUrl: `https://127.0.0.1:${port}`,
     useBinaryFormat: true,
+    fetch: Object.assign(
+      (input: string | URL | Request, init?: RequestInit) => {
+        const current = readCoordinatorDescriptor();
+        if (expected && !sameCoordinator(current, expected))
+          throw new CoordinatorSecurityError(
+            'Coordinator instance changed before request'
+          );
+        const descriptor = expected ?? current;
+        if (descriptor.grpcPort === null)
+          throw new CoordinatorSecurityError(
+            'Coordinator gRPC listener is disabled'
+          );
+        const grpcPort = descriptor.grpcPort;
+        const url = new URL(
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.href
+              : input.url
+        );
+        return coordinatorFetch(
+          descriptor,
+          grpcPort,
+          `${url.pathname}${url.search}`,
+          init
+        );
+      },
+      {
+        preconnect: () => {
+          throw new CoordinatorSecurityError(
+            'Unpinned gRPC preconnect is not supported'
+          );
+        },
+      }
+    ),
   });
 
   return {
@@ -50,17 +96,15 @@ export function createCoordinatorClients(
 }
 
 // Lazy singleton — auto-starts coordinator on first use
-let _clients: CoordinatorClients | null = null;
 let _port = DEFAULT_PORT;
+let clients: CoordinatorClients | undefined;
 
 /**
  * Set the coordinator port for the singleton client.
  * Must be called before getCoordinatorClients() if non-default port is needed.
  */
 export function setCoordinatorPort(port: number): void {
-  if (_clients && _port !== port) {
-    _clients = null;
-  }
+  if (_port !== port) clients = undefined;
   _port = port;
 }
 
@@ -71,10 +115,8 @@ export function setCoordinatorPort(port: number): void {
  * (see coordinator-service.ts for lifecycle management).
  */
 export function getCoordinatorClients(): CoordinatorClients {
-  if (!_clients) {
-    _clients = createCoordinatorClients(_port);
-  }
-  return _clients;
+  clients ??= createCoordinatorClients(_port);
+  return clients;
 }
 
 /**
@@ -82,14 +124,27 @@ export function getCoordinatorClients(): CoordinatorClients {
  * Returns true if healthy, false on any error.
  */
 export async function isCoordinatorHealthy(
-  port = DEFAULT_PORT,
+  port?: number,
   timeoutMs = 2000
 ): Promise<boolean> {
   try {
-    const clients = createCoordinatorClients(port);
-    const response = await clients.coordinator.health({}, { timeoutMs });
+    if (!(await checkHealth(port))) return false;
+    const response = await createCoordinatorClients(port).coordinator.health(
+      {},
+      { timeoutMs }
+    );
     return response.healthy;
-  } catch {
+  } catch (error) {
+    if (
+      error instanceof CoordinatorPortOccupiedError ||
+      error instanceof CoordinatorBinaryMissingError ||
+      error instanceof CoordinatorConnectionRefusedError
+    ) {
+      return false;
+    }
+    if (error instanceof CoordinatorSecurityError) {
+      throw error;
+    }
     return false;
   }
 }

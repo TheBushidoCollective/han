@@ -8,7 +8,11 @@
 
 import type React from "react";
 import { useEffect, useState } from "react";
-import { isBlockedByLocalNetworkAccess } from "../../helpers/localNetworkAccess.ts";
+import { isLocalDashboard } from "../../bootstrap.ts";
+import {
+	isBlockedByLocalNetworkAccess,
+	isLoopbackOrigin,
+} from "../../helpers/localNetworkAccess.ts";
 import { colors, fontSizes, fonts, radii, spacing } from "../../theme.ts";
 import { Box, Heading, Spinner, Text, VStack } from "../atoms/index.ts";
 
@@ -175,7 +179,9 @@ export function ConnectionOverlay(): React.ReactElement {
 	const [pulseVisible, setPulseVisible] = useState(true);
 	// Read once: neither the page origin nor the configured endpoint changes
 	// without a reload, and this decides whether waiting is even meaningful.
-	const [blocked] = useState(() => isBlockedByLocalNetworkAccess());
+	const [blocked] = useState(() =>
+		isLocalDashboard ? !isLoopbackOrigin() : isBlockedByLocalNetworkAccess(),
+	);
 
 	useEffect(() => {
 		if (blocked) {

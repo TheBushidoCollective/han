@@ -94,10 +94,11 @@ pub fn jsonl_read_page(file_path: &Path, offset: u32, limit: u32) -> ParserResul
     let mut current_line: u32 = 0;
     let mut byte_offset: i64 = 0;
     let mut line_start: usize = 0;
+    let end = offset.saturating_add(limit);
 
     for (i, &byte) in mmap.iter().enumerate() {
         if byte == b'\n' {
-            if current_line >= offset && current_line < offset + limit {
+            if current_line >= offset && current_line < end {
                 let content = String::from_utf8_lossy(&mmap[line_start..i]).to_string();
                 if !content.trim().is_empty() {
                     lines.push(JsonlLine {
@@ -111,14 +112,14 @@ pub fn jsonl_read_page(file_path: &Path, offset: u32, limit: u32) -> ParserResul
             byte_offset = (i + 1) as i64;
             line_start = i + 1;
 
-            if current_line >= offset + limit {
+            if current_line >= end {
                 break;
             }
         }
     }
 
     // Handle last line without trailing newline
-    if line_start < mmap.len() && current_line >= offset && current_line < offset + limit {
+    if line_start < mmap.len() && current_line >= offset && current_line < end {
         let content = String::from_utf8_lossy(&mmap[line_start..]).to_string();
         if !content.trim().is_empty() {
             lines.push(JsonlLine {
@@ -130,7 +131,7 @@ pub fn jsonl_read_page(file_path: &Path, offset: u32, limit: u32) -> ParserResul
         let _ = current_line; // suppress unused assignment warning
     }
 
-    let next_offset = offset + limit;
+    let next_offset = end;
     let has_more = next_offset < total_lines;
 
     Ok(PaginatedResult {
@@ -279,6 +280,16 @@ mod tests {
 
         let result = jsonl_read_page(f.path(), 2, 10).unwrap();
         assert_eq!(result.lines.len(), 2);
+        assert!(!result.has_more);
+    }
+
+    #[test]
+    fn test_read_page_unbounded_from_nonzero_offset() {
+        let f = write_temp_jsonl(&[r#"{"line":0}"#, r#"{"line":1}"#, r#"{"line":2}"#]);
+        let result = jsonl_read_page(f.path(), 2, u32::MAX).unwrap();
+        assert_eq!(result.lines.len(), 1);
+        assert_eq!(result.lines[0].line_number, 2);
+        assert_eq!(result.next_offset, u32::MAX);
         assert!(!result.has_more);
     }
 

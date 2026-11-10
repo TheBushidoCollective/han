@@ -50,8 +50,8 @@ Han is distributed via npm with:
         └── @thebushidocollective/han-win32-x64
 
 @thebushidocollective/han-{platform}
-└── bin/
-    └── han                    # Compiled Bun binary for platform
+├── han                       # Compiled Bun CLI (han.exe on Windows)
+└── han-coordinator           # Matching Rust daemon (han-coordinator.exe on Windows)
 ```
 
 ### Platform Packages
@@ -60,17 +60,13 @@ Five platform-specific packages published separately:
 
 | Package | Platform | Contents |
 |---------|----------|----------|
-| `@thebushidocollective/han-linux-x64` | Linux x64 | Bun binary (compiled from TypeScript + Rust) |
-| `@thebushidocollective/han-linux-arm64` | Linux ARM64 | Bun binary (compiled from TypeScript + Rust) |
-| `@thebushidocollective/han-darwin-x64` | macOS Intel | Bun binary (compiled from TypeScript + Rust) |
-| `@thebushidocollective/han-darwin-arm64` | macOS Apple Silicon | Bun binary (compiled from TypeScript + Rust) |
-| `@thebushidocollective/han-win32-x64` | Windows x64 | Bun binary (compiled from TypeScript + Rust) |
+| `@thebushidocollective/han-linux-x64` | Linux x64 | CLI and coordinator |
+| `@thebushidocollective/han-linux-arm64` | Linux ARM64 | CLI and coordinator |
+| `@thebushidocollective/han-darwin-x64` | macOS Intel | CLI and coordinator |
+| `@thebushidocollective/han-darwin-arm64` | macOS Apple Silicon | CLI and coordinator |
+| `@thebushidocollective/han-win32-x64` | Windows x64 | CLI and coordinator |
 
-Each package contains a **single compiled Bun binary** that embeds:
-
-- TypeScript code (compiled to JS)
-- Rust native module (han-native)
-- All dependencies
+The platform package contains the CLI and coordinator from the same release. The wrapper rejects incomplete or version-mismatched platform packages and pins its on-demand install to the wrapper version. The installer verifies both platform-specific release assets, places the pair in a release-specific directory, and switches the CLI symlink in one rename. The CLI resolves its executable's real path to find its matching coordinator. Older pairs remain available to running processes. Homebrew installs the corresponding coordinator as a resource.
 
 ### Installation Flow
 

@@ -5,7 +5,7 @@
 	"description": "Han Dashboard - Browse Claude Code sessions, metrics, and settings",
 	"type": "module",
 	"scripts": {
-		"dev": "relay-compiler --watch & bun run build/dev.ts",
+		"dev": "relay-compiler --watch & vite --host 127.0.0.1",
 		"build": "relay-compiler && bun run build/build.ts",
 		"preview": "bun run build && cd out && bunx serve",
 		"relay": "relay-compiler",
