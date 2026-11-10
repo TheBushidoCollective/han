@@ -1,0 +1,299 @@
+name: Deploy Han Server
+
+# Builds the han-server image and deploys it to the existing Cloud Run service
+# han-server in thebushido-co. Nothing deploys from a workstation.
+#
+# This workflow deploys the server only. It does not touch Firebase Hosting:
+# the api rewrite is static and belongs to deploy-hosting.yml. It has no
+# Firebase CLI and no npm install.
+#
+# - Pull request: test, and build the image without pushing. No cloud identity.
+# - Push to main: runs after Han Infrastructure finishes for the same commit
+#   (workflow_run). verify-source first checks that the run is the Han Infrastructure
+#   push to main, from this repository, at a commit on origin/main, and refuses anything
+#   else. Then test, and publish and deploy inside the han-production environment.
+#   That environment reaches the deployer only, and the deployer has no project-level
+#   role (PATH.md section 8).
+
+on:
+  pull_request:
+    paths:
+      - "packages/han-rs/**"
+      - "deploy/firebase/**"
+      - ".github/workflows/deploy-han-server.yml"
+  workflow_run:
+    workflows: ["Han Infrastructure"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+# PR runs cancel earlier PR runs. Main runs share one group. GitHub replaces a
+# pending run in a group when a newer one queues, whatever cancel-in-progress
+# says, so a pending main deploy can be superseded by a newer main push. That is
+# safe here: each run deploys the digest of its own commit, and the newest
+# commit is the one that should be live.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('deploy-han-server-pr-{0}', github.event.number) || 'deploy-han-server-main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PROJECT_ID: ${{ vars.HAN_GCP_PROJECT_ID }}
+  REGION: us-central1
+  SERVICE: han-server
+
+jobs:
+  verify-source:
+    # The trigger gate. Every job that tests, publishes or deploys waits for it.
+    # It refuses unless the infra run that triggered this is the Han Infrastructure
+    # workflow file, a push to main, from this repository, and its commit is an
+    # ancestor of origin/main. A tag or branch named main, a fork, or another
+    # workflow with the same name is refused. Git failures fail closed.
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # Full history and every branch, so origin/main exists for the ancestry check.
+          # Credentials stay persisted so the fetch below uses this repository's token.
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Verify the trigger and the commit
+        shell: bash
+        env:
+          WR_PATH: ${{ github.event.workflow_run.path }}
+          WR_EVENT: ${{ github.event.workflow_run.event }}
+          WR_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          WR_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WR_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          WR_HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          if [ "$WR_PATH" != ".github/workflows/han-infra.yml" ]; then
+            fail "Trigger is '$WR_PATH', not .github/workflows/han-infra.yml"
+          fi
+          if [ "$WR_EVENT" != "push" ]; then fail "Trigger event is '$WR_EVENT', not push"; fi
+          if [ "$WR_CONCLUSION" != "success" ]; then fail "Infra run concluded '$WR_CONCLUSION'"; fi
+          if [ "$WR_BRANCH" != "main" ]; then fail "Trigger branch is '$WR_BRANCH', not main"; fi
+          if [ -z "$REPO" ] || [ "$WR_HEAD_REPO" != "$REPO" ]; then
+            fail "Trigger repository '$WR_HEAD_REPO' is not '$REPO'"
+          fi
+          if ! [[ "$WR_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            fail "Trigger head '$WR_HEAD_SHA' is not a full commit SHA"
+          fi
+          if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+            # A shallow checkout has no origin/main history to test against.
+            git fetch --no-tags --unshallow origin '+refs/heads/main:refs/remotes/origin/main'
+          else
+            git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          fi
+          main_sha="$(git rev-parse --verify --quiet 'refs/remotes/origin/main^{commit}')" \
+            || fail "origin/main did not resolve after the fetch"
+          git cat-file -e "$WR_HEAD_SHA^{commit}" 2>/dev/null \
+            || fail "Trigger commit $WR_HEAD_SHA is not in this repository"
+          rc=0
+          git merge-base --is-ancestor "$WR_HEAD_SHA" "$main_sha" || rc=$?
+          case "$rc" in
+            0) echo "Trigger commit $WR_HEAD_SHA is an ancestor of origin/main $main_sha" ;;
+            1) fail "Trigger commit $WR_HEAD_SHA is not an ancestor of origin/main $main_sha" ;;
+            *) fail "git could not compare $WR_HEAD_SHA with origin/main (exit $rc)" ;;
+          esac
+
+  test:
+    needs: verify-source
+    if: always() && (github.event_name == 'pull_request' || (needs.verify-source.result == 'success' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: packages/han-rs
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends protobuf-compiler
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: packages/han-rs
+      - name: Test han-server
+        run: cargo test --package han-server
+
+  build-pr:
+    needs: test
+    # Runs when the PR tests passed. It does not need verify-source, which is skipped on pull requests.
+    if: always() && github.event_name == 'pull_request' && needs.test.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Build without pushing
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: packages/han-rs
+          file: packages/han-rs/crates/han-server/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish:
+    needs: [test, verify-source]
+    # success() is written out. GitHub would apply it by default, but naming it keeps the gate dependence visible here.
+    if: success() && github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: han-production
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Authenticate to Google Cloud (WIF, deployer)
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        with:
+          workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.HAN_GCP_DEPLOYER_SA }}
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+      - id: push
+        name: Build and push
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: packages/han-rs
+          file: packages/han-rs/crates/han-server/Dockerfile
+          push: true
+          tags: us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/han/han-server:${{ github.event.workflow_run.head_sha }}
+          # No cache. A shared cache lets a run on another ref write what production builds read.
+          no-cache: true
+
+  deploy:
+    needs: [publish, verify-source]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: han-production
+      url: https://api.han.guru
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      IMAGE_REPO: us-central1-docker.pkg.dev/${{ vars.HAN_GCP_PROJECT_ID }}/han/han-server
+      DIGEST: ${{ needs.publish.outputs.digest }}
+      GITHUB_CLIENT_ID: ${{ vars.HAN_GITHUB_CLIENT_ID }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Refuse to deploy without required values
+        run: |
+          set -euo pipefail
+          if [ -z "$GITHUB_CLIENT_ID" ]; then
+            echo "::error::HAN_GITHUB_CLIENT_ID is unset. Slice I must create the OAuth app first."
+            exit 1
+          fi
+          if [ -z "$DIGEST" ]; then
+            echo "::error::No image digest from the publish job."
+            exit 1
+          fi
+
+      - name: Authenticate to Google Cloud (WIF, deployer)
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        with:
+          workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.HAN_GCP_DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
+
+      - name: Refuse to deploy without secret versions
+        env:
+          # Each secret must already have an enabled version. The deploy never
+          # writes a placeholder. The deployer reads version metadata through
+          # roles/secretmanager.viewer, granted per secret by bootstrap.py (section 12).
+          SECRETS: han-server-database-url han-server-jwt-secret han-server-master-kek han-server-github-client-secret han-server-stripe-secret-key han-server-stripe-webhook-secret
+        run: |
+          set -euo pipefail
+          for secret in $SECRETS; do
+            count="$(gcloud secrets versions list "$secret" --project "$PROJECT_ID" \
+              --filter='state=ENABLED' --limit=1 --format='value(name)' | wc -l | tr -d ' ')"
+            if [ "$count" = "0" ]; then
+              echo "::error::$secret has no enabled version. Add its value before deploying."
+              exit 1
+            fi
+          done
+
+      - name: Deploy a new revision of han-server by digest
+        # The service and its invoker setting exist already (cloudrun.tf). This
+        # updates the revision only. It does not pass an invoker flag, so the
+        # setting is checked below, not assumed.
+        run: |
+          set -euo pipefail
+          gcloud run deploy "$SERVICE" \
+            --project "$PROJECT_ID" \
+            --region "$REGION" \
+            --image "$IMAGE_REPO@$DIGEST" \
+            --service-account "han-server-run@${PROJECT_ID}.iam.gserviceaccount.com" \
+            --port 8080 \
+            --cpu 1 \
+            --memory 1Gi \
+            --concurrency 10 \
+            --min-instances 0 \
+            --max-instances 1 \
+            --add-cloudsql-instances "${PROJECT_ID}:${REGION}:han-pg" \
+            --set-env-vars "PUBLIC_URL=https://api.han.guru,GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID},RUST_LOG=info,DB_MAX_CONNECTIONS=5" \
+            --set-secrets "DATABASE_URL=han-server-database-url:latest,JWT_SECRET=han-server-jwt-secret:latest,GITHUB_CLIENT_SECRET=han-server-github-client-secret:latest,STRIPE_SECRET_KEY=han-server-stripe-secret-key:latest,STRIPE_WEBHOOK_SECRET=han-server-stripe-webhook-secret:latest,MASTER_KEK=han-server-master-kek:1" \
+            --quiet
+
+      - name: Confirm the invoker setting survived the deploy
+        run: |
+          set -euo pipefail
+          gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format=json > service.json
+          python3 deploy/firebase/scripts/check_invoker.py service.json
+
+      - name: Confirm the live revision runs the pushed digest
+        run: |
+          set -euo pipefail
+          live="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" \
+            --format='value(status.latestReadyRevisionName)')"
+          image="$(gcloud run revisions describe "$live" --project "$PROJECT_ID" --region "$REGION" \
+            --format='value(spec.containers[0].image)')"
+          case "$image" in
+            *"@$DIGEST") echo "Live revision $live runs $image" ;;
+            *) echo "::error::Live revision $live runs $image, not $DIGEST"; exit 1 ;;
+          esac
+          echo "LIVE_REVISION=$live" >> "$GITHUB_ENV"
+
+      - name: Confirm this revision started with a working database
+        # Reads only the live revision's JSON logs. Degraded mode fails, and so
+        # does an old revision's log. See deploy/firebase/scripts/check_startup.py.
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 18); do
+            # Reads only the constrained view (bootstrap.py step 10): a bucket that
+            # receives han-server logs only, through a view the deployer can view.
+            gcloud logging read \
+              "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"$SERVICE\" AND resource.labels.revision_name=\"$LIVE_REVISION\"" \
+              --bucket=han-server-logs --location=us-central1 --view=startup \
+              --project "$PROJECT_ID" --limit 300 --freshness 2h --format=json > logs.json
+            if python3 deploy/firebase/scripts/check_startup.py logs.json "$LIVE_REVISION"; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::Startup check did not pass for $LIVE_REVISION"
+          exit 1

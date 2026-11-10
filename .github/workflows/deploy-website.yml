@@ -40,10 +40,10 @@ jobs:
         run: |
           chmod +x ./.github/scripts/check-installer-contract.sh
           if ./.github/scripts/check-installer-contract.sh; then
-            echo "met=true" >> $GITHUB_OUTPUT
+            echo "met=true" >> "$GITHUB_OUTPUT"
             echo "Notice: Installer contract met. Proceeding with deployment."
           else
-            echo "met=false" >> $GITHUB_OUTPUT
+            echo "met=false" >> "$GITHUB_OUTPUT"
             echo "Notice: Installer contract unmet on latest release. Skipping website deployment."
           fi
       - name: Setup Bun

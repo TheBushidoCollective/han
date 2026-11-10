@@ -88,6 +88,58 @@ fn require_env(name: &str) -> Result<String, String> {
     std::env::var(name).map_err(|_| format!("Missing required environment variable: {name}"))
 }
 
+/// Default PostgreSQL pool ceiling. Kept at the historical value so local runs
+/// and Railway behave as before.
+pub const DEFAULT_DB_MAX_CONNECTIONS: u32 = 20;
+
+/// Parse `DB_MAX_CONNECTIONS`. Unset or empty uses the default. Anything that
+/// is not an integer from 1 to 100 is an error, so a typo cannot silently
+/// raise the pool past what the database allows.
+pub fn parse_db_max_connections(raw: Option<&str>) -> Result<u32, String> {
+    let Some(raw) = raw.map(str::trim).filter(|s| !s.is_empty()) else {
+        return Ok(DEFAULT_DB_MAX_CONNECTIONS);
+    };
+    let value: u32 = raw
+        .parse()
+        .map_err(|e| format!("Invalid DB_MAX_CONNECTIONS '{raw}': {e}"))?;
+    if !(1..=100).contains(&value) {
+        return Err(format!("DB_MAX_CONNECTIONS must be 1 to 100, got {value}"));
+    }
+    Ok(value)
+}
+
+#[cfg(test)]
+mod db_pool_tests {
+    use super::*;
+
+    #[test]
+    fn unset_and_blank_use_default() {
+        assert_eq!(parse_db_max_connections(None), Ok(DEFAULT_DB_MAX_CONNECTIONS));
+        assert_eq!(parse_db_max_connections(Some("")), Ok(DEFAULT_DB_MAX_CONNECTIONS));
+        assert_eq!(parse_db_max_connections(Some("   ")), Ok(DEFAULT_DB_MAX_CONNECTIONS));
+    }
+
+    #[test]
+    fn valid_values_are_accepted_with_whitespace() {
+        assert_eq!(parse_db_max_connections(Some("5")), Ok(5));
+        assert_eq!(parse_db_max_connections(Some(" 100 ")), Ok(100));
+        assert_eq!(parse_db_max_connections(Some("1")), Ok(1));
+    }
+
+    #[test]
+    fn zero_and_above_limit_are_rejected() {
+        assert!(parse_db_max_connections(Some("0")).is_err());
+        assert!(parse_db_max_connections(Some("101")).is_err());
+    }
+
+    #[test]
+    fn non_numeric_is_rejected_not_defaulted() {
+        let err = parse_db_max_connections(Some("five")).unwrap_err();
+        assert!(err.contains("five"), "error should name the bad value: {err}");
+        assert!(parse_db_max_connections(Some("-1")).is_err());
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,0 +1,8 @@
+{
+  "name": "han-firebase-deploy",
+  "private": true,
+  "description": "Pins the Firebase CLI used by the deploy workflows. Installed with npm ci --ignore-scripts, so no dependency runs code at install time.",
+  "devDependencies": {
+    "firebase-tools": "15.24.0"
+  }
+}

@@ -705,8 +705,8 @@ jobs:
           cp "artifacts/${{ matrix.coordinator_binary }}" "bin/han-coordinator${suffix}"
           cp "artifacts/${{ matrix.coordinator_binary }}" "bin/${{ matrix.coordinator_binary }}" 2>/dev/null || true
           chmod +x bin/* 2>/dev/null || true
-          echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
-          echo "HAN_INSTALLED_BIN=${{ github.workspace }}/bin/han${suffix}" >> $GITHUB_ENV
+          echo "${{ github.workspace }}/bin" >> "$GITHUB_PATH"
+          echo "HAN_INSTALLED_BIN=${{ github.workspace }}/bin/han${suffix}" >> "$GITHUB_ENV"
 
       - name: Prove Legacy Containment
         shell: bash

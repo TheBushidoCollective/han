@@ -39,7 +39,7 @@ jobs:
 
           # Count total reviews
           REVIEW_COUNT=$(echo "$ALL_REVIEWS" | jq 'length')
-          echo "review_count=$REVIEW_COUNT" >> $GITHUB_OUTPUT
+          echo "review_count=$REVIEW_COUNT" >> "$GITHUB_OUTPUT"
 
           if [ -n "$LAST_REVIEW" ]; then
             # Extract the commit SHA from the marker
@@ -47,19 +47,21 @@ jobs:
             FIRST_COMMIT=$(echo "$FIRST_REVIEW" | grep -oP '<!-- claude-review-commit:\K[a-f0-9]+' || echo "")
 
             if [ -n "$LAST_COMMIT" ]; then
-              echo "last_reviewed_commit=$LAST_COMMIT" >> $GITHUB_OUTPUT
-              echo "first_reviewed_commit=$FIRST_COMMIT" >> $GITHUB_OUTPUT
-              echo "has_previous_review=true" >> $GITHUB_OUTPUT
+              {
+                echo "last_reviewed_commit=$LAST_COMMIT"
+                echo "first_reviewed_commit=$FIRST_COMMIT"
+                echo "has_previous_review=true"
+              } >> "$GITHUB_OUTPUT"
 
               # Calculate lines changed since last review
               LINES_CHANGED=$(git diff --shortstat "$LAST_COMMIT"..HEAD 2>/dev/null | awk '{sum=$4+$6} END {print sum+0}')
-              echo "lines_changed=$LINES_CHANGED" >> $GITHUB_OUTPUT
+              echo "lines_changed=$LINES_CHANGED" >> "$GITHUB_OUTPUT"
               echo "Found $REVIEW_COUNT previous reviews, last at commit $LAST_COMMIT, $LINES_CHANGED lines changed since"
             else
-              echo "has_previous_review=false" >> $GITHUB_OUTPUT
+              echo "has_previous_review=false" >> "$GITHUB_OUTPUT"
             fi
           else
-            echo "has_previous_review=false" >> $GITHUB_OUTPUT
+            echo "has_previous_review=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Determine review mode
@@ -72,17 +74,17 @@ jobs:
 
             # Circuit breaker: After 3 reviews, switch to approval-focused mode
             if [ "${REVIEW_COUNT:-0}" -ge 3 ]; then
-              echo "mode=closure" >> $GITHUB_OUTPUT
+              echo "mode=closure" >> "$GITHUB_OUTPUT"
               echo "Closure mode: $REVIEW_COUNT reviews already - focusing on approval"
             elif [ "${LINES:-0}" -lt 50 ]; then
-              echo "mode=verification" >> $GITHUB_OUTPUT
+              echo "mode=verification" >> "$GITHUB_OUTPUT"
               echo "Verification mode: $LINES lines changed - checking if concerns addressed"
             else
-              echo "mode=incremental" >> $GITHUB_OUTPUT
+              echo "mode=incremental" >> "$GITHUB_OUTPUT"
               echo "Incremental mode: $LINES lines changed - reviewing new changes"
             fi
           else
-            echo "mode=initial" >> $GITHUB_OUTPUT
+            echo "mode=initial" >> "$GITHUB_OUTPUT"
             echo "Initial review mode"
           fi
 

@@ -1,0 +1,177 @@
+name: Han Infrastructure
+
+# Plans and applies deploy/firebase/terraform through CI only.
+#
+# - Pull request: plan as han-tf-plan. No state lock and no environment, so a
+#   pull request cannot reach the apply identity.
+# - Push to main: plan as han-tf-plan on every push. The plan is compared with
+#   the state, so a change from an earlier push cannot be lost. If the plan has
+#   changes, apply the saved plan as han-tf-apply inside the han-infra-apply
+#   environment, which needs a reviewer.
+#
+# Why every push plans, with no "did Terraform change" gate: GitHub replaces a
+# pending run in the same concurrency group when a newer one queues, even with
+# cancel-in-progress false. A gate on the push's own diff would then skip a
+# Terraform change whose run was replaced. Planning against the state does not
+# depend on which earlier runs survived.
+#
+# The han-infra-apply environment is the only path to the apply identity, which
+# holds no owner or project-level IAM role (PATH.md section 8).
+# The deploy workflows use han-production, a different subject, so their jobs
+# cannot exchange a token for the apply identity.
+#
+# Deletes and replacements fail unless their address is in the allowlist below.
+# The list is empty until slice L.
+
+on:
+  pull_request:
+    paths:
+      - "deploy/firebase/terraform/**"
+      - "deploy/firebase/scripts/**"
+      - ".github/workflows/han-infra.yml"
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('han-infra-pr-{0}', github.event.number) || 'han-infra-main' }}
+  # Main runs are never cancelled by a later push. A replaced pending main run
+  # is harmless because the next run plans against the state.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  TF_IN_AUTOMATION: "1"
+  TF_INPUT: "0"
+  TF_VAR_project_id: ${{ vars.HAN_GCP_PROJECT_ID }}
+  TF_VAR_github_repository: ${{ github.repository }}
+  TERRAFORM_VERSION: 1.15.8
+  # Reviewed destroy/replace exceptions, one resource address per entry. Empty
+  # until slice L.
+  DESTROY_ALLOWLIST: ""
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: deploy/firebase/terraform
+    outputs:
+      has_changes: ${{ steps.plan.outputs.has_changes }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Authenticate to Google Cloud (WIF, plan identity)
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        with:
+          workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.HAN_GCP_TF_PLAN_SA }}
+
+      - name: Init
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=thebushido-co-han-tfstate" \
+            -backend-config="prefix=terraform/han"
+
+      - name: Format and validate
+        run: |
+          terraform fmt -check -recursive
+          terraform validate
+
+      - id: plan
+        name: Plan
+        run: |
+          set -uo pipefail
+          # The runner runs this with bash -e. A bare command that exits 2 would end the step
+          # before its status is read. "|| rc=$?" records the status and keeps the step running.
+          rc=0
+          terraform plan -input=false -lock=false -no-color -detailed-exitcode -out=tfplan || rc=$?
+          case "$rc" in
+            0) echo "has_changes=false" >> "$GITHUB_OUTPUT" ;;
+            2) echo "has_changes=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "::error::terraform plan failed with exit $rc"; exit "$rc" ;;
+          esac
+
+      - name: Refuse unexpected deletes
+        run: |
+          set -euo pipefail
+          terraform show -json tfplan > plan.json
+          # shellcheck disable=SC2086
+          python3 ../scripts/plan_guard.py plan.json $DESTROY_ALLOWLIST
+
+      - name: Upload plan
+        if: github.event_name == 'push' && steps.plan.outputs.has_changes == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: han-tfplan
+          path: deploy/firebase/terraform/tfplan
+          retention-days: 7
+
+  apply:
+    needs: plan
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.plan.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: han-infra-apply
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: deploy/firebase/terraform
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          # The wrapper rewrites stdout and can change what -detailed-exitcode reports.
+          terraform_wrapper: false
+
+      - name: Authenticate to Google Cloud (WIF, apply identity)
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        with:
+          workload_identity_provider: ${{ vars.HAN_GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.HAN_GCP_TF_APPLY_SA }}
+
+      - name: Init
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=thebushido-co-han-tfstate" \
+            -backend-config="prefix=terraform/han"
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: han-tfplan
+          path: deploy/firebase/terraform
+
+      - name: Refuse unexpected deletes in the saved plan
+        run: |
+          set -euo pipefail
+          terraform show -json tfplan > plan.json
+          # shellcheck disable=SC2086
+          python3 ../scripts/plan_guard.py plan.json $DESTROY_ALLOWLIST
+
+      - name: Apply saved plan
+        # Terraform refuses a saved plan whose state has moved since it was made.
+        run: terraform apply -input=false -no-color tfplan
+
+      - name: No secret values in state
+        run: |
+          set -euo pipefail
+          terraform show -json > state.json
+          python3 ../scripts/state_guard.py state.json
+
+      - name: No drift after apply
+        run: terraform plan -input=false -no-color -detailed-exitcode

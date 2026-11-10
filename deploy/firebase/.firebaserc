@@ -1,0 +1,20 @@
+{
+  "projects": {
+    "default": "thebushido-co"
+  },
+  "targets": {
+    "thebushido-co": {
+      "hosting": {
+        "dashboard": [
+          "han-guru-dashboard"
+        ],
+        "app": [
+          "han-guru-app"
+        ],
+        "api": [
+          "han-guru-api"
+        ]
+      }
+    }
+  }
+}
