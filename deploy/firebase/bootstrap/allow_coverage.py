@@ -9,7 +9,6 @@ import base64
 import hashlib
 import json
 import re
-from typing import Callable
 
 PROJECT_ID = 'thebushido-co'
 PROJECT_NUMBER = '911514101920'
@@ -74,6 +73,10 @@ def classify(member, manifest):
     if re.fullmatch(r'(?:user|serviceAccount|group):' + email, member):
         return 'disjoint'
     if re.fullmatch(r'domain:' + domain, member):
+        return 'disjoint'
+    # Legacy project-scoped convenience members name this project's own owners,
+    # editors and viewers. They are never federated pool principals.
+    if re.fullmatch(r'project(?:Owner|Editor|Viewer):' + re.escape(PROJECT_ID), member):
         return 'disjoint'
     if re.fullmatch(r'serviceAccount:[a-z0-9-]+\.svc\.id\.goog\[[A-Za-z0-9._-]+/[A-Za-z0-9._-]+\]', member):
         return 'disjoint'

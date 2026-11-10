@@ -131,4 +131,22 @@ describe('isCoordinatorHealthy', () => {
     const healthy = await isCoordinatorHealthy();
     expect(typeof healthy).toBe('boolean');
   });
+
+  test('returns false when coordinator port is occupied without descriptor (legacy coordinator)', async () => {
+    const { createServer } = await import('node:net');
+    const server = createServer();
+    const listening = Promise.withResolvers<void>();
+    server.listen(0, '127.0.0.1', listening.resolve);
+    await listening.promise;
+    const addr = server.address();
+    const port = typeof addr === 'object' && addr ? addr.port : 0;
+    try {
+      const healthy = await isCoordinatorHealthy(port, 500);
+      expect(healthy).toBe(false);
+    } finally {
+      const closed = Promise.withResolvers<void>();
+      server.close(() => closed.resolve());
+      await closed.promise;
+    }
+  });
 });

@@ -1,0 +1,141 @@
+name: Release Proofs
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Release version being proved"
+        type: string
+        required: false
+        default: "3.23.0"
+
+jobs:
+  native-proofs:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: han-linux-x64
+            binary_name: han-linux-x64
+            coordinator_binary: han-coordinator-linux-x64
+          - os: ubuntu-24.04-arm
+            artifact: han-linux-arm64
+            binary_name: han-linux-arm64
+            coordinator_binary: han-coordinator-linux-arm64
+          - os: macos-latest
+            artifact: han-darwin-arm64
+            binary_name: han-darwin-arm64
+            coordinator_binary: han-coordinator-darwin-arm64
+          - os: macos-15-intel
+            artifact: han-darwin-x64
+            binary_name: han-darwin-x64
+            coordinator_binary: han-coordinator-darwin-x64
+          - os: windows-latest
+            artifact: han-windows-x64
+            binary_name: han-windows-x64.exe
+            coordinator_binary: han-coordinator-windows-x64.exe
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: artifacts/
+
+      - name: Start local proof server and curl shim
+        shell: bash
+        run: |
+          chmod +x artifacts/* 2>/dev/null || true
+          chmod +x packages/han/scripts/release-proof/curl-shim/curl
+          mkdir -p release-assets
+          cp -r artifacts/* release-assets/ 2>/dev/null || true
+          if [[ "${{ matrix.os }}" == *windows* ]]; then
+            cp "artifacts/${{ matrix.coordinator_binary }}" "artifacts/han-coordinator.exe" 2>/dev/null || true
+          else
+            cp "artifacts/${{ matrix.coordinator_binary }}" "artifacts/han-coordinator" 2>/dev/null || true
+          fi
+          bun packages/han/scripts/release-proof/serve-release.ts release-assets --tag "v${{ inputs.version }}" --port 41999 &
+          echo "SERVER_PID=$!" >> $GITHUB_ENV
+          echo "${{ github.workspace }}/packages/han/scripts/release-proof/curl-shim" >> $GITHUB_PATH
+          echo "HAN_PROOF_SERVER=http://127.0.0.1:41999" >> $GITHUB_ENV
+          echo "HAN_RELEASE_DOWNLOAD_BASE=http://127.0.0.1:41999/TheBushidoCollective/han/releases/download" >> $GITHUB_ENV
+          echo "HAN_VERSION=${{ inputs.version }}" >> $GITHUB_ENV
+          cat > packages/han/lib/build-info.generated.ts << 'EOF'
+          export const HAN_VERSION = "${{ inputs.version }}";
+          export const COORDINATOR_SHA256: string | null = null;
+          export const DETECT_PLUGINS_PROMPT = "You are a plugin detector.";
+          EOF
+          cat > packages/han/lib/commands/browse/embedded-dashboard.generated.ts << 'EOF'
+          export const EMBEDDED_DASHBOARD_ASSETS: Record<string, string> = {};
+          EOF
+          sleep 2
+      - name: Install dependencies for proof runners
+        shell: bash
+        run: |
+          cd packages/han
+          bun install --frozen-lockfile
+          cd ../browse-client
+          bun install --frozen-lockfile
+          bunx playwright install --with-deps chromium
+
+      - name: 1. Prove Installer
+        shell: bash
+        run: |
+          bun packages/han/scripts/release-proof/prove-installer.ts
+
+      - name: 2. Prove Installed Coordinator
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == *windows* ]]; then
+            bun packages/han/scripts/prove-installed-windows-coordinator.ts "artifacts/${{ matrix.binary_name }}" "artifacts/${{ matrix.coordinator_binary }}"
+          else
+            mkdir -p "$RUNNER_TEMP/evidence"
+            bun packages/han/scripts/prove-installed-coordinator.ts \
+              --cli "${{ github.workspace }}/artifacts/${{ matrix.binary_name }}" \
+              --coordinator "${{ github.workspace }}/artifacts/${{ matrix.coordinator_binary }}" \
+              --bun-version 1.4.4 \
+              --bun-revision "$(bun -p 'Bun.revision')" \
+              --evidence-dir "$RUNNER_TEMP/evidence"
+          fi
+
+      - name: 3. Prove Installed Hooks
+        shell: bash
+        env:
+          HAN_INSTALLED_BIN: ${{ github.workspace }}/artifacts/${{ matrix.binary_name }}
+        run: |
+          bun packages/han/scripts/release-proof/prove-installed-hooks.ts
+
+      - name: 4. Browser Transport against Installed Binary
+        shell: bash
+        run: |
+          INSTALLED_CLI="${{ github.workspace }}/artifacts/${{ matrix.binary_name }}"
+          INSTALLED_COORD="${{ github.workspace }}/artifacts/${{ matrix.coordinator_binary }}"
+          cd packages/browse-client
+          HAN_TRANSPORT_CLI="$INSTALLED_CLI" HAN_TRANSPORT_COORDINATOR="$INSTALLED_COORD" bunx playwright test --config playwright.transport.config.ts
+      - name: 5. Prove Legacy Upgrade
+        shell: bash
+        env:
+          HAN_INSTALLED_BIN: ${{ github.workspace }}/artifacts/${{ matrix.binary_name }}
+        run: |
+          bun packages/han/scripts/release-proof/prove-legacy-upgrade.ts
+
+      - name: 6. Leak Check
+        shell: bash
+        run: |
+          echo "Checking for leaked coordinator or han processes..."
+          if [[ "${{ matrix.os }}" == *windows* ]]; then
+            tasklist | grep -iE 'han(-coordinator)?\.exe' || echo "No leaked processes found."
+          else
+            pgrep -fl 'han(-coordinator)?' || echo "No leaked processes found."
+          fi

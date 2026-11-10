@@ -25,9 +25,6 @@ Railway hosts the backend services:
    - Requires PostgreSQL and Redis
    - Health check: `/health`
 
-2. **Certificate Server** (`cert-server/`)
-   - Already configured with `railway.toml`
-
 **Note:** The website (`website/`) is hosted on GitHub Pages, not Railway.
 
 ## Setup Instructions

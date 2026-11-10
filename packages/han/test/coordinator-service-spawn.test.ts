@@ -4,6 +4,7 @@
  * Uses existsSync mock that returns true to exercise findCoordinatorBinary
  * success path and Bun.spawn error handling.
  */
+
 import {
   afterAll,
   afterEach,
@@ -13,7 +14,8 @@ import {
   mock,
   test,
 } from 'bun:test';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { getHanDataDir } from '../lib/config/claude-settings.ts';
 import { realGrpcClient } from './setup.ts';
 
@@ -48,12 +50,57 @@ mock.module('../lib/grpc/client.ts', () => ({
 // below already sets. Left real, these tests would hit the network and, on
 // a machine running han, get a truthful "yes, one is already serving".
 const realHealthModule = require('../lib/commands/coordinator/health.ts');
+const mockOptionalDescriptor = mock(() =>
+  mockBunSpawn.mock.calls.length ? mockDescriptor() : null
+);
 mock.module('../lib/commands/coordinator/health.ts', () => ({
   ...realHealthModule,
   checkHealth: async (port?: number) =>
     (await mockHealth(port))
       ? { status: 'ok', pid: 4242, uptime: 1, version: 'test' }
       : null,
+  readOptionalDescriptor: () => mockOptionalDescriptor(),
+  checkDescriptorHealth: async (
+    descriptor: { pid: number; httpsPort: number },
+    requestedPort?: number
+  ) => {
+    if (
+      requestedPort !== undefined &&
+      requestedPort !== 0 &&
+      requestedPort !== descriptor.httpsPort
+    ) {
+      throw new realConnection.CoordinatorSecurityError(
+        'Coordinator descriptor port does not match requested port'
+      );
+    }
+    if (!(await mockHealth()))
+      throw new realConnection.CoordinatorSecurityError('not healthy');
+    return { status: 'ok', pid: descriptor.pid };
+  },
+  checkStartupObserver: async () => !!(await mockHealth()),
+  descriptorIsDead: () => false,
+}));
+const realConnection = require('../lib/coordinator/connection.ts');
+const readActualDescriptor = realConnection.readCoordinatorDescriptor;
+const mockDescriptor = mock(() => ({
+  transportVersion: 1,
+  instanceId: 'owned',
+  pid: 4242,
+  httpsPort: 41957,
+  grpcPort: 41958,
+  certificatePem: 'certificate',
+  bearerToken: 'token',
+  supervisor: null,
+}));
+mock.module('../lib/coordinator/connection.ts', () => ({
+  ...realConnection,
+  readCoordinatorDescriptor: (path?: string) =>
+    path === undefined ? mockDescriptor() : readActualDescriptor(path),
+}));
+const realRecovery = require('../lib/coordinator/recovery-runtime.ts');
+mock.module('../lib/coordinator/recovery-runtime.ts', () => ({
+  ...realRecovery,
+  posixPrepare: () => {},
 }));
 
 // existsSync returns true so findCoordinatorBinary "finds" a binary path.
@@ -71,22 +118,10 @@ mock.module('node:fs', () => ({ ...realFs, existsSync: () => true }));
 // on any machine, while still exercising the "spawn attempted, then
 // failed" path these tests are about.
 const originalBunSpawn = Bun.spawn;
-const mockBunSpawn = mock(() => {
+const mockBunSpawn = mock((_args: string[]) => {
   throw new Error('ENOENT: no such file or directory (test double)');
 });
 Bun.spawn = mockBunSpawn as unknown as typeof Bun.spawn;
-
-// The spawn path fetches TLS certificates before launching the binary. Left
-// real, these tests would hit certs.han.guru and write into the developer's
-// ~/.claude/han/certs.
-const mockEnsureCertificates = mock(async () => ({
-  cert: '-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----',
-  key: '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
-}));
-
-mock.module('../lib/commands/coordinator/tls.ts', () => ({
-  ensureCertificates: mockEnsureCertificates,
-}));
 
 // Keep waitForHealthy short so tests don't time out while polling a
 // non-existent coordinator (production default is 30s).
@@ -100,7 +135,23 @@ let originalError: typeof console.error;
 
 beforeEach(() => {
   mockHealth.mockReset();
+  mockBunSpawn.mockClear();
   mockShutdown.mockReset();
+  mockDescriptor.mockReset();
+  mockOptionalDescriptor.mockReset();
+  mockOptionalDescriptor.mockImplementation(() =>
+    mockBunSpawn.mock.calls.length ? mockDescriptor() : null
+  );
+  mockDescriptor.mockReturnValue({
+    transportVersion: 1,
+    instanceId: 'owned',
+    pid: 4242,
+    httpsPort: 41957,
+    grpcPort: 41958,
+    certificatePem: 'certificate',
+    bearerToken: 'token',
+    supervisor: null,
+  });
   consoleOutput = [];
   originalLog = console.log;
   originalError = console.error;
@@ -127,6 +178,11 @@ afterAll(() => {
   mock.module('node:fs', () => realFs);
   mock.module('../lib/grpc/client.ts', () => realGrpcClient);
   mock.module('../lib/commands/coordinator/health.ts', () => realHealthModule);
+  mock.module('../lib/coordinator/recovery-runtime.ts', () => realRecovery);
+  mock.module('../lib/coordinator/connection.ts', () => ({
+    ...realConnection,
+    readCoordinatorDescriptor: readActualDescriptor,
+  }));
   Bun.spawn = originalBunSpawn;
 });
 
@@ -135,19 +191,12 @@ afterAll(() => {
 // ============================================================================
 
 describe('startCoordinatorService with binary found', () => {
-  test("when already running state, logs 'Already running'", async () => {
-    // First make it think it's running
+  test('rechecks health when already attached', async () => {
     mockHealth.mockResolvedValue(true);
     await cs.startCoordinatorService();
-    consoleOutput = [];
-
-    // Call again — should hit the isRunning early return
+    mockHealth.mockClear();
     await cs.startCoordinatorService();
-
-    const hasAlreadyRunning = consoleOutput.some((msg) =>
-      msg.includes('Already running')
-    );
-    expect(hasAlreadyRunning).toBe(true);
+    expect(mockHealth).toHaveBeenCalled();
   });
 
   test('attempts to spawn binary when not healthy and binary found', async () => {
@@ -156,31 +205,105 @@ describe('startCoordinatorService with binary found', () => {
     mockHealth.mockReset();
     mockHealth.mockResolvedValue(false);
 
-    await cs.startCoordinatorService();
-
-    // Should attempt to start (binary "found" due to existsSync mock)
-    // Either it tried to spawn (and potentially failed) or logged something
-    const hasStartMsg = consoleOutput.some(
-      (msg) =>
-        msg.includes('Starting') ||
-        msg.includes('failed') ||
-        msg.includes('Failed')
-    );
-    expect(hasStartMsg).toBe(true);
+    await expect(cs.startCoordinatorService()).rejects.toThrow('test double');
+    expect(mockBunSpawn).toHaveBeenCalled();
+    const args = mockBunSpawn.mock.calls[0][0] as string[];
+    expect(args).toContain('--foreground');
+    expect(args).toContain('--data-dir');
+    expect(args[args.indexOf('--data-dir') + 1]).toBe(getHanDataDir());
   });
 
-  // han-coordinator only reads the cert cache; it never fills it. If this step
-  // is skipped the daemon self-signs, and the dashboard's browser then refuses
-  // the connection and sits on "Connecting to Han Coordinator..." forever.
-  test('fetches TLS certificates before spawning the binary', async () => {
-    mockEnsureCertificates.mockClear();
+  test('passes all supervisor binding fields to its own foreground child', async () => {
     await cs.stopCoordinatorService();
-    mockHealth.mockReset();
     mockHealth.mockResolvedValue(false);
+    const supervisor = {
+      pid: process.pid,
+      nonce: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      generationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    };
+    await expect(cs.startCoordinatorService({ supervisor })).rejects.toThrow(
+      'test double'
+    );
+    const args = mockBunSpawn.mock.calls[0][0] as string[];
+    expect(args[args.indexOf('--supervisor-pid') + 1]).toBe(
+      String(supervisor.pid)
+    );
+    expect(args[args.indexOf('--supervisor-nonce') + 1]).toBe(supervisor.nonce);
+    expect(args[args.indexOf('--supervisor-generation') + 1]).toBe(
+      supervisor.generationId
+    );
+  });
 
+  test('passes --grpc-port 0 when requested port is 0, and omits it when port is non-zero', async () => {
+    const prevPort = process.env.HAN_COORDINATOR_PORT;
+    try {
+      process.env.HAN_COORDINATOR_PORT = '0';
+      mockHealth.mockResolvedValue(false);
+      mockBunSpawn.mockClear();
+      await expect(cs.startCoordinatorService()).rejects.toThrow('test double');
+      expect(mockBunSpawn).toHaveBeenCalled();
+      let args = mockBunSpawn.mock.calls[0][0] as string[];
+      expect(args).toContain('--port');
+      expect(args[args.indexOf('--port') + 1]).toBe('0');
+      expect(args).toContain('--grpc-port');
+      expect(args[args.indexOf('--grpc-port') + 1]).toBe('0');
+
+      process.env.HAN_COORDINATOR_PORT = '41957';
+      mockBunSpawn.mockClear();
+      await expect(cs.startCoordinatorService()).rejects.toThrow('test double');
+      expect(mockBunSpawn).toHaveBeenCalled();
+      args = mockBunSpawn.mock.calls[0][0] as string[];
+      expect(args).toContain('--port');
+      expect(args[args.indexOf('--port') + 1]).toBe('41957');
+      expect(args).not.toContain('--grpc-port');
+    } finally {
+      if (prevPort !== undefined) process.env.HAN_COORDINATOR_PORT = prevPort;
+      else delete process.env.HAN_COORDINATOR_PORT;
+    }
+  });
+
+  test('fails closed with CoordinatorSecurityError when cached descriptor port mismatches fixed requested port', async () => {
+    const prevPort = process.env.HAN_COORDINATOR_PORT;
+    try {
+      mockOptionalDescriptor.mockImplementation(() => mockDescriptor());
+      mockHealth.mockResolvedValue(true);
+      mockBunSpawn.mockClear();
+      await cs.startCoordinatorService();
+
+      process.env.HAN_COORDINATOR_PORT = '41959';
+      await expect(cs.startCoordinatorService()).rejects.toThrow(
+        /port does not match/
+      );
+      expect(mockBunSpawn).not.toHaveBeenCalled();
+    } finally {
+      if (prevPort !== undefined) process.env.HAN_COORDINATOR_PORT = prevPort;
+      else delete process.env.HAN_COORDINATOR_PORT;
+      await cs.stopCoordinatorService();
+    }
+  });
+
+  test('fails closed with CoordinatorSecurityError when descriptor changes during cached health check', async () => {
+    mockOptionalDescriptor.mockImplementation(() => mockDescriptor());
+    mockHealth.mockResolvedValue(true);
     await cs.startCoordinatorService();
 
-    expect(mockEnsureCertificates).toHaveBeenCalled();
+    let callCount = 0;
+    const baseDesc = mockDescriptor();
+    mockOptionalDescriptor.mockImplementation(() => {
+      callCount++;
+      return {
+        ...baseDesc,
+        instanceId: callCount > 1 ? 'rotated-instance' : 'owned',
+      } as never;
+    });
+
+    try {
+      await expect(cs.startCoordinatorService()).rejects.toThrow(
+        'Coordinator descriptor changed during health check'
+      );
+    } finally {
+      await cs.stopCoordinatorService();
+    }
   });
 
   test('handles spawn failure gracefully', async () => {
@@ -189,11 +312,7 @@ describe('startCoordinatorService with binary found', () => {
     // Not healthy — so it will try to find and spawn binary
     mockHealth.mockResolvedValue(false);
 
-    // This should not throw even if Bun.spawn fails
-    await cs.startCoordinatorService();
-
-    // Should have error output
-    expect(consoleOutput.length).toBeGreaterThan(0);
+    await expect(cs.startCoordinatorService()).rejects.toThrow('test double');
   });
 });
 
@@ -234,19 +353,18 @@ describe('cross-process spawn guard', () => {
     }
   });
 
-  test('a live, fresh guard blocks spawning: no cert fetch, no spawn attempt', async () => {
+  test('a live, fresh guard blocks spawning', async () => {
     const otherPid = process.ppid;
     realFs.writeFileSync(
       spawnGuardPath(),
       JSON.stringify({ pid: otherPid, timestamp: new Date().toISOString() })
     );
-    mockEnsureCertificates.mockClear();
 
-    await cs.startCoordinatorService();
+    await expect(cs.startCoordinatorService()).rejects.toThrow(
+      'failed its health check'
+    );
 
-    // ensureCertificates() only runs once a call has claimed the guard and
-    // is about to spawn. Blocked means it never gets there.
-    expect(mockEnsureCertificates).not.toHaveBeenCalled();
+    expect(mockBunSpawn).not.toHaveBeenCalled();
     // The guard is untouched — we neither took it over nor released a
     // claim that isn't ours.
     const guard = JSON.parse(realFs.readFileSync(spawnGuardPath(), 'utf-8'));
@@ -261,14 +379,9 @@ describe('cross-process spawn guard', () => {
       spawnGuardPath(),
       JSON.stringify({ pid: deadPid, timestamp: new Date().toISOString() })
     );
-    mockEnsureCertificates.mockClear();
 
-    await cs.startCoordinatorService();
-
-    // Taken over: this call claimed the guard and reached the spawn
-    // attempt (proven by the certificate fetch), then released it again in
-    // its finally block once Bun.spawn threw (no real binary in this test).
-    expect(mockEnsureCertificates).toHaveBeenCalled();
+    await expect(cs.startCoordinatorService()).rejects.toThrow('test double');
+    expect(mockBunSpawn).toHaveBeenCalled();
     expect(realFs.existsSync(spawnGuardPath())).toBe(false);
   });
 
@@ -278,31 +391,24 @@ describe('cross-process spawn guard', () => {
       spawnGuardPath(),
       JSON.stringify({ pid: process.ppid, timestamp: staleTimestamp })
     );
-    mockEnsureCertificates.mockClear();
 
-    await cs.startCoordinatorService();
-
-    expect(mockEnsureCertificates).toHaveBeenCalled();
+    await expect(cs.startCoordinatorService()).rejects.toThrow('test double');
+    expect(mockBunSpawn).toHaveBeenCalled();
     expect(realFs.existsSync(spawnGuardPath())).toBe(false);
   });
 
   test('release only unlinks the guard if this process still owns it', async () => {
     const otherPid = process.ppid;
-    // Simulate another process taking over the guard while this call is
-    // mid-flight (between its own claim and its own release): once
-    // ensureCertificates resolves, the guard file no longer names us.
-    mockEnsureCertificates.mockImplementationOnce(async () => {
+    // Replace the guard during spawn, after it was acquired.
+    mockBunSpawn.mockImplementationOnce(() => {
       realFs.writeFileSync(
         spawnGuardPath(),
         JSON.stringify({ pid: otherPid, timestamp: new Date().toISOString() })
       );
-      return {
-        cert: '-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----',
-        key: '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
-      };
+      throw new Error('test double');
     });
 
-    await cs.startCoordinatorService();
+    await expect(cs.startCoordinatorService()).rejects.toThrow('test double');
 
     // Our own release must not have deleted a file that, by the time it
     // ran, no longer named our pid.
@@ -321,12 +427,138 @@ describe('cross-process spawn guard', () => {
 // state.ownsProcess === true — the behavioral test file's existsSync-false
 // mock never gets past findCoordinatorBinary to a spawn attempt at all.
 describe('stopCoordinatorService ownership', () => {
+  test('retains a supervised child until the supervisor can reap it', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const supervisor = {
+      pid: process.pid,
+      nonce: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      generationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    };
+    const child = { pid: 4242, exitCode: null, unref: mock(), kill: mock() };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    mockDescriptor.mockImplementation(
+      () =>
+        ({
+          transportVersion: 1,
+          instanceId: 'owned',
+          pid: child.pid,
+          httpsPort: 41957,
+          grpcPort: 41958,
+          certificatePem: 'certificate',
+          bearerToken: 'token',
+          supervisor,
+        }) as never
+    );
+    const result = await cs.startCoordinatorService({ supervisor });
+    expect(result.kind).toBe('owned');
+    expect(child.unref).not.toHaveBeenCalled();
+  });
+
+  test('does not signal a live child when pinned health fails', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockRejectedValueOnce(
+      new realConnection.CoordinatorSecurityError('connection reset')
+    );
+    const child = {
+      pid: 4242,
+      exitCode: null as number | null,
+      unref: mock(),
+      kill: mock(),
+      exited: new Promise<number>(() => {}),
+    };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await expect(cs.startCoordinatorService()).rejects.toThrow(
+      'connection reset'
+    );
+    expect(child.kill).not.toHaveBeenCalled();
+  });
+
+  test('attaches to a replacement instead of returning a cached dead child', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = {
+      pid: 4242,
+      exitCode: null as number | null,
+      unref: mock(),
+      kill: mock(),
+    };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    expect((await cs.startCoordinatorService()).kind).toBe('owned');
+    child.exitCode = 1;
+    mockDescriptor.mockReturnValue({
+      transportVersion: 1,
+      instanceId: 'replacement',
+      pid: 9999,
+      httpsPort: 41957,
+      grpcPort: 41958,
+      certificatePem: 'replacement',
+      bearerToken: 'replacement',
+      supervisor: null,
+    });
+    expect((await cs.startCoordinatorService()).kind).toBe('attached');
+    await cs.stopCoordinatorService();
+    expect(mockShutdown).not.toHaveBeenCalled();
+    expect(child.kill).not.toHaveBeenCalled();
+  });
+
+  test('returns owned on second start when child remains live and matches descriptor', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const supervisor = {
+      pid: process.pid,
+      nonce: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      generationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    };
+    const child = {
+      pid: 4242,
+      exitCode: null as number | null,
+      unref: mock(),
+      kill: mock(),
+    };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    mockDescriptor.mockImplementation(
+      () =>
+        ({
+          transportVersion: 1,
+          instanceId: 'owned',
+          pid: child.pid,
+          httpsPort: 41957,
+          grpcPort: 41958,
+          certificatePem: 'certificate',
+          bearerToken: 'token',
+          supervisor,
+        }) as never
+    );
+
+    const first = await cs.startCoordinatorService({ supervisor });
+    expect(first.kind).toBe('owned');
+    if (first.kind === 'owned') {
+      expect(first.child).toBe(child as never);
+    }
+
+    const second = await cs.startCoordinatorService({ supervisor });
+    expect(second.kind).toBe('owned');
+    if (second.kind === 'owned') {
+      expect(second.child).toBe(child as never);
+    }
+    expect(child.unref).not.toHaveBeenCalled();
+    expect(mockBunSpawn).toHaveBeenCalledTimes(1);
+
+    await cs.stopCoordinatorService();
+  });
+
   test('a coordinator this process actually spawned still gets a graceful shutdown', async () => {
     mockHealth.mockReset();
     mockHealth.mockResolvedValueOnce(false); // not already running
     mockHealth.mockResolvedValue(true); // healthy once "spawned"
 
-    const fakeSubprocess = { unref: mock(), kill: mock() };
+    const fakeSubprocess = {
+      pid: 4242,
+      exitCode: null,
+      unref: mock(),
+      kill: mock(),
+    };
     mockBunSpawn.mockImplementationOnce(() => fakeSubprocess as never);
 
     await cs.startCoordinatorService();
@@ -341,20 +573,395 @@ describe('stopCoordinatorService ownership', () => {
     expect(shutdownArgs.timeoutSeconds).toBe(5);
   });
 
-  test('owned coordinator falls back to process kill if gRPC shutdown fails', async () => {
+  test('does not signal a child when shutdown fails without a committed intent', async () => {
     mockHealth.mockReset();
     mockHealth.mockResolvedValueOnce(false);
     mockHealth.mockResolvedValue(true);
 
-    const fakeSubprocess = { unref: mock(), kill: mock() };
+    const fakeSubprocess = {
+      pid: 4242,
+      exitCode: null,
+      unref: mock(),
+      kill: mock(),
+    };
     mockBunSpawn.mockImplementationOnce(() => fakeSubprocess as never);
 
     await cs.startCoordinatorService();
 
     mockShutdown.mockReset();
     mockShutdown.mockRejectedValueOnce(new Error('connection refused'));
-    await cs.stopCoordinatorService();
+    await expect(cs.stopCoordinatorService()).rejects.toThrow(
+      'connection refused'
+    );
+    expect(fakeSubprocess.kill).not.toHaveBeenCalled();
+  });
 
-    expect(fakeSubprocess.kill).toHaveBeenCalled();
+  test('a replacement descriptor is never sent shutdown by an old owner', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = { pid: 4242, exitCode: null, unref: mock(), kill: mock() };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await cs.startCoordinatorService();
+    mockDescriptor.mockReturnValue({
+      transportVersion: 1,
+      instanceId: 'replacement',
+      pid: 4343,
+      httpsPort: 41957,
+      grpcPort: 41958,
+      certificatePem: 'replacement',
+      bearerToken: 'other',
+      supervisor: null,
+    });
+    await cs.stopCoordinatorService();
+    expect(mockShutdown).not.toHaveBeenCalled();
+    expect(child.kill).not.toHaveBeenCalled();
+  });
+
+  test('a child that loses startup does not own the healthy replacement', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = { pid: 4241, exitCode: 1, unref: mock(), kill: mock() };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    expect((await cs.startCoordinatorService()).kind).toBe('attached');
+    expect(child.kill).not.toHaveBeenCalled();
+    await cs.stopCoordinatorService();
+    expect(mockShutdown).not.toHaveBeenCalled();
+  });
+
+  test('does not authenticate an unrelated publication while the child is live', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = { pid: 4241, exitCode: null, unref: mock(), kill: mock() };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await expect(cs.startCoordinatorService()).rejects.toThrow(
+      'failed its health check'
+    );
+    expect(mockHealth).toHaveBeenCalledTimes(1);
+    expect(child.kill).not.toHaveBeenCalled();
+  });
+
+  test('descriptor security failure does not trigger an unverified shutdown', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = { pid: 4242, exitCode: null, unref: mock(), kill: mock() };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await cs.startCoordinatorService();
+    mockDescriptor.mockImplementationOnce(() => {
+      throw new realConnection.CoordinatorSecurityError('invalid descriptor');
+    });
+    await expect(cs.stopCoordinatorService()).rejects.toThrow(
+      'invalid descriptor'
+    );
+    expect(mockShutdown).not.toHaveBeenCalled();
+    expect(child.kill).not.toHaveBeenCalled();
+  });
+
+  test.each([Code.Unauthenticated, Code.PermissionDenied])(
+    'authentication RPC error %s does not trigger a kill',
+    async (code) => {
+      mockHealth.mockResolvedValueOnce(false);
+      mockHealth.mockResolvedValue(true);
+      const child = { pid: 4242, exitCode: null, unref: mock(), kill: mock() };
+      mockBunSpawn.mockImplementationOnce(() => child as never);
+      await cs.startCoordinatorService();
+      mockShutdown.mockRejectedValueOnce(new ConnectError('refused', code));
+      await expect(cs.stopCoordinatorService()).rejects.toThrow('refused');
+      expect(child.kill).not.toHaveBeenCalled();
+    }
+  );
+
+  test('live child ownership survives authentication failure, allowing shutdown retry', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = {
+      pid: 4242,
+      exitCode: null as number | null,
+      unref: mock(),
+      kill: mock(),
+    };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await cs.startCoordinatorService();
+    const authError = new realConnection.CoordinatorSecurityError(
+      'Coordinator rejected authenticated request (401)'
+    );
+    mockShutdown.mockRejectedValueOnce(
+      new ConnectError(
+        'wrapped rejection',
+        Code.Unknown,
+        undefined,
+        undefined,
+        authError
+      )
+    );
+    await expect(cs.stopCoordinatorService()).rejects.toThrow(
+      'wrapped rejection'
+    );
+    expect(mockShutdown).toHaveBeenCalledTimes(1);
+    expect(child.kill).not.toHaveBeenCalled();
+
+    // Ownership evidence survived: state.ownsProcess is true, child remains tracked.
+    // A second shutdown attempt invokes the RPC again:
+    mockShutdown.mockResolvedValueOnce({});
+    await expect(cs.stopCoordinatorService()).resolves.toBeUndefined();
+    expect(mockShutdown).toHaveBeenCalledTimes(2);
+  });
+
+  test('wrapped authentication error is not suppressed even when child exits during RPC', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = {
+      pid: 4242,
+      exitCode: null as number | null,
+      unref: mock(),
+      kill: mock(),
+    };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await cs.startCoordinatorService();
+    const authError = new realConnection.CoordinatorSecurityError(
+      'Coordinator rejected authenticated request (401)'
+    );
+    mockShutdown.mockImplementationOnce(() => {
+      child.exitCode = 1;
+      throw new ConnectError(
+        'wrapped rejection',
+        Code.Unknown,
+        undefined,
+        undefined,
+        authError
+      );
+    });
+    await expect(cs.stopCoordinatorService()).rejects.toThrow(
+      'wrapped rejection'
+    );
+    expect(mockShutdown).toHaveBeenCalledTimes(1);
+    expect(child.kill).not.toHaveBeenCalled();
+  });
+
+  test('wrapped TLS error is not suppressed even when child exits during RPC', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = {
+      pid: 4242,
+      exitCode: null as number | null,
+      unref: mock(),
+      kill: mock(),
+    };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await cs.startCoordinatorService();
+    const tlsError = new realConnection.CoordinatorSecurityError(
+      'Coordinator connection failed: UNABLE_TO_VERIFY_LEAF_SIGNATURE'
+    );
+    mockShutdown.mockImplementationOnce(() => {
+      child.exitCode = 1;
+      throw new ConnectError(
+        'wrapped TLS failure',
+        Code.Unknown,
+        undefined,
+        undefined,
+        tlsError
+      );
+    });
+    await expect(cs.stopCoordinatorService()).rejects.toThrow(
+      'wrapped TLS failure'
+    );
+    expect(mockShutdown).toHaveBeenCalledTimes(1);
+    expect(child.kill).not.toHaveBeenCalled();
+  });
+
+  test('explicit connection refusal on an exited child stops cleanly without error', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    mockHealth.mockResolvedValue(true);
+    const child = {
+      pid: 4242,
+      exitCode: null as number | null,
+      unref: mock(),
+      kill: mock(),
+    };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    await cs.startCoordinatorService();
+    const cause = new TypeError('fetch failed');
+    Object.defineProperty(cause, 'code', {
+      value: 'ECONNREFUSED',
+      enumerable: true,
+    });
+    const refusalError = new realConnection.CoordinatorConnectionRefusedError(
+      'Coordinator connection failed: ECONNREFUSED: Unable to connect',
+      { cause }
+    );
+    mockShutdown.mockImplementationOnce(() => {
+      child.exitCode = 1;
+      throw new ConnectError(
+        'wrapped refusal',
+        Code.Unknown,
+        undefined,
+        undefined,
+        refusalError
+      );
+    });
+    await expect(cs.stopCoordinatorService()).resolves.toBeUndefined();
+    expect(mockShutdown).toHaveBeenCalledTimes(1);
+  });
+
+  test('startup catch does not suppress pinned-health security failure when shutdown intent appears', async () => {
+    mockHealth.mockResolvedValueOnce(false);
+    const supervisor = {
+      pid: process.pid,
+      nonce: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      generationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    };
+    const child = { pid: 4242, exitCode: null, unref: mock(), kill: mock() };
+    mockBunSpawn.mockImplementationOnce(() => child as never);
+    mockDescriptor.mockImplementation(
+      () =>
+        ({
+          transportVersion: 1,
+          instanceId: 'owned',
+          pid: child.pid,
+          httpsPort: 41957,
+          grpcPort: 41958,
+          certificatePem: '-----BEGIN CERTIFICATE-----\ntest',
+          bearerToken: 'a'.repeat(43),
+          supervisor,
+        }) as never
+    );
+    const intentPath = join(
+      getHanDataDir(),
+      'runtime',
+      `coordinator.stopping.${supervisor.nonce}.${supervisor.generationId}.json`
+    );
+    mockHealth.mockImplementationOnce(() => {
+      realFs.mkdirSync(dirname(intentPath), { recursive: true });
+      realFs.writeFileSync(
+        intentPath,
+        JSON.stringify({
+          transportVersion: 1,
+          instanceId: 'owned',
+          pid: child.pid,
+          httpsPort: 41957,
+          grpcPort: 41958,
+          certificatePem: '-----BEGIN CERTIFICATE-----\ntest',
+          bearerToken: 'a'.repeat(43),
+          supervisor,
+        }),
+        { mode: 0o600 }
+      );
+      throw new realConnection.CoordinatorSecurityError(
+        'Coordinator rejected authenticated request (401)'
+      );
+    });
+    try {
+      await expect(cs.startCoordinatorService({ supervisor })).rejects.toThrow(
+        'Coordinator rejected authenticated request'
+      );
+      expect(mockHealth).toHaveBeenCalledTimes(2);
+    } finally {
+      realFs.rmSync(intentPath, { force: true });
+    }
+  });
+});
+
+describe('isExplicitConnectionRefusal classifier', () => {
+  test('rejects CoordinatorChildExitError even with typed refusal cause', async () => {
+    const { CoordinatorChildExitError } = await import(
+      '../lib/commands/coordinator/daemon.ts'
+    );
+    const cause = new TypeError('fetch failed');
+    Object.defineProperty(cause, 'code', {
+      value: 'ECONNREFUSED',
+      enumerable: true,
+    });
+    const refusalError = new realConnection.CoordinatorConnectionRefusedError(
+      'Coordinator connection failed: ECONNREFUSED',
+      { cause }
+    );
+    expect(
+      realConnection.isExplicitConnectionRefusal(
+        new CoordinatorChildExitError('Coordinator child exited', {
+          cause: refusalError,
+        })
+      )
+    ).toBe(false);
+  });
+
+  test('rejects security and TLS errors even when wrapped in ConnectError or generic Error', () => {
+    const authError = new realConnection.CoordinatorSecurityError(
+      'Coordinator rejected authenticated request (401)'
+    );
+    expect(realConnection.isExplicitConnectionRefusal(authError)).toBe(false);
+    expect(
+      realConnection.isExplicitConnectionRefusal(
+        new ConnectError(
+          'wrapped',
+          Code.Unknown,
+          undefined,
+          undefined,
+          authError
+        )
+      )
+    ).toBe(false);
+
+    const tlsError = new realConnection.CoordinatorSecurityError(
+      'Coordinator connection failed: UNABLE_TO_VERIFY_LEAF_SIGNATURE'
+    );
+    expect(realConnection.isExplicitConnectionRefusal(tlsError)).toBe(false);
+    expect(
+      realConnection.isExplicitConnectionRefusal(
+        new ConnectError(
+          'wrapped',
+          Code.Unknown,
+          undefined,
+          undefined,
+          tlsError
+        )
+      )
+    ).toBe(false);
+
+    const certError = new Error('certificate has expired');
+    expect(realConnection.isExplicitConnectionRefusal(certError)).toBe(false);
+  });
+
+  test('accepts explicit connection refusal and rejects other errors', () => {
+    const cause = new TypeError('fetch failed');
+    Object.defineProperty(cause, 'code', {
+      value: 'ECONNREFUSED',
+      enumerable: true,
+    });
+    const refusal = new realConnection.CoordinatorConnectionRefusedError(
+      'Coordinator connection failed: ECONNREFUSED: Unable to connect',
+      { cause }
+    );
+    expect(realConnection.isExplicitConnectionRefusal(refusal)).toBe(true);
+
+    const wrappedRefusal = new ConnectError(
+      'wrapped refusal',
+      Code.Unknown,
+      undefined,
+      undefined,
+      refusal
+    );
+    expect(realConnection.isExplicitConnectionRefusal(wrappedRefusal)).toBe(
+      true
+    );
+
+    // Plain CoordinatorSecurityError with ECONNREFUSED in message is NOT typed refusal
+    const untypedRefusal = new realConnection.CoordinatorSecurityError(
+      'Coordinator connection failed: ECONNREFUSED: Unable to connect'
+    );
+    expect(realConnection.isExplicitConnectionRefusal(untypedRefusal)).toBe(
+      false
+    );
+
+    // ConnectError wrapping untyped refusal is NOT typed refusal
+    expect(
+      realConnection.isExplicitConnectionRefusal(
+        new ConnectError(
+          'wrapped untyped',
+          Code.Unknown,
+          undefined,
+          undefined,
+          untypedRefusal
+        )
+      )
+    ).toBe(false);
   });
 });

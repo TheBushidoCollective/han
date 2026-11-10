@@ -18,11 +18,12 @@ else
   chmod +x package/han
 fi
 
-# Copy coordinator binary if present
-if [ -f "artifact/han-coordinator.exe" ]; then
-  cp "artifact/han-coordinator.exe" package/han-coordinator.exe
-elif [ -f "artifact/han-coordinator" ]; then
-  cp "artifact/han-coordinator" package/han-coordinator
+# Both binaries are required and originate from the same platform build.
+COORDINATOR="han-coordinator-${ARTIFACT#han-}"
+if [[ "$PLATFORM" == win32-* ]]; then
+  cp "artifact/${COORDINATOR}.exe" package/han-coordinator.exe
+else
+  cp "artifact/${COORDINATOR}" package/han-coordinator
   chmod +x package/han-coordinator
 fi
 

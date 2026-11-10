@@ -16,17 +16,8 @@ import { getGraphQLEndpoints } from "../config/urls.ts";
 
 /**
  * Hostnames that resolve to this machine.
- *
- * `coordinator.local.han.guru` is a public DNS name pointing at 127.0.0.1, so it
- * belongs here: it is a loopback target even though it does not look like one.
  */
-const LOOPBACK_HOSTNAMES = new Set([
-	"localhost",
-	"127.0.0.1",
-	"::1",
-	"[::1]",
-	"coordinator.local.han.guru",
-]);
+const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
 function isLoopbackHostname(hostname: string): boolean {
 	if (LOOPBACK_HOSTNAMES.has(hostname)) {

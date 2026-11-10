@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const { execFileSync } = require('node:child_process');
-const { existsSync } = require('node:fs');
+const { existsSync, readFileSync } = require('node:fs');
 const { dirname, join } = require('node:path');
 
 const platform = process.platform;
@@ -25,6 +25,26 @@ if (!pkgName) {
 
 const pkg = `@thebushidocollective/han-${pkgName}`;
 const binName = platform === 'win32' ? 'han.exe' : 'han';
+const coordinatorName =
+  platform === 'win32' ? 'han-coordinator.exe' : 'han-coordinator';
+const version = require('./package.json').version;
+
+function isMatchingPair(binPath) {
+  try {
+    const directory = dirname(binPath);
+    const manifest = JSON.parse(
+      readFileSync(join(directory, 'package.json'), 'utf8')
+    );
+    return (
+      manifest.name === pkg &&
+      manifest.version === version &&
+      existsSync(binPath) &&
+      existsSync(join(directory, coordinatorName))
+    );
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Find the platform binary using require.resolve (the canonical way to locate
@@ -35,7 +55,7 @@ function findBinaryViaResolve() {
   try {
     const pkgJson = require.resolve(`${pkg}/package.json`);
     const binPath = join(dirname(pkgJson), binName);
-    if (existsSync(binPath)) return binPath;
+    if (isMatchingPair(binPath)) return binPath;
   } catch {
     // Package not resolvable
   }
@@ -59,7 +79,7 @@ function findBinaryViaHardcodedPaths() {
       binName
     ),
   ];
-  return candidates.find((p) => existsSync(p)) || null;
+  return candidates.find(isMatchingPair) || null;
 }
 
 /**
@@ -68,10 +88,14 @@ function findBinaryViaHardcodedPaths() {
  */
 function installAndFind() {
   try {
-    execFileSync('npm', ['install', '--no-save', '--ignore-scripts', pkg], {
-      stdio: 'pipe',
-      cwd: __dirname,
-    });
+    execFileSync(
+      'npm',
+      ['install', '--no-save', '--ignore-scripts', `${pkg}@${version}`],
+      {
+        stdio: 'pipe',
+        cwd: __dirname,
+      }
+    );
   } catch {
     // Install failed - fall through to checks anyway
   }

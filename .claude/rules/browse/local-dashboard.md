@@ -42,9 +42,6 @@ curl -sk https://localhost:41957/graphql -X POST \
 3. **GraphQL iteration** — Test schema changes against the local server
 4. **No deployment lag** — Railway builds add delays to the feedback loop
 
-## When to Use Remote
+## Production Embedded Mode
 
-Only use the remote dashboard (`dashboard.local.han.guru`) for:
-- Final verification before merging
-- Testing TLS/CORS behavior in production-like environment
-- Demonstrating to others
+Installed release binaries bundle the complete dashboard static assets and serve them directly on local loopback without external dependencies.

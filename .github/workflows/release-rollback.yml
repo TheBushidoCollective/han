@@ -1,0 +1,38 @@
+name: Release Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: "Target git ref to roll back to (commit SHA or tag)"
+        required: true
+      target_version:
+        description: "Target version to restore (e.g. 3.22.0)"
+        required: true
+      dry_run:
+        description: "Dry run (simulate without mutating live release/npm)"
+        type: boolean
+        required: true
+        default: true
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: protected-release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_ref }}
+
+      - name: Plan rollback
+        run: |
+          echo "=== Rollback Plan ==="
+          echo "Target ref: ${{ inputs.target_ref }}"
+          echo "Target version: ${{ inputs.target_version }}"
+          echo "Dry run: ${{ inputs.dry_run }}"
+
+      - name: Execute rollback
+        if: ${{ inputs.dry_run == false }}
+        run: |
+          echo "Executing release rollback to ${{ inputs.target_version }}..."

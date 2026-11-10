@@ -20,6 +20,16 @@ const pagesDir = join(srcDir, "pages");
 const outDir = join(projectRoot, ".dev-out");
 
 const PORT = Number(process.env.PORT) || 3000;
+const revision = Bun.spawnSync(["git", "rev-parse", "HEAD"], {
+	cwd: projectRoot,
+});
+if (revision.exitCode !== 0)
+	throw new Error("Cannot determine dashboard source revision");
+const manifest = JSON.stringify({
+	kind: "local-dashboard",
+	transportVersion: 1,
+	sourceRevision: revision.stdout.toString().trim(),
+});
 
 // Connected clients for live reload
 const liveReloadClients = new Set<{ send: (msg: string) => void }>();
@@ -61,6 +71,7 @@ async function build() {
 			"import.meta.env.MODE": JSON.stringify("development"),
 			"import.meta.env.PROD": "false",
 			"import.meta.env.DEV": "true",
+			__HAN_BUILD_TARGET__: JSON.stringify("local-dashboard"),
 			global: "globalThis",
 		},
 	});
@@ -120,9 +131,15 @@ watch(srcDir, { recursive: true }, (_event, filename) => {
 
 Bun.serve({
 	port: PORT,
+	hostname: "127.0.0.1",
 	async fetch(req, server) {
 		const url = new URL(req.url);
 		const pathname = url.pathname;
+		if (pathname === "/han-dashboard-manifest.json") {
+			return new Response(manifest, {
+				headers: { "Content-Type": "application/json" },
+			});
+		}
 
 		// Live reload WebSocket
 		if (pathname === "/__live_reload") {
@@ -131,9 +148,6 @@ Bun.serve({
 			}
 			return new Response("WebSocket upgrade failed", { status: 400 });
 		}
-
-		// Note: /graphql is NOT proxied - the React app connects directly to the coordinator
-		// at https://coordinator.local.han.guru:41957/graphql via urls.ts config
 
 		// Serve built files
 		let filePath: string;
@@ -189,8 +203,5 @@ Bun.serve({
 	},
 });
 
-console.log(`\nDev server running at http://localhost:${PORT}`);
-console.log(
-	"GraphQL connects directly to coordinator at https://coordinator.local.han.guru:41957/graphql",
-);
+console.log(`\nDev asset server running at http://127.0.0.1:${PORT}`);
 console.log("Watching for changes...\n");
