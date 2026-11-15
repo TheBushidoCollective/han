@@ -390,6 +390,13 @@
       "keywords": ["database", "sql", "query-optimization", "agent"]
     },
     {
+      "name": "deed-page",
+      "description": "Publish generated HTML reports, decks and static build folders to a public deed.page URL after the user asks or confirms",
+      "source": "./plugins/tools/deed-page",
+      "category": "Tool",
+      "keywords": ["publish", "static-hosting", "html", "share-link", "skill"]
+    },
+    {
       "name": "dialyzer",
       "description": "Dialyzer skills for static analysis of Erlang/Elixir code",
       "source": "./plugins/validation/dialyzer",

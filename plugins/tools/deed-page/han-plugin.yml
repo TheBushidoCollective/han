@@ -1,0 +1,3 @@
+# deed-page plugin configuration
+# Skills-only plugin: no validation hooks and no MCP server.
+hooks: {}
