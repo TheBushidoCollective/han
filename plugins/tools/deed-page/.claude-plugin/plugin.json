@@ -1,0 +1,20 @@
+{
+  "name": "deed-page",
+  "version": "1.0.0",
+  "description": "Publish a generated HTML report, deck, dashboard or static build folder to a public deed.page URL, only after the user asks or confirms.",
+  "author": {
+    "name": "Avatar 8 LLC",
+    "url": "https://deed.page"
+  },
+  "homepage": "https://deed.page",
+  "repository": "https://github.com/f-o-x11/deed-page-skill",
+  "license": "MIT",
+  "keywords": [
+    "deed-page",
+    "publish",
+    "static-hosting",
+    "html",
+    "share-link",
+    "skill"
+  ]
+}
